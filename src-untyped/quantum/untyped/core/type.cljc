@@ -764,10 +764,12 @@
                 found' (-> found (ubit/conj ret') c/long)]
             (ifs (c/or (ubit/contains? found' <ident)
                        (ubit/contains? found' =ident))
-                 (reduced [-1 nil])
+                 (reduced [-1 found'])
 
-                 (ubit/contains? found' >ident)
-                 (reduced [2 nil])
+                 (c/or (ubit/contains? found' ><ident)
+                       (c/and (ubit/contains? found' >ident)
+                              (ubit/contains? found' <>ident)))
+                 [2 found']
 
                  [ret' found'])))
         [3 ubit/empty]

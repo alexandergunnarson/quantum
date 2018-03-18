@@ -154,6 +154,39 @@
     (is= c             (t/compare a* b*))
     (is= (t/inverse c) (t/compare b* a*))))
 
+(def comparison-combinations
+  ["#{<}"
+   "#{< =}"
+   "#{< = >}"
+   "#{< = > ><}"
+   "#{< = > >< <>}"
+   "#{< = > <>}"
+   "#{< = ><}"
+   "#{< = >< <>}"
+   "#{< = <>}"
+   "#{< >}"
+   "#{< > ><}"
+   "#{< > >< <>}"
+   "#{< > <>}"
+   "#{< ><}"
+   "#{< >< <>}"
+   "#{< <>}"
+   "#{=}"
+   "#{= >}"
+   "#{= > ><}"
+   "#{= > >< <>}"
+   "#{= > <>}"
+   "#{= ><}"
+   "#{= >< <>}"
+   "#{= <>}"
+   "#{>}"
+   "#{> ><}"
+   "#{> >< <>}"
+   "#{> <>}"
+   "#{><}"
+   "#{>< <>}"
+   "#{<>}"])
+
 (deftest test|in|compare
   (testing "UniversalSetSpec"
     (testing "+ UniversalSetSpec"
@@ -266,6 +299,7 @@
       ;; Comparison annotations achieved by first comparing each element of the first/left
       ;; to the entire second/right, then comparing each element of the second/right to the
       ;; entire first/left
+      ;; TODO add complete comparisons via `comparison-combinations`
       (testing "#{<}, #{<}"
         ;; comparisons:        < <                        < <
         (test-comparison  0 (| a b)                    (| a b))
@@ -391,37 +425,64 @@
     (testing "+ InferSpec")
     (testing "+ Expression")
     (testing "+ ProtocolSpec")
-    ;; TODO fix impl
     (testing "+ ClassSpec"
-      (testing "#{<+} -> <"
+      (testing "#{<}"
         (test-comparison -1 i|<a0 (| i|>a+b i|>a0 i|>a1)))
-      (testing "#{><+} -> ><"
-        (test-comparison  2 i|a   (| i|><0 i|><1)))
-      (testing "#{<>+} -> <>"
-        (test-comparison  3 a     (| ><0 ><1)))
-      (testing "#{<+ ><+} -> <"
+    #_(testing "#{< =}")         ; Impossible for `OrSpec`
+    #_(testing "#{< = >}")       ; Impossible for `OrSpec`
+    #_(testing "#{< = > ><}")    ; Impossible for `OrSpec`
+    #_(testing "#{< = > >< <>}") ; Impossible for `OrSpec`
+    #_(testing "#{< = > <>}")    ; Impossible for `OrSpec`
+    #_(testing "#{< = ><}")      ; Impossible for `OrSpec`
+    #_(testing "#{< = >< <>}")   ; Impossible for `OrSpec`
+    #_(testing "#{< = <>}")      ; Impossible for `OrSpec`
+    #_(testing "#{< >}")         ; Impossible for `OrSpec`
+    #_(testing "#{< > ><}")      ; Impossible for `OrSpec`
+    #_(testing "#{< > >< <>}")   ; Impossible for `OrSpec`
+    #_(testing "#{< > <>}")      ; Impossible for `OrSpec`
+      (testing "#{< ><}"
         (test-comparison -1 i|a   (| i|>a+b i|>a0 i|><0 i|><1))
-        (test-comparison -1 i|>a0 (| i|>a+b i|>a0))) ; TODO fix impl
-      (testing "#{<+ <>+} -> <"
+        (test-comparison -1 i|>a0 (| i|>a+b i|>a0)))
+      (testing "#{< >< <>}"
+        (test-comparison -1 i|a   (| i|>a+b i|>a0 i|><0 i|><1 t/string?)))
+      (testing "#{< <>}"
         (test-comparison -1 a     (| >a ><0 ><1)))
-      (testing "#{=+ ><+} -> ><"
-        (test-comparison  2 i|a   (| i|a i|><0 i|><1)))
-      (testing "#{=+ <>+} -> <"
+    #_(testing "#{=}")           ; Impossible for `OrSpec`
+    #_(testing "#{= >}")         ; Impossible for `OrSpec`
+    #_(testing "#{= > ><}")      ; Impossible for `OrSpec`
+    #_(testing "#{= > >< <>}")   ; Impossible for `OrSpec`
+    #_(testing "#{= > <>}")      ; Impossible for `OrSpec`
+      (testing "#{= ><}"
+        (test-comparison -1 i|a   (| i|a i|><0 i|><1)))
+      (testing "#{= >< <>}"
+        (test-comparison -1 i|a   (| i|a i|><0 i|><1 t/string?)))
+      (testing "#{= <>}"
         (test-comparison -1 a     (| a ><0 ><1)))
-      (testing "#{>+ ><+} -> ><"
+      (testing "#{>}"
+        (test-comparison  1 a     (| <a0 <a1))
+        (test-comparison  1 i|a   (| i|<a0 i|<a1)))
+      (testing "#{> ><}"
         (test-comparison  2 i|a   (| i|<a+b i|<a0 i|><0 i|><1)))
-      (testing "#{>+ <>+} -> ><"
+      (testing "#{> >< <>}"
+        (test-comparison  2 i|a   (| i|<a+b i|<a0 i|><0 i|><1 t/string?)))
+      (testing "#{> <>}"
         (test-comparison  2 a     (| <a0 ><0 ><1)))
+      (testing "#{><}"
+        (test-comparison  2 i|a   (| i|><0 i|><1)))
+      (testing "#{>< <>}"
+        (test-comparison  2 i|a   (| i|><0 i|><1 t/string?)))
+      (testing "#{<>}"
+        (test-comparison  3 a     (| ><0 ><1)))
       (testing "Nilable"
-        (testing "= nilabled"
-          (test-comparison -1 t/long?     (t/? t/long?)))
-        (testing "< nilabled"
+        (testing "<  nilabled: #{< <>}"
           (test-comparison -1 t/long?     (t/? t/object?)))
-        (testing "> nilabled"
+        (testing "=  nilabled: #{= <>}"
+          (test-comparison -1 t/long?     (t/? t/long?)))
+        (testing ">  nilabled: #{> <>}"
           (test-comparison  2 t/object?   (t/? t/long?)))
-        (testing ">< nilabled"
-          (test-comparison  2 t/iterable? (t/? t/comparable?))) ; TODO fix impl
-        (testing "<> nilabled"
+        (testing ">< nilabled: #{>< <>}"
+          (test-comparison  2 t/iterable? (t/? t/comparable?)))
+        (testing "<> nilabled: #{<>}"
           (test-comparison  3 t/long?     (t/? t/string?)))))
     (testing "+ ValueSpec"
       (testing "arg <"
@@ -461,13 +522,20 @@
           (test-comparison -1 (t/isa? java.util.AbstractMap$SimpleEntry) (& (t/isa? java.util.Map$Entry) (t/isa? java.io.Serializable))))
         (testing "Interface"
           (test-comparison -1 i|a           (& i|>a0 i|>a1))))
-    #_(testing "#{< =}")         ; not possible for `AndSpec`
-    #_(testing "#{< = >}")       ; not possible for `AndSpec`
-    #_(testing "#{< = > ><}")    ; not possible for `AndSpec`
-    #_(testing "#{< = > >< <>}") ; not possible for `AndSpec`
-    #_(testing "#{< >}")         ; not possible for `AndSpec`
-    #_(testing "#{< > ><}")      ; not possible for `AndSpec`
-    #_(testing "#{< > >< <>}")   ; not possible for `AndSpec`
+      (testing "#{<}"
+        (test-comparison -1 i|a           (& i|>a0 i|>a1)))
+    #_(testing "#{< =}")         ; Impossible for `AndSpec`
+    #_(testing "#{< = >}")       ; Impossible for `AndSpec`
+    #_(testing "#{< = > ><}")    ; Impossible for `AndSpec`
+    #_(testing "#{< = > >< <>}") ; Impossible for `AndSpec`
+    #_(testing "#{< = > <>}")    ; Impossible for `AndSpec`
+    #_(testing "#{< = ><}")      ; Impossible for `AndSpec`
+    #_(testing "#{< = >< <>}")   ; Impossible for `AndSpec`
+    #_(testing "#{< = <>}")      ; Impossible for `AndSpec`
+    #_(testing "#{< >}")         ; Impossible for `AndSpec`
+    #_(testing "#{< > ><}")      ; Impossible for `AndSpec`
+    #_(testing "#{< > >< <>}")   ; Impossible for `AndSpec`
+    #_(testing "#{< > <>}")      ; Impossible for `AndSpec`
       (testing "#{< ><}"
         (test-comparison  2 i|a           (& i|>a+b i|>a0 i|>a1 i|><0 i|><1)))
       (testing "#{< >< <>}"
@@ -475,14 +543,16 @@
       (testing "#{< <>}"
         (test-comparison  3 t/string?     (& t/char-seq? t/java-set?))
         (test-comparison  3 ><0           (& (! ><1) (! ><0))))
-    #_(testing "#{= >}")       ; not possible for `AndSpec`
-    #_(testing "#{= > ><}")    ; not possible for `AndSpec`
-    #_(testing "#{= > >< <>}") ; not possible for `AndSpec`
+    #_(testing "#{=}")           ; Impossible for `AndSpec`
+    #_(testing "#{= >}")         ; Impossible for `AndSpec`
+    #_(testing "#{= > ><}")      ; Impossible for `AndSpec`
+    #_(testing "#{= > >< <>}")   ; Impossible for `AndSpec`
+    #_(testing "#{= > <>}")      ; Impossible for `AndSpec`
       (testing "#{= ><}"
         (test-comparison  1 i|a           (& i|a i|><0 i|><1))
         (test-comparison  1 t/char-seq?   (& t/char-seq?   t/java-set?))
         (test-comparison  1 t/char-seq?   (& t/char-seq?   t/java-set? t/array-list?)))
-      (testing "#{= >< <>}") ; <- comparison should be 1
+      (testing "#{= >< <>}") ; <- TODO comparison should be 1
       (testing "#{= <>}"
         (test-comparison  1 t/array-list? (& t/array-list? t/java-set?)))
       (testing "#{>}"
@@ -493,42 +563,47 @@
         (test-comparison  2 t/comparable? (& (t/isa? java.nio.ByteBuffer) t/java-set?)))
       (testing "#{> >< <>}"
         (test-comparison  2 i|a           (& i|<a0 i|><0 t/array-list?)))
-      (testing "#{> <>}") ; <- comparison should be 1
+      (testing "#{> <>}") ; <- TODO comparison should be 1
       (testing "#{><}"
         (test-comparison  2 i|a           (& i|><0 i|><1))
         (test-comparison  2 t/char-seq?   (& t/java-set? t/array-list?)))
-      (testing "#{>< <>}") ; <- comparison should be 3
+      (testing "#{>< <>}") ; <- TODO comparison should be 3
       (testing "#{<>}"
         (test-comparison  3 t/string?     (& t/array-list? t/java-set?))))
     (testing "+ ValueSpec"
       (testing "#{<}"
         (test-comparison -1 (t/value "a") (& t/char-seq? t/comparable?)))
     #_(testing "#{< =}")         ; not possible for `AndSpec`
-    #_(testing "#{< >}")         ; not possible for `AndSpec`; `>` not possible for `ValueSpec`
-    #_(testing "#{< =}")         ; not possible for `AndSpec`
     #_(testing "#{< = >}")       ; not possible for `AndSpec`; `>` not possible for `ValueSpec`
     #_(testing "#{< = > ><}")    ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
     #_(testing "#{< = > >< <>}") ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{< = > <>}")    ; not possible for `AndSpec`; `>` not possible for `ValueSpec`
+    #_(testing "#{< = ><}")      ; not possible for `AndSpec`; `><` not possible for `ValueSpec`
+    #_(testing "#{< = >< <>}")   ; not possible for `AndSpec`; `><` not possible for `ValueSpec`
+    #_(testing "#{< = <>}")      ; not possible for `AndSpec`
     #_(testing "#{< >}")         ; not possible for `AndSpec`; `>` not possible for `ValueSpec`
     #_(testing "#{< > ><}")      ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
     #_(testing "#{< > >< <>}")   ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{< > <>}")      ; not possible for `AndSpec`; `>` not possible for `ValueSpec`
     #_(testing "#{< ><}")        ; `><` not possible for `ValueSpec`
     #_(testing "#{< >< <>}")     ; `><` not possible for `ValueSpec`
       (testing "#{< <>}"
         (test-comparison  3 (t/value "a") (& t/char-seq? t/array-list?))
         (test-comparison  3 (t/value "a") (& t/char-seq? t/java-set?)))
-    #_(testing "#{= >}")       ; not possible for `AndSpec`; `>` not possible for `ValueSpec`
-    #_(testing "#{= > ><}")    ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
-    #_(testing "#{= > >< <>}") ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
-    #_(testing "#{= ><}")      ; `><` not possible for `ValueSpec`
-    #_(testing "#{= >< <>}")   ; `><` not possible for `ValueSpec`
+    #_(testing "#{=}")           ; not possible for `AndSpec`
+    #_(testing "#{= >}")         ; not possible for `AndSpec`; `>` not possible for `ValueSpec`
+    #_(testing "#{= > ><}")      ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{= > >< <>}")   ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{= > <>}")      ; not possible for `AndSpec`; `>` not possible for `ValueSpec`
+    #_(testing "#{= ><}")        ; `><` not possible for `ValueSpec`
+    #_(testing "#{= >< <>}")     ; `><` not possible for `ValueSpec`
       (testing "#{= <>}")
-    #_(testing "#{>}")         ; `>` not possible for `ValueSpec`
-    #_(testing "#{> ><}")      ; `>` and `><` not possible for `ValueSpec`
-    #_(testing "#{> >< <>}")   ; `>` and `><` not possible for `ValueSpec`
-    #_(testing "#{> <>}")      ; `>` not possible for `ValueSpec`
-    #_(testing "#{><}")        ; `><` not possible for `ValueSpec`
-    #_(testing "#{>< <>}")     ; `><` not possible for `ValueSpec`
+    #_(testing "#{>}")           ; `>` not possible for `ValueSpec`
+    #_(testing "#{> ><}")        ; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{> >< <>}")     ; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{> <>}")        ; `>` not possible for `ValueSpec`
+    #_(testing "#{><}")          ; `><` not possible for `ValueSpec`
+    #_(testing "#{>< <>}")       ; `><` not possible for `ValueSpec`
       (testing "#{<>}"
         (test-comparison  3 (t/value "a") (& t/array-list? t/java-set?)))))
   (testing "InferSpec"
@@ -866,6 +941,4 @@
        (! t/boolean?)))
   (test-comparison 0 t/any? t/universal-set)
   (testing "universal class(-set) identity"
-    (is (not= t/val? (& t/any? t/val?)))
-    ;; TODO fix impl
     (is (t/= t/val? (& t/any? t/val?)))))
