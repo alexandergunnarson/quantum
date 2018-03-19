@@ -1,7 +1,8 @@
 (ns quantum.untyped.core.type
   "Essentially, set-theoretic definitions and operations on types."
+  {:todo "Maybe reduce dependencies and distribute predicates to other namespaces"}
   (:refer-clojure :exclude
-    [< <= = not= >= > == compare *
+    [< <= = not= >= > == compare * -
      and or not
      boolean  byte  char  short  int  long  float  double
      boolean? byte? char? short? int? long? float? double?
@@ -9,6 +10,7 @@
      nil? any? class? tagged-literal? #?(:cljs object?)
      number? decimal? bigdec? integer? ratio?
      true? false? keyword? string? symbol?
+     list? map? map-entry? seq? seqable? sorted? vector?
      fn? ifn?
      meta ref])
   (:require
@@ -39,11 +41,13 @@
       :refer [educe join]]
     [quantum.untyped.core.refs
       :refer [?deref]]
+    [quantum.untyped.core.data.tuple]
     [quantum.untyped.core.type.core             :as utcore]
     [quantum.untyped.core.type.predicates       :as utpred]
     [quantum.untyped.core.vars                  :as uvar
       :refer [def- update-meta]])
-  #?(:clj (:import quantum.untyped.core.analyze.expr.Expression))
+  #?(:clj (:import quantum.untyped.core.analyze.expr.Expression
+                   quantum.untyped.core.data.tuple.Tuple))
 #?(:cljs
   (:require-macros
     [quantum.untyped.core.type :as self
@@ -60,8 +64,6 @@
     [from to]))
 
 #_(defmacro range-of)
-
-#_(defn instance? [])
 
 (do
 
@@ -96,9 +98,9 @@
 ;; -----
 
 (udt/deftype ClassSpec
-  [meta     #_(t/? ::meta)
-   ^Class c #_t/class?
-   name     #_(t/? t/symbol?)]
+  [       meta #_(t/? ::meta)
+   ^Class c    #_t/class?
+          name #_(t/? t/symbol?)]
   {PSpec                 nil
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn
@@ -124,7 +126,7 @@
    name #_(t/? t/symbol?)]
   {PSpec                 nil
    fipp.ednize/IOverride nil
-   fipp.ednize/IEdn      {-edn      ([this] (c/or name (list `isa|protocol? (:on p))))}
+   fipp.ednize/IEdn      {-edn      ([this] (c/or name (list `isa?|protocol (:on p))))}
    ?Fn                   {invoke    ([_ x] (satisfies? p x))}
    ?Meta                 {meta      ([this] meta)
                           with-meta ([this meta'] (ProtocolSpec. meta' p name))}})
@@ -136,13 +138,18 @@
       (.-p ^ProtocolSpec spec)
       (err! "Cannot cast to ProtocolSpec" {:x spec})))
 
-(defn isa?|protocol [p]
+(defn- isa?|protocol [p]
   (assert (utpred/protocol? p))
   (ProtocolSpec. nil p nil))
 
 (defn isa? [x]
-  (ifs #?@(:clj [(c/class? x) (ClassSpec. nil x nil)])
-       (utpred/protocol? x)   (isa?|protocol x)))
+  (ifs #?(:clj  (utpred/protocol? x)
+                ;; Unfortunately there's no better check in CLJS, at least as of 03/18/2018
+          :cljs (c/and (c/fn? x) (c/= (str x) "function (){}")))
+       (isa?|protocol x)
+
+       (#?(:clj c/class? c/fn?) x)
+       (ClassSpec. nil x nil)))
 
 ;; ===== CREATION ===== ;;
 
@@ -573,7 +580,7 @@
 (uvar/defalias ! not)
 
 (defn -
-  "Computes the difference of `s0` from `s1` (& A (! B))
+  "Computes the difference of `s0` from `s1`: (& s0 (! s1))
    If `s0` =       `s1`, `∅`
    If `s0` <       `s1`, `∅`
    If `s0` <>      `s1`, `s0`
@@ -600,11 +607,53 @@
                                     1 (first args)
                                     (OrSpec. args (atom nil))))))))))
 
-#?(:clj
-(defmacro spec
-  "Creates a spec function"
-  [arglist & body] ; TODO spec this
-  `(FnSpec. nil (fn ~arglist ~@body) (list* `spec '~arglist '~body))))
+(udt/deftype SequentialSpec)
+
+(defn of
+  "Creates a spec that.
+   `pred` must be `t/<=` iterable"
+  [pred spec])
+
+(udt/deftype FnSpec
+  [name   #_(t/? t/symbol?)
+   lookup #_(t/map-of t/integer?
+                      (t/or (spec spec? "output-spec")
+                            (t/vec-of (t/tuple (spec spec? "input-spec")
+                                               (spec spec? "output-spec")))))
+   spec   #_spec?
+   meta]
+  {PSpec nil
+   ;; Outputs whether the args match any input spec
+   ?Fn   {invoke    ([this args]
+                      (if-let [arity-specs (get lookup (count args))]
+                        (->> arity-specs (uc/map+ first) (seq-or #(% args)))
+                        false))}
+   ?Meta {meta      ([this] meta)
+          with-meta ([this meta'] (FnSpec. name lookup spec meta'))}
+   fipp.ednize/IOverride nil
+   fipp.ednize/IEdn
+     {-edn ([this] (list `fn name lookup))}})
+
+(defn fn|args>out-spec
+  "Returns nil if args do not match any input spec"
+  [^FnSpec spec args]
+  (when-let [spec-or-arity-specs (get (.-lookup spec) (count args))]
+    (if (spec? spec-or-arity-specs)
+        spec-or-arity-specs
+        (->> spec-or-arity-specs (uc/filter+ #((first %) args)) uc/first second))))
+
+(defn fn-spec
+  [name-  #_(t/? t/symbol?)
+   lookup #_(t/map-of t/integer?
+                      (t/or (spec spec? "output-spec")
+                            (t/vec-of (t/tuple (t/vec-of (spec spec? "input-spec"))
+                                               (spec spec? "output-spec")))))]
+  (let [spec (->> lookup vals
+                  (uc/map+ (fn [spec-or-arity-specs]
+                             (if (spec? spec-or-arity-specs)
+                                 spec-or-arity-specs
+                                 (->> spec-or-arity-specs (map ))))))]
+    (FnSpec. name- lookup spec nil)))
 
 (deftype FnConstantlySpec
   [name         #_(t/? t/symbol?)
@@ -1000,47 +1049,6 @@
         ClassSpec        (inverted compare|class+value)
         ValueSpec        compare|value+value}}))
 
-;; ===== GENERAL ===== ;;
-
-         (-def nil?          (value nil))
-         (-def object?       (isa? #?(:clj java.lang.Object :cljs js/Object)))
-         (-def val|by-class? (or object? #?@(:cljs [(isa? js/String) (isa? js/Symbol)])))
-         (-def val?          (not nil?))
-
-         (-def none?         empty-set)
-         (-def any?          universal-set)
-
-;; ===== PRIMITIVES ===== ;;
-
-         (-def                       boolean?  (isa? #?(:clj Boolean :cljs js/Boolean)))
-         (-def                       ?boolean? (? boolean?))
-
-#?(:clj  (-def                       byte?     (isa? Byte)))
-#?(:clj  (-def                       ?byte?    (? byte?)))
-
-#?(:clj  (-def                       char?     (isa? Character)))
-#?(:clj  (-def                       ?char?    (? char?)))
-
-#?(:clj  (-def                       short?    (isa? Short)))
-#?(:clj  (-def                       ?short?   (? short?)))
-
-#?(:clj  (-def                       int?      (isa? Integer)))
-#?(:clj  (-def                       ?int?     (? int?)))
-
-#?(:clj  (-def                       long?     (isa? Long)))
-#?(:clj  (-def                       ?long?    (? long?)))
-
-#?(:clj  (-def                       float?    (isa? Float)))
-#?(:clj  (-def                       ?float?   (? float?)))
-
-         (-def                       double?   (isa? #?(:clj Double :cljs js/Number)))
-         (-def                       ?double?  (? double?))
-
-         (-def primitive?            (or boolean? #?@(:clj [byte? char? short? int? long? float?]) double?))
-
-#_(:clj (-def comparable-primitive? (and primitive? (not boolean?))))
-
-
 #?(:clj
 (def boxed-class->unboxed-symbol
   {Boolean   'boolean
@@ -1173,28 +1181,123 @@
 ;; ===== META ===== ;;
 
 #?(:clj  (-def class?                      (isa? java.lang.Class)))
-#?(:clj  (-def primitive-class?            (>expr (fn [x] (c/and (uclass/primitive? x) (not== Void/TYPE x))))))
+#?(:clj  (-def primitive-class?            (or (value Boolean/TYPE)
+                                               (value Byte/TYPE)
+                                               (value Character/TYPE)
+                                               (value Short/TYPE)
+                                               (value Integer/TYPE)
+                                               (value Long/TYPE)
+                                               (value Float/TYPE)
+                                               (value Double/TYPE))))
 #?(:clj  (-def protocol?                   (>expr (ufn/fn-> :on-interface class?))))
 
-;; ===== NUMBERS ===== ;;
 
-         (-def bigint?                     (or #?@(:clj  [(isa? clojure.lang.BigInt) (isa? java.math.BigInteger)]
-                                                   :cljs [(isa? com.gfredericks.goog.math.Integer)])))
-         (-def integer?                    (or #?@(:clj [byte? short? int? long?]) bigint?))
 
-#?(:clj  (-def bigdec?                     (isa? java.math.BigDecimal))) ; TODO CLJS may have this
 
-         (-def decimal?                    (or #?@(:clj [float?]) double? #?(:clj bigdec?)))
 
-         (-def ratio?                      (isa? #?(:clj  clojure.lang.Ratio
-                                                    :cljs quantum.core.numeric.types.Ratio))) ; TODO add this CLJS entry to the predicate after the fact
+#?(:clj  (-def comparable?       (isa? java.lang.Comparable)))
+         (-def keyword?          (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
+         (-def symbol?           (isa? #?(:clj clojure.lang.Symbol  :cljs cljs.core/Symbol)))
+#?(:clj  (-def tagged-literal?   (isa? clojure.lang.TaggedLiteral)))
 
-#?(:clj  (-def primitive-number?           (or short? int? long? float? double?)))
+         (-def literal?          (or nil? boolean? symbol? keyword? string? #?(:clj long?) double? #?(:clj tagged-literal?)))
 
-         (-def number?                     (or #?@(:clj  [(isa? Number)]
-                                                   :cljs [integer? decimal? ratio?])))
+         (-def +map|built-in?    (or (isa? #?(:clj clojure.lang.PersistentHashMap  :cljs cljs.core/PersistentHashMap))
+                                     (isa? #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core/PersistentArrayMap))
+                                     (isa? #?(:clj clojure.lang.PersistentTreeMap  :cljs cljs.core/PersistentTreeMap))))
 
-;; ----- NUMBER LIKENESSES ----- ;;
+         (-def +map?             #?(:clj  (isa?          clojure.lang.IPersistentMap)
+                                    :cljs (isa?|protocol cljs.core/IMap)))
+
+         (-def map?              #?(:clj  (isa? java.util.Map)
+                                    :cljs (TODO)))
+
+         (-def +set?             #?(:clj  (isa?          clojure.lang.IPersistentSet)
+                                    :cljs (isa?|protocol cljs.core/ISet)))
+
+         (-def +set|built-in?    (or (isa? #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet))
+                                     (isa? #?(:clj clojure.lang.PersistentTreeSet :cljs cljs.core/PersistentTreeSet))))
+
+#?(:clj  (-def array-list?       (isa? java.util.ArrayList)))
+#?(:clj  (-def java-coll?        (isa? java.util.Collection)))
+#?(:clj  (-def java-set?         (isa? java.util.Set)))
+#?(:clj  (-def thread?           (isa? java.lang.Thread)))
+         (-def throwable?        #?(:clj (isa? java.lang.Throwable) :cljs any?))
+#?(:clj  (-def comparable?       (isa? java.lang.Comparable)))
+#?(:clj  (-def java-iterable?    (isa? java.lang.Iterable)))
+
+;; ---------------------- ;;
+;; ===== Predicates ===== ;;
+;; ---------------------- ;;
+
+;; ===== General ===== ;;
+
+         (-def none?         empty-set)
+         (-def any?          universal-set)
+
+         (-def nil?          (value nil))
+         (-def object?       (isa? #?(:clj java.lang.Object :cljs js/Object)))
+
+                             ;; TODO this is incomplete for CLJS base classes, I think
+         (-def val|by-class? (or object? #?@(:cljs [(isa? js/String) (isa? js/Symbol)])))
+         (-def val?          (not nil?))
+
+;; ===== Primitives ===== ;;
+
+         (-def boolean?   (isa? #?(:clj Boolean :cljs js/Boolean)))
+         (-def ?boolean?  (? boolean?))
+
+#?(:clj  (-def byte?      (isa? Byte)))
+#?(:clj  (-def ?byte?     (? byte?)))
+
+#?(:clj  (-def char?      (isa? Character)))
+#?(:clj  (-def ?char?     (? char?)))
+
+#?(:clj  (-def short?     (isa? Short)))
+#?(:clj  (-def ?short?    (? short?)))
+
+#?(:clj  (-def int?       (isa? Integer)))
+#?(:clj  (-def ?int?      (? int?)))
+
+#?(:clj  (-def long?      (isa? Long)))
+#?(:clj  (-def ?long?     (? long?)))
+
+#?(:clj  (-def float?     (isa? Float)))
+#?(:clj  (-def ?float?    (? float?)))
+
+         (-def double?    (isa? #?(:clj Double :cljs js/Number)))
+         (-def ?double?   (? double?))
+
+         (-def primitive? (or boolean? #?@(:clj [byte? char? short? int? long? float?]) double?))
+
+#_(:clj  (-def comparable-primitive? (and primitive? (not boolean?))))
+
+;; ===== Numbers ===== ;;
+
+;; ----- Integers ----- ;;
+
+         (-def bigint?           #?(:clj  (or (isa? clojure.lang.BigInt) (isa? java.math.BigInteger))
+                                    :cljs (isa? com.gfredericks.goog.math.Integer)))
+
+         (-def integer?          (or #?@(:clj [byte? short? int? long?]) bigint?))
+
+;; ----- Decimals ----- ;;
+
+#?(:clj  (-def bigdec?           (isa? java.math.BigDecimal))) ; TODO CLJS may have this
+
+         (-def decimal?          (or #?(:clj float?) double? #?(:clj bigdec?)))
+
+;; ----- General ----- ;;
+
+         (-def ratio?            (isa? #?(:clj  clojure.lang.Ratio
+                                          :cljs quantum.core.numeric.types.Ratio))) ; TODO add this CLJS entry to the predicate after the fact
+
+         (-def primitive-number? (or #?@(:clj [short? int? long? float?]) double?)))
+
+         (-def number?           (or #?@(:clj  [(isa? java.lang.Number)]
+                                         :cljs [integer? decimal? ratio?])))
+
+;; ----- Likenesses ----- ;;
 
        #_(-def integer-value?              (or integer? (and decimal? (>expr unum/integer-value?))))
 
@@ -1230,38 +1333,253 @@
       ;;"java.lang.Double"    numerically-double?
       (err! "Could not find numerical range spec for class" {:c c}))))
 
-#?(:clj  (-def char-seq?       (isa? java.lang.CharSequence)))
-#?(:clj  (-def comparable?     (isa? java.lang.Comparable)))
-         (-def string?         (isa? #?(:clj java.lang.String     :cljs js/String)))
-         (-def keyword?        (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
-         (-def symbol?         (isa? #?(:clj clojure.lang.Symbol  :cljs cljs.core/Symbol)))
-#?(:clj  (-def tagged-literal? (isa? clojure.lang.TaggedLiteral)))
+;; ========== Collections ========== ;;
 
-         (-def literal?        (or nil? boolean? symbol? keyword? string? #?(:clj long?) double? #?(:clj tagged-literal?)))
+;; ===== Tuples ===== ;;
 
-         (-def +map?           #?(:clj  (isa?          clojure.lang.IPersistentMap)
-                                  :cljs (isa?|protocol cljs.core/IMap)))
-         (-def +vector?        #?(:clj  (isa?          clojure.lang.IPersistentVector)
-                                  :cljs (isa?|protocol cljs.core/IVector)))
-         (-def +set?           #?(:clj  (isa?          clojure.lang.IPersistentSet)
-                                  :cljs (isa?|protocol cljs.core/ISet)))
+         (-def tuple?           ;; clojure.lang.Tuple was discontinued; we won't support it for now
+                                (isa? quantum.untyped.core.data.tuple.Tuple))
+#?(:clj  (-def map-entry?       (isa? java.util.Map$Entry)))
 
-#?(:clj  (-def array-list?     (isa? java.util.ArrayList)))
-#?(:clj  (-def java-coll?      (isa? java.util.Collection)))
-#?(:clj  (-def java-set?       (isa? java.util.Set)))
-#?(:clj  (-def thread?         (isa? java.lang.Thread)))
-#?(:clj  (-def throwable?      (isa? java.lang.Throwable)))
-#?(:clj  (-def comparable?     (isa? java.lang.Comparable)))
-#?(:clj  (-def iterable?       (isa? java.lang.Iterable)))
+;; ===== Sequences ===== ;; Sequential (generally not efficient Lookup / RandomAccess)
 
-         (-def fn?             (isa? #?(:clj clojure.lang.Fn  :cljs js/Function)))
-         (-def ifn?            (isa? #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
-         (-def fnt?            (and fn? (>expr (fn-> c/meta :spec))))
+         (-def cons?            (isa? #?(:clj clojure.lang.Cons    :cljs cljs.core/Cons)))
+         (-def lseq?            (isa? #?(:clj clojure.lang.LazySeq :cljs cljs.core/LazySeq)))
+         (-def misc-seq?        (or (isa? #?(:clj clojure.lang.APersistentMap$KeySeq       :cljs cljs.core/KeySeq))
+                                    (isa? #?(:clj clojure.lang.APersistentMap$ValSeq       :cljs cljs.core/ValSeq))
+                                    (isa? #?(:clj clojure.lang.PersistentVector$ChunkedSeq :cljs cljs.core/ChunkedSeq))
+                                    (isa? #?(:clj clojure.lang.IndexedSeq                  :cljs cljs.core/IndexedSeq))))
+
+         (-def non-list-seq?    (or cons? lseq? misc-seq?))
+
+;; ----- Lists ----- ;; Not extremely different from Sequences ; TODO clean this up
+
+         (-def cdlist?          none? #_(:clj  (or (isa? clojure.data.finger_tree.CountedDoubleList)
+                                                   (isa? quantum.core.data.finger_tree.CountedDoubleList))
+                                         :cljs (isa? quantum.core.data.finger-tree/CountedDoubleList)))
+         (-def dlist?           none? #_(:clj  (or (isa? clojure.data.finger_tree.CountedDoubleList)
+                                                   (isa? quantum.core.data.finger_tree.CountedDoubleList))
+                                         :cljs (isa? quantum.core.data.finger-tree/CountedDoubleList)))
+         (-def +list?           (isa? #?(:clj clojure.lang.IPersistentList :cljs cljs.core/IList)))
+         (-def !list?           #?(:clj (isa? java.util.LinkedList)))
+         (-def  list?           #?(:clj  (isa? java.util.List)
+                                   :cljs +list?))
+
+;; ----- Generic ----- ;;
+
+         (-def seq?             #?(:clj clojure.lang.ISeq :cljs cljs.core/ISeq))
+
+;; TODO add maps in here
+
+;; ===== Arrays ===== ;; Sequential, Associative (specifically, whose keys are sequential,
+                      ;; dense integer values), not extensible
+
+;; ----- String ----- ;; A special wrapper for char array where different encodings, etc. are possible
+
+         ;; Mutable String
+         (-def !string?  (isa? #?(:clj java.lang.StringBuilder :cljs goog.string.StringBuffer)))
+         ;; Immutable String
+         (-def  string?  (isa? #?(:clj java.lang.String        :cljs js/String)))
+
+#?(:clj  (-def char-seq? (isa? java.lang.CharSequence)))
+
+;; ===== Vectors ===== ;; Sequential, Associative (specifically, whose keys are sequential,
+                       ;; dense integer values), extensible
+
+         (-def !array-list?      #?(:clj  (or (isa? java.util.ArrayList)
+                                              ;; indexed and associative, but not extensible
+                                              (isa? java.util.Arrays$ArrayList))
+                                    :cljs (or ;; not used
+                                              #_(isa? cljs.core/ArrayList)
+                                              ;; because supports .push etc.
+                                              (isa? js/Array))))
+         ;; svec = "spliceable vector"
+         (-def svector?          (isa? clojure.core.rrb_vector.rrbt.Vector))
+
+         (-def +vector?          #?(:clj  (isa?          clojure.lang.IPersistentVector)
+                                    :cljs (isa?|protocol cljs.core/IVector)))
+
+         (-def +vector|built-in? (isa? #?(:clj  clojure.lang.PersistentVector
+                                          :cljs cljs.core/PersistentVector)))
+
+         (-def  !+vector?        #?(:clj  (isa?          clojure.lang.ITransientVector)
+                                    :cljs (isa?|protocol cljs.core/ITransientVector)))
+         (-def ?!+vector?        (or +vector? ?!+vector?))
+#?(:clj  (-def  !vector|long?    (isa? it.unimi.dsi.fastutil.longs.LongArrayList)))
+         (-def  !vector|ref?     (isa? #?(:clj  java.util.ArrayList
+                                          ;; because supports .push etc.
+                                          :cljs js/Array)))
+         (-def  !vector?         (or !vector|long? !vector|ref?))
+
+                                 ;; java.util.Vector is deprecated, because you can
+                                 ;; just create a synchronized wrapper over an ArrayList
+                                 ;; via java.util.Collections
+#?(:clj  (-def !!vector?         none?))
+         (-def   vector?         (or ?!+vector? !vector? #?(:clj !!vector?)))
+
+;; ===== Queues ===== ;; Particularly FIFO queues, as LIFO = stack = any vector
+
+         (-def   +queue? (isa? #?(:clj  clojure.lang.PersistentQueue
+                                  :cljs cljs.core/PersistentQueue)))
+         (-def  !+queue? none?)
+         (-def ?!+queue? (or +queue? !+queue?))
+#?(:clj  (-def  !!queue? (or (isa? java.util.concurrent.BlockingQueue)
+                             (isa? java.util.concurrent.TransferQueue)
+                             (isa? java.util.concurrent.ConcurrentLinkedQueue))))
+         (-def   !queue? #?(:clj  ;; Considered single-threaded mutable unless otherwise noted
+                                  (- (isa? java.util.Queue) (or ?!+queue? !!queue?))
+                            :cljs (isa? goog.structs.Queue)))
+         (-def    queue? (or ?!+queue? !queue? #?(:clj !!queue?)))
+
+;; ===== Generic ===== ;;
+
+         ;; Standard "uncuttable" types
+         (-def integral?  (or primitive? number?))
+
+;; ----- Collections ----- ;;
+
+         (-def sorted?    #?(:clj  (or (isa? clojure.lang.Sorted)
+                                       (isa? java.util.SortedMap)
+                                       (isa? java.util.SortedSet))
+                             :cljs (or (isa? cljs.core/ISorted)
+                                       (isa? goog.structs.AvlTree))))
+
+         (-def transient? (isa? #?(:clj clojure.lang.ITransientCollection
+                                   :cljs cljs.core/ITransientCollection)))
+
+         (-def editable?  (isa? #?(:clj clojure.lang.IEditableCollection
+                                   :cljs cljs.core/IEditableCollection)))
+
+;; ===== Functions ===== ;;
+
+         (-def fn?          (isa? #?(:clj clojure.lang.Fn  :cljs js/Function)))
+
+         (-def ifn?         (isa? #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
+
+         (-def fnt?         (and fn? (>expr (fn-> c/meta :spec))))
+
+         (-def multimethod? (isa? #?(:clj clojure.lang.MultiFn :cljs cljs.core/IMultiFn)))
+
          ;; I.e., can you call/invoke it by being in functor position (first element of an unquoted list)?
-         (-def callable?       (or ifn? fnt?))
+         ;; TODO should we allow java.lang.Runnable, java.util.concurrent.Callable to be `callable?`?
+         (-def callable?    (or ifn? fnt?))
 
-         (-def true?           (value true))
-         (-def false?          (value false))
+;; ===== Miscellaneous ===== ;;
+
+         (-def regex?       (isa? #?(:clj java.util.regex.Pattern :cljs js/RegExp)))
+
+         (-def atom?        (isa? #?(:clj clojure.lang.IAtom :cljs cljs.core/IAtom)))
+
+         (-def volatile?    (isa? #?(:clj clojure.lang.Volatile :cljs cljs.core/Volatile)))
+
+#?(:clj  (-def atomic?      (or atom? volatile?
+                                java.util.concurrent.atomic.AtomicReference
+                                ;; From the java.util.concurrent package:
+                                ;; "Additionally, classes are provided only for those
+                                ;;  types that are commonly useful in intended applications.
+                                ;;  For example, there is no atomic class for representing
+                                ;;  byte. In those infrequent cases where you would like
+                                ;;  to do so, you can use an AtomicInteger to hold byte
+                                ;;  values, and cast appropriately. You can also hold floats
+                                ;;  using Float.floatToIntBits and Float.intBitstoFloat
+                                ;;  conversions, and doubles using Double.doubleToLongBits
+                                ;;  and Double.longBitsToDouble conversions.
+                                java.util.concurrent.atomic.AtomicBoolean
+                              #_java.util.concurrent.atomic.AtomicByte
+                              #_java.util.concurrent.atomic.AtomicShort
+                                java.util.concurrent.atomic.AtomicInteger
+                                java.util.concurrent.atomic.AtomicLong
+                              #_java.util.concurrent.atomic.AtomicFloat
+                              #_java.util.concurrent.atomic.AtomicDouble
+                                com.google.common.util.concurrent.AtomicDouble)))
+
+;; TODO finish this below
+
+(-def m2m-chan?         '{:clj  #{clojure.core.async.impl.channels.ManyToManyChannel}
+                                :cljs #{cljs.core.async.impl.channels/ManyToManyChannel}})
+
+(-def chan?             '{:clj  #{clojure.core.async.impl.protocols.Channel}
+                                :cljs #{cljs.core.async.impl.channels/ManyToManyChannel
+                                        #_"TODO more?"}})
+
+(-def keyword?          '{:clj  #{clojure.lang.Keyword}
+                                :cljs #{cljs.core/Keyword}})
+
+(-def symbol?           '{:clj  #{clojure.lang.Symbol}
+                                :cljs #{cljs.core/Symbol}})
+
+(-def file?             '{:clj  #{java.io.File}
+                                :cljs #{#_js/File}}) ; isn't always available! Use an abstraction
+
+(-def any?               {:clj  (uset/union (:clj (preds>types 'prim?)) #{'java.lang.Object})
+                                :cljs '#{(quote default)}})
+
+(-def comparable?        {:clj  (uset/union '#{byte char short int long float double} '#{Comparable})
+                                :cljs (:cljs (preds>types 'number?))})
+
+(-def record?           '{:clj  #{clojure.lang.IRecord}
+                              #_:cljs #_#{cljs.core/IRecord}}) ; because can't protocol-dispatch on protocols in CLJS
+
+(-def transformer?      '{:clj #{#_clojure.core.protocols.CollReduce ; no, in order to find most specific type
+                                       quantum.untyped.core.reducers.Transformer}
+                                :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on protocol
+                                        quantum.untyped.core.reducers.Transformer}})
+
+#_(-def reducible?       (preds>types
+                                 'array?
+                                 'string?
+                                 'record?
+                                 'reducer?
+                                 'chan?
+                                 {:cljs (:cljs (preds>types '+map?))}
+                                 {:cljs (:cljs (preds>types '+set?))}
+                                 'integer?
+                                 {:clj  '#{clojure.lang.IReduce
+                                           clojure.lang.IReduceInit
+                                           clojure.lang.IKVReduce
+                                           #_clojure.core.protocols.CollReduce} ; no, in order to find most specific type
+                                  #_:cljs #_'#{cljs.core/IReduce}}  ; because can't protocol-dispatch on protocols in CLJS
+                                  {:clj  '#{fast_zip.core.ZipperLocation}
+                                  :cljs '#{fast-zip.core/ZipperLocation}}))
+
+; ----- COLLECTIONS ----- ;
+
+                                 ;; TODO clojure.lang.Indexed / cljs.core/IIndexed?
+         (-def indexed?          (preds>types string? vector? (isa? clojure.lang.IndexedSeq) array?))
+                               ;; TODO this might be ambiguous
+                               ;; TODO clojure.lang.Associative / cljs.core/IAssociative?
+         (-def associative?       (preds>types 'map? 'set? 'indexed?))
+                               ;; TODO this might be ambiguous
+                               ;; TODO clojure.lang.Sequential / cljs.core/ISequential?
+         (-def sequential?        (preds>types 'seq? 'list? 'indexed?))
+                               ;; TODO this might be ambiguous
+                               ;; TODO clojure.lang.ICollection / cljs.core/ICollection?
+         (-def counted?           (preds>types 'array? 'string?
+                                 {:clj  (uset/union (:clj (preds>types '!vector? '!!vector?
+                                                                       '!map?    '!!map?
+                                                                       '!set?    '!!set?))
+                                                    '#{clojure.lang.Counted})
+                                  :cljs (:clj (preds>types 'vector? 'map? 'set?))}))
+
+         (-def coll?              (preds>types 'sequential? 'associative?))
+
+         (-def sequential?       #?(:clj (or (isa? clojure.lang.Sequential)
+                                             (isa? java.util.List))
+                                     ))
+
+         (-def seqable?          #?(:clj (or (isa? clojure.lang.ISeq)
+                                             (isa? clojure.lang.Seqable)
+                                             java-iterable?
+                                             char-seq?
+                                             map?
+                                             array?)))
+
+         ;; Able to be iterated over in some fashion, whether by `first`/`next` seq recursion, reduction, etc.
+         (-def iterable?         (or seqable? reducible?))
+
+
+         (-def true?             (value true))
+         (-def false?            (value false))
 #_(t/def ::form    (t/or ::literal t/list? t/vector? ...))
 
 )

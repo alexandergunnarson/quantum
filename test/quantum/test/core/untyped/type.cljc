@@ -481,7 +481,7 @@
         (testing ">  nilabled: #{> <>}"
           (test-comparison  2 t/object?   (t/? t/long?)))
         (testing ">< nilabled: #{>< <>}"
-          (test-comparison  2 t/iterable? (t/? t/comparable?)))
+          (test-comparison  2 t/java-iterable? (t/? t/comparable?)))
         (testing "<> nilabled: #{<>}"
           (test-comparison  3 t/long?     (t/? t/string?)))))
     (testing "+ ValueSpec"
@@ -517,7 +517,7 @@
         (testing "Final Concrete"
           (test-comparison -1 t/string?     (& t/char-seq? t/comparable?)))
         (testing "Extensible Concrete"
-          (test-comparison -1 t/array-list? (& t/iterable? (t/isa? java.util.RandomAccess))))
+          (test-comparison -1 t/array-list? (& t/java-iterable? (t/isa? java.util.RandomAccess))))
         (testing "Abstract"
           (test-comparison -1 (t/isa? java.util.AbstractMap$SimpleEntry) (& (t/isa? java.util.Map$Entry) (t/isa? java.io.Serializable))))
         (testing "Interface"
@@ -698,7 +698,7 @@
           (test-comparison  2 (t/isa? java.util.AbstractCollection) t/comparable?)))
       (testing "Interface + Interface"
         (testing "< , >"
-          (test-comparison -1 t/java-coll? t/iterable?))
+          (test-comparison -1 t/java-coll? t/java-iterable?))
         (testing "><"
           (test-comparison  2 t/char-seq?  t/comparable?))))
     (testing "+ ValueSpec"

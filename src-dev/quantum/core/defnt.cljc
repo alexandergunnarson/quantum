@@ -696,9 +696,8 @@
           (ast/throw-expr {:env  env
                            :form (list 'throw (:form arg|analyzed))
                            :arg  arg|analyzed
-                           ;; `nil` because nothing is actually returned
-                           ;; TODO This needs to be handled in other analysis places
-                           :spec nil})))))
+                           ;; `t/none?` because nothing is actually returned
+                           :spec t/none?})))))
 
 (defn analyze-seq*
   "Analyze a seq after it has been macro-expanded.
@@ -720,21 +719,22 @@
        (let [caller|expr (analyze* env caller|form)
              caller|spec (:spec caller|expr)
              args-ct     (count body)]
-         (case (t/compare spec t/callable?)
+         (case (t/compare caller|spec t/callable?)
            (1 2)  (err! "It is not known whether expression be called" {:expr caller|expr})
            3      (err! "Expression cannot be called" {:expr caller|expr})
            (-1 0) (let [assert-valid-args-ct
-                               ;; For keywords or persistent maps, must be exactly one or two args
-                          (ifs (or (t/<= caller|spec t/keyword?) (t/<= caller|spec t/+map?))
+                          (ifs (or (t/<= caller|spec t/keyword?) (t/<= caller|spec t/+map|built-in?))
                                (when-not (or (= args-ct 1) (= args-ct 2))
-                                 (err! "Keywords and persistent maps must be provided with exactly one or two args when calling them"
+                                 (err! (str "Keywords and `clojure.core` persistent maps must be provided "
+                                            "with exactly one or two args when calling them")
                                        {:args-ct args-ct :caller caller|expr}))
-                               ;; For persistent vectors or sets, must be exactly one arg
-                               (or (t/<= caller|spec t/+vector?) (t/<= caller|spec t/+set?))
+
+                               (or (t/<= caller|spec t/+vector|built-in?) (t/<= caller|spec t/+set|built-in?))
                                (when-not (= args-ct 1)
-                                 (err! "Persistent vectors and persistent sets must be provided with exactly one arg when calling them"
+                                 (err! (str "`clojure.core` persistent vectors and `clojure.core` persistent "
+                                            "sets must be provided with exactly one arg when calling them")
                                        {:args-ct args-ct :caller caller|expr}))
-                               ;; For spec'ed fns, depends on the spec
+
                                (t/<= caller|spec t/fnt?)
                                (TODO "Don't know how to handle spec'ed fns yet" {:caller caller|expr})
                                ;; For non-speced fns, unknown; we will have to risk runtime exception
@@ -742,7 +742,13 @@
                                (t/<= caller|spec t/fn?)
                                nil
                                ;; If it's ifn but not fn, we might have missed something in this dispatch so for now we throw
-                               (err! "Don't know how how to handle non-fn ifn" {:caller caller|expr}))]
+                               (err! "Don't know how how to handle non-fn ifn" {:caller caller|expr}))
+                        {:keys [args spec]}
+                          (->> body
+                               (c/map+ #(analyze* env %))
+                               (reduce (fn [{:keys [args spec]} arg|analyzed]
+                                         (conj args))))]
+
                     ;; TODO incrementally check by analyzing each arg in `reduce` and pruning branches of what the
                     ;; spec could be, and throwing if it's found something that's an impossible combination
                     (ast/call-expr

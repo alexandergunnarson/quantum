@@ -46,79 +46,13 @@
 #?(:clj (def float   Float/TYPE))
 #?(:clj (def double  Double/TYPE))
 
-(def ^{:doc "Could do <Class>/MAX_VALUE for the maxes in Java but JS doesn't like it of course
-             In JavaScript, all numbers are 64-bit floating point numbers.
-             This means you can't represent in JavaScript all the Java longs
-             Max 'safe' int: (dec (Math/pow 2 53))"}
-  primitive-type-meta
-  {'boolean {:bits 1
-             :min  0
-             :max  1
-   #?@(:clj [:array-ident "Z"
-             :outer-type "[Z"
-             :boxed      'java.lang.Boolean
-             :unboxed    'Boolean/TYPE])}
-   'byte    {:bits 8
-             :min -128
-             :max  127
-   #?@(:clj [:array-ident "B"
-             :outer-type  "[B"
-             :boxed       'java.lang.Byte
-             :unboxed     'Byte/TYPE])}
-   'short   {:bits 16
-             :min -32768
-             :max  32767
-   #?@(:clj [:array-ident "S"
-             :outer-type  "[S"
-             :boxed       'java.lang.Short
-             :unboxed     'Short/TYPE])}
-   'char    {:bits 16
-             :min  0
-             :max  65535
-   #?@(:clj [:array-ident "C"
-             :outer-type  "[C"
-             :boxed       'java.lang.Character
-             :unboxed     'Character/TYPE])}
-   'int     {:bits 32
-             :min -2147483648
-             :max  2147483647
-   #?@(:clj [:array-ident "I"
-             :outer-type  "[I"
-             :boxed       'java.lang.Integer
-             :unboxed     'Integer/TYPE])}
-   'long    {:bits 64
-             :min -9223372036854775808
-             :max  9223372036854775807
-   #?@(:clj [:array-ident "J"
-             :outer-type  "[J"
-             :boxed       'java.lang.Long
-             :unboxed     'Long/TYPE])}
-   ; Technically with floating-point nums, "min" isn't the most negative;
-   ; it's the smallest absolute
-   'float   {:bits 32
-             :min  1.4E-45
-             :max  3.4028235E38
-   #?@(:clj [:array-ident "F"
-             :outer-type  "[F"
-             :boxed       'java.lang.Float
-             :unboxed     'Float/TYPE])}
-   'double  {:bits 64
-             ; Because:
-             ; Double/MIN_VALUE        = 4.9E-324
-             ; (.-MIN_VALUE js/Number) = 5e-324
-             :min  #?(:clj  Double/MIN_VALUE
-                      :cljs (.-MIN_VALUE js/Number))
-             :max  1.7976931348623157E308 ; Max number in JS
-   #?@(:clj [:array-ident "D"
-             :outer-type  "[D"
-             :boxed       'java.lang.Double
-             :unboxed     'Double/TYPE])}})
+(def primitive-type-meta quantum.untyped.core.type/unboxed-symbol->type-meta)
 
 (def array-ident->primitive-sym
-  (->> primitive-type-meta (map (juxt (rcomp val :array-ident) key)) (into {})))
+  (->> unboxed-symbol->type-meta (map (juxt (rcomp val :array-ident) key)) (into {})))
 
 (def elem-types-clj
-  (->> primitive-type-meta
+  (->> unboxed-symbol->type-meta
        (map (fn [[k v]] [(:outer-type v) k]))
        (reduce
          (fn [m [k v]]
@@ -127,7 +61,7 @@
 
 #?(:clj
 (def boxed-types
-  (->> primitive-type-meta
+  (->> unboxed-symbol->type-meta
        (map (fn [[k v]] [k (:boxed v)]))
        (into {}))))
 
@@ -136,10 +70,10 @@
   (zipmap (vals boxed-types) (keys boxed-types))))
 
 #?(:clj
-(def boxed->unboxed-types-evaled (->> primitive-type-meta vals (map (juxt :boxed :unboxed)) (into {}) eval)))
+(def boxed->unboxed-types-evaled (->> unboxed-symbol->type-meta vals (map (juxt :boxed :unboxed)) (into {}) eval)))
 
 (def max-values
-  (->> primitive-type-meta
+  (->> unboxed-symbol->type-meta
        (map (fn [[k v]] [k (:max v)]))
        (into {})))
 
@@ -204,156 +138,6 @@
   {:clj  (->> lang->types (map :clj)  (apply uset/union))
    :cljs (->> lang->types (map :cljs) (apply uset/union))})
 
-(reg-pred! 'default         '{:clj  #{Object}
-                              :cljs #{(quote default)}})
-
-; ______________________ ;
-; ===== PRIMITIVES ===== ;
-; •••••••••••••••••••••• ;
-
-(reg-pred! 'nil?            '{:clj #{nil} :cljs #{nil}})
-
-; ===== NON-NUMERIC PRIMITIVES ===== ; ; TODO CLJS
-
-(reg-pred! 'unboxed-bool?   '{:clj  #{boolean}
-                              :cljs #{js/Boolean}})
-(reg-pred! 'unboxed-boolean? (preds>types 'unboxed-bool?))
-(reg-pred! 'boxed-bool?     '{:clj  #{java.lang.Boolean}
-                              :cljs #{js/Boolean}})
-(reg-pred! 'boxed-boolean?   (preds>types 'boxed-bool?))
-(reg-pred! '?bool?           (preds>types 'boxed-bool?))
-(reg-pred! '?boolean?        (preds>types '?bool?))
-(reg-pred! 'bool?            (preds>types 'unboxed-bool? 'boxed-bool?))
-(reg-pred! 'boolean?         (preds>types 'bool?))
-
-(reg-pred! 'unboxed-byte?   '{:clj  #{byte}})
-(reg-pred! 'boxed-byte?     '{:clj  #{java.lang.Byte}})
-(reg-pred! '?byte?           (preds>types 'boxed-byte?))
-(reg-pred! 'byte?            (preds>types 'unboxed-byte? 'boxed-byte?))
-
-(reg-pred! 'unboxed-char?   '{:clj  #{char}})
-(reg-pred! 'boxed-char?     '{:clj  #{java.lang.Character}})
-(reg-pred! '?char?           (preds>types 'boxed-char?))
-(reg-pred! 'char?            (preds>types 'unboxed-char? 'boxed-char?))
-
-; ===== NUMBERS ===== ; ; TODO CLJS
-
-; ----- INTEGERS ----- ;
-
-(reg-pred! 'unboxed-short?  '{:clj  #{short}})
-(reg-pred! 'boxed-short?    '{:clj  #{java.lang.Short}})
-(reg-pred! '?short?          (preds>types 'boxed-short?))
-(reg-pred! 'short?           (preds>types 'unboxed-short? 'boxed-short?))
-
-(reg-pred! 'unboxed-int?    '{:clj  #{int}
-                              ;; because the integral values representable by JS numbers are in the
-                              ;; range of Java ints, though technically one needs to ensure that
-                              ;; there is only an integral value, no decimal value
-                              :cljs #{js/Number}})
-(reg-pred! 'boxed-int?      '{:clj  #{java.lang.Integer}
-                              :cljs #{js/Number}})
-(reg-pred! '?int?            (preds>types 'boxed-int?))
-(reg-pred! 'int?             (preds>types 'unboxed-int? 'boxed-int?))
-
-(reg-pred! 'unboxed-long?   '{:clj  #{long}})
-(reg-pred! 'boxed-long?     '{:clj  #{java.lang.Long}})
-(reg-pred! '?long?           (preds>types 'boxed-long?))
-(reg-pred! 'long?            (preds>types 'unboxed-long? 'boxed-long?))
-
-(reg-pred! 'bigint?         '{:clj  #{clojure.lang.BigInt java.math.BigInteger}
-                              :cljs #{com.gfredericks.goog.math.Integer}})
-
-(reg-pred! 'integer?         (preds>types 'unboxed-short? 'unboxed-int? 'unboxed-long? 'bigint?))
-
-; ----- DECIMALS ----- ;
-
-(reg-pred! 'unboxed-float?  '{:clj  #{float}})
-(reg-pred! 'boxed-float?    '{:clj  #{java.lang.Float}})
-(reg-pred! '?float?          (preds>types 'boxed-float?))
-(reg-pred! 'float?           (preds>types 'unboxed-float? 'boxed-float?))
-
-(reg-pred! 'unboxed-double? '{:clj  #{double}
-                              :cljs #{js/Number}})
-(reg-pred! 'boxed-double?   '{:clj  #{java.lang.Double}
-                              :cljs #{js/Number}})
-(reg-pred! '?double?         (preds>types 'boxed-double?))
-(reg-pred! 'double?          (preds>types 'unboxed-double? 'boxed-double?))
-
-(reg-pred! 'bigdec?         '{:clj #{java.math.BigDecimal}})
-
-(reg-pred! 'decimal?         (preds>types 'unboxed-float? 'unboxed-double? 'bigdec?))
-
-; ----- GENERAL ----- ;
-
-(reg-pred! 'ratio?          '{:clj  #{clojure.lang.Ratio}
-                              :cljs #{quantum.core.numeric.types.Ratio}})
-
-(reg-pred! 'number?          {:clj  (uset/union
-                                      (:clj (preds>types 'unboxed-short? 'unboxed-int? 'unboxed-long?
-                                                         'unboxed-float? 'unboxed-double?))
-                                      '#{java.lang.Number})
-                              :cljs (:cljs (preds>types 'integer? 'decimal? 'ratio?))})
-
-;; 'Platform number'
-(reg-pred! 'pnumber?        '{:cljs #{js/Number}})
-
-;; The closest thing to a native int the platform has
-(reg-pred! 'nat-int?        '{:clj  #{int}
-                              :cljs #{js/Number}})
-
-;; The closest thing to a native long the platform has
-(reg-pred! 'nat-long?       '{:clj  #{long}
-                              :cljs #{js/Number}})
-
-; _______________________ ;
-; ===== COLLECTIONS ===== ;
-; ••••••••••••••••••••••• ;
-
-; ===== TUPLES ===== ;
-
-(reg-pred! 'tuple?          '{:clj  #{quantum.untyped.core.data.tuple.Tuple} ; clojure.lang.Tuple was discontinued; we won't support it for now
-                              :cljs #{quantum.untyped.core.data.tuple.Tuple}})
-(reg-pred! 'map-entry?      '{:clj #{java.util.Map$Entry}})
-
-; ===== SEQUENCES ===== ; Sequential (generally not efficient Lookup / RandomAccess)
-
-(reg-pred! 'cons?           '{:clj  #{clojure.lang.Cons}
-                              :cljs #{cljs.core/Cons}})
-(reg-pred! 'lseq?           '{:clj  #{clojure.lang.LazySeq}
-                              :cljs #{cljs.core/LazySeq}})
-(reg-pred! 'misc-seq?       '{:clj  #{clojure.lang.APersistentMap$ValSeq
-                                      clojure.lang.APersistentMap$KeySeq
-                                      clojure.lang.PersistentVector$ChunkedSeq
-                                      clojure.lang.IndexedSeq}
-                              :cljs #{cljs.core/ValSeq
-                                      cljs.core/KeySeq
-                                      cljs.core/IndexedSeq
-                                      cljs.core/ChunkedSeq}})
-
-(reg-pred! 'non-list-seq?    (preds>types 'cons? 'lseq? 'misc-seq?))
-
-; ----- LISTS ----- ; Not extremely different from Sequences ; TODO clean this up
-
-(reg-pred! 'cdlist?          {}
-                          #_'{:clj  #{clojure.data.finger_tree.CountedDoubleList
-                                      quantum.core.data.finger_tree.CountedDoubleList}
-                              :cljs #{quantum.core.data.finger-tree/CountedDoubleList}})
-(reg-pred! 'dlist?           {}
-                          #_'{:clj  #{clojure.data.finger_tree.CountedDoubleList
-                                      quantum.core.data.finger_tree.CountedDoubleList}
-                              :cljs #{quantum.core.data.finger-tree/CountedDoubleList}})
-(reg-pred! '+list?           {:clj  '#{clojure.lang.IPersistentList}
-                              :cljs (uset/union (:cljs (preds>types 'dlist? 'cdlist?))
-                                                '#{cljs.core/List cljs.core/EmptyList})})
-(reg-pred! '!list?           '{:clj  #{java.util.LinkedList}})
-(reg-pred!  'list?           {:clj  '#{java.util.List}
-                              :cljs (:cljs (preds>types '+list?))})
-
-; ----- GENERIC ----- ;
-
-(reg-pred! 'seq?             {:clj  '#{clojure.lang.ISeq}
-                              :cljs (:cljs (preds>types 'non-list-seq? 'list?))})
-
 ; ===== MAPS ===== ; Associative
 
 ; ----- Generators ----- ;
@@ -377,7 +161,7 @@
    >lang->type #_(t/spec t/fn? "Generates the `lang->type` corresponding to key and value map types")
    ref->ref    #_::lang->type]
   (let [?prefix     (when prefix (str prefix "-"))
-        base-types  (conj (keys primitive-type-meta) 'ref)
+        base-types  (conj (keys unboxed-symbol->type-meta) 'ref)
         type-combos (->> base-types
                          (<- (combo/selections 2))
                          ;; No `boolean->*` maps exist in fastutil, for obvious reasons
@@ -449,7 +233,7 @@
    lang->type|ref #_::lang->type]
   (let [?prefix (when prefix (str prefix "-"))
         pred->lang->type|base
-          (->> (conj (keys primitive-type-meta) 'ref)
+          (->> (conj (keys unboxed-symbol->type-meta) 'ref)
                ;; No `boolean` sets exist in fastutil, for obvious reasons
                (remove (fn= 'boolean))
                (map (fn [t]
@@ -611,8 +395,7 @@
                                                 java.util.Set})
                                      :cljs (:clj (preds>types '?!+set? '!set? '!!set?))})
 
-; ===== ARRAYS ===== ; Sequential, Associative (specifically, whose keys are sequential,
-                     ; dense integer values), not extensible
+; ===== ARRAYS ===== ;
 ; TODO do e.g. {:clj {0 {:byte ...}}}
 (def array-1d-types        {:clj   {:boolean       (symbol "[Z")
                                     :byte          (symbol "[B")
@@ -656,213 +439,6 @@
                                         (->> array-8d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
                                         (->> array-9d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
                                         (->> array-10d-types (map (fn [[k v]] [k (-> v vals set)])) (into {}))))
-
-; String: A special wrapper for char array where different encodings, etc. are possible
-
-;; Mutable String
-(reg-pred! '!string?        '{:clj  #{StringBuilder}
-                              :cljs #{goog.string.StringBuffer}})
-;; Immutable String
-(reg-pred! 'string?         '{:clj  #{String}
-                              :cljs #{js/String}})
-
-(reg-pred! 'char-seq?       '{:clj #{CharSequence}})
-
-; ===== VECTORS ===== ; Sequential, Associative (specifically, whose keys are sequential,
-                      ; dense integer values), extensible
-
-(reg-pred! '!array-list?    '{:clj  #{java.util.ArrayList
-                                      java.util.Arrays$ArrayList} ; indexed and associative, but not extensible
-                              :cljs #_cljs.core.ArrayList ; not used
-                                    #{js/Array}}) ; because supports .push etc.
-;; svec = "spliceable vector"
-(reg-pred! 'svector?        '{:clj  #{clojure.core.rrb_vector.rrbt.Vector}
-                              :cljs #{clojure.core.rrb_vector.rrbt.Vector}})
-(reg-pred! '+vector?         {:clj  '#{clojure.lang.IPersistentVector}
-                              :cljs (uset/union (:cljs (preds>types 'svector?))
-                                                '#{cljs.core/PersistentVector})})
-(reg-pred! '!+vector?       '{:clj  #{clojure.lang.ITransientVector}
-                              :cljs #{cljs.core/TransientVector}})
-(reg-pred! '?!+vector?       (preds>types '+vector? '!+vector?))
-(reg-pred! '!vector|long?   '{:clj  #{it.unimi.dsi.fastutil.longs.LongArrayList}})
-(reg-pred! '!vector|ref?    '{:clj  #{java.util.ArrayList}
-                              :cljs #{js/Array}})  ; because supports .push etc.
-(reg-pred! '!vector?         (preds>types '!vector|long? '!vector|ref?))
-                             ;; java.util.Vector is deprecated, because you can
-                             ;; just create a synchronized wrapper over an ArrayList
-                             ;; via java.util.Collections
-(reg-pred! '!!vector?        {})
-(reg-pred! 'vector?          (preds>types '?!+vector? '!vector? '!!vector?))
-
-; ===== QUEUES ===== ; Particularly FIFO queues, as LIFO = stack = any vector
-
-(reg-pred!   '+queue?       '{:clj  #{clojure.lang.PersistentQueue}
-                              :cljs #{cljs.core/PersistentQueue}})
-(reg-pred!  '!+queue?        {})
-(reg-pred! '?!+queue?        (preds>types '+queue? '!+queue?))
-(reg-pred!   '!queue?       '{:clj  #{java.util.ArrayDeque} ; TODO *MANY* more here
-                              :cljs #{goog.structs.Queue}})
-(reg-pred!  '!!queue?        {}) ; TODO *MANY* more here
-(reg-pred!    'queue?        {:clj  (uset/union (:clj (preds>types '?!+queue?))
-                                                '#{java.util.Queue})
-                              :cljs (:cljs (preds>types '?!+queue? '!queue? '!!queue?))})
-
-; ===== GENERIC ===== ;
-
-; ----- PRIMITIVES ----- ;
-
-(reg-pred! 'primitive-unboxed? (preds>types 'unboxed-bool? 'unboxed-byte? 'unboxed-char?
-                                 'unboxed-short? 'unboxed-int? 'unboxed-long?
-                                 'unboxed-float? 'unboxed-double?))
-
-(reg-pred! 'prim?              (preds>types 'primitive-unboxed?))
-
-(reg-pred! 'prim-comparable?   (preds>types 'unboxed-byte? 'unboxed-char?
-                                 'unboxed-short? 'unboxed-int? 'unboxed-long?
-                                 'unboxed-float? 'unboxed-double?))
-
-;; Possibly can't check for boxedness in Java because it does auto-(un)boxing, but it's nice to have
-(reg-pred! 'primitive-boxed?   (preds>types 'boxed-bool? 'boxed-byte? 'boxed-char?
-                                 'boxed-short? 'boxed-int? 'boxed-long?
-                                 'boxed-float? 'boxed-double?))
-
-(reg-pred! 'primitive?         (preds>types 'bool? 'byte? 'char?
-                                 'short? 'int? 'long?
-                                 'float? 'double?
-                               #_{:cljs #{js/String}}))
-
-;; Standard "uncuttable" types
-(reg-pred! 'integral?          (preds>types 'bool? 'byte? 'char? 'number?))
-
-; ----- COLLECTIONS ----- ;
-
-                               ;; TODO this might be ambiguous
-                               ;; TODO clojure.lang.Indexed / cljs.core/IIndexed?
-(reg-pred! 'indexed?           (preds>types 'array? 'string? 'vector?
-                                '{:clj #{clojure.lang.APersistentVector$RSeq}}))
-                               ;; TODO this might be ambiguous
-                               ;; TODO clojure.lang.Associative / cljs.core/IAssociative?
-(reg-pred! 'associative?       (preds>types 'map? 'set? 'indexed?))
-                               ;; TODO this might be ambiguous
-                               ;; TODO clojure.lang.Sequential / cljs.core/ISequential?
-(reg-pred! 'sequential?        (preds>types 'seq? 'list? 'indexed?))
-                               ;; TODO this might be ambiguous
-                               ;; TODO clojure.lang.ICollection / cljs.core/ICollection?
-(reg-pred! 'counted?           (preds>types 'array? 'string?
-                                 {:clj  (uset/union (:clj (preds>types '!vector? '!!vector?
-                                                                       '!map?    '!!map?
-                                                                       '!set?    '!!set?))
-                                                    '#{clojure.lang.Counted})
-                                  :cljs (:clj (preds>types 'vector? 'map? 'set?))}))
-
-(reg-pred! 'coll?              (preds>types 'sequential? 'associative?))
-
-(reg-pred! 'sorted?            {:clj  '#{clojure.lang.Sorted java.util.SortedMap java.util.SortedSet}
-                                :cljs (:cljs (preds>types 'sorted-set? 'sorted-map?))}) ; TODO add in `cljs.core/ISorted
-
-(reg-pred! 'transient?        '{:clj  #{clojure.lang.ITransientCollection}
-                                :cljs #{cljs.core/TransientVector
-                                        cljs.core/TransientHashSet
-                                        cljs.core/TransientArrayMap
-                                        cljs.core/TransientHashMap}})
-
-;; Collections that have Transient counterparts
-(reg-pred! 'transientizable?   (preds>types #_core-tuple?
-                                '{:clj  #{clojure.lang.PersistentArrayMap
-                                          clojure.lang.PersistentHashMap
-                                          clojure.lang.PersistentHashSet
-                                          clojure.lang.PersistentVector}
-                                  :cljs #{cljs.core/PersistentArrayMap
-                                          cljs.core/PersistentHashMap
-                                          cljs.core/PersistentHashSet
-                                          cljs.core/PersistentVector}}))
-
-(reg-pred! 'editable?          {:clj  '#{clojure.lang.IEditableCollection}
-                                :cljs #_#{cljs.core/IEditableCollection} ; can't dispatch on a protocol
-                                      (:cljs (preds>types 'transientizable?))})
-
-; ===== FUNCTIONS ===== ;
-
-(reg-pred! 'fn?               '{:clj #{clojure.lang.Fn}  :cljs #{js/Function}})
-(reg-pred! 'ifn?              '{:clj #{clojure.lang.IFn} :cljs #{js/Function}}) ; TODO keyword types?
-(reg-pred! 'multimethod?      '{:clj #{clojure.lang.MultiFn}})
-
-; ===== MISCELLANEOUS ===== ;
-
-(reg-pred! 'regex?            '{:clj  #{java.util.regex.Pattern}
-                                :cljs #{js/RegExp}})
-
-(reg-pred! 'atom?             '{:clj  #{clojure.lang.IAtom}
-                                :cljs #{cljs.core/Atom}})
-(reg-pred! 'volatile?         '{:clj  #{clojure.lang.Volatile}
-                                :cljs #{cljs.core/Volatile}})
-(reg-pred! 'atomic?            {:clj  (uset/union (:clj (preds>types 'atom? 'volatile?))
-                                     '#{java.util.concurrent.atomic.AtomicReference
-                                        ; From the java.util.concurrent package:
-                                        ; "Additionally, classes are provided only for those
-                                        ;  types that are commonly useful in intended applications.
-                                        ;  For example, there is no atomic class for representing
-                                        ;  byte. In those infrequent cases where you would like
-                                        ;  to do so, you can use an AtomicInteger to hold byte
-                                        ;  values, and cast appropriately. You can also hold floats
-                                        ;  using Float.floatToIntBits and Float.intBitstoFloat
-                                        ;  conversions, and doubles using Double.doubleToLongBits
-                                        ;  and Double.longBitsToDouble conversions.
-                                        java.util.concurrent.atomic.AtomicBoolean
-                                      #_java.util.concurrent.atomic.AtomicByte
-                                      #_java.util.concurrent.atomic.AtomicShort
-                                        java.util.concurrent.atomic.AtomicInteger
-                                        java.util.concurrent.atomic.AtomicLong
-                                      #_java.util.concurrent.atomic.AtomicFloat
-                                      #_java.util.concurrent.atomic.AtomicDouble
-                                        com.google.common.util.concurrent.AtomicDouble})})
-
-(reg-pred! 'm2m-chan?         '{:clj  #{clojure.core.async.impl.channels.ManyToManyChannel}
-                                :cljs #{cljs.core.async.impl.channels/ManyToManyChannel}})
-
-(reg-pred! 'chan?             '{:clj  #{clojure.core.async.impl.protocols.Channel}
-                                :cljs #{cljs.core.async.impl.channels/ManyToManyChannel
-                                        #_"TODO more?"}})
-
-(reg-pred! 'keyword?          '{:clj  #{clojure.lang.Keyword}
-                                :cljs #{cljs.core/Keyword}})
-
-(reg-pred! 'symbol?           '{:clj  #{clojure.lang.Symbol}
-                                :cljs #{cljs.core/Symbol}})
-
-(reg-pred! 'file?             '{:clj  #{java.io.File}
-                                :cljs #{#_js/File}}) ; isn't always available! Use an abstraction
-
-(reg-pred! 'any?               {:clj  (uset/union (:clj (preds>types 'prim?)) #{'java.lang.Object})
-                                :cljs '#{(quote default)}})
-
-(reg-pred! 'comparable?        {:clj  (uset/union '#{byte char short int long float double} '#{Comparable})
-                                :cljs (:cljs (preds>types 'number?))})
-
-(reg-pred! 'record?           '{:clj  #{clojure.lang.IRecord}
-                              #_:cljs #_#{cljs.core/IRecord}}) ; because can't protocol-dispatch on protocols in CLJS
-
-(reg-pred! 'transformer?      '{:clj #{#_clojure.core.protocols.CollReduce ; no, in order to find most specific type
-                                       quantum.untyped.core.reducers.Transformer}
-                                :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on protocol
-                                        quantum.untyped.core.reducers.Transformer}})
-
-#_(reg-pred! 'reducible?       (preds>types
-                                 'array?
-                                 'string?
-                                 'record?
-                                 'reducer?
-                                 'chan?
-                                 {:cljs (:cljs (preds>types '+map?))}
-                                 {:cljs (:cljs (preds>types '+set?))}
-                                 'integer?
-                                 {:clj  '#{clojure.lang.IReduce
-                                           clojure.lang.IReduceInit
-                                           clojure.lang.IKVReduce
-                                           #_clojure.core.protocols.CollReduce} ; no, in order to find most specific type
-                                  #_:cljs #_'#{cljs.core/IReduce}}  ; because can't protocol-dispatch on protocols in CLJS
-                                  {:clj  '#{fast_zip.core.ZipperLocation}
-                                  :cljs '#{fast-zip.core/ZipperLocation}}))
 
 (reg-pred! 'booleans?       {:clj #{(-> array-1d-types  :clj  :boolean)}})
 (reg-pred! 'boolean-array?  (preds>types 'booleans?))

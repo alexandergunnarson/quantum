@@ -1,6 +1,6 @@
 (ns quantum.untyped.core.collections
   (:refer-clojure :exclude
-    [#?(:cljs array?) assoc-in cat contains? count distinct distinct? get group-by filter
+    [#?(:cljs array?) assoc-in cat contains? count distinct distinct? first get group-by filter
      flatten last map map-indexed mapcat partition-all pmap remove zipmap])
   (:require
     [clojure.core                  :as core]
@@ -26,6 +26,13 @@
 
 (defn ?persistent! [x]
   (if (transient? x) (persistent! x) x))
+
+(def first|rf (aritoid ufn/fn-nil identity (fn [_ x] (reduced x))))
+
+(defn first [xs]
+  (if (ur/transformer? xs)
+      (educe first|rf)
+      (core/first xs)))
 
 ;; ===== SOCIATIVE ===== ;;
 
