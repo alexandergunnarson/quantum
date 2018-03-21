@@ -8,15 +8,16 @@
     [quantum.core.macros.reify     :as reify]
     [quantum.core.macros.transform :as trans]
     [quantum.core.analyze.clojure.core :as ana]
-    [quantum.core.macros.core
-      :refer [case-env]]
     [quantum.core.macros
       :refer [macroexpand-all]]
     [quantum.core.test
-      :refer [deftest is testing]])
+      :refer [deftest is testing]]
+    [quantum.untyped.core.form.evaluate :as ufeval
+      :refer [case-env]])
+  #?(:cljs
   (:require-macros
     [quantum.test.core.macros.defnt
-      :refer [with-merge-test]])
+      :refer [with-merge-test]]))
   #?(:clj (:import java.util.concurrent.atomic.AtomicInteger)))
 
 ; TODO look at this for type-checked Spec implementation: https://github.com/arohner/spectrum/blob/master/src/spectrum/conform.clj
@@ -196,14 +197,14 @@
                                              [:f t/number?]
                                              [:g (s/or* t/number? t/sequential?)
                                                  0]])]
-      {:pre  (< a @c))
+      {:pre  (< a @c)
        :post (s/and (s/coll-of odd? :kind t/array?)
                     #(= (first %) c))}
       ...)
      ([a string?
        b (s/coll-of bigdec? :kind vector?)
        c t/any
-       d t/any
+       d t/any]
       ...)))
 
 (def data

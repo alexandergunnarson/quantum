@@ -122,7 +122,7 @@
 (defnt write-page!
   {:attribution "alexandergunnarson"}
   ([^org.openqa.selenium.WebDriver driver]
-    (write-page! (.getPageSource driver) (str "Page " (time/now) ".html")))
+    (write-page! (.getPageSource driver) (str "Page " (time/now:epoch-millis) ".html")))
   ([^string? page ^string? page-name]
     (io/assoc!
       {:path   [:resources "Pages" page-name]
@@ -220,10 +220,12 @@
 
 #?(:clj
 (defn screenshot! [^PhantomJSDriver driver ^String file-name]
-  (let [^java.io.File scrFile (.getScreenshotAs driver (. OutputType FILE))]
-    (->> [:resources "Screens" (str file-name ".png")]
+  (let [file       ^java.io.File (.getScreenshotAs driver (. OutputType FILE))
+        file-name' (str file-name ".png")
+        ks         [:resources "Screens" file-name']]
+    (->> ks
          conv/->file
-         (FileUtils/copyFile scrFile)))))
+         (FileUtils/copyFile file)))))
 
 #?(:clj (def select-all-str (Keys/chord ^"[Ljava.lang.String;" (into-array [(str (. Keys CONTROL)) "a"]))))
 #?(:clj (def backspace (str (. Keys BACK_SPACE))))

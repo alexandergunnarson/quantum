@@ -17,7 +17,7 @@
     [quantum.db.datomic  :as db]
     [quantum.core.collections :as coll
       :refer [for fori join kw-map reduce
-              map-vals+ ensurec merge-deep val?]]
+              map-vals+ ensurec merge-deep]]
     [quantum.core.error  :as err]
     [quantum.core.log    :as log]
     [quantum.core.system :as sys
