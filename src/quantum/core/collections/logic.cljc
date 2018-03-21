@@ -7,16 +7,13 @@
     [quantum.core.fn   :as fn
       :refer [rcomp]]
     [quantum.core.vars :as var
-      :refer [defalias]]))
+      :refer [defalias]]
+    [quantum.untyped.core.collections.logic :as u]))
 
 (defn seq-or
   "∃: A faster version of |some| using |reduce| instead of |seq|."
   ([xs] (seq-or identity xs))
-  ([pred xs]
-    (transduce (fn ([] true) ; vacuously
-                   ([ret] ret)
-                   ([_ x]   (and (pred x  ) (reduced x)))
-                   ([_ k v] (and (pred k v) (reduced [k v])))) xs)))
+  ([pred xs] (transduce (u/seq-or|rf pred) xs)))
 
 (defalias some seq-or)
 
@@ -27,11 +24,7 @@
 (defn seq-and
   "∀: A faster version of |every?| using |reduce| instead of |seq|."
   ([xs] (seq-and identity xs))
-  ([pred xs]
-    (transduce (fn ([] true) ; vacuously
-                   ([ret] ret)
-                   ([_ x]   (or (pred x  ) (reduced false)))
-                   ([_ k v] (or (pred k v) (reduced [k v])))) xs)))
+  ([pred xs] (transduce (u/seq-and|rf pred) xs)))
 
 (defalias every? seq-and)
 

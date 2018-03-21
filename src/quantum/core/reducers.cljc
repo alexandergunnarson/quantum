@@ -46,6 +46,7 @@
     [quantum.core.reducers.fold    :as fold]
     [quantum.core.vars             :as var
       :refer [defalias def-]]
+    [quantum.untyped.core.collections.logic :as ucoll&]
     [quantum.untyped.core.qualify  :as qual]
     [quantum.untyped.core.reducers :as ur]
     [quantum.untyped.core.form.generate
@@ -139,8 +140,7 @@
   (let [ret (reduce
               (fn
                 ([ret] ret)
-                ([ret x]
-                  (if (identical? ret sentinel) (f x) (f ret x))))
+                ([ret x] (if (identical? ret sentinel) (f x) (f ret x))))
               sentinel
               xs)]
     (if (identical? ret sentinel) (f) ret)))
@@ -151,11 +151,19 @@
   (let [ret (red/reducei
               (fn
                 ([ret] ret)
-                ([ret x i]
-                  (if (identical? ret sentinel) (f x) (f ret x i))))
+                ([ret x i] (if (identical? ret sentinel) (f x) (f ret x i))))
               sentinel
               xs)]
     (if (identical? ret sentinel) (f) ret)))
+
+(defn pairwise-seq-or
+  ([pred] (fn [xs] (pairwise-seq-or pred xs)))
+  ([pred xs] (red-apply (ucoll&/seq-or|rf pred))))
+
+;; Useful for e.g. comparison operators like `<=`
+(defn pairwise-seq-and
+  ([pred] (fn [xs] (pairwise-seq-and pred xs)))
+  ([pred xs] (red-apply (ucoll&/seq-and|rf pred))))
 
 (defn reduce-sentinel
   "Calls `reduce` with a sentinel.
