@@ -40,5 +40,5 @@ dependencies:
     - sudo clinfo | grep Intel
 test:
   override:
-    - case $CIRCLE_NODE_INDEX in 0) echo "lein test:clj" && lein test:clj ;; 1) echo "lein test:cljs" && lein test:cljs ;; esac:
+    - case $CIRCLE_NODE_INDEX in 0) echo "lein test|backend" && lein "test|backend" ;; 1) echo "lein 'test|frontend'" && lein "test|frontend" ;; esac:
         parallel: true
