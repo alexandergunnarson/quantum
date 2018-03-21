@@ -16,8 +16,8 @@ dependencies:
     - sudo apt-get update
     # Shouldn't use `ppa:ubuntu-toolchain-r/test` : http://askubuntu.com/questions/777803/apt-relocation-error-version-glibcxx-3-4-21-not-defined-in-file-libstdc-so-6
     # install the g++ version OpenCL needs
-    - wget -c http://security.ubuntu.com/ubuntu/pool/main/g/gcc-5/gcc-5-base_5.4.0-6ubuntu1~16.04.9_amd64.deb && sudo dpkg -i gcc-5-base_5.4.0-6ubuntu1~16.04.4_amd64.deb && rm gcc-5-base_5.4.0-6ubuntu1~16.04.4_amd64.deb
-    - wget -c http://security.ubuntu.com/ubuntu/pool/main/g/gcc-5/libstdc++6_5.4.0-6ubuntu1~16.04.9_amd64.deb && sudo dpkg -i libstdc++6_5.4.0-6ubuntu1~16.04.4_amd64.deb && rm libstdc++6_5.4.0-6ubuntu1~16.04.4_amd64.deb
+    - wget -c http://security.ubuntu.com/ubuntu/pool/main/g/gcc-5/gcc-5-base_5.4.0-6ubuntu1~16.04.9_amd64.deb && sudo dpkg -i gcc-5-base_5.4.0-6ubuntu1~16.04.9_amd64.deb && rm gcc-5-base_5.4.0-6ubuntu1~16.04.9_amd64.deb
+    - wget -c http://security.ubuntu.com/ubuntu/pool/main/g/gcc-5/libstdc++6_5.4.0-6ubuntu1~16.04.9_amd64.deb && sudo dpkg -i libstdc++6_5.4.0-6ubuntu1~16.04.9_amd64.deb && rm libstdc++6_5.4.0-6ubuntu1~16.04.9_amd64.deb
     - sudo printf '\nLD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/:$LD_LIBRARY_PATH\n' >> /home/ubuntu/.bashrc
     - strings /usr/lib/x86_64-linux-gnu/libstdc++.so.6 | grep CXXABI_1.3.8 # version required by OpenCL; fail-fast
     # various necessary utils
