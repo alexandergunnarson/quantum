@@ -58,9 +58,9 @@
 
 (defn unhandled-type [type obj]
   (case type
-    :conn   (>ex-info :unhandled-predicate "Object is not mconn, conn, or db" obj)
-    :db     (>ex-info :unhandled-predicate "Object is not mdb or db"          obj)
-    :entity (>ex-info :unhandled-predicate "Object is not mentity or entity"  obj)))
+    :conn   (>err :unhandled-predicate "Object is not mconn, conn, or db" obj)
+    :db     (>err :unhandled-predicate "Object is not mdb or db"          obj)
+    :entity (>err :unhandled-predicate "Object is not mentity or entity"  obj)))
 
 ; PREDICATES
 
