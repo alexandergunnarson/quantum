@@ -22,8 +22,8 @@
            (let [g (fn [a' b' c' d' e'] [a' b' c' d' e'])]
              ((ns/conja g 4 5) a b c))))))
 
-(deftest test:reversed
-  (let [sub-reversed ((ns/reversed -) 0 1 2 3 4 5)]
+(deftest test:reversea
+  (let [sub-reversed ((ns/reversea -) 0 1 2 3 4 5)]
     (is (= sub-reversed
            (apply - (reverse [0 1 2 3 4 5]))))
     (is (not= sub-reversed (- 0 1 2 3 4 5)))))

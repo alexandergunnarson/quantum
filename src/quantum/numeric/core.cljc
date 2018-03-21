@@ -9,7 +9,7 @@
               for', dotimes, first, get-in* assoc-in!*
               count kw-map, blank]]
     [quantum.core.compare      :as comp]
-    [quantum.core.data.binary  :as bin
+    [quantum.core.data.bits    :as bit
       :refer [>>]]
     [quantum.core.error        :as err
       :refer [>ex-info TODO]]

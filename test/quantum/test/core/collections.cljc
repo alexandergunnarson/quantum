@@ -2,8 +2,7 @@
   (:require
     [quantum.core.test        :as test
       :refer [deftest is testing]]
-    [quantum.core.collections :as ns
-      :refer [!ref]]
+    [quantum.core.collections :as ns]
     [quantum.core.collections.core :as ccoll]
     [quantum.core.error
       :refer [TODO]]
@@ -11,6 +10,8 @@
       :refer [fn-> fn->>]]
     [quantum.core.logic
       :refer [fn-or fn-and whenf1]]
+    [quantum.core.refs
+      :refer [!ref]]
     [quantum.core.type :as t]
     [quantum.core.meta.profile
       :refer [p profile]]))
@@ -417,7 +418,7 @@
 (deftest test:median-of-5
   (let [x0 (!ref) x1 (!ref) x2 (!ref) x3 (!ref) x4 (!ref)]
     (doseq [xsv (quantum.untyped.core.numeric.combinatorics/permutations [0 1 2 3 4])]
-      (is (= (ns/index-of xsv 2) (ns/median-5 (long-array xsv) < x0 x1 x2 x3 x4))))))
+      (is (= (ns/index-of xsv 2) (ns/median-5 (long-array xsv) < 0 x0 x1 x2 x3 x4))))))
 
 
 ; Selection's main purpose is to ensure that the top k items are there.
@@ -434,9 +435,9 @@
                     xs3 (ns/copy xs0)
                     k 4
                     ret {:sort    (set (ns/ltake 4 (p :sort    (ns/sort!* xs0 >))))
-                         :quick   (set (ns/ltake 4 (p :quick   (ns/quick-select!* xs1 k ^java.util.Comparator >))))
-                         :intro   (set (ns/ltake 4 (p :intro   (ns/intro-select!* xs2 k ^java.util.Comparator >))))
-                         :medians (set (ns/ltake 4 (p :medians (ns/select:median-of-medians!* xs3 k ^java.util.Comparator >))))}]
+                         :quick   (set (ns/ltake 4 (p :quick   (ns/select!:quick* xs1 k ^java.util.Comparator >))))
+                         :intro   (set (ns/ltake 4 (p :intro   (ns/select!:intro* xs2 k ^java.util.Comparator >))))
+                         :medians (set (ns/ltake 4 (p :medians (ns/select!:median-of-medians* xs3 k ^java.util.Comparator >))))}]
                 (is (= (:sort ret) (:quick ret) (:intro ret) (:medians ret))))))
         do-test
           (fn [slow?]
@@ -455,8 +456,8 @@
                    expected (doto (ns/copy arr) (java.util.Arrays/sort from to)) ; TODO CLJS
                    actual   (ns/copy arr)]
                 (if slow?
-                    (p ::medians      (ns/select:median-of-medians! k from to actual))
-                    (p ::intro-select (ns/intro-select!             k from to actual)))
+                    (p ::medians      (ns/median-of-medians! k from to actual))
+                    (p ::intro-select (ns/intro-select!      k from to actual)))
                 #_(is (= (ns/get expected k) ; TODO Assumes must be sorted
                          (ns/get actual   k)))
                 (when-not (is (= (set (take k expected)) (set (take k actual))))

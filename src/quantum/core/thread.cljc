@@ -20,10 +20,10 @@
                       [quantum.core.error                      :as err
                         :refer [throw-unless >ex-info TODO]]
                       [quantum.core.fn                         :as fn
-                        :refer [<- fn-> fn1 rcomp call fnl]]
+                        :refer [<- fn-> fn1 rcomp call fnl fn-nil]]
                       [quantum.core.log                        :as log]
                       [quantum.core.logic                      :as logic
-                        :refer [fn-or fn-not fn= fn-nil whenf whenp whenf1 ifn1]                                             ]
+                        :refer [fn-or fn-not fn= whenf whenp whenf1 ifn1]                                             ]
                       [quantum.core.macros                     :as macros
                         :refer [defnt]]
                       [quantum.core.spec                       :as s

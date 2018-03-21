@@ -1,6 +1,6 @@
 (ns quantum.core.collections.diff
-  (:require
-    #_[quantum.core.collections.inner :as inner]))
+  #_(:require
+    [quantum.core.collections.inner :as inner]))
 
 ; COMMENTED OUT FOR NOW
 ; (defn diff-changes
@@ -183,3 +183,5 @@
           [] (range 0 (count a)))
 
         :else (throw (ex-info "Cannot diff" {:a a :b b}))))
+
+nil

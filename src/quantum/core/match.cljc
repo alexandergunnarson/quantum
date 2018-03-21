@@ -45,7 +45,7 @@
     (when (empty? (:rest ret)) ret))))
 
 (def defs
-  (let [defs-syms '#{& ? | + * ?= ?! _}]
+  (let [defs-syms '#{#_& ? | + * ?= ?! _}]
     (->> (zipmap defs-syms
                  (mapv (fnl qual/qualify 'quantum.core.match) defs-syms))
          (apply concat) vec)))

@@ -16,7 +16,7 @@
     [quantum.core.macros                     :as macros
       :refer [#?(:clj defnt)]                         ]
     [quantum.core.fn                         :as fn
-      :refer [fn-> fn->> fn1 rcomp]]
+      :refer [fn' fn-> fn->> fn1 rcomp]]
     [quantum.core.logic                      :as logic
       :refer [fn= fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let]]
     [quantum.core.type                       :as t
@@ -467,25 +467,25 @@
            (fn [x] (cond-let
                      [{[form] :form [oper] :oper}
                       (re-match-whole x
-                        (& (m/as :oper (| '+ '-))
-                           (| (& 1 (m/as :form _))
-                              (& (m/as :form _) 1))))]
+                        (m/& (m/as :oper (| '+ '-))
+                               (| (m/& 1 (m/as :form _))
+                                  (m/& (m/as :form _) 1))))]
                      (list ('{+ inc* - dec*} oper) form)
                      [{[form] :form}
                       (re-match-whole x
-                        (& '=
-                           (| (& 0 (m/as :form _))
-                              (& (m/as :form _) 0))))]
+                        (m/& '=
+                             (| (m/& 0 (m/as :form _))
+                                (m/& (m/as :form _) 0))))]
                      (list 'zero? form)
                      [{[form] :form}
                       (re-match-whole x
-                        (& '> (& (m/as :form _) 0)))]
+                        (m/& '> (m/& (m/as :form _) 0)))]
                      (list 'pos? form)
                      [{[form] :form}
                       (re-match-whole x
-                        (& '*
-                           (| (& 2 (m/as :form _))
-                              (& (m/as :form _) 2))))]
+                        (m/& '*
+                             (| (m/& 2 (m/as :form _))
+                                (m/& (m/as :form _) 2))))]
                      (list '>> form 1)
                      x))
            identity))
