@@ -1,6 +1,9 @@
 (ns quantum.apis.librato.telemetry
   (:require
     [quantum.apis.librato.core :as librato]
+    [quantum.core.error        :as err
+      :refer [err!]]
+    [quantum.core.log          :as log]
     [quantum.core.system       :as sys]
     [quantum.core.telemetry    :as tel]))
 
@@ -18,17 +21,18 @@
 
 (defn sys-thread-stats>measurements #_> #_(seq-of ::librato/measurement)
   [thread-stats #_(spec "Output of sys/thread-stats")]
-  [{:name :vm.threads.ct         :value (get thread-report :ct)}
-   {:name :vm.threads.daemon-ct  :value (get thread-report :daemon-ct)}
-   {:name :vm.threads.started-ct :value (get thread-report :started-ct)}])
+  [{:name :vm.threads.ct         :value (get thread-stats :ct)}
+   {:name :vm.threads.daemon-ct  :value (get thread-stats :daemon-ct)}
+   {:name :vm.threads.started-ct :value (get thread-stats :started-ct)}])
 
 (defmethod tel/stats>measurements [:quantum.apis.librato ::sys/thread] [_ thread-stats]
   (sys-thread-stats>measurements thread-stats))
 
+;; TODO normalize this — it's always [0,1] and Librato doesn't care for it
 (defn sys-cpu-stats>measurements #_> #_(seq-of ::librato/measurement)
   [cpu-stats #_(spec "Output of sys/cpu-stats")]
-  [{:name :sys.cpu :value (get cpu-report :system)}
-   {:name :vm.cpu  :value (get cpu-report :this)}])
+  [{:name :sys.cpu :value (get cpu-stats :system)}
+   {:name :vm.cpu  :value (get cpu-stats :this)}])
 
 (defmethod tel/stats>measurements [:quantum.apis.librato ::sys/cpu] [_ cpu-stats]
   (sys-cpu-stats>measurements cpu-stats))
@@ -38,4 +42,8 @@
    :measurements (reduce into [] xs)})
 
 (defmethod tel/offload! :quantum.apis.librato [_ measurements config]
-  (librato/post-metrics! config measurements))
+  (log/pr ::debug "Offloading measurements to Librato" measurements config)
+  (let [resp (librato/post-measurements! config measurements)]
+    ;; TODO clean this up
+    (when (-> resp :status (>= 400))
+      (err! "Found exceptional status in Librato" {:resp resp}))))

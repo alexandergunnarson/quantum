@@ -156,7 +156,7 @@
           queue      (-> scheduler :queue      (validate atom?))]
       (if shut-down?
           false
-          (do (swap! queue update (long at) (fn-> (coll/ensurec []) (conj f)))
+          (do (swap! queue update (long at) (fn-> (c/ensurec []) (conj f)))
               true))))))
 
 ; ===== THREADPOOLS ===== ;
@@ -341,7 +341,7 @@
                                  [:clojure/core.async :queue] !core-async-queue)))))
                default-core-pools)
           [provided-pools generable-pools]
-            (->> pools (coll/split-into (fn-> val :pool fn?) hash-map))
+            (->> pools (c/split-into (fn-> val :pool fn?) hash-map))
           generated-pools
             (->> generable-pools (map-vals' (update :pool call)))
           this' (-> this

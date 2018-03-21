@@ -56,10 +56,11 @@
     (let [tasks (->> config :destinations
                      (mapv (fn [[destination-ident
                                  {:keys [offloader stats tags interval config]}]]
-                             {:ident destination-ident :interval interval
-                              :f (fn [] (offload-stats! offloader stats tags config))})))]
+                             {:ident    destination-ident
+                              :interval interval
+                              :f        (fn [] (offload-stats! offloader stats tags config))})))]
       (assoc this :executor (comp/start (pool/>interval-executor {:tasks tasks})))))
-  ([this] (update this :executor #(do (comp/stop %) nil))))
+  ([this] (update this :executor #(do (some-> % comp/stop) nil))))
 
 (defn >telemeter [config #_::config] (map->Telemeter {:config config}))
 
