@@ -24,7 +24,7 @@
 (deftest test:normalize-sum-to
   (dotimes [i 100] ; doubles might be off by a little bit — TODO have tests for doubles
     (let [target-sum (rationalize (rand))]
-      (is (= (->> (repeatedly (rand/rand-int-between 5 20) #(rationalize (rand)))
+      (is (= (->> (repeatedly (rand/int-between 5 20) #(rationalize (rand)))
                   (<- (ns/normalize-sum-to target-sum))
                   (apply +))
              target-sum)))))

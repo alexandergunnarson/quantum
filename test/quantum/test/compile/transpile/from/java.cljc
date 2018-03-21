@@ -4,8 +4,7 @@
         :cljs cljs.test)
       :refer        [#?@(:clj [deftest is testing])]
       :refer-macros [deftest is testing]]
-    [quantum.core.print                  :as pr
-      :refer [!]]
+    [quantum.core.print                  :as pr]
     [quantum.core.convert                :as conv]
     [quantum.core.collections            :as coll
       :refer [dropl dropr popr]]
@@ -53,11 +52,11 @@
        ns/parse
        ns/clean
        doall
-       (#(with-out-str (! %)))
+       (#(with-out-str (pr/ppr %)))
        (dropl 5) ; (do
        popr popr ; TODO fix to do before `apply str`
        fmt/reformat-string))) ; TODO fix this
 
-#?(:clj (spit "./dev-resources/test/quantum/compile/transpile/bit_sieve.clj"
+#_(:clj (spit "./dev-resources/test/quantum/compile/transpile/bit_sieve.clj"
               (let [ret (test-integration)]
                 (with-out-str (println ret)))))

@@ -33,7 +33,7 @@
         (-> from-src
             from-java/parse
             from-java/clean
-            ((fn [x] (with-out-str (pr/! x)))) ; TODO is this necessary for formatter?
+            ((fn [x] (with-out-str (pr/ppr x)))) ; TODO is this necessary for formatter?
             ; TODO format
             )))
   ([^seq? from-src from to]

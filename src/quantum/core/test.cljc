@@ -6,6 +6,8 @@
       :refer [fn->]]
     [quantum.core.print :as pr
       :refer [ppr-meta]]
+    [quantum.core.type
+      :refer [val?]]
     [quantum.core.vars
       :refer [#?(:clj defmalias) defalias]]
     [quantum.untyped.core.type.predicates

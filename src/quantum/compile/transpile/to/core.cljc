@@ -741,7 +741,7 @@
      (log/pr :debug "IN KEYWORD")
      (->> obj name replace-specials eval-form))
    ([^number? obj] (str obj))
-   ([:else obj]
+   ([^default obj]
      (if (nil? obj)
          "null"
          (throw (>ex-info (type obj) "Unrecognized form" {:obj obj})))))
