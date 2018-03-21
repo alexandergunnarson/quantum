@@ -273,7 +273,9 @@
       :regular         "Metropolis-Regular"
       :medium          "Metropolis-Medium"
       :medium-contrast "Metropolis-Medium"
-      :semibold        "Metropolis-SemiBold"}})
+      :semibold        "Metropolis-SemiBold"}
+   :gotham
+     {:rounded "Gotham Rounded"}})
 
 (defn >font [family-name weight-name] (-> fonts (get family-name) (get weight-name)))
 
