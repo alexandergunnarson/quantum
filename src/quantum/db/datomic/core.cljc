@@ -19,7 +19,7 @@
       :refer [<! <!! >! >!!]]
     [quantum.core.data.set      :as set]
     [quantum.core.error         :as err
-      :refer [>ex-info TODO catch-all]]
+      :refer [>ex-info >err TODO catch-all]]
     [quantum.core.fn            :as fn
       :refer [<- fn-> fn->> fn1 fnl fn' rfn with-do]]
     [quantum.core.log           :as log]
