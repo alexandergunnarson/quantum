@@ -458,7 +458,7 @@
   ([xf] (promise xf nil))
   ([xf ex-handler] (Promise. (async/promise-chan xf ex-handler))))
 
-(deftype MultiplexedPromise [cs] ; is a vector
+(deftype MultiplexedPromise [cs #_vector?]
   #?@(:clj [clojure.lang.IDeref
               (deref [_] (map deref cs))
             clojure.lang.IBlockingDeref
@@ -531,6 +531,36 @@
   ([p0 p1] (MultiplexedPromise. [p0 p1]))
   ([p0 p1 & ps] (MultiplexedPromise. (apply vector p0 p1 ps))))
 
+; ----- Neither `take!` nor `put!` ----- ;
+
+(defn do-interval
+  "Calls `f` every `wait-ms`. Returns a stop-chan."
+  [f #_fn? wait-ms #_pos-integer?]
+  (let [stop-ch   (promise)
+        execution (go-loop []
+                    (when-not (core/realized? stop-ch) ; TODO issues here prevent using `delivered?`
+                      (f)
+                      (wait! wait-ms)
+                      (recur)))]
+    stop-ch))
+
+; ----- `take!`s ----- ;
+
+;; TODO take another look at this given transducers
+(defn each!
+  "Calls `f` on `take!`n values from `from` until stopped or `from` is closed.
+   Returns a stop-chan."
+  [from f]
+  (let [stop-ch (promise)]
+    (go (try
+          (loop []
+            (let [v (<! from)]
+              (when-not (or (nil? v) (core/realized? stop-ch)) ; TODO issues here prevent using `delivered?`
+                (f v)
+                (recur))))
+          (finally (mark-stopped!-protocol stop-ch)))) ; TODO deprotocolize
+    stop-ch))
+
 ; ----- PIPING ----- ;
 
 (defn pipe!*
@@ -544,8 +574,8 @@
       (go (try
             (loop []
               (let [v (<! from)]
-                (if (or (nil? v) (and stop-ch (core/realized? #_delivered? stop-ch))) ; TODO issues here too
-                    (when close? (async/close! to)) ; TODO issues with `async/close!` here
+                (if (or (nil? v) (core/realized? stop-ch)) ; TODO issues here prevent using `delivered?`
+                    (when close? (async/close! to)) ; TODO issues with using `close!` here
                     (when (>! to v)
                       (recur)))))
             (finally (mark-stopped!-protocol stop-ch)))) ; TODO deprotocolize

@@ -170,11 +170,12 @@
 #?(:clj (defalias loaded-libs core/loaded-libs))
 
 #?(:clj
-(defmacro load-lib [lib]
+(defmacro load-lib! [lib]
   `(do (require 'alembic.still)
        (alembic.still/distill ~lib))))
 
-#_(:clj (defalias lein alembic.still/lein))
+#?(:clj (defalias load-package! load-lib!))
+#?(:clj (defalias load-dep!     load-lib!))
 
 #?(:clj
 (defn assert-ns-aliased

@@ -6,15 +6,16 @@
     [com.stuartsierra.component  :as comp]
 #?(:cljs
     [servant.core                :as servant])
-    [quantum.core.async          :as async]
+    [quantum.core.async          :as async
+      :refer [close! go-loop put!]]
     [quantum.core.core           :as qcore]
     [quantum.core.data.map       :as map]
     [quantum.core.data.set       :as set]
     [quantum.core.data.validated :as dv]
     [quantum.core.fn
       :refer [fn1 fn& fnl, fn-> fn->>, call with-do]]
-    [quantum.core.collections    :as coll
-      :refer [for, contains? kw-map, update, assoc-in, join, key val, updates
+    [quantum.core.collections    :as c
+      :refer [for, kw-map, update, assoc-in, join, key val, updates
               map-keys+, map-vals']]
     [quantum.core.error          :as err
       :refer [>ex-info catch-all TODO]]
@@ -45,6 +46,39 @@
        ForkJoinPool ForkJoinWorkerThread ForkJoinPool$ForkJoinWorkerThreadFactory
        ThreadFactory
        LinkedBlockingQueue SynchronousQueue])))
+
+#?(:clj
+(defn pool>map [^ExecutorService pool]
+  (let [base {:shut-down?  (.isShutdown   pool)
+              :terminated? (.isTerminated pool)}
+        specific (cond (instance? ForkJoinPool pool)
+                       (let [^ForkJoinPool pool pool]
+                         {:status  {:quiescent?         (.isQuiescent              pool)
+                                    :shut-down?         (.isShutdown               pool)
+                                    :terminated?        (.isTerminated             pool)
+                                    :terminating?       (.isTerminating            pool)}
+                          :threads {:active-threads     (.getActiveThreadCount     pool)
+                                    :running-threads    (.getRunningThreadCount    pool)
+                                    :queued-submissions (.getQueuedSubmissionCount pool)
+                                    :queued-tasks       (.getQueuedTaskCount       pool)}
+                          :config  {:async-mode?        (.getAsyncMode             pool)
+                                    :parallelism        (.getParallelism           pool)
+                                    :pool-size          (.getPoolSize              pool)}})
+                       (instance? ThreadPoolExecutor pool)
+                       (let [^ThreadPoolExecutor pool pool]
+                         {:status  {:shut-down?                  (.isShutdown              pool)
+                                    :terminated?                 (.isTerminated            pool)
+                                    :terminating?                (.isTerminating           pool)}
+                          :threads {:active-threads              (.getActiveCount          pool)
+                                    :queued-tasks                (-> pool .getQueue count)
+                                    :completed-tasks             (.getCompletedTaskCount   pool)
+                                    :tasks                       (.getTaskCount            pool)}
+                          :config  {:core-pool-size              (.getCorePoolSize         pool)
+                                    :largest-pool-size           (.getLargestPoolSize      pool)
+                                    :max-pool-size               (.getMaximumPoolSize      pool)
+                                    :allows-core-thread-timeout? (.allowsCoreThreadTimeOut pool)
+                                    :keep-alive-time             (.getKeepAliveTime        pool java.util.concurrent.TimeUnit/MILLISECONDS)}}))]
+    (merge base specific))))
 
 ; ===== SCHEDULING ===== ;
 
@@ -85,7 +119,7 @@
                 (catch-all
                   (let [now                 (System/nanoTime)
                         [prevs [_ curr-fs]] (map/split-key now @queue)]
-                    (when (or (contains? prevs) (contains? curr-fs))
+                    (when (or (c/contains? prevs) (c/contains? curr-fs))
                       (doseq [[_ prev-fs] prevs]
                         (doseq [prev-f prev-fs] (prev-f)))
                       (when curr-fs
@@ -122,7 +156,7 @@
           queue      (-> scheduler :queue      (validate atom?))]
       (if shut-down?
           false
-          (do (swap! queue update (long at) (fn-> (coll/ensurec []) (conj f)))
+          (do (swap! queue update (long at) (fn-> (c/ensurec []) (conj f)))
               true))))))
 
 ; ===== THREADPOOLS ===== ;
@@ -307,7 +341,7 @@
                                  [:clojure/core.async :queue] !core-async-queue)))))
                default-core-pools)
           [provided-pools generable-pools]
-            (->> pools (coll/split-into (fn-> val :pool fn?) hash-map))
+            (->> pools (c/split-into (fn-> val :pool fn?) hash-map))
           generated-pools
             (->> generable-pools (map-vals' (update :pool call)))
           this' (-> this
@@ -325,7 +359,7 @@
         (-> this
             (updates :provided  (whenp1 (-> config :shut-down-opts :provided) shut-down-pools!)
                      :generated shut-down-pools!)))
-      (log/pr ::debug "Stopped ThreadpoolManager...")))))
+      (log/pr ::debug "Stopped ThreadpoolManager.")))))
 
 #?(:clj (defn validate-pools-map [x] (t/+map? x))) ; TODO more validation
 
@@ -343,7 +377,7 @@
 (defn ->threadpool-manager [opts]
   (map->ThreadpoolManager {:config (->threadpool-manager:config opts)})))
 
-#?(:clj (swap! qcore/registered-components assoc ::threadpool-manager
+#?(:clj (swap! qcore/*registered-components assoc ::threadpool-manager
           #(comp/using (->threadpool-manager %) [::log/log])))
 
 #?(:cljs
@@ -396,7 +430,64 @@
 
 #?(:clj (def pool? (fnl instance? ExecutorService)))
 
-; ===== DISTRIBUTOR ===== ;
+; ===== Interval Executor ===== ;
+
+(declare add-task!)
+
+#_(t/def ::task
+    (s/keys :req-un
+      [(spec :ident    ident?)
+       (spec :f        fn?)
+       (spec :interval (spec pos-int? "In millis"))]))
+
+(res/defcomponent IntervalExecutor
+  ^{:doc "For each task in `tasks`, executes `f` at a fixed interval of `interval`.
+          TODO may be superseded by a higher-resolution Java executor in Clojure, but
+          this implementation is cross-platform.
+          Internally, a `go-loop` is used for every task."}
+  [config
+   ;; TODO make `chan` the primary point of contact for components
+   ;; It's used to ensure that resources are stopped being used before cleanup starts
+   chan #_chan? stop-ch #_promise?
+   *tasks #_(t/of atom? (t/of map? ident?
+                          (t/and ::task
+                            (t/keys :req-un [(spec :stop-ch promise?)]))))]
+  ([this]
+    (let [chan'    (async/chan 100) ; `100` is arbitrary
+          *tasks'  (atom {})
+          stop-ch' (async/each! chan'
+                     (fn [msg]
+                       (err/catch-all
+                         (let [[kind payload] msg]
+                           (case kind
+                             :add    (let [{:as task :keys [ident f interval]} payload
+                                           stop-ch (async/do-interval f interval)]
+                                       (swap! *tasks' (fn [tasks]
+                                                        (some-> tasks (get ident) :stop-ch async/request-stop!)
+                                                        (assoc tasks ident (assoc task :stop-ch stop-ch)))))
+                             :remove (let [ident payload]
+                                       (swap! *tasks' (fn [tasks]
+                                                        (some-> tasks (get ident) :stop-ch async/request-stop!)
+                                                        (dissoc tasks ident)))))))))
+          this'    (assoc this :chan chan' :stop-ch stop-ch' :*tasks *tasks')]
+      (doseq [{:keys [ident f interval]} (:tasks config)]
+        (add-task! this' (kw-map ident f interval)))
+      this'))
+  ([this]
+    (close! chan)
+    (async/request-stop! stop-ch)
+    (->> @*tasks c/vals+ (c/map+ :stop-ch) (c/each #(some-> % async/request-stop!)))
+    (assoc this :chan nil :stop-ch nil :*tasks nil)))
+
+(defnt add-task!    [^IntervalExecutor x task  #_::task] (async/put! (:chan x) [:add    task]))
+(defnt remove-task! [^IntervalExecutor x ident #_ident?] (async/put! (:chan x) [:remove ident]))
+
+(defn >interval-executor [{:as config :keys [tasks #_(t/of ::task)]}]
+  (map->IntervalExecutor {:config config}))
+
+(res/register-component! ::interval-executor >interval-executor [])
+
+; ===== Distributor ===== ;
 
 (defrecord Distributor
   [name

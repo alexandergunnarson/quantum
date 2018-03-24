@@ -121,6 +121,28 @@
   {:attribution "thebusby.bagotricks"}
   [& body] `(fn fn->># [x#] (->> x# ~@body))))
 
+#?(:clj
+(defmacro arrow?-base [arrow pred-expr expr forms]
+  (let [g (gensym) pred (gensym "pred")
+        steps (->> forms (map (fn [step] `(when (~pred ~g) (~arrow ~g ~step)))))]
+    `(let [~g ~expr ~pred ~pred-expr ~@(interleave (repeat g) (butlast steps))]
+       ~(if (empty? steps) g (last steps))))))
+
+#?(:clj
+(defmacro ->?
+  "When expr satifies `pred`, threads it into the first form (via `->`),
+   and when that result satisfies `pred`, so on through the next; etc."
+  [pred-expr expr & forms] `(arrow?-base -> ~pred-expr ~expr ~forms)))
+
+#?(:clj (defmacro some?-> "Equivalent to `some->`" [& args] `(->? some? ~@args)))
+
+(defmacro ->>?
+  "When expr satifies `pred`, threads it into the first form (via `->>`),
+   and when that result satifies `pred`, so on through the next; etc."
+  [pred-expr expr & forms] `(arrow?-base ->> ~pred-expr ~expr ~forms))
+
+#?(:clj (defmacro some?->> "Equivalent to `some->>`" [& args] `(->>? some? ~@args)))
+
 ;; ===== For side effects ===== ;;
 
 #?(:clj

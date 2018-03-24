@@ -107,7 +107,7 @@
 (defn mem-stats
   "Return stats about memory availability and usage, in MB. Calls
    System/gc before gathering stats when the :gc option is true."
-  {:todo {0 "Use |convert| package to convert gb to mb"}}
+  {:todo {0 "Use `convert` package to convert gb to mb"}}
   [& {:keys [gc?]}]
   (when gc? (System/gc))
   ; Warning: inconsistent snapshots here
@@ -162,9 +162,9 @@
   []
   ; Warning: inconsistent snapshots here
   (let [mgr (java.lang.management.ManagementFactory/getThreadMXBean)]
-    {:ct        (.getThreadCount mgr)
-     :daemon-ct (.getDaemonThreadCount mgr)
-     :started   (.getTotalStartedThreadCount mgr)})))
+    {:ct         (.getThreadCount mgr)
+     :daemon-ct  (.getDaemonThreadCount mgr)
+     :started-ct (.getTotalStartedThreadCount mgr)})))
 
 #?(:clj
 (defn cpu-stats

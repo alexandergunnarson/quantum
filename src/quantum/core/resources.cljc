@@ -105,8 +105,8 @@
              {:sym sym
               :fn  `(defn ~sym [{:keys ~fields :as this#}]
                       (let [~(first params) this#] ~@body))}))
-        startf-genned (gen-lifecyle-fn startf ":__start")
-        stopf-genned  (gen-lifecyle-fn stopf  ":__stop")]
+        startf-genned (gen-lifecyle-fn startf "|__start")
+        stopf-genned  (gen-lifecyle-fn stopf  "|__stop")]
    `(do ~(:fn startf-genned)
         ~(:fn stopf-genned)
         (defrecord ~name ~fields
