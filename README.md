@@ -163,12 +163,12 @@ Appendix
 It's *much* easier and has few (if any) real disadvantages.
 
 *Appeal to authority:*
-Google (the whole company), React, Meteor, and Ember follow this pattern.
+[Google (the whole company)](https://cacm.acm.org/magazines/2016/7/204032-why-google-stores-billions-of-lines-of-code-in-a-single-repository/fulltext), React, [Babel](https://github.com/babel/babel/blob/master/doc/design/monorepo.md), Meteor, and Ember follow this pattern.
 
 *Pithy quote:*
 ["Juggling a multimodule project over multiple repos is like trying to teach a newborn baby how to ride a bike."](https://github.com/babel/babel/blob/master/doc/design/monorepo.md)
 
-See [here](https://cacm.acm.org/magazines/2016/7/204032-why-google-stores-billions-of-lines-of-code-in-a-single-repository/fulltext), [here](https://github.com/babel/babel/blob/master/doc/design/monorepo.md) and [here](http://danluu.com/monorepo/) for a more complete justification.
+See [here](http://danluu.com/monorepo/) for further justification.
 
 ### Good practices for dependency hell
 
