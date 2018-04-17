@@ -21,10 +21,6 @@
 (def ^{:todo {0 "Finish up `conditions` fork" 1 "look at cljs.stacktrace / clojure.stacktrace"}}
   annotations)
 
-;; ===== Config ===== ;;
-
-(defalias u/*pr-data-to-str?)
-
 ;; ===== Error type: generic ===== ;;
 
 (defaliases u generic-error-type env>generic-error error? #?(:clj throwable?))

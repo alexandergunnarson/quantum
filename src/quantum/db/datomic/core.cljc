@@ -19,7 +19,7 @@
       :refer [<! <!! >! >!!]]
     [quantum.core.data.set      :as set]
     [quantum.core.error         :as err
-      :refer [>ex-info TODO catch-all]]
+      :refer [>ex-info >err TODO catch-all]]
     [quantum.core.fn            :as fn
       :refer [<- fn-> fn->> fn1 fnl fn' rfn with-do]]
     [quantum.core.log           :as log]
@@ -58,9 +58,9 @@
 
 (defn unhandled-type [type obj]
   (case type
-    :conn   (>ex-info :unhandled-predicate "Object is not mconn, conn, or db" obj)
-    :db     (>ex-info :unhandled-predicate "Object is not mdb or db"          obj)
-    :entity (>ex-info :unhandled-predicate "Object is not mentity or entity"  obj)))
+    :conn   (>err :unhandled-predicate "Object is not mconn, conn, or db" obj)
+    :db     (>err :unhandled-predicate "Object is not mdb or db"          obj)
+    :entity (>err :unhandled-predicate "Object is not mentity or entity"  obj)))
 
 ; PREDICATES
 
