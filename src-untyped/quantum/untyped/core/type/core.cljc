@@ -17,9 +17,9 @@
       :refer [>ex-info]]
     [quantum.untyped.core.fn
       :refer [<- fn->>]]
-    [quantum.untyped.core.type.defs   :as utdef]
     [quantum.untyped.core.vars
-      :refer [defalias]]))
+      :refer [defalias]]
+    [quantum.untyped.core.type.defs   :as utdef]))
 
 (def class #?(:clj clojure.core/class :cljs type))
 
@@ -55,7 +55,7 @@
    Byte/TYPE      Byte
    Character/TYPE Character
    Double/TYPE    Double
-   Void/TYPE      Void      }))
+   Void/TYPE      Void}))
 
 #?(:clj
 (def unboxed->convertible
@@ -90,15 +90,25 @@
 (def unboxed-type-map
   (zipmap (vals boxed-type-map) (keys boxed-type-map))))
 
-(def prim-types                     (-> utdef/types               (get 'prim?)))
-(def prim-types|unevaled            (-> utdef/types|unevaled :clj (get 'prim?)))
-(def primitive-types                (-> utdef/types               (get 'primitive?)))
-(def primitive-types|unevaled       (-> utdef/types|unevaled :clj (get 'primitive?)))
-(def primitive-boxed-types          (-> utdef/types               (get 'primitive-boxed?)))
-(def primitive-boxed-types|unevaled (-> utdef/types|unevaled :clj (get 'primitive-boxed?)))
+(def prim-types                     #?(:clj  #{Boolean/TYPE Byte/TYPE Character/TYPE
+                                               Short/TYPE Integer/TYPE Long/TYPE
+                                               Float/TYPE Double/TYPE}
+                                       :cljs #{js/Boolean js/Number}))
+(def prim-types|unevaled            '#{boolean byte char short int long float double})
+
+(def primitive-boxed-types          #?(:clj  #{Boolean Byte Character Short Integer Long Float Double}
+                                       :cljs #{js/Boolean js/Number}))
+(def primitive-boxed-types|unevaled #?(:clj  '#{java.lang.Boolean java.lang.Byte java.lang.Character
+                                                java.lang.Short java.lang.Integer java.lang.Long
+                                                java.lang.Float java.lang.Double}
+                                       :cljs '#{js/Boolean js/Number}))
+
+(def primitive-types                (set/union prim-types primitive-boxed-types))
+(def primitive-types|unevaled       (set/union prim-types|unevaled primitive-boxed-types|unevaled))
 
 (def prim|unevaled?      #(contains? prim-types|unevaled %))
 (def primitive|unevaled? #(contains? primitive-types|unevaled %))
+
 #?(:clj  (def  auto-unboxable|unevaled? #(contains? primitive-boxed-types|unevaled %))
    :cljs (defn auto-unboxable|unevaled? [x] (throw (>ex-info :unsupported "`auto-unboxable?` not supported by CLJS"))))
 
@@ -114,7 +124,16 @@
     :cljs #{ubytes ubytes-clamped ushorts uints bytes shorts       ints       floats doubles}})
 
 (def cljs-typed-array-convertible-classes
-  (let [cljs-typed-array-types (-> utdef/array-1d-types :cljs (dissoc :object))
+  (let [cljs-typed-array-types '{:byte          js/Int8Array
+                                 :ubyte         js/Uint8Array
+                                 :ubyte-clamped js/Uint8ClampedArray
+                                 :char          js/Uint16Array ; kind of
+                                 :ushort        js/Uint16Array
+                                 :short         js/Int16Array
+                                 :int           js/Int32Array
+                                 :uint          js/Uint32Array
+                                 :float         js/Float32Array
+                                 :double        js/Float64Array}
         generalize-type (fn->> name str/lower-case (remove #{\u}))]
     (->> cljs-typed-array-types
          (reduce
@@ -128,6 +147,17 @@
            {}))))
 
 (def java-array-type-regex #"(\[+)(?:(Z|S|B|C|I|J|F|D)|(?:L(.+);))") ; TODO create this regex dynamically
+
+#?(:clj
+(defn array-depth-equal?
+  "Efficiency prioritized because this fn is used a lot in `untyped.core.type/compare|class|class`"
+  [^Class class0 ^Class class1]
+  (let [s0 (.getName class0) s1 (.getName class1)]
+    (loop [i 0]
+      (let [c0  (.charAt s0 i)     c1  (.charAt s1 i)
+            c0? (identical? c0 \[) c1? (identical? c1 \[)]
+        (or (and (not c0?) (not c1?))
+            (and c0? c1? (recur (unchecked-inc i)))))))))
 
 #?(:clj
 (defn nth-elem-type|clj
@@ -151,7 +181,7 @@
             (symbol ?object-type)
             (str (apply str (drop n brackets)) "L" ?object-type ";"))))))
 
-(def default-types (-> utdef/types|unevaled (get ucore/lang) :any))
+(def default-types '#{#?(:clj java.lang.Object :cljs (quote default))})
 
 (defn ->boxed|sym   [t]
   #?(:clj  (if-let [boxed   (get boxed-type-map   t)] boxed   t)
@@ -197,12 +227,8 @@
             double  java.lang.Double/TYPE})})
 
 #?(:clj
-(defn class>prim-subclasses
-  {:examples '{(class>prim-subclasses Number)
-               #{utdef/long utdef/int utdef/short utdef/byte utdef/float utdef/double}}}
-  [^Class c]
-  (let [boxed-types (get-in utdef/types [:clj 'primitive-boxed?])]
-    (->> boxed-types
-         (r/filter #(isa? % c))
-         (r/map boxed->unboxed)
-         (into #{})))))
+(defn class>prim-subclasses [^Class c]
+  (->> primitive-boxed-types
+       (r/filter #(isa? % c))
+       (r/map boxed->unboxed)
+       (into #{}))))

@@ -10,11 +10,12 @@
      nil? any? class? tagged-literal? #?(:cljs object?)
      number? decimal? bigdec? integer? ratio?
      true? false? keyword? string? symbol?
-     list? map? map-entry? seq? seqable? sorted? vector?
+     associative? coll? indexed? list? map? map-entry? record? seq? seqable? set? sorted? vector?
      fn? ifn?
-     meta ref])
+     meta ref volatile?])
   (:require
     [clojure.core                               :as c]
+    [clojure.string                             :as str]
     [quantum.untyped.core.analyze.expr          :as xp
       :refer [>expr #?(:cljs Expression)]]
     [quantum.untyped.core.classes               :as uclass]
@@ -43,9 +44,10 @@
       :refer [?deref]]
     [quantum.untyped.core.data.tuple]
     [quantum.untyped.core.type.core             :as utcore]
+    [quantum.untyped.core.type.defs             :as utdef]
     [quantum.untyped.core.type.predicates       :as utpred]
     [quantum.untyped.core.vars                  :as uvar
-      :refer [def- update-meta]])
+      :refer [def- defmacro- update-meta]])
   #?(:clj (:import quantum.untyped.core.analyze.expr.Expression
                    quantum.untyped.core.data.tuple.Tuple))
 #?(:cljs
@@ -225,7 +227,7 @@
 
 #?(:clj (uvar/defalias -def define))
 
-(-def spec? (isa?|protocol PSpec))
+(-def spec? (isa? PSpec))
 
 (defn *
   "Denote on a spec that it must be enforced at runtime.
@@ -286,9 +288,7 @@
                (== (utcore/boxed->unboxed c0) c1)        1
                (== c0 (utcore/boxed->unboxed c1))       -1
                ;; we'll consider the two unrelated
-               ;; TODO this uses reflection so each class comparison is slowish
-               (c/or (utcore/primitive-array-type? c0)
-                     (utcore/primitive-array-type? c1))  3
+               (c/not (utcore/array-depth-equal? c0 c1)) 3
                (.isAssignableFrom c0 c1)                 1
                (.isAssignableFrom c1 c0)                -1
                ;; multiple inheritance of interfaces
@@ -607,7 +607,7 @@
                                     1 (first args)
                                     (OrSpec. args (atom nil))))))))))
 
-(udt/deftype SequentialSpec)
+#_(udt/deftype SequentialSpec)
 
 (defn of
   "Creates a spec that.
@@ -1060,79 +1060,7 @@
    Float     'float
    Double    'double}))
 
-(def ^{:doc "Could do <Class>/MAX_VALUE for the maxes in Java but JS doesn't like it of course
-             In JavaScript, all numbers are 64-bit floating point numbers.
-             This means you can't represent in JavaScript all the Java longs
-             Max 'safe' int: (dec (Math/pow 2 53))"}
-  unboxed-symbol->type-meta
-  {'boolean {:bits 1
-             :min  0
-             :max  1
-   #?@(:clj [:array-ident  "Z"
-             :outer-type  "[Z"
-             :boxed       java.lang.Boolean
-             :unboxed     Boolean/TYPE])}
-   'byte    {:bits 8
-             :min -128
-             :max  127
-   #?@(:clj [:array-ident  "B"
-             :outer-type  "[B"
-             :boxed       java.lang.Byte
-             :unboxed     Byte/TYPE])}
-   'short   {:bits 16
-             :min -32768
-             :max  32767
-   #?@(:clj [:array-ident  "S"
-             :outer-type  "[S"
-             :boxed       java.lang.Short
-             :unboxed     Short/TYPE])}
-   'char    {:bits 16
-             :min  0
-             :max  65535
-   #?@(:clj [:array-ident  "C"
-             :outer-type  "[C"
-             :boxed       java.lang.Character
-             :unboxed     Character/TYPE])}
-   'int     {:bits 32
-             :min -2147483648
-             :max  2147483647
-   #?@(:clj [:array-ident  "I"
-             :outer-type  "[I"
-             :boxed       java.lang.Integer
-             :unboxed     Integer/TYPE])}
-   'long    {:bits 64
-             :min -9223372036854775808
-             :max  9223372036854775807
-   #?@(:clj [:array-ident  "J"
-             :outer-type  "[J"
-             :boxed       java.lang.Long
-             :unboxed     Long/TYPE])}
-   ; Technically with floating-point nums, "min" isn't the most negative;
-   ; it's the smallest absolute
-   'float   {:bits         32
-             :min-absolute 1.4E-45
-             :min         -3.4028235E38
-             :max          3.4028235E38
-             :min-int     -16777216 ; -2^24
-             :max-int      16777216 ;  2^24
-   #?@(:clj [:array-ident  "F"
-             :outer-type  "[F"
-             :boxed       java.lang.Float
-             :unboxed     Float/TYPE])}
-   'double  {:bits        64
-             ; Because:
-             ; Double/MIN_VALUE        = 4.9E-324
-             ; (.-MIN_VALUE js/Number) = 5e-324
-             :min-absolute #?(:clj  Double/MIN_VALUE
-                              :cljs (.-MIN_VALUE js/Number))
-             :min         -1.7976931348623157E308
-             :max          1.7976931348623157E308 ; Max number in JS
-             :min-int      -9007199254740992 ; -2^53
-             :max-int       9007199254740992 ;  2^53
-   #?@(:clj [:array-ident  "D"
-             :outer-type  "[D"
-             :boxed       java.lang.Double
-             :unboxed     Double/TYPE])}})
+(uvar/defalias utdef/unboxed-symbol->type-meta)
 
 #?(:clj (def primitive-classes (->> unboxed-symbol->type-meta vals (uc/map+ :unboxed) (join #{}))))
 
@@ -1178,57 +1106,34 @@
                (spec>?class-value (isa? String))  nil}}
   [spec] (-spec>?class-value spec false)))
 
-;; ===== META ===== ;;
-
-#?(:clj  (-def class?                      (isa? java.lang.Class)))
-#?(:clj  (-def primitive-class?            (or (value Boolean/TYPE)
-                                               (value Byte/TYPE)
-                                               (value Character/TYPE)
-                                               (value Short/TYPE)
-                                               (value Integer/TYPE)
-                                               (value Long/TYPE)
-                                               (value Float/TYPE)
-                                               (value Double/TYPE))))
-#?(:clj  (-def protocol?                   (>expr (ufn/fn-> :on-interface class?))))
-
-
-
-
-
-#?(:clj  (-def comparable?       (isa? java.lang.Comparable)))
-         (-def keyword?          (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
-         (-def symbol?           (isa? #?(:clj clojure.lang.Symbol  :cljs cljs.core/Symbol)))
-#?(:clj  (-def tagged-literal?   (isa? clojure.lang.TaggedLiteral)))
-
-         (-def literal?          (or nil? boolean? symbol? keyword? string? #?(:clj long?) double? #?(:clj tagged-literal?)))
-
-         (-def +map|built-in?    (or (isa? #?(:clj clojure.lang.PersistentHashMap  :cljs cljs.core/PersistentHashMap))
-                                     (isa? #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core/PersistentArrayMap))
-                                     (isa? #?(:clj clojure.lang.PersistentTreeMap  :cljs cljs.core/PersistentTreeMap))))
-
-         (-def +map?             #?(:clj  (isa?          clojure.lang.IPersistentMap)
-                                    :cljs (isa?|protocol cljs.core/IMap)))
-
-         (-def map?              #?(:clj  (isa? java.util.Map)
-                                    :cljs (TODO)))
-
-         (-def +set?             #?(:clj  (isa?          clojure.lang.IPersistentSet)
-                                    :cljs (isa?|protocol cljs.core/ISet)))
-
-         (-def +set|built-in?    (or (isa? #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet))
-                                     (isa? #?(:clj clojure.lang.PersistentTreeSet :cljs cljs.core/PersistentTreeSet))))
-
-#?(:clj  (-def array-list?       (isa? java.util.ArrayList)))
-#?(:clj  (-def java-coll?        (isa? java.util.Collection)))
-#?(:clj  (-def java-set?         (isa? java.util.Set)))
-#?(:clj  (-def thread?           (isa? java.lang.Thread)))
-         (-def throwable?        #?(:clj (isa? java.lang.Throwable) :cljs any?))
-#?(:clj  (-def comparable?       (isa? java.lang.Comparable)))
-#?(:clj  (-def java-iterable?    (isa? java.lang.Iterable)))
-
 ;; ---------------------- ;;
 ;; ===== Predicates ===== ;;
 ;; ---------------------- ;;
+
+        (def basic-type-syms '[boolean byte char short int long float double ref])
+
+#?(:clj (defn- >v-sym [prefix #_symbol? kind  #_symbol?] (symbol (str prefix "|" kind "?"))))
+
+#?(:clj (defn- >kv-sym [prefix #_symbol? from-type #_symbol? to-type #_symbol?]
+          (symbol (str prefix "|" from-type "->" to-type "?"))))
+
+#?(:clj (defmacro- def-preds|map|same-types [prefix #_symbol?]
+          `(do ~@(for [kind (conj basic-type-syms 'any)]
+                   (list `-def (>v-sym prefix kind) (>kv-sym prefix kind kind))))))
+
+#?(:clj (defmacro- def-preds|map|any [prefix #_symbol?]
+          (let [anys (->> (for [kind basic-type-syms]
+                            [(list `-def (>kv-sym prefix kind 'any)
+                                         (->> basic-type-syms (map #(>kv-sym prefix kind %)) (list* `or)))
+                             (list `-def (>kv-sym prefix 'any kind)
+                                         (->> basic-type-syms (map #(>kv-sym prefix % kind)) (list* `or)))])
+                          (apply concat))
+                any->any (list `-def (>kv-sym prefix 'any 'any)
+                                     (->> basic-type-syms
+                                          (map #(vector (>kv-sym prefix 'any %) (>kv-sym prefix % 'any)))
+                                          (apply concat)
+                                          (list* `or)))]
+            `(do ~@(concat anys [any->any])))))
 
 ;; ===== General ===== ;;
 
@@ -1242,35 +1147,53 @@
          (-def val|by-class? (or object? #?@(:cljs [(isa? js/String) (isa? js/Symbol)])))
          (-def val?          (not nil?))
 
+;; ===== Meta ===== ;;
+
+#?(:clj  (-def class?           (isa? java.lang.Class)))
+#?(:clj  (-def primitive-class? (or (value Boolean/TYPE)
+                                    (value Byte/TYPE)
+                                    (value Character/TYPE)
+                                    (value Short/TYPE)
+                                    (value Integer/TYPE)
+                                    (value Long/TYPE)
+                                    (value Float/TYPE)
+                                    (value Double/TYPE))))
+#?(:clj  (-def protocol?        (>expr (ufn/fn-> :on-interface class?))))
+
 ;; ===== Primitives ===== ;;
 
-         (-def boolean?   (isa? #?(:clj Boolean :cljs js/Boolean)))
+         (-def  boolean?  (isa? #?(:clj Boolean :cljs js/Boolean)))
          (-def ?boolean?  (? boolean?))
 
-#?(:clj  (-def byte?      (isa? Byte)))
+#?(:clj  (-def  byte?     (isa? Byte)))
 #?(:clj  (-def ?byte?     (? byte?)))
 
-#?(:clj  (-def char?      (isa? Character)))
+#?(:clj  (-def  char?     (isa? Character)))
 #?(:clj  (-def ?char?     (? char?)))
 
-#?(:clj  (-def short?     (isa? Short)))
+#?(:clj  (-def  short?    (isa? Short)))
 #?(:clj  (-def ?short?    (? short?)))
 
-#?(:clj  (-def int?       (isa? Integer)))
+#?(:clj  (-def  int?      (isa? Integer)))
 #?(:clj  (-def ?int?      (? int?)))
 
-#?(:clj  (-def long?      (isa? Long)))
+#?(:clj  (-def  long?     (isa? Long)))
 #?(:clj  (-def ?long?     (? long?)))
 
-#?(:clj  (-def float?     (isa? Float)))
+#?(:clj  (-def  float?    (isa? Float)))
 #?(:clj  (-def ?float?    (? float?)))
 
-         (-def double?    (isa? #?(:clj Double :cljs js/Number)))
+         (-def  double?   (isa? #?(:clj Double :cljs js/Number)))
          (-def ?double?   (? double?))
 
          (-def primitive? (or boolean? #?@(:clj [byte? char? short? int? long? float?]) double?))
 
 #_(:clj  (-def comparable-primitive? (and primitive? (not boolean?))))
+
+;; ===== Booleans ===== ;;
+
+         (-def true?  (value true))
+         (-def false? (value false))
 
 ;; ===== Numbers ===== ;;
 
@@ -1292,7 +1215,7 @@
          (-def ratio?            (isa? #?(:clj  clojure.lang.Ratio
                                           :cljs quantum.core.numeric.types.Ratio))) ; TODO add this CLJS entry to the predicate after the fact
 
-         (-def primitive-number? (or #?@(:clj [short? int? long? float?]) double?)))
+         (-def primitive-number? (or #?@(:clj [short? int? long? float?]) double?))
 
          (-def number?           (or #?@(:clj  [(isa? java.lang.Number)]
                                          :cljs [integer? decimal? ratio?])))
@@ -1367,12 +1290,96 @@
 
 ;; ----- Generic ----- ;;
 
-         (-def seq?             #?(:clj clojure.lang.ISeq :cljs cljs.core/ISeq))
-
-;; TODO add maps in here
-
 ;; ===== Arrays ===== ;; Sequential, Associative (specifically, whose keys are sequential,
                       ;; dense integer values), not extensible
+
+#?(:clj
+(defn >array-nd-type [kind n]
+  (let [prefix (apply str (repeat n \[))
+        letter (case kind
+                 boolean "Z"
+                 byte    "B"
+                 char    "C"
+                 short   "S"
+                 int     "I"
+                 long    "J"
+                 float   "F"
+                 double  "D"
+                 object  "Ljava.lang.Object;")]
+    (isa? (Class/forName (str prefix letter))))))
+
+#?(:clj
+(defn >array-nd-types [n]
+  (->> '[boolean byte char short int long float double object]
+       (map #(>array-nd-type % n))
+       (apply or)))
+
+         (-def booleans?       #?(:clj (>array-nd-type 'boolean 1) :cljs none?))
+         (-def bytes?          #?(:clj (>array-nd-type 'byte    1) :cljs (isa? js/Int8Array)))
+         (-def ubytes?         #?(:clj none?                       :cljs (isa? js/Uint8Array)))
+         (-def ubytes-clamped? #?(:clj none?                       :cljs (isa? js/Uint8ClampedArray)))
+         (-def chars?          #?(:clj (>array-nd-type 'char    1) :cljs (isa? js/Uint16Array))) ; kind of
+         (-def shorts?         #?(:clj (>array-nd-type 'short   1) :cljs (isa? js/Int16Array)))
+         (-def ushorts?        #?(:clj none?                       :cljs (isa? js/Uint16Array)))
+         (-def ints?           #?(:clj (>array-nd-type 'int     1) :cljs (isa? js/Int32Array)))
+         (-def uints?          #?(:clj none?                       :cljs (isa? js/Uint32Array)))
+         (-def longs?          #?(:clj (>array-nd-type 'long    1) :cljs none?))
+         (-def floats?         #?(:clj (>array-nd-type 'float   1) :cljs (isa? js/Float32Array)))
+         (-def doubles?        #?(:clj (>array-nd-type 'double  1) :cljs (isa? js/Float64Array)))
+         (-def objects?        #?(:clj (>array-nd-type 'object  1) :cljs (isa? js/Array)))
+
+         (-def numeric-1d?     (or bytes? ubytes? ubytes-clamped?
+                                   chars?
+                                   shorts? ushorts? ints? uints? longs?
+                                   floats? doubles?))
+
+         (-def array-1d?       (or booleans? bytes? ubytes? ubytes-clamped?
+                                   chars?
+                                   shorts? ushorts? ints? uints? longs?
+                                   floats? doubles? objects?))
+
+#?(:clj  (-def booleans-2d?    (>array-nd-type 'boolean 2)))
+#?(:clj  (-def bytes-2d?       (>array-nd-type 'byte    2)))
+#?(:clj  (-def chars-2d?       (>array-nd-type 'char    2)))
+#?(:clj  (-def shorts-2d?      (>array-nd-type 'short   2)))
+#?(:clj  (-def ints-2d?        (>array-nd-type 'int     2)))
+#?(:clj  (-def longs-2d?       (>array-nd-type 'long    2)))
+#?(:clj  (-def floats-2d?      (>array-nd-type 'float   2)))
+#?(:clj  (-def doubles-2d?     (>array-nd-type 'double  2)))
+#?(:clj  (-def objects-2d?     (>array-nd-type 'object  2)))
+
+#?(:clj  (-def numeric-2d?     (or bytes-2d?
+                                   chars-2d?
+                                   shorts-2d? ints-2d? longs-2d?
+                                   floats-2d? doubles-2d?)))
+
+#?(:clj  (-def array-2d?       (>array-nd-types 2 )))
+
+#?(:clj  (-def array-3d?       (>array-nd-types 3 )))
+#?(:clj  (-def array-4d?       (>array-nd-types 4 )))
+#?(:clj  (-def array-5d?       (>array-nd-types 5 )))
+#?(:clj  (-def array-6d?       (>array-nd-types 6 )))
+#?(:clj  (-def array-7d?       (>array-nd-types 7 )))
+#?(:clj  (-def array-8d?       (>array-nd-types 8 )))
+#?(:clj  (-def array-9d?       (>array-nd-types 9 )))
+#?(:clj  (-def array-10d?      (>array-nd-types 10)))
+
+         ;; TODO differentiate between "all supported n-D arrays" and "all n-D arrays"
+         (-def objects-nd?     (or objects?
+                                   #?@(:clj [(>array-nd-type 'object  2)
+                                             (>array-nd-type 'object  3)
+                                             (>array-nd-type 'object  4)
+                                             (>array-nd-type 'object  5)
+                                             (>array-nd-type 'object  6)
+                                             (>array-nd-type 'object  7)
+                                             (>array-nd-type 'object  8)
+                                             (>array-nd-type 'object  9)
+                                             (>array-nd-type 'object 10)])))
+
+         ;; TODO differentiate between "all supported n-D arrays" and "all n-D arrays"
+         (-def array?          (or array-1d?
+                                   #?@(:clj [array-2d? array-3d? array-4d? array-5d?
+                                             array-6d? array-7d? array-8d? array-9d? array-10d?])))
 
 ;; ----- String ----- ;; A special wrapper for char array where different encodings, etc. are possible
 
@@ -1394,28 +1401,30 @@
                                               ;; because supports .push etc.
                                               (isa? js/Array))))
          ;; svec = "spliceable vector"
-         (-def svector?          (isa? clojure.core.rrb_vector.rrbt.Vector))
+         (-def   svector?          (isa? clojure.core.rrb_vector.rrbt.Vector))
 
-         (-def +vector?          #?(:clj  (isa?          clojure.lang.IPersistentVector)
-                                    :cljs (isa?|protocol cljs.core/IVector)))
+         (-def   +vector?          (isa? #?(:clj  clojure.lang.IPersistentVector
+                                            :cljs cljs.core/IVector)))
 
-         (-def +vector|built-in? (isa? #?(:clj  clojure.lang.PersistentVector
-                                          :cljs cljs.core/PersistentVector)))
+         (-def   +vector|built-in? (isa? #?(:clj  clojure.lang.PersistentVector
+                                            :cljs cljs.core/PersistentVector)))
 
-         (-def  !+vector?        #?(:clj  (isa?          clojure.lang.ITransientVector)
-                                    :cljs (isa?|protocol cljs.core/ITransientVector)))
-         (-def ?!+vector?        (or +vector? ?!+vector?))
-#?(:clj  (-def  !vector|long?    (isa? it.unimi.dsi.fastutil.longs.LongArrayList)))
-         (-def  !vector|ref?     (isa? #?(:clj  java.util.ArrayList
-                                          ;; because supports .push etc.
-                                          :cljs js/Array)))
-         (-def  !vector?         (or !vector|long? !vector|ref?))
+         (-def  !+vector?          (isa? #?(:clj  clojure.lang.ITransientVector
+                                            :cljs cljs.core/ITransientVector)))
+         (-def ?!+vector?          (or +vector? ?!+vector?))
 
-                                 ;; java.util.Vector is deprecated, because you can
-                                 ;; just create a synchronized wrapper over an ArrayList
-                                 ;; via java.util.Collections
-#?(:clj  (-def !!vector?         none?))
-         (-def   vector?         (or ?!+vector? !vector? #?(:clj !!vector?)))
+         ;; TODO complete this
+#?(:clj  (-def  !vector|long?      (isa? it.unimi.dsi.fastutil.longs.LongArrayList)))
+         (-def  !vector|ref?       (isa? #?(:clj  java.util.ArrayList
+                                            ;; because supports .push etc.
+                                            :cljs js/Array)))
+         (-def  !vector?           (or !vector|long? !vector|ref?))
+
+                                   ;; java.util.Vector is deprecated, because you can
+                                   ;; just create a synchronized wrapper over an ArrayList
+                                   ;; via java.util.Collections
+#?(:clj  (-def !!vector?           none?))
+         (-def   vector?           (or ?!+vector? !vector? #?(:clj !!vector?)))
 
 ;; ===== Queues ===== ;; Particularly FIFO queues, as LIFO = stack = any vector
 
@@ -1426,29 +1435,720 @@
 #?(:clj  (-def  !!queue? (or (isa? java.util.concurrent.BlockingQueue)
                              (isa? java.util.concurrent.TransferQueue)
                              (isa? java.util.concurrent.ConcurrentLinkedQueue))))
+
          (-def   !queue? #?(:clj  ;; Considered single-threaded mutable unless otherwise noted
                                   (- (isa? java.util.Queue) (or ?!+queue? !!queue?))
                             :cljs (isa? goog.structs.Queue)))
+
          (-def    queue? (or ?!+queue? !queue? #?(:clj !!queue?)))
 
-;; ===== Generic ===== ;;
+;; ===== Maps ===== ;; Associative
 
-         ;; Standard "uncuttable" types
-         (-def integral?  (or primitive? number?))
+;; ----- Hash Maps ----- ;;
 
-;; ----- Collections ----- ;;
+         (-def   +hash-map?                  (isa? #?(:clj  clojure.lang.PersistentHashMap
+                                                      :cljs cljs.core/PersistentHashMap)))
 
-         (-def sorted?    #?(:clj  (or (isa? clojure.lang.Sorted)
-                                       (isa? java.util.SortedMap)
-                                       (isa? java.util.SortedSet))
-                             :cljs (or (isa? cljs.core/ISorted)
-                                       (isa? goog.structs.AvlTree))))
+         (-def  !+hash-map?                  (isa? #?(:clj  clojure.lang.PersistentHashMap$TransientHashMap
+                                                      :cljs cljs.core/TransientHashMap)))
 
-         (-def transient? (isa? #?(:clj clojure.lang.ITransientCollection
-                                   :cljs cljs.core/ITransientCollection)))
+         (-def ?!+hash-map?                  (or !+hash-map? +hash-map?))
 
-         (-def editable?  (isa? #?(:clj clojure.lang.IEditableCollection
-                                   :cljs cljs.core/IEditableCollection)))
+         (-def   !hash-map|boolean->boolean? none?)
+         (-def   !hash-map|boolean->byte?    none?)
+         (-def   !hash-map|boolean->char?    none?)
+         (-def   !hash-map|boolean->short?   none?)
+         (-def   !hash-map|boolean->int?     none?)
+         (-def   !hash-map|boolean->long?    none?)
+         (-def   !hash-map|boolean->float?   none?)
+         (-def   !hash-map|boolean->double?  none?)
+         (-def   !hash-map|boolean->ref?     none?)
+
+         (-def   !hash-map|byte->boolean?    #?(:clj (or (isa? it.unimi.dsi.fastutil.bytes.Byte2BooleanOpenHashMap)        (isa? it.unimi.dsi.fastutil.bytes.Byte2BooleanOpenCustomHashMap))        :cljs none?))
+         (-def   !hash-map|byte->byte?       #?(:clj (or (isa? it.unimi.dsi.fastutil.bytes.Byte2ByteOpenHashMap)           (isa? it.unimi.dsi.fastutil.bytes.Byte2ByteOpenCustomHashMap))           :cljs none?))
+         (-def   !hash-map|byte->char?       #?(:clj (or (isa? it.unimi.dsi.fastutil.bytes.Byte2CharOpenHashMap)           (isa? it.unimi.dsi.fastutil.bytes.Byte2CharOpenCustomHashMap))           :cljs none?))
+         (-def   !hash-map|byte->short?      #?(:clj (or (isa? it.unimi.dsi.fastutil.bytes.Byte2ShortOpenHashMap)          (isa? it.unimi.dsi.fastutil.bytes.Byte2ShortOpenCustomHashMap))          :cljs none?))
+         (-def   !hash-map|byte->int?        #?(:clj (or (isa? it.unimi.dsi.fastutil.bytes.Byte2IntOpenHashMap)            (isa? it.unimi.dsi.fastutil.bytes.Byte2IntOpenCustomHashMap))            :cljs none?))
+         (-def   !hash-map|byte->long?       #?(:clj (or (isa? it.unimi.dsi.fastutil.bytes.Byte2LongOpenHashMap)           (isa? it.unimi.dsi.fastutil.bytes.Byte2LongOpenCustomHashMap))           :cljs none?))
+         (-def   !hash-map|byte->float?      #?(:clj (or (isa? it.unimi.dsi.fastutil.bytes.Byte2FloatOpenHashMap)          (isa? it.unimi.dsi.fastutil.bytes.Byte2FloatOpenCustomHashMap))          :cljs none?))
+         (-def   !hash-map|byte->double?     #?(:clj (or (isa? it.unimi.dsi.fastutil.bytes.Byte2DoubleOpenHashMap)         (isa? it.unimi.dsi.fastutil.bytes.Byte2DoubleOpenCustomHashMap))         :cljs none?))
+         (-def   !hash-map|byte->ref?        #?(:clj (or (isa? it.unimi.dsi.fastutil.bytes.Byte2ReferenceOpenHashMap)      (isa? it.unimi.dsi.fastutil.bytes.Byte2ReferenceOpenCustomHashMap))      :cljs none?))
+
+         (-def   !hash-map|char->ref?        #?(:clj (or (isa? it.unimi.dsi.fastutil.chars.Char2ReferenceOpenHashMap)      (isa? it.unimi.dsi.fastutil.chars.Char2ReferenceOpenCustomHashMap))      :cljs none?))
+         (-def   !hash-map|char->boolean?    #?(:clj (or (isa? it.unimi.dsi.fastutil.chars.Char2BooleanOpenHashMap)        (isa? it.unimi.dsi.fastutil.chars.Char2BooleanOpenCustomHashMap))        :cljs none?))
+         (-def   !hash-map|char->byte?       #?(:clj (or (isa? it.unimi.dsi.fastutil.chars.Char2ByteOpenHashMap)           (isa? it.unimi.dsi.fastutil.chars.Char2ByteOpenCustomHashMap))           :cljs none?))
+         (-def   !hash-map|char->char?       #?(:clj (or (isa? it.unimi.dsi.fastutil.chars.Char2CharOpenHashMap)           (isa? it.unimi.dsi.fastutil.chars.Char2CharOpenCustomHashMap))           :cljs none?))
+         (-def   !hash-map|char->short?      #?(:clj (or (isa? it.unimi.dsi.fastutil.chars.Char2ShortOpenHashMap)          (isa? it.unimi.dsi.fastutil.chars.Char2ShortOpenCustomHashMap))          :cljs none?))
+         (-def   !hash-map|char->int?        #?(:clj (or (isa? it.unimi.dsi.fastutil.chars.Char2IntOpenHashMap)            (isa? it.unimi.dsi.fastutil.chars.Char2IntOpenCustomHashMap))            :cljs none?))
+         (-def   !hash-map|char->long?       #?(:clj (or (isa? it.unimi.dsi.fastutil.chars.Char2LongOpenHashMap)           (isa? it.unimi.dsi.fastutil.chars.Char2LongOpenCustomHashMap))           :cljs none?))
+         (-def   !hash-map|char->float?      #?(:clj (or (isa? it.unimi.dsi.fastutil.chars.Char2FloatOpenHashMap)          (isa? it.unimi.dsi.fastutil.chars.Char2FloatOpenCustomHashMap))          :cljs none?))
+         (-def   !hash-map|char->double?     #?(:clj (or (isa? it.unimi.dsi.fastutil.chars.Char2DoubleOpenHashMap)         (isa? it.unimi.dsi.fastutil.chars.Char2DoubleOpenCustomHashMap))         :cljs none?))
+
+         (-def   !hash-map|short->boolean?   #?(:clj (or (isa? it.unimi.dsi.fastutil.shorts.Short2BooleanOpenHashMap)      (isa? it.unimi.dsi.fastutil.shorts.Short2BooleanOpenCustomHashMap))      :cljs none?))
+         (-def   !hash-map|short->byte?      #?(:clj (or (isa? it.unimi.dsi.fastutil.shorts.Short2ByteOpenHashMap)         (isa? it.unimi.dsi.fastutil.shorts.Short2ByteOpenCustomHashMap))         :cljs none?))
+         (-def   !hash-map|short->char?      #?(:clj (or (isa? it.unimi.dsi.fastutil.shorts.Short2CharOpenHashMap)         (isa? it.unimi.dsi.fastutil.shorts.Short2CharOpenCustomHashMap))         :cljs none?))
+         (-def   !hash-map|short->short?     #?(:clj (or (isa? it.unimi.dsi.fastutil.shorts.Short2ShortOpenHashMap)        (isa? it.unimi.dsi.fastutil.shorts.Short2ShortOpenCustomHashMap))        :cljs none?))
+         (-def   !hash-map|short->int?       #?(:clj (or (isa? it.unimi.dsi.fastutil.shorts.Short2IntOpenHashMap)          (isa? it.unimi.dsi.fastutil.shorts.Short2IntOpenCustomHashMap))          :cljs none?))
+         (-def   !hash-map|short->long?      #?(:clj (or (isa? it.unimi.dsi.fastutil.shorts.Short2LongOpenHashMap)         (isa? it.unimi.dsi.fastutil.shorts.Short2LongOpenCustomHashMap))         :cljs none?))
+         (-def   !hash-map|short->float?     #?(:clj (or (isa? it.unimi.dsi.fastutil.shorts.Short2FloatOpenHashMap)        (isa? it.unimi.dsi.fastutil.shorts.Short2FloatOpenCustomHashMap))        :cljs none?))
+         (-def   !hash-map|short->double?    #?(:clj (or (isa? it.unimi.dsi.fastutil.shorts.Short2DoubleOpenHashMap)       (isa? it.unimi.dsi.fastutil.shorts.Short2DoubleOpenCustomHashMap))       :cljs none?))
+         (-def   !hash-map|short->ref?       #?(:clj (or (isa? it.unimi.dsi.fastutil.shorts.Short2ReferenceOpenHashMap)    (isa? it.unimi.dsi.fastutil.shorts.Short2ReferenceOpenCustomHashMap))    :cljs none?))
+
+         (-def   !hash-map|int->boolean?     #?(:clj (or (isa? it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap)          (isa? it.unimi.dsi.fastutil.ints.Int2BooleanOpenCustomHashMap))          :cljs none?))
+         (-def   !hash-map|int->byte?        #?(:clj (or (isa? it.unimi.dsi.fastutil.ints.Int2ByteOpenHashMap)             (isa? it.unimi.dsi.fastutil.ints.Int2ByteOpenCustomHashMap))             :cljs none?))
+         (-def   !hash-map|int->char?        #?(:clj (or (isa? it.unimi.dsi.fastutil.ints.Int2CharOpenHashMap)             (isa? it.unimi.dsi.fastutil.ints.Int2CharOpenCustomHashMap))             :cljs none?))
+         (-def   !hash-map|int->short?       #?(:clj (or (isa? it.unimi.dsi.fastutil.ints.Int2ShortOpenHashMap)            (isa? it.unimi.dsi.fastutil.ints.Int2ShortOpenCustomHashMap))            :cljs none?))
+         (-def   !hash-map|int->int?         #?(:clj (or (isa? it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap)              (isa? it.unimi.dsi.fastutil.ints.Int2IntOpenCustomHashMap))              :cljs none?))
+         (-def   !hash-map|int->long?        #?(:clj (or (isa? it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap)             (isa? it.unimi.dsi.fastutil.ints.Int2LongOpenCustomHashMap))             :cljs none?))
+         (-def   !hash-map|int->float?       #?(:clj (or (isa? it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap)            (isa? it.unimi.dsi.fastutil.ints.Int2FloatOpenCustomHashMap))            :cljs none?))
+         (-def   !hash-map|int->double?      #?(:clj (or (isa? it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap)           (isa? it.unimi.dsi.fastutil.ints.Int2DoubleOpenCustomHashMap))           :cljs none?))
+         (-def   !hash-map|int->ref?         #?(:clj (or (isa? it.unimi.dsi.fastutil.ints.Int2ReferenceOpenHashMap)        (isa? it.unimi.dsi.fastutil.ints.Int2ReferenceOpenCustomHashMap))        :cljs none?))
+
+         (-def   !hash-map|long->boolean?    #?(:clj (or (isa? it.unimi.dsi.fastutil.longs.Long2BooleanOpenHashMap)        (isa? it.unimi.dsi.fastutil.longs.Long2BooleanOpenCustomHashMap))        :cljs none?))
+         (-def   !hash-map|long->byte?       #?(:clj (or (isa? it.unimi.dsi.fastutil.longs.Long2ByteOpenCustomHashMap)     (isa? it.unimi.dsi.fastutil.longs.Long2ByteOpenHashMap))                 :cljs none?))
+         (-def   !hash-map|long->char?       #?(:clj (or (isa? it.unimi.dsi.fastutil.longs.Long2CharOpenHashMap)           (isa? it.unimi.dsi.fastutil.longs.Long2CharOpenCustomHashMap))           :cljs none?))
+         (-def   !hash-map|long->short?      #?(:clj (or (isa? it.unimi.dsi.fastutil.longs.Long2ShortOpenHashMap)          (isa? it.unimi.dsi.fastutil.longs.Long2ShortOpenCustomHashMap))          :cljs none?))
+         (-def   !hash-map|long->int?        #?(:clj (or (isa? it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap)            (isa? it.unimi.dsi.fastutil.longs.Long2IntOpenCustomHashMap))            :cljs none?))
+         (-def   !hash-map|long->long?       #?(:clj (or (isa? it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap)           (isa? it.unimi.dsi.fastutil.longs.Long2LongOpenCustomHashMap))           :cljs none?))
+         (-def   !hash-map|long->float?      #?(:clj (or (isa? it.unimi.dsi.fastutil.longs.Long2FloatOpenHashMap)          (isa? it.unimi.dsi.fastutil.longs.Long2FloatOpenCustomHashMap))          :cljs none?))
+         (-def   !hash-map|long->double?     #?(:clj (or (isa? it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap)         (isa? it.unimi.dsi.fastutil.longs.Long2DoubleOpenCustomHashMap))         :cljs none?))
+         (-def   !hash-map|long->ref?        #?(:clj (or (isa? it.unimi.dsi.fastutil.longs.Long2ReferenceOpenHashMap)      (isa? it.unimi.dsi.fastutil.longs.Long2ReferenceOpenCustomHashMap))      :cljs none?))
+
+         (-def   !hash-map|float->boolean?   #?(:clj (or (isa? it.unimi.dsi.fastutil.floats.Float2BooleanOpenHashMap)      (isa? it.unimi.dsi.fastutil.floats.Float2BooleanOpenCustomHashMap))      :cljs none?))
+         (-def   !hash-map|float->byte?      #?(:clj (or (isa? it.unimi.dsi.fastutil.floats.Float2ByteOpenHashMap)         (isa? it.unimi.dsi.fastutil.floats.Float2ByteOpenCustomHashMap))         :cljs none?))
+         (-def   !hash-map|float->char?      #?(:clj (or (isa? it.unimi.dsi.fastutil.floats.Float2CharOpenHashMap)         (isa? it.unimi.dsi.fastutil.floats.Float2CharOpenCustomHashMap))         :cljs none?))
+         (-def   !hash-map|float->short?     #?(:clj (or (isa? it.unimi.dsi.fastutil.floats.Float2ShortOpenHashMap)        (isa? it.unimi.dsi.fastutil.floats.Float2ShortOpenCustomHashMap))        :cljs none?))
+         (-def   !hash-map|float->int?       #?(:clj (or (isa? it.unimi.dsi.fastutil.floats.Float2IntOpenHashMap)          (isa? it.unimi.dsi.fastutil.floats.Float2IntOpenCustomHashMap))          :cljs none?))
+         (-def   !hash-map|float->long?      #?(:clj (or (isa? it.unimi.dsi.fastutil.floats.Float2LongOpenHashMap)         (isa? it.unimi.dsi.fastutil.floats.Float2LongOpenCustomHashMap))         :cljs none?))
+         (-def   !hash-map|float->float?     #?(:clj (or (isa? it.unimi.dsi.fastutil.floats.Float2FloatOpenHashMap)        (isa? it.unimi.dsi.fastutil.floats.Float2FloatOpenCustomHashMap))        :cljs none?))
+         (-def   !hash-map|float->double?    #?(:clj (or (isa? it.unimi.dsi.fastutil.floats.Float2DoubleOpenHashMap)       (isa? it.unimi.dsi.fastutil.floats.Float2DoubleOpenCustomHashMap))       :cljs none?))
+         (-def   !hash-map|float->ref?       #?(:clj (or (isa? it.unimi.dsi.fastutil.floats.Float2ReferenceOpenHashMap)    (isa? it.unimi.dsi.fastutil.floats.Float2ReferenceOpenCustomHashMap))    :cljs none?))
+
+         (-def   !hash-map|double->boolean?  #?(:clj (or (isa? it.unimi.dsi.fastutil.doubles.Double2BooleanOpenHashMap)    (isa? it.unimi.dsi.fastutil.doubles.Double2BooleanOpenCustomHashMap))    :cljs none?))
+         (-def   !hash-map|double->byte?     #?(:clj (or (isa? it.unimi.dsi.fastutil.doubles.Double2ByteOpenHashMap)       (isa? it.unimi.dsi.fastutil.doubles.Double2ByteOpenCustomHashMap))       :cljs none?))
+         (-def   !hash-map|double->char?     #?(:clj (or (isa? it.unimi.dsi.fastutil.doubles.Double2CharOpenHashMap)       (isa? it.unimi.dsi.fastutil.doubles.Double2CharOpenCustomHashMap))       :cljs none?))
+         (-def   !hash-map|double->short?    #?(:clj (or (isa? it.unimi.dsi.fastutil.doubles.Double2ShortOpenHashMap)      (isa? it.unimi.dsi.fastutil.doubles.Double2ShortOpenCustomHashMap))      :cljs none?))
+         (-def   !hash-map|double->int?      #?(:clj (or (isa? it.unimi.dsi.fastutil.doubles.Double2IntOpenHashMap)        (isa? it.unimi.dsi.fastutil.doubles.Double2IntOpenCustomHashMap))        :cljs none?))
+         (-def   !hash-map|double->long?     #?(:clj (or (isa? it.unimi.dsi.fastutil.doubles.Double2LongOpenHashMap)       (isa? it.unimi.dsi.fastutil.doubles.Double2LongOpenCustomHashMap))       :cljs none?))
+         (-def   !hash-map|double->float?    #?(:clj (or (isa? it.unimi.dsi.fastutil.doubles.Double2FloatOpenHashMap)      (isa? it.unimi.dsi.fastutil.doubles.Double2FloatOpenCustomHashMap))      :cljs none?))
+         (-def   !hash-map|double->double?   #?(:clj (or (isa? it.unimi.dsi.fastutil.doubles.Double2DoubleOpenHashMap)     (isa? it.unimi.dsi.fastutil.doubles.Double2DoubleOpenCustomHashMap))     :cljs none?))
+         (-def   !hash-map|double->ref?      #?(:clj (or (isa? it.unimi.dsi.fastutil.doubles.Double2ReferenceOpenHashMap)  (isa? it.unimi.dsi.fastutil.doubles.Double2ReferenceOpenCustomHashMap))  :cljs none?))
+
+         (-def   !hash-map|ref->boolean?     #?(:clj (or (isa? it.unimi.dsi.fastutil.objects.Reference2BooleanOpenHashMap) (isa? it.unimi.dsi.fastutil.objects.Reference2BooleanOpenCustomHashMap)) :cljs none?))
+         (-def   !hash-map|ref->byte?        #?(:clj (or (isa? it.unimi.dsi.fastutil.objects.Reference2ByteOpenHashMap)    (isa? it.unimi.dsi.fastutil.objects.Reference2ByteOpenCustomHashMap))    :cljs none?))
+         (-def   !hash-map|ref->char?        #?(:clj (or (isa? it.unimi.dsi.fastutil.objects.Reference2CharOpenHashMap)    (isa? it.unimi.dsi.fastutil.objects.Reference2CharOpenCustomHashMap))    :cljs none?))
+         (-def   !hash-map|ref->short?       #?(:clj (or (isa? it.unimi.dsi.fastutil.objects.Reference2ShortOpenHashMap)   (isa? it.unimi.dsi.fastutil.objects.Reference2ShortOpenCustomHashMap))   :cljs none?))
+         (-def   !hash-map|ref->int?         #?(:clj (or (isa? it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap)     (isa? it.unimi.dsi.fastutil.objects.Reference2IntOpenCustomHashMap))     :cljs none?))
+         (-def   !hash-map|ref->long?        #?(:clj (or (isa? it.unimi.dsi.fastutil.objects.Reference2LongOpenHashMap)    (isa? it.unimi.dsi.fastutil.objects.Reference2LongOpenCustomHashMap))    :cljs none?))
+         (-def   !hash-map|ref->float?       #?(:clj (or (isa? it.unimi.dsi.fastutil.objects.Reference2FloatOpenHashMap)   (isa? it.unimi.dsi.fastutil.objects.Reference2FloatOpenCustomHashMap))   :cljs none?))
+         (-def   !hash-map|ref->double?      #?(:clj (or (isa? it.unimi.dsi.fastutil.objects.Reference2DoubleOpenHashMap)  (isa? it.unimi.dsi.fastutil.objects.Reference2DoubleOpenCustomHashMap))  :cljs none?))
+
+         (-def   !hash-map|ref->ref?         (or #?@(:clj  [(isa? java.util.HashMap)
+                                                            ;; Because this has different semantics
+                                                            #_(isa? java.util.IdentityHashMap)
+                                                            (isa? it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap)
+                                                            (isa? it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenCustomHashMap)]
+                                                     :cljs [(isa? goog.structs.Map)])))
+
+         (def-preds|map|any                  !hash-map)
+
+         (def-preds|map|same-types           !hash-map)
+
+         (-def   !hash-map?                  !hash-map|any?)
+
+#?(:clj  (-def  !!hash-map?                  (isa? java.util.concurrent.ConcurrentHashMap)))
+         (-def    hash-map?                  (or ?!+hash-map? #?(:clj !!hash-map?) !hash-map?))
+
+;; ----- Array Maps ----- ;;
+
+         (-def   +array-map?                  (isa? #?(:clj  clojure.lang.PersistentArrayMap
+                                                       :cljs cljs.core/PersistentArrayMap)))
+
+         (-def  !+array-map?                  (isa? #?(:clj  clojure.lang.PersistentArrayMap$TransientArrayMap
+                                                       :cljs cljs.core/TransientArrayMap)))
+
+         (-def ?!+array-map?                  (or !+array-map? +array-map?))
+
+         (-def   !array-map|boolean->boolean? none?)
+         (-def   !array-map|boolean->byte?    none?)
+         (-def   !array-map|boolean->char?    none?)
+         (-def   !array-map|boolean->short?   none?)
+         (-def   !array-map|boolean->int?     none?)
+         (-def   !array-map|boolean->long?    none?)
+         (-def   !array-map|boolean->float?   none?)
+         (-def   !array-map|boolean->double?  none?)
+         (-def   !array-map|boolean->ref?     none?)
+
+         (-def   !array-map|byte->boolean?    #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2BooleanArrayMap)          :cljs none?))
+         (-def   !array-map|byte->byte?       #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ByteArrayMap)             :cljs none?))
+         (-def   !array-map|byte->char?       #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2CharArrayMap)             :cljs none?))
+         (-def   !array-map|byte->short?      #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ShortArrayMap)            :cljs none?))
+         (-def   !array-map|byte->int?        #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2IntArrayMap)              :cljs none?))
+         (-def   !array-map|byte->long?       #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2LongArrayMap)             :cljs none?))
+         (-def   !array-map|byte->float?      #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2FloatArrayMap)            :cljs none?))
+         (-def   !array-map|byte->double?     #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2DoubleArrayMap)           :cljs none?))
+         (-def   !array-map|byte->ref?        #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ReferenceArrayMap)        :cljs none?))
+
+         (-def   !array-map|char->ref?        #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ReferenceArrayMap)        :cljs none?))
+         (-def   !array-map|char->boolean?    #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2BooleanArrayMap)          :cljs none?))
+         (-def   !array-map|char->byte?       #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ByteArrayMap)             :cljs none?))
+         (-def   !array-map|char->char?       #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2CharArrayMap)             :cljs none?))
+         (-def   !array-map|char->short?      #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ShortArrayMap)            :cljs none?))
+         (-def   !array-map|char->int?        #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2IntArrayMap)              :cljs none?))
+         (-def   !array-map|char->long?       #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2LongArrayMap)             :cljs none?))
+         (-def   !array-map|char->float?      #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2FloatArrayMap)            :cljs none?))
+         (-def   !array-map|char->double?     #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2DoubleArrayMap)           :cljs none?))
+
+         (-def   !array-map|short->boolean?   #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2BooleanArrayMap)        :cljs none?))
+         (-def   !array-map|short->byte?      #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ByteArrayMap)           :cljs none?))
+         (-def   !array-map|short->char?      #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2CharArrayMap)           :cljs none?))
+         (-def   !array-map|short->short?     #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ShortArrayMap)          :cljs none?))
+         (-def   !array-map|short->int?       #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2IntArrayMap)            :cljs none?))
+         (-def   !array-map|short->long?      #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2LongArrayMap)           :cljs none?))
+         (-def   !array-map|short->float?     #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2FloatArrayMap)          :cljs none?))
+         (-def   !array-map|short->double?    #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2DoubleArrayMap)         :cljs none?))
+         (-def   !array-map|short->ref?       #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ReferenceArrayMap)      :cljs none?))
+
+         (-def   !array-map|int->boolean?     #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2BooleanArrayMap)            :cljs none?))
+         (-def   !array-map|int->byte?        #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2ByteArrayMap)               :cljs none?))
+         (-def   !array-map|int->char?        #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2CharArrayMap)               :cljs none?))
+         (-def   !array-map|int->short?       #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2ShortArrayMap)              :cljs none?))
+         (-def   !array-map|int->int?         #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2IntArrayMap)                :cljs none?))
+         (-def   !array-map|int->long?        #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2LongArrayMap)               :cljs none?))
+         (-def   !array-map|int->float?       #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2FloatArrayMap)              :cljs none?))
+         (-def   !array-map|int->double?      #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2DoubleArrayMap)             :cljs none?))
+         (-def   !array-map|int->ref?         #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2ReferenceArrayMap)          :cljs none?))
+
+         (-def   !array-map|long->boolean?    #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2BooleanArrayMap)          :cljs none?))
+         (-def   !array-map|long->byte?       #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2ByteArrayMap)             :cljs none?))
+         (-def   !array-map|long->char?       #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2CharArrayMap)             :cljs none?))
+         (-def   !array-map|long->short?      #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2ShortArrayMap)            :cljs none?))
+         (-def   !array-map|long->int?        #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2IntArrayMap)              :cljs none?))
+         (-def   !array-map|long->long?       #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2LongArrayMap)             :cljs none?))
+         (-def   !array-map|long->float?      #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2FloatArrayMap)            :cljs none?))
+         (-def   !array-map|long->double?     #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2DoubleArrayMap)           :cljs none?))
+         (-def   !array-map|long->ref?        #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2ReferenceArrayMap)        :cljs none?))
+
+         (-def   !array-map|float->boolean?   #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2BooleanArrayMap)        :cljs none?))
+         (-def   !array-map|float->byte?      #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2ByteArrayMap)           :cljs none?))
+         (-def   !array-map|float->char?      #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2CharArrayMap)           :cljs none?))
+         (-def   !array-map|float->short?     #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2ShortArrayMap)          :cljs none?))
+         (-def   !array-map|float->int?       #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2IntArrayMap)            :cljs none?))
+         (-def   !array-map|float->long?      #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2LongArrayMap)           :cljs none?))
+         (-def   !array-map|float->float?     #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2FloatArrayMap)          :cljs none?))
+         (-def   !array-map|float->double?    #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2DoubleArrayMap)         :cljs none?))
+         (-def   !array-map|float->ref?       #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2ReferenceArrayMap)      :cljs none?))
+
+         (-def   !array-map|double->boolean?  #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2BooleanArrayMap)      :cljs none?))
+         (-def   !array-map|double->byte?     #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2ByteArrayMap)         :cljs none?))
+         (-def   !array-map|double->char?     #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2CharArrayMap)         :cljs none?))
+         (-def   !array-map|double->short?    #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2ShortArrayMap)        :cljs none?))
+         (-def   !array-map|double->int?      #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2IntArrayMap)          :cljs none?))
+         (-def   !array-map|double->long?     #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2LongArrayMap)         :cljs none?))
+         (-def   !array-map|double->float?    #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2FloatArrayMap)        :cljs none?))
+         (-def   !array-map|double->double?   #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2DoubleArrayMap)       :cljs none?))
+         (-def   !array-map|double->ref?      #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2ReferenceArrayMap)    :cljs none?))
+
+         (-def   !array-map|ref->boolean?     #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2BooleanArrayMap)   :cljs none?))
+         (-def   !array-map|ref->byte?        #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2ByteArrayMap)      :cljs none?))
+         (-def   !array-map|ref->char?        #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2CharArrayMap)      :cljs none?))
+         (-def   !array-map|ref->short?       #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2ShortArrayMap)     :cljs none?))
+         (-def   !array-map|ref->int?         #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2IntArrayMap)       :cljs none?))
+         (-def   !array-map|ref->long?        #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2LongArrayMap)      :cljs none?))
+         (-def   !array-map|ref->float?       #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2FloatArrayMap)     :cljs none?))
+         (-def   !array-map|ref->double?      #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2DoubleArrayMap)    :cljs none?))
+         (-def   !array-map|ref->ref?         #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2ReferenceArrayMap) :cljs none?))
+
+         (def-preds|map|any                   !array-map)
+
+         (def-preds|map|same-types            !array-map)
+
+         (-def   !array-map?                  !array-map|any?)
+
+#?(:clj  (-def  !!array-map?                  none?))
+
+         (-def    array-map?                  (or ?!+array-map? #?(:clj !!array-map?) !array-map?))
+
+;; ----- Unsorted Maps ----- ;; TODO Perhaps the concept of unsortedness is `(- map sorted?)`?
+
+         (-def   +unsorted-map?                  (or   +hash-map?   +array-map?))
+         (-def  !+unsorted-map?                  (or  !+hash-map?  !+array-map?))
+         (-def ?!+unsorted-map?                  (or ?!+hash-map? ?!+array-map?))
+
+         (-def   !unsorted-map|boolean->boolean? (or !hash-map|boolean->boolean? !array-map|boolean->boolean?))
+         (-def   !unsorted-map|boolean->byte?    (or !hash-map|boolean->byte?    !array-map|boolean->byte?))
+         (-def   !unsorted-map|boolean->char?    (or !hash-map|boolean->char?    !array-map|boolean->char?))
+         (-def   !unsorted-map|boolean->short?   (or !hash-map|boolean->short?   !array-map|boolean->short?))
+         (-def   !unsorted-map|boolean->int?     (or !hash-map|boolean->int?     !array-map|boolean->int?))
+         (-def   !unsorted-map|boolean->long?    (or !hash-map|boolean->long?    !array-map|boolean->long?))
+         (-def   !unsorted-map|boolean->float?   (or !hash-map|boolean->float?   !array-map|boolean->float?))
+         (-def   !unsorted-map|boolean->double?  (or !hash-map|boolean->double?  !array-map|boolean->double?))
+         (-def   !unsorted-map|boolean->ref?     (or !hash-map|boolean->ref?     !array-map|boolean->ref?))
+
+         (-def   !unsorted-map|byte->boolean?    (or !hash-map|byte->boolean?    !array-map|byte->boolean?))
+         (-def   !unsorted-map|byte->byte?       (or !hash-map|byte->byte?       !array-map|byte->byte?))
+         (-def   !unsorted-map|byte->char?       (or !hash-map|byte->char?       !array-map|byte->char?))
+         (-def   !unsorted-map|byte->short?      (or !hash-map|byte->short?      !array-map|byte->short?))
+         (-def   !unsorted-map|byte->int?        (or !hash-map|byte->int?        !array-map|byte->int?))
+         (-def   !unsorted-map|byte->long?       (or !hash-map|byte->long?       !array-map|byte->long?))
+         (-def   !unsorted-map|byte->float?      (or !hash-map|byte->float?      !array-map|byte->float?))
+         (-def   !unsorted-map|byte->double?     (or !hash-map|byte->double?     !array-map|byte->double?))
+         (-def   !unsorted-map|byte->ref?        (or !hash-map|byte->ref?        !array-map|byte->ref?))
+
+         (-def   !unsorted-map|char->boolean?    (or !hash-map|char->boolean?    !array-map|char->boolean?))
+         (-def   !unsorted-map|char->byte?       (or !hash-map|char->byte?       !array-map|char->byte?))
+         (-def   !unsorted-map|char->char?       (or !hash-map|char->char?       !array-map|char->char?))
+         (-def   !unsorted-map|char->short?      (or !hash-map|char->short?      !array-map|char->short?))
+         (-def   !unsorted-map|char->int?        (or !hash-map|char->int?        !array-map|char->int?))
+         (-def   !unsorted-map|char->long?       (or !hash-map|char->long?       !array-map|char->long?))
+         (-def   !unsorted-map|char->float?      (or !hash-map|char->float?      !array-map|char->float?))
+         (-def   !unsorted-map|char->double?     (or !hash-map|char->double?     !array-map|char->double?))
+         (-def   !unsorted-map|char->ref?        (or !hash-map|char->ref?        !array-map|char->ref?))
+
+         (-def   !unsorted-map|short->boolean?   (or !hash-map|short->boolean?   !array-map|short->boolean?))
+         (-def   !unsorted-map|short->byte?      (or !hash-map|short->byte?      !array-map|short->byte?))
+         (-def   !unsorted-map|short->char?      (or !hash-map|short->char?      !array-map|short->char?))
+         (-def   !unsorted-map|short->short?     (or !hash-map|short->short?     !array-map|short->short?))
+         (-def   !unsorted-map|short->int?       (or !hash-map|short->int?       !array-map|short->int?))
+         (-def   !unsorted-map|short->long?      (or !hash-map|short->long?      !array-map|short->long?))
+         (-def   !unsorted-map|short->float?     (or !hash-map|short->float?     !array-map|short->float?))
+         (-def   !unsorted-map|short->double?    (or !hash-map|short->double?    !array-map|short->double?))
+         (-def   !unsorted-map|short->ref?       (or !hash-map|short->ref?       !array-map|short->ref?))
+
+         (-def   !unsorted-map|int->boolean?     (or !hash-map|int->boolean?     !array-map|int->boolean?))
+         (-def   !unsorted-map|int->byte?        (or !hash-map|int->byte?        !array-map|int->byte?))
+         (-def   !unsorted-map|int->char?        (or !hash-map|int->char?        !array-map|int->char?))
+         (-def   !unsorted-map|int->short?       (or !hash-map|int->short?       !array-map|int->short?))
+         (-def   !unsorted-map|int->int?         (or !hash-map|int->int?         !array-map|int->int?))
+         (-def   !unsorted-map|int->long?        (or !hash-map|int->long?        !array-map|int->long?))
+         (-def   !unsorted-map|int->float?       (or !hash-map|int->float?       !array-map|int->float?))
+         (-def   !unsorted-map|int->double?      (or !hash-map|int->double?      !array-map|int->double?))
+         (-def   !unsorted-map|int->ref?         (or !hash-map|int->ref?         !array-map|int->ref?))
+
+         (-def   !unsorted-map|long->boolean?    (or !hash-map|long->boolean?     !array-map|long->boolean?))
+         (-def   !unsorted-map|long->byte?       (or !hash-map|long->byte?        !array-map|long->byte?))
+         (-def   !unsorted-map|long->char?       (or !hash-map|long->char?        !array-map|long->char?))
+         (-def   !unsorted-map|long->short?      (or !hash-map|long->short?       !array-map|long->short?))
+         (-def   !unsorted-map|long->int?        (or !hash-map|long->int?         !array-map|long->int?))
+         (-def   !unsorted-map|long->long?       (or !hash-map|long->long?        !array-map|long->long?))
+         (-def   !unsorted-map|long->float?      (or !hash-map|long->float?       !array-map|long->float?))
+         (-def   !unsorted-map|long->double?     (or !hash-map|long->double?      !array-map|long->double?))
+         (-def   !unsorted-map|long->ref?        (or !hash-map|long->ref?         !array-map|long->ref?))
+
+         (-def   !unsorted-map|float->boolean?   (or !hash-map|float->boolean?    !array-map|float->boolean?))
+         (-def   !unsorted-map|float->byte?      (or !hash-map|float->byte?       !array-map|float->byte?))
+         (-def   !unsorted-map|float->char?      (or !hash-map|float->char?       !array-map|float->char?))
+         (-def   !unsorted-map|float->short?     (or !hash-map|float->short?      !array-map|float->short?))
+         (-def   !unsorted-map|float->int?       (or !hash-map|float->int?        !array-map|float->int?))
+         (-def   !unsorted-map|float->long?      (or !hash-map|float->long?       !array-map|float->long?))
+         (-def   !unsorted-map|float->float?     (or !hash-map|float->float?      !array-map|float->float?))
+         (-def   !unsorted-map|float->double?    (or !hash-map|float->double?     !array-map|float->double?))
+         (-def   !unsorted-map|float->ref?       (or !hash-map|float->ref?        !array-map|float->ref?))
+
+         (-def   !unsorted-map|double->boolean?  (or !hash-map|double->boolean?   !array-map|double->boolean?))
+         (-def   !unsorted-map|double->byte?     (or !hash-map|double->byte?      !array-map|double->byte?))
+         (-def   !unsorted-map|double->char?     (or !hash-map|double->char?      !array-map|double->char?))
+         (-def   !unsorted-map|double->short?    (or !hash-map|double->short?     !array-map|double->short?))
+         (-def   !unsorted-map|double->int?      (or !hash-map|double->int?       !array-map|double->int?))
+         (-def   !unsorted-map|double->long?     (or !hash-map|double->long?      !array-map|double->long?))
+         (-def   !unsorted-map|double->float?    (or !hash-map|double->float?     !array-map|double->float?))
+         (-def   !unsorted-map|double->double?   (or !hash-map|double->double?    !array-map|double->double?))
+         (-def   !unsorted-map|double->ref?      (or !hash-map|double->ref?       !array-map|double->ref?))
+
+         (-def   !unsorted-map|ref->boolean?     (or !hash-map|ref->boolean?      !array-map|ref->boolean?))
+         (-def   !unsorted-map|ref->byte?        (or !hash-map|ref->byte?         !array-map|ref->byte?))
+         (-def   !unsorted-map|ref->char?        (or !hash-map|ref->char?         !array-map|ref->char?))
+         (-def   !unsorted-map|ref->short?       (or !hash-map|ref->short?        !array-map|ref->short?))
+         (-def   !unsorted-map|ref->int?         (or !hash-map|ref->int?          !array-map|ref->int?))
+         (-def   !unsorted-map|ref->long?        (or !hash-map|ref->long?         !array-map|ref->long?))
+         (-def   !unsorted-map|ref->float?       (or !hash-map|ref->float?        !array-map|ref->float?))
+         (-def   !unsorted-map|ref->double?      (or !hash-map|ref->double?       !array-map|ref->double?))
+         (-def   !unsorted-map|ref->ref?         (or !hash-map|ref->ref?          !array-map|ref->ref?))
+
+         (def-preds|map|any                      !unsorted-map)
+
+         (def-preds|map|same-types               !unsorted-map)
+
+         (-def   !unsorted-map?                  !unsorted-map|any?)
+
+#?(:clj  (-def  !!unsorted-map?                  (or !!hash-map? !!array-map?)))
+         (-def    unsorted-map?                  (or ?!+unsorted-map? !unsorted-map? #?(:clj !!unsorted-map?)))
+
+;; ----- Sorted Maps ----- ;;
+
+         (-def   +map?                           (isa? #?(:clj  clojure.lang.IPersistentMap
+                                                          :cljs cljs.core/IMap)))
+         (-def  !+map?                           (isa? #?(:clj  clojure.lang.ITransientMap
+                                                          :cljs cljs.core/ITransientMap)))
+
+         (-def   +sorted-map?                    (and (isa? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
+                                                      +map?))
+         (-def  !+sorted-map?                    (and (isa? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
+                                                      !+map?))
+         (-def ?!+sorted-map?                    (or +sorted-map? !+sorted-map?))
+
+         (-def   !sorted-map|boolean->boolean?   none?)
+         (-def   !sorted-map|boolean->byte?      none?)
+         (-def   !sorted-map|boolean->char?      none?)
+         (-def   !sorted-map|boolean->short?     none?)
+         (-def   !sorted-map|boolean->int?       none?)
+         (-def   !sorted-map|boolean->long?      none?)
+         (-def   !sorted-map|boolean->float?     none?)
+         (-def   !sorted-map|boolean->double?    none?)
+         (-def   !sorted-map|boolean->ref?       none?)
+
+         (-def   !sorted-map|byte->boolean?      #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2BooleanSortedMap)          :cljs none?))
+         (-def   !sorted-map|byte->byte?         #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ByteSortedMap)             :cljs none?))
+         (-def   !sorted-map|byte->char?         #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2CharSortedMap)             :cljs none?))
+         (-def   !sorted-map|byte->short?        #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ShortSortedMap)            :cljs none?))
+         (-def   !sorted-map|byte->int?          #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2IntSortedMap)              :cljs none?))
+         (-def   !sorted-map|byte->long?         #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2LongSortedMap)             :cljs none?))
+         (-def   !sorted-map|byte->float?        #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2FloatSortedMap)            :cljs none?))
+         (-def   !sorted-map|byte->double?       #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2DoubleSortedMap)           :cljs none?))
+         (-def   !sorted-map|byte->ref?          #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ReferenceSortedMap)        :cljs none?))
+
+         (-def   !sorted-map|char->ref?          #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ReferenceSortedMap)        :cljs none?))
+         (-def   !sorted-map|char->boolean?      #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2BooleanSortedMap)          :cljs none?))
+         (-def   !sorted-map|char->byte?         #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ByteSortedMap)             :cljs none?))
+         (-def   !sorted-map|char->char?         #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2CharSortedMap)             :cljs none?))
+         (-def   !sorted-map|char->short?        #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ShortSortedMap)            :cljs none?))
+         (-def   !sorted-map|char->int?          #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2IntSortedMap)              :cljs none?))
+         (-def   !sorted-map|char->long?         #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2LongSortedMap)             :cljs none?))
+         (-def   !sorted-map|char->float?        #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2FloatSortedMap)            :cljs none?))
+         (-def   !sorted-map|char->double?       #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2DoubleSortedMap)           :cljs none?))
+
+         (-def   !sorted-map|short->boolean?     #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2BooleanSortedMap)        :cljs none?))
+         (-def   !sorted-map|short->byte?        #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ByteSortedMap)           :cljs none?))
+         (-def   !sorted-map|short->char?        #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2CharSortedMap)           :cljs none?))
+         (-def   !sorted-map|short->short?       #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ShortSortedMap)          :cljs none?))
+         (-def   !sorted-map|short->int?         #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2IntSortedMap)            :cljs none?))
+         (-def   !sorted-map|short->long?        #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2LongSortedMap)           :cljs none?))
+         (-def   !sorted-map|short->float?       #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2FloatSortedMap)          :cljs none?))
+         (-def   !sorted-map|short->double?      #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2DoubleSortedMap)         :cljs none?))
+         (-def   !sorted-map|short->ref?         #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ReferenceSortedMap)      :cljs none?))
+
+         (-def   !sorted-map|int->boolean?       #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2BooleanSortedMap)            :cljs none?))
+         (-def   !sorted-map|int->byte?          #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2ByteSortedMap)               :cljs none?))
+         (-def   !sorted-map|int->char?          #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2CharSortedMap)               :cljs none?))
+         (-def   !sorted-map|int->short?         #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2ShortSortedMap)              :cljs none?))
+         (-def   !sorted-map|int->int?           #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2IntSortedMap)                :cljs none?))
+         (-def   !sorted-map|int->long?          #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2LongSortedMap)               :cljs none?))
+         (-def   !sorted-map|int->float?         #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2FloatSortedMap)              :cljs none?))
+         (-def   !sorted-map|int->double?        #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2DoubleSortedMap)             :cljs none?))
+         (-def   !sorted-map|int->ref?           #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2ReferenceSortedMap)          :cljs none?))
+
+         (-def   !sorted-map|long->boolean?      #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2BooleanSortedMap)          :cljs none?))
+         (-def   !sorted-map|long->byte?         #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2ByteSortedMap)             :cljs none?))
+         (-def   !sorted-map|long->char?         #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2CharSortedMap)             :cljs none?))
+         (-def   !sorted-map|long->short?        #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2ShortSortedMap)            :cljs none?))
+         (-def   !sorted-map|long->int?          #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2IntSortedMap)              :cljs none?))
+         (-def   !sorted-map|long->long?         #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2LongSortedMap)             :cljs none?))
+         (-def   !sorted-map|long->float?        #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2FloatSortedMap)            :cljs none?))
+         (-def   !sorted-map|long->double?       #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2DoubleSortedMap)           :cljs none?))
+         (-def   !sorted-map|long->ref?          #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2ReferenceSortedMap)        :cljs none?))
+
+         (-def   !sorted-map|float->boolean?     #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2BooleanSortedMap)        :cljs none?))
+         (-def   !sorted-map|float->byte?        #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2ByteSortedMap)           :cljs none?))
+         (-def   !sorted-map|float->char?        #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2CharSortedMap)           :cljs none?))
+         (-def   !sorted-map|float->short?       #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2ShortSortedMap)          :cljs none?))
+         (-def   !sorted-map|float->int?         #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2IntSortedMap)            :cljs none?))
+         (-def   !sorted-map|float->long?        #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2LongSortedMap)           :cljs none?))
+         (-def   !sorted-map|float->float?       #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2FloatSortedMap)          :cljs none?))
+         (-def   !sorted-map|float->double?      #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2DoubleSortedMap)         :cljs none?))
+         (-def   !sorted-map|float->ref?         #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2ReferenceSortedMap)      :cljs none?))
+
+         (-def   !sorted-map|double->boolean?    #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2BooleanSortedMap)      :cljs none?))
+         (-def   !sorted-map|double->byte?       #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2ByteSortedMap)         :cljs none?))
+         (-def   !sorted-map|double->char?       #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2CharSortedMap)         :cljs none?))
+         (-def   !sorted-map|double->short?      #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2ShortSortedMap)        :cljs none?))
+         (-def   !sorted-map|double->int?        #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2IntSortedMap)          :cljs none?))
+         (-def   !sorted-map|double->long?       #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2LongSortedMap)         :cljs none?))
+         (-def   !sorted-map|double->float?      #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2FloatSortedMap)        :cljs none?))
+         (-def   !sorted-map|double->double?     #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2DoubleSortedMap)       :cljs none?))
+         (-def   !sorted-map|double->ref?        #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2ReferenceSortedMap)    :cljs none?))
+
+         (-def   !sorted-map|ref->boolean?       #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2BooleanSortedMap)   :cljs none?))
+         (-def   !sorted-map|ref->byte?          #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2ByteSortedMap)      :cljs none?))
+         (-def   !sorted-map|ref->char?          #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2CharSortedMap)      :cljs none?))
+         (-def   !sorted-map|ref->short?         #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2ShortSortedMap)     :cljs none?))
+         (-def   !sorted-map|ref->int?           #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2IntSortedMap)       :cljs none?))
+         (-def   !sorted-map|ref->long?          #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2LongSortedMap)      :cljs none?))
+         (-def   !sorted-map|ref->float?         #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2FloatSortedMap)     :cljs none?))
+         (-def   !sorted-map|ref->double?        #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2DoubleSortedMap)    :cljs none?))
+
+         (-def   !sorted-map|ref->ref?           (or #?@(:clj  [(isa? java.util.TreeMap)
+                                                                (isa? it.unimi.dsi.fastutil.objects.Reference2ReferenceSortedMap)]
+                                                         :cljs [(isa? goog.structs.AvlTree)])))
+
+         (def-preds|map|any                      !sorted-map)
+
+         (def-preds|map|same-types               !sorted-map)
+
+         (-def   !sorted-map?                    !sorted-map|any?)
+
+#?(:clj  (-def  !!sorted-map?                    (isa? java.util.concurrent.ConcurrentNavigableMap)))
+         (-def    sorted-map?                    (or ?!+sorted-map? #?@(:clj [!!sorted-map? (isa? java.util.SortedMap)]) !sorted-map?))
+
+;; ----- Other Maps ----- ;;
+
+         (-def   +insertion-ordered-map? (or (isa? linked.map.LinkedMap)
+                                             ;; This is true, but we have replaced OrderedMap with LinkedMap
+                                             #_(:clj (isa? flatland.ordered.map.OrderedMap))))
+         (-def  !+insertion-ordered-map? none?
+                                         ;; This is true, but we have replaced OrderedMap with LinkedMap
+                                         #_(isa? flatland.ordered.map.TransientOrderedMap))
+         (-def ?!+insertion-ordered-map? (or +insertion-ordered-map? !+insertion-ordered-map?))
+
+         (-def   !insertion-ordered-map? #?(:clj (isa? java.util.LinkedHashMap) :cljs none?))
+
+         ;; See https://github.com/ben-manes/concurrentlinkedhashmap (and links therefrom) for good implementation
+#?(:clj  (-def  !!insertion-ordered-map? none?))
+
+         (-def    insertion-ordered-map? (or ?!+insertion-ordered-map? !insertion-ordered-map? #?(:clj !!insertion-ordered-map?)))
+
+;; ----- General Maps ----- ;;
+
+         (-def   +map|built-in?         (or (isa? #?(:clj clojure.lang.PersistentHashMap  :cljs cljs.core/PersistentHashMap))
+                                            (isa? #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core/PersistentArrayMap))
+                                            (isa? #?(:clj clojure.lang.PersistentTreeMap  :cljs cljs.core/PersistentTreeMap))))
+
+         ;; `+map?` and `!+map?` defined above
+         (-def ?!+map?                  (or !+map? +map?))
+
+         (-def   !map|boolean->boolean? none?)
+         (-def   !map|boolean->byte?    none?)
+         (-def   !map|boolean->char?    none?)
+         (-def   !map|boolean->short?   none?)
+         (-def   !map|boolean->int?     none?)
+         (-def   !map|boolean->long?    none?)
+         (-def   !map|boolean->float?   none?)
+         (-def   !map|boolean->double?  none?)
+         (-def   !map|boolean->ref?     none?)
+
+         (-def   !map|byte->boolean?    #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2BooleanMap)        :cljs none?))
+         (-def   !map|byte->byte?       #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ByteMap)           :cljs none?))
+         (-def   !map|byte->char?       #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2CharMap)           :cljs none?))
+         (-def   !map|byte->short?      #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ShortMap)          :cljs none?))
+         (-def   !map|byte->int?        #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2IntMap)            :cljs none?))
+         (-def   !map|byte->long?       #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2LongMap)           :cljs none?))
+         (-def   !map|byte->float?      #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2FloatMap)          :cljs none?))
+         (-def   !map|byte->double?     #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2DoubleMap)         :cljs none?))
+         (-def   !map|byte->ref?        #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ReferenceMap)      :cljs none?))
+
+         (-def   !map|char->ref?        #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ReferenceMap)      :cljs none?))
+         (-def   !map|char->boolean?    #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2BooleanMap)        :cljs none?))
+         (-def   !map|char->byte?       #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ByteMap)           :cljs none?))
+         (-def   !map|char->char?       #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2CharMap)           :cljs none?))
+         (-def   !map|char->short?      #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ShortMap)          :cljs none?))
+         (-def   !map|char->int?        #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2IntMap)            :cljs none?))
+         (-def   !map|char->long?       #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2LongMap)           :cljs none?))
+         (-def   !map|char->float?      #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2FloatMap)          :cljs none?))
+         (-def   !map|char->double?     #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2DoubleMap)         :cljs none?))
+
+         (-def   !map|short->boolean?   #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2BooleanMap)      :cljs none?))
+         (-def   !map|short->byte?      #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ByteMap)         :cljs none?))
+         (-def   !map|short->char?      #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2CharMap)         :cljs none?))
+         (-def   !map|short->short?     #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ShortMap)        :cljs none?))
+         (-def   !map|short->int?       #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2IntMap)          :cljs none?))
+         (-def   !map|short->long?      #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2LongMap)         :cljs none?))
+         (-def   !map|short->float?     #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2FloatMap)        :cljs none?))
+         (-def   !map|short->double?    #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2DoubleMap)       :cljs none?))
+         (-def   !map|short->ref?       #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ReferenceMap)    :cljs none?))
+
+         (-def   !map|int->boolean?     #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2BooleanMap)          :cljs none?))
+         (-def   !map|int->byte?        #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2ByteMap)             :cljs none?))
+         (-def   !map|int->char?        #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2CharMap)             :cljs none?))
+         (-def   !map|int->short?       #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2ShortMap)            :cljs none?))
+         (-def   !map|int->int?         #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2IntMap)              :cljs none?))
+         (-def   !map|int->long?        #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2LongMap)             :cljs none?))
+         (-def   !map|int->float?       #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2FloatMap)            :cljs none?))
+         (-def   !map|int->double?      #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2DoubleMap)           :cljs none?))
+         (-def   !map|int->ref?         #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2ReferenceMap)        :cljs none?))
+
+         (-def   !map|long->boolean?    #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2BooleanMap)        :cljs none?))
+         (-def   !map|long->byte?       #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2ByteMap)           :cljs none?))
+         (-def   !map|long->char?       #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2CharMap)           :cljs none?))
+         (-def   !map|long->short?      #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2ShortMap)          :cljs none?))
+         (-def   !map|long->int?        #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2IntMap)            :cljs none?))
+         (-def   !map|long->long?       #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2LongMap)           :cljs none?))
+         (-def   !map|long->float?      #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2FloatMap)          :cljs none?))
+         (-def   !map|long->double?     #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2DoubleMap)         :cljs none?))
+         (-def   !map|long->ref?        #?(:clj (isa? it.unimi.dsi.fastutil.longs.Long2ReferenceMap)      :cljs none?))
+
+         (-def   !map|float->boolean?   #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2BooleanMap)      :cljs none?))
+         (-def   !map|float->byte?      #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2ByteMap)         :cljs none?))
+         (-def   !map|float->char?      #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2CharMap)         :cljs none?))
+         (-def   !map|float->short?     #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2ShortMap)        :cljs none?))
+         (-def   !map|float->int?       #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2IntMap)          :cljs none?))
+         (-def   !map|float->long?      #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2LongMap)         :cljs none?))
+         (-def   !map|float->float?     #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2FloatMap)        :cljs none?))
+         (-def   !map|float->double?    #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2DoubleMap)       :cljs none?))
+         (-def   !map|float->ref?       #?(:clj (isa? it.unimi.dsi.fastutil.floats.Float2ReferenceMap)    :cljs none?))
+
+         (-def   !map|double->boolean?  #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2BooleanMap)    :cljs none?))
+         (-def   !map|double->byte?     #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2ByteMap)       :cljs none?))
+         (-def   !map|double->char?     #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2CharMap)       :cljs none?))
+         (-def   !map|double->short?    #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2ShortMap)      :cljs none?))
+         (-def   !map|double->int?      #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2IntMap)        :cljs none?))
+         (-def   !map|double->long?     #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2LongMap)       :cljs none?))
+         (-def   !map|double->float?    #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2FloatMap)      :cljs none?))
+         (-def   !map|double->double?   #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2DoubleMap)     :cljs none?))
+         (-def   !map|double->ref?      #?(:clj (isa? it.unimi.dsi.fastutil.doubles.Double2ReferenceMap)  :cljs none?))
+
+         (-def   !map|ref->boolean?     #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2BooleanMap) :cljs none?))
+         (-def   !map|ref->byte?        #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2ByteMap)    :cljs none?))
+         (-def   !map|ref->char?        #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2CharMap)    :cljs none?))
+         (-def   !map|ref->short?       #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2ShortMap)   :cljs none?))
+         (-def   !map|ref->int?         #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2IntMap)     :cljs none?))
+         (-def   !map|ref->long?        #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2LongMap)    :cljs none?))
+         (-def   !map|ref->float?       #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2FloatMap)   :cljs none?))
+         (-def   !map|ref->double?      #?(:clj (isa? it.unimi.dsi.fastutil.objects.Reference2DoubleMap)  :cljs none?))
+
+         (-def   !map|ref->ref?         (or #?@(:clj  [;; perhaps just `(- !map? <primitive-possibilities>)` ?
+                                                       !unsorted-map|ref->ref?
+                                                       !sorted-map|ref->ref?
+                                                       (isa? it.unimi.dsi.fastutil.objects.Reference2ReferenceMap)]
+                                                :cljs [(isa? goog.structs.AvlTree)])))
+
+         (def-preds|map|any             !map)
+
+         (def-preds|map|same-types      !map)
+
+         (-def   !map?                  !map|any?)
+
+#?(:clj  (-def  !!map?                  (or !!unsorted-map? !!sorted-map?)))
+
+         (-def    map?                  (or ?!+map? !map? #?@(:clj [!!map? (isa? java.util.Map)])))
+
+;; ===== Sets ===== ;; Associative; A special type of Map whose keys and vals are identical
+
+#?(:clj  (-def    java-set?              (isa? java.util.Set)))
+
+;; ----- Hash Sets ----- ;;
+
+         (-def   +hash-set?              (isa? #?(:clj  clojure.lang.PersistentHashSet
+                                                  :cljs cljs.core/PersistentHashSet)))
+         (-def  !+hash-set?              (isa? #?(:clj  clojure.lang.PersistentHashSet$TransientHashSet
+                                                  :cljs cljs.core/TransientHashSet)))
+         (-def ?!+hash-set?              (or +hash-set? !+hash-set?))
+
+         (-def   !hash-set|byte?         #?(:clj (isa? it.unimi.dsi.fastutil.bytes.ByteOpenHashSet)     :cljs none?))
+         (-def   !hash-set|char?         #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharOpenHashSet)     :cljs none?))
+         (-def   !hash-set|short?        #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortOpenHashSet)   :cljs none?))
+         (-def   !hash-set|int?          #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntOpenHashSet)       :cljs none?))
+         (-def   !hash-set|long?         #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongOpenHashSet)     :cljs none?))
+         (-def   !hash-set|float?        #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatOpenHashSet)   :cljs none?))
+         (-def   !hash-set|double?       #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet) :cljs none?))
+         (-def   !hash-set|ref?          #?(:clj  (or (isa? java.util.HashSet)
+                                                      ;; Because this has different semantics
+                                                      #_(isa? java.util.IdentityHashSet)
+                                                      (isa? it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet))
+                                            :cljs (isa? goog.structs.Set)))
+
+         (-def   !hash-set?              (or !hash-set|ref?
+                                             #?@(:clj [!hash-set|byte? !hash-set|short? !hash-set|char?
+                                                       !hash-set|int? !hash-set|long?
+                                                       !hash-set|float? !hash-set|double?])))
+
+         ;; CLJ technically can have via ConcurrentHashMap with same KVs but this hasn't been implemented yet
+#?(:clj  (-def  !!hash-set?              none?))
+         (-def    hash-set?              (or ?!+hash-set? !hash-set? #?(:clj !!hash-set?)))
+
+;; ----- Unsorted Sets ----- ;;
+
+         (-def   +unsorted-set?            +hash-set?)
+         (-def  !+unsorted-set?           !+hash-set?)
+         (-def ?!+unsorted-set?          ?!+hash-set?)
+
+#?(:clj  (-def   !unsorted-set|byte?     !hash-set|byte?))
+#?(:clj  (-def   !unsorted-set|short?    !hash-set|char?))
+#?(:clj  (-def   !unsorted-set|char?     !hash-set|short?))
+#?(:clj  (-def   !unsorted-set|int?      !hash-set|int?))
+#?(:clj  (-def   !unsorted-set|long?     !hash-set|long?))
+#?(:clj  (-def   !unsorted-set|float?    !hash-set|float?))
+#?(:clj  (-def   !unsorted-set|double?   !hash-set|double?))
+         (-def   !unsorted-set|ref?      !hash-set|ref?)
+
+         (-def   !unsorted-set?          (or !unsorted-set|ref?
+                                             #?@(:clj [!unsorted-set|byte? !unsorted-set|short? !unsorted-set|char?
+                                                       !unsorted-set|int? !unsorted-set|long?
+                                                       !unsorted-set|float? !unsorted-set|double?])))
+
+#?(:clj  (-def  !!unsorted-set?          !!hash-set?))
+         (-def    unsorted-set?            hash-set?)
+
+;; ----- Sorted Sets ----- ;;
+
+         (-def   +sorted-set?            (isa? #?(:clj  clojure.lang.PersistentTreeSet
+                                                  :cljs cljs.core/PersistentTreeSet)))
+         (-def  !+sorted-set?            none?)
+         (-def ?!+sorted-set?            (or +sorted-set? !+sorted-set?))
+
+#?(:clj  (-def   !sorted-set|byte?       (isa? it.unimi.dsi.fastutil.bytes.ByteSortedSet)))
+#?(:clj  (-def   !sorted-set|short?      (isa? it.unimi.dsi.fastutil.shorts.ShortSortedSet)))
+#?(:clj  (-def   !sorted-set|char?       (isa? it.unimi.dsi.fastutil.chars.CharSortedSet)))
+#?(:clj  (-def   !sorted-set|int?        (isa? it.unimi.dsi.fastutil.ints.IntSortedSet)))
+#?(:clj  (-def   !sorted-set|long?       (isa? it.unimi.dsi.fastutil.longs.LongSortedSet)))
+#?(:clj  (-def   !sorted-set|float?      (isa? it.unimi.dsi.fastutil.floats.FloatSortedSet)))
+#?(:clj  (-def   !sorted-set|double?     (isa? it.unimi.dsi.fastutil.doubles.DoubleSortedSet)))
+         ;; CLJS technically can have via goog.structs.AVLTree with same KVs but this hasn't been implemented yet
+         (-def   !sorted-set|ref?        #?(:clj (isa? java.util.TreeSet) :cljs none?))
+
+         (-def   !sorted-set?            (or !sorted-set|ref?
+                                             #?@(:clj [!sorted-set|byte? !sorted-set|short? !sorted-set|char?
+                                                       !sorted-set|int? !sorted-set|long?
+                                                       !sorted-set|float? !sorted-set|double?])))
+
+         ;; CLJ technically can have via ConcurrentSkipListMap with same KVs but this hasn't been implemented yet
+#?(:clj  (-def  !!sorted-set?            none?))
+         (-def    sorted-set?            (or ?!+sorted-set? !sorted-set? #?@(:clj [!!sorted-set? (isa? java.util.SortedSet)])))
+
+;; ----- Other Sets ----- ;;
+
+         (-def   +insertion-ordered-set? (or (isa? linked.set.LinkedSet)
+                                           ;; This is true, but we have replaced OrderedSet with LinkedSet
+                                           #_(:clj (isa? flatland.ordered.set.OrderedSet))))
+         (-def  !+insertion-ordered-set? none?
+                                         ;; This is true, but we have replaced OrderedSet with LinkedSet
+                                         #_(isa? flatland.ordered.set.TransientOrderedSet))
+         (-def ?!+insertion-ordered-set? (or +insertion-ordered-set? !+insertion-ordered-set?))
+
+         (-def   !insertion-ordered-set? #?(:clj (isa? java.util.LinkedHashSet) :cljs none?))
+
+         ;; CLJ technically can have via ConcurrentLinkedHashMap with same KVs but this hasn't been implemented yet
+#?(:clj  (-def  !!insertion-ordered-set? none?))
+
+         (-def    insertion-ordered-set? (or ?!+insertion-ordered-set? !insertion-ordered-set? #?(:clj !!insertion-ordered-set?)))
+
+;; ----- General Sets ----- ;;
+
+         (-def  !+set?                   (isa? #?(:clj  clojure.lang.ITransientSet
+                                                 :cljs cljs.core/ITransientSet)))
+
+         (-def   +set|built-in?          (or (isa? #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet))
+                                             (isa? #?(:clj clojure.lang.PersistentTreeSet :cljs cljs.core/PersistentTreeSet))))
+
+         (-def   +set?                   (isa? #?(:clj  clojure.lang.IPersistentSet
+                                                  :cljs cljs.core/ISet)))
+         (-def ?!+set?                   (or !+set? +set?))
+
+         (-def   !set|byte?              #?(:clj (isa? it.unimi.dsi.fastutil.bytes.ByteSet)     :cljs none?))
+         (-def   !set|short?             #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortSet)   :cljs none?))
+         (-def   !set|char?              #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharSet)     :cljs none?))
+         (-def   !set|int?               #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntSet)       :cljs none?))
+         (-def   !set|long?              #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongSet)     :cljs none?))
+         (-def   !set|float?             #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatSet)   :cljs none?))
+         (-def   !set|double?            #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleSet) :cljs none?))
+         (-def   !set|ref?               (or !unsorted-set|ref? !sorted-set|ref?))
+
+         (-def   !set?                   (or !set|ref?
+                                             #?@(:clj [!set|byte? !set|short? !set|char?
+                                                       !set|int? !set|long?
+                                                       !set|float? !set|double?])))
+
+         (-def   !set?                   (or !unsorted-set? !sorted-set?))
+#?(:clj  (-def  !!set?                   (or !!unsorted-set? !!sorted-set?)))
+         (-def    set?                   (or ?!+set? !set? #?@(:clj [!!set? (isa? java.util.Set)])))
 
 ;; ===== Functions ===== ;;
 
@@ -1460,126 +2160,155 @@
 
          (-def multimethod? (isa? #?(:clj clojure.lang.MultiFn :cljs cljs.core/IMultiFn)))
 
-         ;; I.e., can you call/invoke it by being in functor position (first element of an unquoted list)?
+         ;; I.e., can you call/invoke it by being in functor position (first element of an unquoted list)
+         ;; within a typed context?
          ;; TODO should we allow java.lang.Runnable, java.util.concurrent.Callable to be `callable?`?
          (-def callable?    (or ifn? fnt?))
 
+;; ===== References ===== ;;
+
+         (-def atom?     (isa? #?(:clj clojure.lang.IAtom :cljs cljs.core/IAtom)))
+
+         (-def volatile? (isa? #?(:clj clojure.lang.Volatile :cljs cljs.core/Volatile)))
+
+#?(:clj  (-def atomic?   (or atom? volatile?
+                             java.util.concurrent.atomic.AtomicReference
+                             ;; From the java.util.concurrent package:
+                             ;; "Additionally, classes are provided only for those
+                             ;;  types that are commonly useful in intended applications.
+                             ;;  For example, there is no atomic class for representing
+                             ;;  byte. In those infrequent cases where you would like
+                             ;;  to do so, you can use an AtomicInteger to hold byte
+                             ;;  values, and cast appropriately. You can also hold floats
+                             ;;  using Float.floatToIntBits and Float.intBitstoFloat
+                             ;;  conversions, and doubles using Double.doubleToLongBits
+                             ;;  and Double.longBitsToDouble conversions."
+                             java.util.concurrent.atomic.AtomicBoolean
+                           #_java.util.concurrent.atomic.AtomicByte
+                           #_java.util.concurrent.atomic.AtomicShort
+                             java.util.concurrent.atomic.AtomicInteger
+                             java.util.concurrent.atomic.AtomicLong
+                           #_java.util.concurrent.atomic.AtomicFloat
+                           #_java.util.concurrent.atomic.AtomicDouble
+                             com.google.common.util.concurrent.AtomicDouble)))
+
 ;; ===== Miscellaneous ===== ;;
+
+#?(:clj  (-def thread?      (isa? java.lang.Thread)))
+
+         ;; Able to be used with `throw`
+         (-def throwable?   #?(:clj (isa? java.lang.Throwable) :cljs any?))
 
          (-def regex?       (isa? #?(:clj java.util.regex.Pattern :cljs js/RegExp)))
 
-         (-def atom?        (isa? #?(:clj clojure.lang.IAtom :cljs cljs.core/IAtom)))
+         (-def chan?        (isa? #?(:clj  clojure.core.async.impl.protocols/Channel
+                                     :cljs cljs.core.async.impl.protocols/Channel)))
 
-         (-def volatile?    (isa? #?(:clj clojure.lang.Volatile :cljs cljs.core/Volatile)))
+         (-def keyword?     (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
+         (-def symbol?      (isa? #?(:clj clojure.lang.Symbol  :cljs cljs.core/Symbol)))
 
-#?(:clj  (-def atomic?      (or atom? volatile?
-                                java.util.concurrent.atomic.AtomicReference
-                                ;; From the java.util.concurrent package:
-                                ;; "Additionally, classes are provided only for those
-                                ;;  types that are commonly useful in intended applications.
-                                ;;  For example, there is no atomic class for representing
-                                ;;  byte. In those infrequent cases where you would like
-                                ;;  to do so, you can use an AtomicInteger to hold byte
-                                ;;  values, and cast appropriately. You can also hold floats
-                                ;;  using Float.floatToIntBits and Float.intBitstoFloat
-                                ;;  conversions, and doubles using Double.doubleToLongBits
-                                ;;  and Double.longBitsToDouble conversions.
-                                java.util.concurrent.atomic.AtomicBoolean
-                              #_java.util.concurrent.atomic.AtomicByte
-                              #_java.util.concurrent.atomic.AtomicShort
-                                java.util.concurrent.atomic.AtomicInteger
-                                java.util.concurrent.atomic.AtomicLong
-                              #_java.util.concurrent.atomic.AtomicFloat
-                              #_java.util.concurrent.atomic.AtomicDouble
-                                com.google.common.util.concurrent.AtomicDouble)))
+         ;; `js/File` isn't always available! Use an abstraction
+#?(:clj  (-def file?        (isa? java.io.File)))
 
-;; TODO finish this below
+         (-def comparable?  #?(:clj  (isa? java.lang.Comparable)
+                               ;; TODO other things are comparable; really it depends on the two objects in question
+                               :cljs (or nil? (isa? cljs.core/IComparable))))
 
-(-def m2m-chan?         '{:clj  #{clojure.core.async.impl.channels.ManyToManyChannel}
-                                :cljs #{cljs.core.async.impl.channels/ManyToManyChannel}})
+         (-def record?      (isa? #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
 
-(-def chan?             '{:clj  #{clojure.core.async.impl.protocols.Channel}
-                                :cljs #{cljs.core.async.impl.channels/ManyToManyChannel
-                                        #_"TODO more?"}})
+         (-def transformer? (isa? quantum.untyped.core.reducers.Transformer))
 
-(-def keyword?          '{:clj  #{clojure.lang.Keyword}
-                                :cljs #{cljs.core/Keyword}})
+;; ----- Collections ----- ;;
 
-(-def symbol?           '{:clj  #{clojure.lang.Symbol}
-                                :cljs #{cljs.core/Symbol}})
+         (-def sorted?    #?(:clj  (or (isa? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
+                                       #?@(:clj  [(isa? java.util.SortedMap)
+                                                  (isa? java.util.SortedSet)]
+                                           :cljs [(isa? goog.structs.AvlTree)])
+                                       ;; TODO implement — monotonically <, <=, =, >=, >
+                                       #_(>expr monotonic?))))
 
-(-def file?             '{:clj  #{java.io.File}
-                                :cljs #{#_js/File}}) ; isn't always available! Use an abstraction
+         (-def transient? (isa? #?(:clj  clojure.lang.ITransientCollection
+                                   :cljs cljs.core/ITransientCollection)))
 
-(-def any?               {:clj  (uset/union (:clj (preds>types 'prim?)) #{'java.lang.Object})
-                                :cljs '#{(quote default)}})
+         (-def editable?  (isa? #?(:clj  clojure.lang.IEditableCollection
+                                   :cljs cljs.core/IEditableCollection)))
 
-(-def comparable?        {:clj  (uset/union '#{byte char short int long float double} '#{Comparable})
-                                :cljs (:cljs (preds>types 'number?))})
+         ;; Indicates efficient lookup by (integer) index (via `get`)
+         (-def indexed?        (or (isa? #?(:clj clojure.lang.Indexed :cljs cljs.core/IIndexed))
+                                   ;; Doesn't guarantee `java.util.List` is implemented, except by
+                                   ;; convention
+                                   #?(:clj (isa? java.util.RandomAccess))
+                                   #?(:clj char-seq? :cljs string?)
+                                   array?))
 
-(-def record?           '{:clj  #{clojure.lang.IRecord}
-                              #_:cljs #_#{cljs.core/IRecord}}) ; because can't protocol-dispatch on protocols in CLJS
+         ;; Indicates whether `assoc?!` is supported
+         (-def associative?    (or (isa? #?(:clj clojure.lang.Associative           :cljs cljs.core/IAssociative))
+                                   (isa? #?(:clj clojure.lang.ITransientAssociative :cljs cljs.core/ITransientAssociative))
+                                   (or map? indexed?)))
 
-(-def transformer?      '{:clj #{#_clojure.core.protocols.CollReduce ; no, in order to find most specific type
-                                       quantum.untyped.core.reducers.Transformer}
-                                :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on protocol
-                                        quantum.untyped.core.reducers.Transformer}})
+         (-def sequential?     (or (isa? #?(:clj clojure.lang.Sequential :cljs cljs.core/ISequential))
+                                   list? indexed?))
 
-#_(-def reducible?       (preds>types
-                                 'array?
-                                 'string?
-                                 'record?
-                                 'reducer?
-                                 'chan?
-                                 {:cljs (:cljs (preds>types '+map?))}
-                                 {:cljs (:cljs (preds>types '+set?))}
-                                 'integer?
-                                 {:clj  '#{clojure.lang.IReduce
-                                           clojure.lang.IReduceInit
-                                           clojure.lang.IKVReduce
-                                           #_clojure.core.protocols.CollReduce} ; no, in order to find most specific type
-                                  #_:cljs #_'#{cljs.core/IReduce}}  ; because can't protocol-dispatch on protocols in CLJS
-                                  {:clj  '#{fast_zip.core.ZipperLocation}
-                                  :cljs '#{fast-zip.core/ZipperLocation}}))
+         (-def counted?        (or (isa? #?(:clj clojure.lang.Counted :cljs cljs.core/ICounted))
+                                   #?(:clj char-seq? :cljs string?) vector? map? set? array?))
 
-; ----- COLLECTIONS ----- ;
+#?(:clj  (-def java-coll?      (isa? java.util.Collection)))
 
-                                 ;; TODO clojure.lang.Indexed / cljs.core/IIndexed?
-         (-def indexed?          (preds>types string? vector? (isa? clojure.lang.IndexedSeq) array?))
-                               ;; TODO this might be ambiguous
-                               ;; TODO clojure.lang.Associative / cljs.core/IAssociative?
-         (-def associative?       (preds>types 'map? 'set? 'indexed?))
-                               ;; TODO this might be ambiguous
-                               ;; TODO clojure.lang.Sequential / cljs.core/ISequential?
-         (-def sequential?        (preds>types 'seq? 'list? 'indexed?))
-                               ;; TODO this might be ambiguous
-                               ;; TODO clojure.lang.ICollection / cljs.core/ICollection?
-         (-def counted?           (preds>types 'array? 'string?
-                                 {:clj  (uset/union (:clj (preds>types '!vector? '!!vector?
-                                                                       '!map?    '!!map?
-                                                                       '!set?    '!!set?))
-                                                    '#{clojure.lang.Counted})
-                                  :cljs (:clj (preds>types 'vector? 'map? 'set?))}))
+         ;; A group of objects/elements
+         (-def coll?           (or #?(:clj java-coll?)
+                                   #?@(:clj  [(isa? clojure.lang.IPersistentCollection)
+                                              (isa? clojure.lang.ITransientCollection)]
+                                       :cljs (isa? cljs.core/ICollection))
+                                   sequential? associative?))
 
-         (-def coll?              (preds>types 'sequential? 'associative?))
+         (-def iterable?       (isa? #?(:clj java.lang.Iterable :cljs cljs.core/IIterable)))
 
-         (-def sequential?       #?(:clj (or (isa? clojure.lang.Sequential)
-                                             (isa? java.util.List))
-                                     ))
+         ;; Whatever is `seqable?` is reducible via a call to `seq`.
+         ;; Reduction is nearly always preferable to seq-iteration if for no other reason than that
+         ;; it can take advantage of transducers and reducers. This predicate just answers whether
+         ;; it is more efficient to reduce than to seq-iterate (note that it should be at least as
+         ;; efficient as seq-iteration).
+         (-def prefer-reduce?  (or #?(:clj (isa? clojure.lang.IReduceInit :cljs cljs.core/IReduce))
+                                   (isa? #?(:clj clojure.lang.IKVReduce :cljs cljs.core/IKVReduce))
+                                   #?(:clj (isa? clojure.core.protocols/IKVReduce))
+                                   #?(:clj char-seq? :cljs string?)
+                                   array?
+                                   record?
+                                   (isa? #?(:clj fast_zip.core.ZipperLocation :cljs fast-zip.core/ZipperLocation))
+                                   chan?))
 
-         (-def seqable?          #?(:clj (or (isa? clojure.lang.ISeq)
-                                             (isa? clojure.lang.Seqable)
-                                             java-iterable?
-                                             char-seq?
-                                             map?
-                                             array?)))
+         ;; Whatever is `reducible?` is seqable via a call to `sequence`.
+         (-def seqable?        (or #?@(:clj  [(isa? clojure.lang.Seqable)
+                                              iterable?
+                                              char-seq?
+                                              map?
+                                              array?]
+                                       :cljs [(isa? cljs.core/ISeqable)
+                                              array?
+                                              string?])))
 
-         ;; Able to be iterated over in some fashion, whether by `first`/`next` seq recursion, reduction, etc.
-         (-def iterable?         (or seqable? reducible?))
+         ;; Able to be traversed over in some fashion, whether by `first`/`next` seq-iteration,
+         ;; reduction, etc.
+         (-def traversable?    (or (isa? #?(:clj clojure.lang.IReduceInit :cljs cljs.core/IReduce))
+                                   (isa? #?(:clj clojure.lang.IKVReduce :cljs cljs.core/IKVReduce))
+                                   #?(:clj (isa? clojure.core.protocols/IKVReduce))
+                                   (isa? #?(:clj clojure.lang.Seqable :cljs cljs.core/ISeqable))
+                                   iterable?
+                                   #?(:clj char-seq? :cljs string?)
+                                   array?
+                                   (isa? #?(:clj fast_zip.core.ZipperLocation :cljs fast-zip.core/ZipperLocation))
+                                   chan?))
+
+#_(t/def ::form (t/or ::literal t/list? t/vector? ...))
+
+#?(:clj  (-def tagged-literal?   (isa? clojure.lang.TaggedLiteral)))
+
+         (-def literal?          (or nil? boolean? symbol? keyword? string? #?(:clj long?) double? #?(:clj tagged-literal?)))
 
 
-         (-def true?             (value true))
-         (-def false?            (value false))
-#_(t/def ::form    (t/or ::literal t/list? t/vector? ...))
+;; ===== Generic ===== ;;
+
+         ;; Standard "uncuttable" types
+         (-def integral?  (or primitive? number?))
 
 )
