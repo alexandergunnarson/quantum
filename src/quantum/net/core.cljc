@@ -35,13 +35,36 @@
 
 ; ===== STATUS =====
 
-(def unexceptional-status?
-  #{200 201 202 203 204 205 206 207 300 301 302 303 307})
+; TODO below
+;; Success       (2xx)
+;; Redirection   (3xx)
+;; Client errors (4xx)
+;; Server errors (5xx)
 
-(def http-response-map
-  {401 :unauthorized
-   403 :too-many-requests
-   500 :server-error})
+(defn status-code? [x] (and (integer? x) (<= 100 x 599)))
+
+(defn exceptional-status-code? [status-code #_status-code?]
+  (>= status-code 400))
+
+(def status-code->status
+  {201 :http/created
+   400 :http/bad-request
+   401 :http/unauthorized
+   403 :http/forbidden
+   404 :http/not-found
+   409 :http/conflict
+   500 :http/internal-error})
+
+(def status-code->message
+  {201 "Created"
+   400 "Bad request"
+   401 "Unauthorized"
+   403 "Forbidden"
+   404 "Not found"
+   409 "Conflict"
+   500 "Internal error"})
+
+(def status->status-code (coll/invert status-code->status))
 
 ; ===== URL =====
 
@@ -50,11 +73,11 @@
 ; ===== PORTS =====
 
 (def port-number
-  {:http 80
-   :https 443
-   :mysql 3306
+  {:http       80
+   :https      443
+   :mysql      3306
    :postgresql 5432
-   :rabbitmq 5672})
+   :rabbitmq   5672})
 
 ; ===== CONTENT TYPE =====
 
@@ -193,11 +216,6 @@
                     (str/join "&"))]
     (if-not (str/blank? params)
       params)))
-
- ; Success (2xx)
- ; Redirection (3xx)
- ; Server errors (5xx)
- ; Client errors (4xx)
 
 #_(defn download
   {:todo ["Show progress" "Get size of download beforehand" "Maybe use ->file"]}
