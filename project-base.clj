@@ -28,7 +28,11 @@
 (def clj-dependency  '[org.clojure/clojure       "1.9.0"])
 (def cljs-dependency '[org.clojure/clojurescript "1.9.946"])
 
-(def latest-stable-quantum-version "1e583fc7" #_"0.3.0-c7ed558e" #_"0.3.0-f1a3dc08")
+(def latest-stable-quantum-version
+  "04957f4e"
+  #_"76665af0" ; used by OYM for a while
+  #_"1e583fc7"
+  #_"0.3.0-c7ed558e" #_"0.3.0-f1a3dc08")
 
 (def quantum-source-paths
   {:typed          "../quantum/src"
@@ -395,7 +399,6 @@
                    'quantum.core.print.prettier
                    '[quantum.core.log :refer [prl!]])
                  (quantum.core.print.prettier/extend-pretty-printing!)
-                 (reset! quantum.core.error/*pr-data-to-str? true)
                  (clojure.main/repl
                    :print  #(binding [*print-meta* true
                                       quantum.core.print/*collapse-symbols?* true

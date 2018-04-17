@@ -8,15 +8,15 @@
     [quantum.core.collections  :as coll
       :refer [red-for, join join! reduce, conj!, subview, map+, range+]]))
 
-; TODO move
+;; TODO move
 (def num-char->int {\0 0 \1 1 \2 2 \3 3 \4 4 \5 5 \6 6 \7 7 \8 8 \9 9})
-; TODO move
+;; TODO move
 (def int->num-char (coll/invert num-char->int))
 
 (defn dec-integer-at [n:str i]
   (-> n:str (get i) num-char->int dec (max 0)))
 
-; TODO for better performance, see `https://github.com/jonschlinkert/to-regex-range/blob/master/index.js`
+;; TODO for better performance, see `https://github.com/jonschlinkert/to-regex-range/blob/master/index.js`
 (defn equidistant-range-around-0->pattern
   "Given an integer `n`, produces the pattern that matches the range bounded
    by `-n` and `+n`."
@@ -24,9 +24,9 @@
   (assert (and (string? n:str)
                (-> n:str count (> 0))))
   (str
-    (re/bounded "0")
+    (re/nc "0")
     "|"
-    (re/bounded
+    (re/nc
       (re/c "-?")
       (re/nc
         (let [ct (count n:str)
@@ -45,7 +45,7 @@
                (join! !s)))))))
 
 (defn bit-range->pattern [abs-min abs-max]
-  (str (re/bounded "-" abs-min)
+  (str (re/nc "-" abs-min)
        "|"
        (equidistant-range-around-0->pattern abs-max)))
 
