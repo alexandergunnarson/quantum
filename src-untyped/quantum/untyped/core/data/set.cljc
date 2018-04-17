@@ -2,18 +2,18 @@
   (:refer-clojure :exclude [not])
   (:require
 #?@(:clj
-   [[flatland.ordered.set      :as oset]
-    [seqspert.hash-set]])
+   [[seqspert.hash-set]])
     [clojure.core              :as core]
     [clojure.set               :as set]
+    [linked.core               :as linked]
     [quantum.untyped.core.core :as ucore]))
 
 (ucore/log-this-ns)
 
 #?(:clj (def hash-set? (partial instance? clojure.lang.PersistentHashSet)))
 
-#?(:clj (def ordered-set oset/ordered-set)) ; insertion-ordered set
-#?(:clj (def oset        ordered-set))
+(def ordered-set linked/set) ; insertion-ordered set
+(def oset        ordered-set)
 
 (def not complement)
 

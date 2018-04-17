@@ -9,6 +9,7 @@
     [clojure.core             :as core]
     [clojure.set              :as set]
     [clojure.data.avl         :as avl]
+    [linked.core              :as linked]
     [quantum.core.vars        :as var
       :refer [defalias]]
     [quantum.core.error       :as err
@@ -17,7 +18,6 @@
     [quantum.untyped.core.data.set :as uset]
 #?@(:clj
    [[clojure.data.finger-tree :as ftree]
-    [flatland.ordered.set     :as oset]
     [seqspert.hash-set]
     [clojure.data.int-map     :as imap]]))
   (:import
@@ -31,8 +31,8 @@
 
 ; ============ STRUCTURES ============
 
-#?(:clj (defalias ordered-set         oset/ordered-set)) ; insertion-ordered set
-#?(:clj (defalias oset                ordered-set))
+        (defalias ordered-set         linked/set) ; insertion-ordered set
+        (defalias oset                ordered-set)
 #?(:clj (defalias c-sorted-set        ftree/counted-sorted-set)) ; sorted set that provides log-n nth
         (defalias sorted-rank-set     avl/sorted-set   )
         (defalias sorted-rank-set-by  avl/sorted-set-by)

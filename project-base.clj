@@ -97,7 +97,9 @@
          [quantum/org.clojure.core.rrb-vector   "0.0.12"]
          [org.clojure/data.finger-tree          "0.0.2"]
          ; MAP / SET
-         [org.flatland/ordered                  "1.5.3"]
+         ;; Superseded by `frankiesardo/linked`
+       #_[org.flatland/ordered                  "1.5.3"]
+         [frankiesardo/linked                   "1.2.9"]
          [org.clojure/data.avl                  "0.0.13"]
          [org.clojure/data.int-map              "0.2.4"]
          ; ==== COMPLEX ====

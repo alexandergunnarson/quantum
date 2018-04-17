@@ -7,9 +7,9 @@
   (:require
     [clojure.core                  :as core]
     [clojure.data.avl              :as avl ]
+    [linked.core                   :as linked]
 #?@(:clj
    [[clojure.data.int-map          :as imap]
-    [flatland.ordered.map          :as omap]
     [seqspert.hash-map]])
     [quantum.untyped.core.convert  :as uconv]
     [quantum.untyped.core.data     :as udata]
@@ -33,13 +33,13 @@
 ;;   - Alex Miller: "We have seen it and will probably investigate some of these ideas after 1.8."
 ;; =======================
 
-#?(:clj (def int-map       imap/int-map  ))
+#?(:clj (def      int-map            imap/int-map))
 #?(:clj (defalias hash-map|long->ref int-map))
-(defalias array-map core/array-map)
-(defalias hash-map  core/hash-map )
+        (defalias array-map          core/array-map)
+        (defalias hash-map           core/hash-map)
 
-(defalias ordered-map #?(:clj omap/ordered-map :cljs array-map))
-(defalias om          ordered-map)
+        (defalias ordered-map        linked/map)
+        (defalias om                 ordered-map)
 
 #?(:clj (defn ^java.util.LinkedHashMap !ordered-map [] (java.util.LinkedHashMap.)))
 
