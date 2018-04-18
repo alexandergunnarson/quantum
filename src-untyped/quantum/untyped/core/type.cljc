@@ -4,13 +4,14 @@
   (:refer-clojure :exclude
     [< <= = not= >= > == compare * -
      and or not
-     boolean  byte  char  short  int  long  float  double
-     boolean? byte? char? short? int? long? float? double?
+     boolean  byte         char  short  int  long  float  double
+     boolean? byte? bytes? char? short? int? long? float? double?
      isa?
      nil? any? class? tagged-literal? #?(:cljs object?)
      number? decimal? bigdec? integer? ratio?
      true? false? keyword? string? symbol?
-     associative? coll? indexed? list? map? map-entry? record? seq? seqable? set? sorted? vector?
+     associative? coll? counted? indexed? list? map? map-entry? record?
+     seq? seqable? sequential? set? sorted? vector?
      fn? ifn?
      meta ref volatile?])
   (:require
@@ -66,8 +67,6 @@
     [from to]))
 
 #_(defmacro range-of)
-
-(do
 
 (defonce *spec-registry (atom {}))
 (swap! *spec-registry empty)
@@ -1312,7 +1311,7 @@
 (defn >array-nd-types [n]
   (->> '[boolean byte char short int long float double object]
        (map #(>array-nd-type % n))
-       (apply or)))
+       (apply or))))
 
          (-def booleans?       #?(:clj (>array-nd-type 'boolean 1) :cljs none?))
          (-def bytes?          #?(:clj (>array-nd-type 'byte    1) :cljs (isa? js/Int8Array)))
@@ -1413,12 +1412,23 @@
                                             :cljs cljs.core/ITransientVector)))
          (-def ?!+vector?          (or +vector? ?!+vector?))
 
-         ;; TODO complete this
-#?(:clj  (-def  !vector|long?      (isa? it.unimi.dsi.fastutil.longs.LongArrayList)))
-         (-def  !vector|ref?       (isa? #?(:clj  java.util.ArrayList
-                                            ;; because supports .push etc.
-                                            :cljs js/Array)))
-         (-def  !vector?           (or !vector|long? !vector|ref?))
+         (-def  !vector|byte?     #?(:clj (isa? it.unimi.dsi.fastutil.bytes.ByteArrayList)     :cljs none?))
+         (-def  !vector|short?    #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortArrayList)   :cljs none?))
+         (-def  !vector|char?     #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharArrayList)     :cljs none?))
+         (-def  !vector|int?      #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntArrayList)       :cljs none?))
+         (-def  !vector|long?     #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongArrayList)     :cljs none?))
+         (-def  !vector|float?    #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatArrayList)   :cljs none?))
+         (-def  !vector|double?   #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleArrayList) :cljs none?))
+
+         (-def  !vector|ref?      #?(:clj  (or (isa? java.util.ArrayList)
+                                               (isa? it.unimi.dsi.fastutil.objects.ReferenceArrayList))
+                                     ;; because supports .push etc.
+                                     :cljs (isa? js/Array)))
+
+         (-def  !vector?          (or !vector|ref?
+                                      !vector|byte?  !vector|short? !vector|char?
+                                      !vector|int?   !vector|long?
+                                      !vector|float? !vector|double?))
 
                                    ;; java.util.Vector is deprecated, because you can
                                    ;; just create a synchronized wrapper over an ArrayList
@@ -1437,7 +1447,7 @@
                              (isa? java.util.concurrent.ConcurrentLinkedQueue))))
 
          (-def   !queue? #?(:clj  ;; Considered single-threaded mutable unless otherwise noted
-                                  (- (isa? java.util.Queue) (or ?!+queue? !!queue?))
+                                  (identity #_- (isa? java.util.Queue) #_(or ?!+queue? !!queue?)) ; TODO re-enable once `-` works
                             :cljs (isa? goog.structs.Queue)))
 
          (-def    queue? (or ?!+queue? !queue? #?(:clj !!queue?)))
@@ -1785,7 +1795,7 @@
                                                       +map?))
          (-def  !+sorted-map?                    (and (isa? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
                                                       !+map?))
-         (-def ?!+sorted-map?                    (or +sorted-map? !+sorted-map?))
+         (-def ?!+sorted-map?                    none? #_(or +sorted-map? !+sorted-map?)) ; TODO re-enable when `or` implemented properly
 
          (-def   !sorted-map|boolean->boolean?   none?)
          (-def   !sorted-map|boolean->byte?      none?)
@@ -2046,9 +2056,9 @@
                                             :cljs (isa? goog.structs.Set)))
 
          (-def   !hash-set?              (or !hash-set|ref?
-                                             #?@(:clj [!hash-set|byte? !hash-set|short? !hash-set|char?
-                                                       !hash-set|int? !hash-set|long?
-                                                       !hash-set|float? !hash-set|double?])))
+                                             !hash-set|byte? !hash-set|short? !hash-set|char?
+                                             !hash-set|int? !hash-set|long?
+                                             !hash-set|float? !hash-set|double?))
 
          ;; CLJ technically can have via ConcurrentHashMap with same KVs but this hasn't been implemented yet
 #?(:clj  (-def  !!hash-set?              none?))
@@ -2060,19 +2070,19 @@
          (-def  !+unsorted-set?           !+hash-set?)
          (-def ?!+unsorted-set?          ?!+hash-set?)
 
-#?(:clj  (-def   !unsorted-set|byte?     !hash-set|byte?))
-#?(:clj  (-def   !unsorted-set|short?    !hash-set|char?))
-#?(:clj  (-def   !unsorted-set|char?     !hash-set|short?))
-#?(:clj  (-def   !unsorted-set|int?      !hash-set|int?))
-#?(:clj  (-def   !unsorted-set|long?     !hash-set|long?))
-#?(:clj  (-def   !unsorted-set|float?    !hash-set|float?))
-#?(:clj  (-def   !unsorted-set|double?   !hash-set|double?))
+         (-def   !unsorted-set|byte?     !hash-set|byte?)
+         (-def   !unsorted-set|short?    !hash-set|char?)
+         (-def   !unsorted-set|char?     !hash-set|short?)
+         (-def   !unsorted-set|int?      !hash-set|int?)
+         (-def   !unsorted-set|long?     !hash-set|long?)
+         (-def   !unsorted-set|float?    !hash-set|float?)
+         (-def   !unsorted-set|double?   !hash-set|double?)
          (-def   !unsorted-set|ref?      !hash-set|ref?)
 
          (-def   !unsorted-set?          (or !unsorted-set|ref?
-                                             #?@(:clj [!unsorted-set|byte? !unsorted-set|short? !unsorted-set|char?
-                                                       !unsorted-set|int? !unsorted-set|long?
-                                                       !unsorted-set|float? !unsorted-set|double?])))
+                                             !unsorted-set|byte? !unsorted-set|short? !unsorted-set|char?
+                                             !unsorted-set|int? !unsorted-set|long?
+                                             !unsorted-set|float? !unsorted-set|double?))
 
 #?(:clj  (-def  !!unsorted-set?          !!hash-set?))
          (-def    unsorted-set?            hash-set?)
@@ -2095,9 +2105,9 @@
          (-def   !sorted-set|ref?        #?(:clj (isa? java.util.TreeSet) :cljs none?))
 
          (-def   !sorted-set?            (or !sorted-set|ref?
-                                             #?@(:clj [!sorted-set|byte? !sorted-set|short? !sorted-set|char?
-                                                       !sorted-set|int? !sorted-set|long?
-                                                       !sorted-set|float? !sorted-set|double?])))
+                                             !sorted-set|byte? !sorted-set|short? !sorted-set|char?
+                                             !sorted-set|int? !sorted-set|long?
+                                             !sorted-set|float? !sorted-set|double?))
 
          ;; CLJ technically can have via ConcurrentSkipListMap with same KVs but this hasn't been implemented yet
 #?(:clj  (-def  !!sorted-set?            none?))
@@ -2142,9 +2152,9 @@
          (-def   !set|ref?               (or !unsorted-set|ref? !sorted-set|ref?))
 
          (-def   !set?                   (or !set|ref?
-                                             #?@(:clj [!set|byte? !set|short? !set|char?
-                                                       !set|int? !set|long?
-                                                       !set|float? !set|double?])))
+                                             !set|byte? !set|short? !set|char?
+                                             !set|int? !set|long?
+                                             !set|float? !set|double?))
 
          (-def   !set?                   (or !unsorted-set? !sorted-set?))
 #?(:clj  (-def  !!set?                   (or !!unsorted-set? !!sorted-set?)))
@@ -2220,18 +2230,18 @@
 
 ;; ----- Collections ----- ;;
 
-         (-def sorted?    #?(:clj  (or (isa? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
-                                       #?@(:clj  [(isa? java.util.SortedMap)
-                                                  (isa? java.util.SortedSet)]
-                                           :cljs [(isa? goog.structs.AvlTree)])
-                                       ;; TODO implement — monotonically <, <=, =, >=, >
-                                       #_(>expr monotonic?))))
+         (-def sorted?         #?(:clj  (or (isa? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
+                                            #?@(:clj  [(isa? java.util.SortedMap)
+                                                       (isa? java.util.SortedSet)]
+                                                :cljs [(isa? goog.structs.AvlTree)])
+                                            ;; TODO implement — monotonically <, <=, =, >=, >
+                                            #_(>expr monotonic?))))
 
-         (-def transient? (isa? #?(:clj  clojure.lang.ITransientCollection
-                                   :cljs cljs.core/ITransientCollection)))
+         (-def transient?      (isa? #?(:clj  clojure.lang.ITransientCollection
+                                        :cljs cljs.core/ITransientCollection)))
 
-         (-def editable?  (isa? #?(:clj  clojure.lang.IEditableCollection
-                                   :cljs cljs.core/IEditableCollection)))
+         (-def editable?       (isa? #?(:clj  clojure.lang.IEditableCollection
+                                        :cljs cljs.core/IEditableCollection)))
 
          ;; Indicates efficient lookup by (integer) index (via `get`)
          (-def indexed?        (or (isa? #?(:clj clojure.lang.Indexed :cljs cljs.core/IIndexed))
@@ -2268,8 +2278,9 @@
          ;; it can take advantage of transducers and reducers. This predicate just answers whether
          ;; it is more efficient to reduce than to seq-iterate (note that it should be at least as
          ;; efficient as seq-iteration).
-         (-def prefer-reduce?  (or #?(:clj (isa? clojure.lang.IReduceInit :cljs cljs.core/IReduce))
-                                   (isa? #?(:clj clojure.lang.IKVReduce :cljs cljs.core/IKVReduce))
+         ;; TODO re-enable when dispatch enabled
+         #_(-def prefer-reduce?  (or (isa? #?(:clj clojure.lang.IReduceInit :cljs cljs.core/IReduce))
+                                   (isa? #?(:clj clojure.lang.IKVReduce   :cljs cljs.core/IKVReduce))
                                    #?(:clj (isa? clojure.core.protocols/IKVReduce))
                                    #?(:clj char-seq? :cljs string?)
                                    array?
@@ -2289,7 +2300,8 @@
 
          ;; Able to be traversed over in some fashion, whether by `first`/`next` seq-iteration,
          ;; reduction, etc.
-         (-def traversable?    (or (isa? #?(:clj clojure.lang.IReduceInit :cljs cljs.core/IReduce))
+         ;; TODO re-enable when dispatch enabled
+         #_(-def traversable?    (or (isa? #?(:clj clojure.lang.IReduceInit :cljs cljs.core/IReduce))
                                    (isa? #?(:clj clojure.lang.IKVReduce :cljs cljs.core/IKVReduce))
                                    #?(:clj (isa? clojure.core.protocols/IKVReduce))
                                    (isa? #?(:clj clojure.lang.Seqable :cljs cljs.core/ISeqable))
@@ -2305,10 +2317,7 @@
 
          (-def literal?          (or nil? boolean? symbol? keyword? string? #?(:clj long?) double? #?(:clj tagged-literal?)))
 
-
 ;; ===== Generic ===== ;;
 
          ;; Standard "uncuttable" types
          (-def integral?  (or primitive? number?))
-
-)

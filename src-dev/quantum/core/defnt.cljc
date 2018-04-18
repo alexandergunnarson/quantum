@@ -204,6 +204,13 @@
          (join #{})))))
 
 #?(:clj
+(defn spec>most-primitive-class [spec #_t/spec?] #_> #_(? class?)
+  (let [cs (spec>most-primitive-classes spec)]
+    (if (-> cs count (not= 1))
+        (err! "Not exactly 1 class found" (kw-map spec cs))
+        (first cs)))))
+
+#?(:clj
 (defn out-spec>class [spec #_t/spec?]
   (let [cs (t/spec>classes spec) cs' (disj cs nil)]
     (if (-> cs' count (not= 1))
@@ -755,8 +762,8 @@
                       {:env    env
                        :form   form
                        :caller caller|expr
-                       :args   args|analyzed
-                       :spec   ...}))))))
+                       :args   args
+                       :spec   spec}))))))
 
 (defn analyze-seq [env form]
   {:post [(prl! %)]}

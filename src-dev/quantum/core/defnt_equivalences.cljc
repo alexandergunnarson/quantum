@@ -6,8 +6,6 @@
     [clojure.core              :as c]
     [quantum.core.defnt
       :refer [analyze defnt fnt|code *fn->spec]]
-    [quantum.core.macros
-      :refer [macroexpand-all case-env env-lang quote+]]
     [quantum.core.spec         :as s]
     [quantum.core.test         :as test
       :refer [deftest testing is is= throws]]
@@ -18,6 +16,8 @@
       :refer [code=]]
     [quantum.untyped.core.form
       :refer [$]]
+    [quantum.untyped.core.form.evaluate
+      :refer [case-env env-lang macroexpand-all]]
     [quantum.untyped.core.form.type-hint
       :refer [tag]]
     [quantum.untyped.core.logic
@@ -32,9 +32,6 @@
            clojure.lang.Seqable
            quantum.core.data.Array
            quantum.core.Primitive))
-
-(require '[quantum.core.spec :as s]
-         '[quantum.core.fn :refer [fn->]])
 
 ;; =====|=====|=====|=====|===== ;;
 

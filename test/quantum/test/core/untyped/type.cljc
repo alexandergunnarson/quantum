@@ -379,7 +379,6 @@
       ;; entire first/left
       (testing "#{= <+} -> #{<+}"
         (testing "+ #{<+}"
-          test-comparisons>comparisons
           ;; comparisons: [-1, -1], [-1, -1]
           (test-comparison  1 (| a >a+b >a0)     (& >a+b >a0))
           ;; comparisons: [-1, -1, 3], [-1, -1]
