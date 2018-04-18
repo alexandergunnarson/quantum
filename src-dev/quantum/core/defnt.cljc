@@ -43,6 +43,8 @@
       :refer [kw-map]]
     [quantum.untyped.core.data.map        :as map]
     [quantum.untyped.core.data.set        :as set]
+    [quantum.untyped.core.defns
+      :refer [defns]]
     [quantum.untyped.core.form            :as uform]
     [quantum.untyped.core.form.evaluate   :as ufeval]
     [quantum.untyped.core.form.generate   :as ufgen
@@ -101,87 +103,6 @@
 
 (do
 
-;; FNT
-
-(s/def ::spec s/any?)
-
-(s/def ::fnt|arg-spec ; TODO expand; make typed destructuring available via ::ss/binding-form
-  (s/alt :infer #{'?}
-         :any   #{'_}
-         :spec  ::spec))
-
-(s/def ::fnt|speced-arg
-  (s/cat :arg-binding   (s/and simple-symbol?
-                               (set/not #{'& '| '>})
-                               (fn-> meta :tag nil?))
-         ::fnt|arg-spec ::fnt|arg-spec))
-
-(s/def ::fnt|output-spec (s/? (s/cat :sym (fn1 = '>) ::spec ::spec)))
-
-(s/def ::fnt|arglist
-  (s/and vector?
-         (s/spec
-           (s/cat :args    (s/* ::fnt|speced-arg)
-                  :varargs (s/? (s/cat :sym (fn1 = '&) ::fnt|speced-arg ::fnt|speced-arg))
-                  :pre     (s/? (s/cat :sym (fn1 = '|) ::spec           ::spec))
-                  :post    ::fnt|output-spec))
-         (s/conformer
-           #(cond-> % (contains? % :varargs) (update :varargs ::fnt|speced-arg)
-                      (contains? % :pre    ) (update :pre     ::spec)
-                      (contains? % :post   ) (update :post    ::spec)))
-         (fn [{:keys [args varargs]}]
-           ;; so `env` in `fnt` can work properly in the analysis
-           ;; TODO need to adjust for destructuring
-           (c/distinct?
-             (concat (c/lmap :arg-binding args)
-                     [(:arg-binding varargs)])))))
-
-(s/def ::fnt|body (s/alt :body (s/* s/any?)))
-
-(s/def ::fnt|arglist+body
-  (s/cat ::fnt|arglist ::fnt|arglist :body ::fnt|body))
-
-(s/def ::fnt|overloads
-  (s/alt :overload-1 ::fnt|arglist+body
-         :overload-n (s/cat :overloads (s/+ (s/spec ::fnt|arglist+body)))))
-
-(s/def ::fnt|postchecks
-  (s/conformer
-    (fn [f]
-      (-> f (update :overloads
-              (fnl mapv (fn [overload] (let [overload' (update overload :body :body)]
-                                         (l/if-let [output-spec (-> f :output-spec ::spec)]
-                                           (do (s/validate (-> overload' ::fnt|arglist :post) nil?)
-                                               (c/assoc-in overload' [::fnt|arglist :post] output-spec))
-                                           overload')))))
-            (dissoc :output-spec)))))
-
-(s/def ::fnt
-  (s/and (s/spec
-           (s/cat
-             ::ss/fn|name   (s/? ::ss/fn|name)
-             ::ss/docstring (s/? ::ss/docstring)
-             ::ss/meta      (s/? ::ss/meta)
-             :output-spec   ::fnt|output-spec
-             :overloads     ::fnt|overloads))
-         ::ss/fn|postchecks
-         ::fnt|postchecks))
-
-(s/def ::fns|code ::fnt)
-
-(s/def ::defnt
-  (s/and (s/spec
-           (s/cat
-             ::ss/fn|name   ::ss/fn|name
-             ::ss/docstring (s/? ::ss/docstring)
-             ::ss/meta      (s/? ::ss/meta)
-             :output-spec   ::fnt|output-spec
-             :overloads     ::fnt|overloads))
-         ::ss/fn|postchecks
-         ::fnt|postchecks))
-
-(s/def ::defns|code ::defnt)
-
 #?(:clj
 (defn class>simplest-class
   "This ensures that special overloads are not created for non-primitive subclasses
@@ -218,88 +139,6 @@
         java.lang.Object
         (-> (class>most-primitive-class (first cs') (contains? cs nil))
             class>simplest-class)))))
-
-(defn fns|code [kind lang args]
-  (assert (= lang #?(:clj :clj :cljs :cljs)) lang)
-  (let [{:keys [::ss/fn|name overloads ::ss/meta] :as args'}
-          (s/validate args (case kind :defn ::defns|code :fn ::fns|code))
-        overload-data>overload
-          (fn [{{:keys [args varargs pre post]} ::fnt|arglist
-                body :body}]
-            (let [spec-code>?class
-                    (fn [spec] (some-> spec eval t/>spec spec>most-primitive-class))
-                  arg-spec>validation
-                    (fn [{[k spec] ::fnt|arg-spec :keys [arg-binding]}]
-                      ;; TODO this validation is purely temporary until destructuring is supported
-                      (s/validate arg-binding simple-symbol?)
-                      (case k
-                        :any   nil
-                        :infer (do (log/pr :warn "Spec inference not yet supported in `defns`. Ignoring request to infer" (str "`" arg-binding "`"))
-                                   nil)
-                        :spec  (if-let [c|sym (do #?(:clj  (some-> spec spec-code>?class ufth/class->instance?-safe-tag|sym)
-                                                     ;; TODO for now CLJS only does `validate` which is more expensive
-                                                     :cljs spec))]
-                                 (list `instance? c|sym arg-binding)
-                                 (list `s/validate arg-binding spec))))
-                  spec-validations
-                    (concat (c/lmap arg-spec>validation args)
-                            (some-> varargs arg-spec>validation))
-                  ;; TODO if an arg has been primitive-type-hinted in the `fn` arglist, then no need to do an `instance?` check
-                  ?hint-arg
-                    (fn [{[k spec] ::fnt|arg-spec :keys [arg-binding]}]
-                      #?(:clj
-                          (if (not= k :spec)
-                              arg-binding
-                              (-> arg-binding
-                                  (ufth/with-type-hint (some-> spec spec-code>?class))
-                                  (ufth/with-fn-arglist-type-hint lang (count args) varargs)))
-                        :cljs arg-binding))
-                  arglist'
-                    (->> args
-                         (c/map ?hint-arg)
-                         (<- (cond-> varargs (conj '& (?hint-arg varargs)))))
-                  pre-validations
-                    (>vec (concat (some->> spec-validations (c/lfilter some?))
-                                  (when pre (list 'assert pre))))
-                  validations
-                    (->> {:post (when post [(list post (symbol "%"))])
-                          :pre  (when (seq pre-validations) pre-validations)}
-                         (c/remove-vals' empty?))]
-              (list* arglist' (concat (when (seq validations) [validations]) body))))
-        overloads (mapv overload-data>overload overloads)
-        code (case kind
-               :fn   (list* 'fn (concat
-                                  (if (contains? args' ::ss/fn|name)
-                                      [fn|name]
-                                      [])
-                                  [overloads]))
-               :defn (list* 'defn fn|name overloads))]
-    code))
-
-(defmacro fns
-  "Like `fnt`, but relies on runtime spec checks.
-   Does not perform type inference (at least not yet).
-   Also does not currently handle spec checks in
-   destructuring contexts yet."
-  [& args]
-  (fns|code :fn (ufeval/env-lang) args))
-
-(defmacro defns
-  "Like `defnt`, but relies on runtime spec checks.
-   Does not perform type inference (at least not yet).
-   Also does not currently handle spec checks in
-   destructuring contexts yet."
-  [& args]
-  (fns|code :defn (ufeval/env-lang) args))
-
-(defns abcde ""
-  ([a ? b _ > t/integer?] {:pre 1} 1 2)
-  ([c t/string?, d StringBuilder & e _ > t/number?]
-    (.substring c 0 1)
-    (.append d 1)
-    3 4)
-  ([f t/long?]
-    (core/+ f 1)))
 
 ; ----- TYPED PART ----- ;
 

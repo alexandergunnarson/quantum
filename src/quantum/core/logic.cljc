@@ -134,62 +134,13 @@
   whenc whenc-> whenc->> whenc1
   whenp whenp-> whenp->> whenp1))
 
-; ======== CONDITIONAL LET BINDINGS ========
+;; ===== Conditional `let` bindings ===== ;;
 
 #?(:clj
-(defmacro if-let-base
-  {:attribution "alexandergunnarson"}
-  ([cond-sym bindings then]
-    `(if-let-base ~cond-sym ~bindings ~then nil))
-  ([cond-sym [bnd expr & more] then else]
-    `(let [temp# ~expr ~bnd temp#]
-       (~cond-sym temp#
-           ~(if (seq more)
-               `(if-let-base ~cond-sym [~@more] ~then ~else)
-               then)
-           ~else)))))
-
-#?(:clj
-(defmacro if-let
-  "Like `if-let`, but multiple bindings can be used."
-  [& xs] `(if-let-base if ~@xs)))
-
-#?(:clj
-(defmacro if-not-let
-  "if : if-let :: if-not : if-not-let. All conditions must be false."
-  [& xs] `(if-let-base if-not ~@xs)))
-
-#?(:clj
-(defmacro when-let-base
-  {:attribution "alexandergunnarson"}
-  [cond-sym [bnd expr & more] & body]
-    `(let [temp# ~expr ~bnd temp#]
-       (~cond-sym temp#
-         ~(if (seq more)
-              `(when-let-base ~cond-sym [~@more] ~@body)
-              `(do ~@body))))))
-
-#?(:clj
-(defmacro when-let
-  "Like `when-let`, but multiple bindings can be used."
-  [& xs] `(if-let-base when ~@xs)))
-
-#?(:clj
-(defmacro when-not-let
-  "when : when-let :: when-not : when-not-let. All conditions must be false."
-  [& xs] `(when-let-base when-not ~@xs)))
-
-
-#?(:clj
-(defmacro cond-let
-  "Transforms into a series of nested `if-let` statements."
-  {:attribution "alexandergunnarson"}
-  ([] nil) ; no else
-  ([else] else)
-  ([bindings then & more]
-   `(if-let ~bindings
-      ~then
-      (cond-let ~@more)))))
+(defaliases u
+  if-let   if-not-let
+  when-let when-not-let
+  cond-let))
 
 ;; ===== `coll-(or|and)` ===== ;;
 
