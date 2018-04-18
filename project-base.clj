@@ -29,7 +29,7 @@
 (def cljs-dependency '[org.clojure/clojurescript "1.9.946"])
 
 (def latest-stable-quantum-version
-  "e188b72d"
+  "e188b72d48777833a23ff413f09fcac1e163c9ee"
   #_"76665af0" ; used by OYM for a while
   #_"1e583fc7"
   #_"0.3.0-c7ed558e" #_"0.3.0-f1a3dc08")
@@ -43,7 +43,7 @@
 (defn >git-hash [project-path & [base-version]]
   (let [hash-str (let [{:keys [exit out]}
                          (clojure.java.shell/sh
-                           "git" "rev-parse" "--short" "HEAD"
+                           "git" "rev-parse" "HEAD"
                            :dir project-path)]
                    (when (= exit 0)
                      (subs out 0 (-> out count dec))))
