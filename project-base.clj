@@ -111,6 +111,8 @@
            [org.clojure/data.xml                "0.0.8"
              :exclusions [org.clojure/clojure]]
 
+       ; ==== SPECS ====
+         [expound                               "0.5.0"]
        ; ==== COLLECTIONS ====
          [diffit                                "1.0.0"]
        ; ==== CONVERT ====
