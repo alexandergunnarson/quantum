@@ -2,17 +2,23 @@
   (:require
     [clojure.spec.alpha                 :as s]
     [quantum.untyped.core.collections   :as c]
-    [quantum.untyped.core.data.set      :as set]
+    [quantum.untyped.core.convert       :as uconv]
+    [quantum.untyped.core.data.map
+      :refer [om]]
+    [quantum.untyped.core.data.set      :as uset]
     [quantum.untyped.core.fn
       :refer [<- fn-> fn1 fnl]]
     [quantum.untyped.core.form.evaluate :as ufeval]
     [quantum.untyped.core.log           :as ulog]
-    [quantum.untyped.core.logic         :as l]
+    [quantum.untyped.core.logic         :as ul]
+    [quantum.untyped.core.loops
+      :refer [reduce-2]]
+    [quantum.untyped.core.reducers      :as ur]
     [quantum.untyped.core.spec          :as us]
     [quantum.untyped.core.specs         :as ss]))
 
 (s/def :quantum.core.defnt/local-name
-  (s/and simple-symbol? (set/not #{'& '| '> '?})))
+  (s/and simple-symbol? (uset/not #{'& '| '> '?})))
 
 ;; ----- Specs ----- ;;
 
@@ -113,7 +119,7 @@
       (-> f (update :overloads
               (fnl mapv (fn [overload]
                           (let [overload' (update overload :body :body)]
-                            (l/if-let [output-spec (-> f :output-spec :spec)]
+                            (ul/if-let [output-spec (-> f :output-spec :spec)]
                               (do (us/validate (-> overload' :arglist :post) nil?)
                                   (c/assoc-in overload' [:arglist :post] output-spec))
                               overload')))))
@@ -167,60 +173,120 @@
                         (get-in v [:key+spec :key])])))
               (into {}))))
 
+(defn speced-binding>arg-ident
+  [{[kind binding-] :binding-form} #_:quantum.core.defnt/speced-binding & [i|arg] #_(? nneg-integer?)]
+  (uconv/>keyword
+    (case kind
+      :sym binding-
+      (:seq :map)
+        (let [ks (if (= kind :seq) [:as :sym] [:as 1])]
+          (or (get-in binding- ks)
+              (gensym (if i|arg (str "arg-" i|arg "-") "varargs")))))))
+
+(s/fdef fghijk
+  :args (s/or :arity-varargs
+                (s/and (s/cat :a      string?
+                              :b      boolean?
+                              :c      (s/and #(-> % count (= 2))
+                                             (fn [{:keys [d]}] (keyword? d))
+                                             (fn [{:keys [e]}] (string?  e))
+                                             (fn [{f :f}] (string? f)))
+                              :i      (s/and sequential?
+                                             (fn [[g]] (double? g))
+                                             (fn [[g & h]] (seq? h)))
+                              :arg-4# (s/and vector?
+                                             (fn [[j]] (symbol? j)))
+                              :k      (s/and seq?
+                                             (fn [[l]] (string? l)))))))
+
+;; TODO need to do fns args with outwardly growing recursive context {:k (f ...)}
+(defn speced-binding>arg-specs
+  ([speced-binding #_:quantum.core.defnt/speced-binding])
+  ([{:as speced-binding [kind binding-] :binding-form [_ spec] :spec} #_:quantum.core.defnt/speced-binding context]
+    (let [arg-specssss (into [spec]
+      (case kind
+        :sym []
+        :seq ((fn abcde-seq [] (let [{elems :elems rest- :rest} binding-]
+               (->> (mapv speced-binding>arg-specs elems)
+                    (<- (cond-> rest- (conj (-> rest- :form speced-binding>arg-specs))))
+                    (apply concat)))))
+        :map ((fn abcde-map []
+               (->> binding-
+                    (map (fn [[k v]] (prl! k v)
+                           (case k
+                             (:as :or)           nil
+                             (:keys :syms :strs) (->> v second (mapv (fn-> :spec second)))
+                             (speced-binding>arg-specs
+                               (-> v (assoc :spec (get-in v [:key+spec :spec])))))))
+                    (apply concat))))))]
+    (prl! arg-specssss)
+    arg-specssss)))
+
+(defn arglist>spec-form|arglist
+  [args+varargs kw-args #_:quantum.core.specs/map-binding-form]
+  `(s/cat ~@(reduce-2
+              (fn [ret speced-binding [_ kw-arg]]
+                (prl! speced-binding kw-arg)
+                (let [arg-specs (speced-binding>arg-specs speced-binding)]
+                  (conj ret kw-arg (if (-> arg-specs count (= 1))
+                                       (first arg-specs)
+                                       `(s/and ~@arg-specs)))))
+              []
+              args+varargs kw-args)))
+
 (defn fns|code [kind lang args]
   (assert (= lang #?(:clj :clj :cljs :cljs)) lang)
   (when (= kind :fn) (ulog/warn! "`fn` will ignore spec validation"))
   (let [{:keys [:quantum.core.specs/fn|name overloads :quantum.core.specs/meta] :as args'}
           (us/validate args (case kind :defn :quantum.core.defnt/defns|code :fn :quantum.core.defnt/fns|code))
         _ (prl! args')
-        arglist>arity-ident (fn [{:keys [args varargs]}]
-                              (keyword (str "arity-" (if varargs "varargs" (count args)))))
-        forms (reduce
-                (fn [ret {{:keys [args varargs] :as arglist} :arglist :keys [body]} #_:quantum.core.defnt/arglist+body]
-                  (prl! ret arglist body)
-                  (let [arglist-form|args    (mapv speced-binding>binding args)
-                        arglist-form|varargs (some-> varargs speced-binding>binding)
-                        arglist-form         (cond-> arglist-form|args
-                                                     varargs (conj '& arglist-form|varargs))
-                        kw-arglist-form (->> arglist-form|args
-                                             ;; TODO finish this
-                                             ;; (map (fn [binding-] [binding- (binding>kw-ident binding-)]))
-                                             (into (array-map)))
-                        kw-arglist-form (cond-> kw-arglist-form
-                                                varargs (assoc :varargs arglist-form|varargs))
-                        overload*       (list* arglist-form body)
-                        arity-ident     (arglist>arity-ident arglist)
-                        ;; ;; TODO finish this
-                        ;; spec            `(s/cat ~(keyword ))
-                        ;; ;; TODO finish this
-                        ;; spec            (if (contains? arglist :pre)
-                        ;;                     `(s/and ~spec (fn [{...}] ~pre))
-                        ;;                     spec)
-                        ;; TODO finish this
-                        spec-form|args* nil
-                        ;; TODO finish this
-                        spec-form|fn*   nil
-                        ]
-                    (-> ret
-                        (update :overloads      conj overload*)
-                        (update :spec-form|args conj arity-ident spec-form|args*)
-                        (update :spec-form|fn   conj arity-ident spec-form|fn*))))
-                {:overloads      []
-                 :spec-form|args []
-                 :spec-form|fn   []}
-                overloads)
-        _ (prl! forms)
+        ret-sym (gensym "ret") arity-kind-sym (gensym "arity-kind") args-sym (gensym "args")
+        {:keys [overload-forms spec-form|args spec-form|fn]}
+          (reduce
+            (fn [ret {{:keys [args varargs pre] [_ post] :post :as arglist} :arglist :keys [body]} #_:quantum.core.defnt/arglist+body]
+              (prl! ret arglist body)
+              (let [{:keys [fn-arglist kw-args]}
+                      (ur/reducei
+                        (fn [ret {:as speced-binding :keys [varargs?]} i|arg]
+                          (let [arg-ident (speced-binding>arg-ident speced-binding i|arg)
+                                binding-  (speced-binding>binding speced-binding)]
+                            (-> ret (cond-> varargs? (update :form conj '&))
+                                    (update :fn-arglist conj  binding-)
+                                    (update :kw-args    assoc binding- arg-ident))))
+                        {:fn-arglist [] :kw-args (om)}
+                        (cond-> args varargs (conj (assoc varargs :varargs? true))))
+                    _ (prl! fn-arglist kw-args)
+                    overload-form     (list* fn-arglist body)
+                    _ (prl! overload-form)
+                    arity-ident       (keyword (str "arity-" (if varargs "varargs" (count args))))
+                    _ (prl! arity-ident)
+                    spec-form|arglist (arglist>spec-form|arglist (cond-> args varargs (conj varargs)) kw-args)
+                    spec-form|pre     (when (contains? arglist :pre) `(fn [~kw-args] ~pre))
+                    spec-form|args*   (if spec-form|pre
+                                          `(s/and ~spec-form|arglist ~spec-form|pre)
+                                          spec-form|arglist)
+                    spec-form|fn*     (if (contains? arglist :post)
+                                          `(let [~kw-args ~args-sym] (~post ~ret-sym))
+                                          `any?)]
+                (-> ret
+                    (update :overload-forms conj overload-form)
+                    (update :spec-form|args conj arity-ident spec-form|args*)
+                    (update :spec-form|fn   conj arity-ident spec-form|fn*))))
+            {:overloads      []
+             :spec-form|args []
+             :spec-form|fn   []}
+            overloads)
+        _ (prl! overload-forms spec-form|args spec-form|fn)
         spec-form (when (= kind :defn)
-                    `(s/fdef ~fn|name {:args (s/or ~@(:spec-form|args forms))
-                                       :fn   (fn [{ret# :ret [arity-kind# args#] :args}]
-                                               (case arity-kind#
-                                                 ~@(:spec-form|fn forms)))}))
+                    `(s/fdef ~fn|name {:args (s/or ~@spec-form|args)
+                                       :fn   (fn [{~ret-sym :ret [~arity-kind-sym ~args-sym] :args}]
+                                               (case ~arity-kind-sym ~@spec-form|fn))}))
         fn-form (case kind
                   :fn   (list* 'fn (-> (if (contains? args' :quantum.core.specs/fn|name)
                                            [fn|name]
                                            [])
-                                       (conj (:overloads forms))))
-                  :defn (list* 'defn fn|name (:overloads forms)))
+                                       (conj overload-forms)))
+                  :defn (list* 'defn fn|name overload-forms))
         code `(do ~spec-form ~fn-form)]
     code))
 
@@ -264,29 +330,30 @@
 
 (s/fdef fghijk
   :args (s/or :arity-1 (s/cat :a number?)
-               :arity-2 (s/and (s/cat :a number? :b number?)
-                               (fn [{a :a b :b}] (> a b)))
-               :arity-3 (s/and (s/cat :a     string?
-                                      :b     boolean?
-                                      :c     (s/and #(-> % count (= 2))
-                                                    (fn [{:keys [d]}] (keyword? d))
-                                                    (fn [{:keys [e]}] (string?  e))
-                                                    (fn [{f :f}] (string? f)))
-                                      :i     (s/and sequential?
-                                                    (fn [[g]] (double? g))
-                                                    (fn [[g & h]] (seq? h)))
-                                      :arg4# (s/and vector?
-                                                    (fn [[j]] (symbol? j)))
-                                      :k     (s/and seq?
-                                                    (fn [[l]] (string? l))))
-                               (fn [{a :a
-                                     b :b
-                                     {:as c :keys [d e] f :f} :c
-                                     [g & h :as i] :i
-                                     [j] :arg4#
-                                     [l :as k] :k}]
-                                 (and (> a b) (contains? c a)
-                                      a b c d e f g h i j k l))))
+              :arity-2 (s/and (s/cat :a number? :b number?)
+                              (fn [{a :a b :b}] (> a b)))
+              :arity-varargs
+                (s/and (s/cat :a      string?
+                              :b      boolean?
+                              :c      (s/and #(-> % count (= 2))
+                                             (fn [{:keys [d]}] (keyword? d))
+                                             (fn [{:keys [e]}] (string?  e))
+                                             (fn [{f :f}] (string? f)))
+                              :i      (s/and sequential?
+                                             (fn [[g]] (double? g))
+                                             (fn [[g & h]] (seq? h)))
+                              :arg-4# (s/and vector?
+                                             (fn [[j]] (symbol? j)))
+                              :k      (s/and seq?
+                                             (fn [[l]] (string? l))))
+                       (fn [{a :a
+                             b :b
+                             {:as c :keys [d e] f :f} :c
+                             [g & h :as i] :i
+                             [j] :arg-4#
+                             [l :as k] :k}]
+                         (and (> a b) (contains? c a)
+                              a b c d e f g h i j k l))))
    :fn   (fn [{ret :ret [arity-kind args] :args}]
            (case arity-kind
              :arity-1 (let [{a :a} args]
