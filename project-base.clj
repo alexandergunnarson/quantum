@@ -113,6 +113,7 @@
 
        ; ==== SPECS ====
          [expound                               "0.5.0"]
+         [orchestra                             "2017.11.12-1"]
        ; ==== COLLECTIONS ====
          [diffit                                "1.0.0"]
        ; ==== CONVERT ====

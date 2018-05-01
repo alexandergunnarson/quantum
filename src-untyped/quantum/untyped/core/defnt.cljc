@@ -15,7 +15,9 @@
       :refer [reduce-2]]
     [quantum.untyped.core.reducers      :as ur]
     [quantum.untyped.core.spec          :as us]
-    [quantum.untyped.core.specs         :as ss]))
+    [quantum.untyped.core.specs         :as ss]
+    [quantum.untyped.core.vars
+      :refer [defmacro-]]))
 
 (s/def :quantum.core.defnt/local-name
   (s/and simple-symbol? (uset/not #{'& '| '> '?})))
@@ -183,50 +185,67 @@
           (or (get-in binding- ks)
               (gensym (if i|arg (str "arg-" i|arg "-") "varargs")))))))
 
-(s/fdef fghijk
-  :args (s/or :arity-varargs
-                (s/and (s/cat :a      string?
-                              :b      boolean?
-                              :c      (s/and #(-> % count (= 2))
-                                             (fn [{:keys [d]}] (keyword? d))
-                                             (fn [{:keys [e]}] (string?  e))
-                                             (fn [{f :f}] (string? f)))
-                              :i      (s/and sequential?
-                                             (fn [[g]] (double? g))
-                                             (fn [[g & h]] (seq? h)))
-                              :arg-4# (s/and vector?
-                                             (fn [[j]] (symbol? j)))
-                              :k      (s/and seq?
-                                             (fn [[l]] (string? l)))))))
+(defn context>destructuring [arg-ident #_simple-symbol? context #_vector?]
+  (reduce
+    (fn [destructuring [context-type #_#{:map :seq} k varargs?]]
+      (case context-type
+        :map  {destructuring k}
+        :seq  (let [base (vec (repeatedly k #(gensym "_")))]
+                (if varargs?
+                    (conj base '& destructuring)
+                    (assoc base k destructuring)))
+        (:keys :syms :strs) {context-type [destructuring]}))
+    arg-ident
+    (rseq context)))
 
-;; TODO need to do fns args with outwardly growing recursive context {:k (f ...)}
+#?(:clj
+(defmacro- spec-fn [[destructuring] [spec sym]]
+  `(let [spec# ~spec] (fn [~destructuring] (spec# ~sym)))))
+
+(defn keys-syms-strs>arg-specs [binding- binding-kind context]
+  (->> (get binding- binding-kind) second
+       (mapv (fn [{:keys [binding-form #_symbol?] [_ spec] :spec}]
+               (let [destructuring (context>destructuring binding-form (conj context [binding-kind nil]))]
+                 `(spec-fn [~destructuring] (~spec ~binding-form)))))))
+
+(defn >as-specs [{:as speced-binding [kind binding-] :binding-form [_ spec] :spec} context]
+  (let [[k base-spec] (case kind :seq [:sym `clojure.core/seqable?]
+                                 :map [1    `clojure.core/map?])]
+    (let [as-ident (or (get-in binding- [:as k]) (gensym "as"))
+          destructuring (context>destructuring as-ident context)]
+     [`(spec-fn [~destructuring] (~base-spec ~as-ident))
+      `(spec-fn [~destructuring] (~spec      ~as-ident))])))
+
 (defn speced-binding>arg-specs
-  ([speced-binding #_:quantum.core.defnt/speced-binding])
-  ([{:as speced-binding [kind binding-] :binding-form [_ spec] :spec} #_:quantum.core.defnt/speced-binding context]
-    (let [arg-specssss (into [spec]
-      (case kind
-        :sym []
-        :seq ((fn abcde-seq [] (let [{elems :elems rest- :rest} binding-]
-               (->> (mapv speced-binding>arg-specs elems)
-                    (<- (cond-> rest- (conj (-> rest- :form speced-binding>arg-specs))))
-                    (apply concat)))))
-        :map ((fn abcde-map []
-               (->> binding-
-                    (map (fn [[k v]] (prl! k v)
-                           (case k
-                             (:as :or)           nil
-                             (:keys :syms :strs) (->> v second (mapv (fn-> :spec second)))
-                             (speced-binding>arg-specs
-                               (-> v (assoc :spec (get-in v [:key+spec :spec])))))))
-                    (apply concat))))))]
-    (prl! arg-specssss)
-    arg-specssss)))
+  ([speced-binding] (speced-binding>arg-specs speced-binding []))
+  ([{:as speced-binding [kind binding-] :binding-form [_ spec] :spec} #_:quantum.core.defnt/speced-binding context #_vector?]
+    (case kind
+      :sym [(let [destructuring (context>destructuring binding- context)]
+             `(spec-fn [~destructuring] (~spec ~binding-)))]
+      :seq (let [{elems :elems rest- :rest} binding-]
+             (apply concat
+               (>as-specs speced-binding context)
+               (->> elems
+                    (map-indexed (fn [i speced-binding]
+                                   (speced-binding>arg-specs speced-binding (conj context [:seq i]))))
+                    (apply concat))
+               (when rest-
+                 [(speced-binding>arg-specs (:form rest-) (conj context [:seq (count elems) true]))])))
+      :map (apply concat
+             (>as-specs speced-binding context)
+             (keys-syms-strs>arg-specs binding- :keys context)
+             (keys-syms-strs>arg-specs binding- :syms context)
+             (keys-syms-strs>arg-specs binding- :strs context)
+             (->> (dissoc binding- :as :or :keys :syms :strs)
+                  (map (fn [[k {:as v :keys [key+spec]}]]
+                         (speced-binding>arg-specs
+                           (assoc v :spec (:spec key+spec))
+                           (conj context [:map (:key key+spec)])))))))))
 
 (defn arglist>spec-form|arglist
   [args+varargs kw-args #_:quantum.core.specs/map-binding-form]
   `(s/cat ~@(reduce-2
               (fn [ret speced-binding [_ kw-arg]]
-                (prl! speced-binding kw-arg)
                 (let [arg-specs (speced-binding>arg-specs speced-binding)]
                   (conj ret kw-arg (if (-> arg-specs count (= 1))
                                        (first arg-specs)
@@ -239,27 +258,22 @@
   (when (= kind :fn) (ulog/warn! "`fn` will ignore spec validation"))
   (let [{:keys [:quantum.core.specs/fn|name overloads :quantum.core.specs/meta] :as args'}
           (us/validate args (case kind :defn :quantum.core.defnt/defns|code :fn :quantum.core.defnt/fns|code))
-        _ (prl! args')
         ret-sym (gensym "ret") arity-kind-sym (gensym "arity-kind") args-sym (gensym "args")
         {:keys [overload-forms spec-form|args spec-form|fn]}
           (reduce
             (fn [ret {{:keys [args varargs pre] [_ post] :post :as arglist} :arglist :keys [body]} #_:quantum.core.defnt/arglist+body]
-              (prl! ret arglist body)
               (let [{:keys [fn-arglist kw-args]}
                       (ur/reducei
                         (fn [ret {:as speced-binding :keys [varargs?]} i|arg]
                           (let [arg-ident (speced-binding>arg-ident speced-binding i|arg)
                                 binding-  (speced-binding>binding speced-binding)]
-                            (-> ret (cond-> varargs? (update :form conj '&))
+                            (-> ret (cond-> varargs? (update :fn-arglist conj '&))
                                     (update :fn-arglist conj  binding-)
                                     (update :kw-args    assoc binding- arg-ident))))
                         {:fn-arglist [] :kw-args (om)}
                         (cond-> args varargs (conj (assoc varargs :varargs? true))))
-                    _ (prl! fn-arglist kw-args)
                     overload-form     (list* fn-arglist body)
-                    _ (prl! overload-form)
                     arity-ident       (keyword (str "arity-" (if varargs "varargs" (count args))))
-                    _ (prl! arity-ident)
                     spec-form|arglist (arglist>spec-form|arglist (cond-> args varargs (conj varargs)) kw-args)
                     spec-form|pre     (when (contains? arglist :pre) `(fn [~kw-args] ~pre))
                     spec-form|args*   (if spec-form|pre
@@ -276,11 +290,10 @@
              :spec-form|args []
              :spec-form|fn   []}
             overloads)
-        _ (prl! overload-forms spec-form|args spec-form|fn)
         spec-form (when (= kind :defn)
-                    `(s/fdef ~fn|name {:args (s/or ~@spec-form|args)
-                                       :fn   (fn [{~ret-sym :ret [~arity-kind-sym ~args-sym] :args}]
-                                               (case ~arity-kind-sym ~@spec-form|fn))}))
+                    `(s/fdef ~fn|name :args (s/or ~@spec-form|args)
+                                      :fn   (fn [{~ret-sym :ret [~arity-kind-sym ~args-sym] :args}]
+                                              (case ~arity-kind-sym ~@spec-form|fn))))
         fn-form (case kind
                   :fn   (list* 'fn (-> (if (contains? args' :quantum.core.specs/fn|name)
                                            [fn|name]
@@ -300,70 +313,3 @@
   "Like `defnt`, but relies entirely on runtime spec checks. Does not perform type inference."
   [& args] (fns|code :defn (ufeval/env-lang) args)))
 
-#_(set! s/*explain-out* expound/printer)
-
-#_(defns abcde "Documentation" {:metadata "abc"}
-  ([a #(instance? Long %)] (+ a 1))
-  ([b ?, c _ > integer?] {:pre 1} 1 2)
-  ([d string?, e #(instance? StringBuilder %) & f _ > number?]
-    (.substring ^String d 0 1)
-    (.append ^StringBuilder e 1)
-    3 4))
-
-(defns fghij "Documentation" {:metadata "abc"}
-  ([a number? > number?] (inc a))
-  ([a number?, b number?
-    | (> a b)
-    > (s/and number? #(> % a) #(> % b))] (+ a b))
-  ([a string?
-    b boolean?
-    {:as c
-     :keys [d keyword? e string?]
-     f [:f string?]}
-    #(-> % count (= 2))
-    [g double? & h seq? :as i] sequential?
-    [j symbol?] vector?
-    & [l string? :as k] seq?
-    | (and (> a b) (contains? c a)
-           a b c d e f g h i j k l)
-    > number?] 0))
-
-(s/fdef fghijk
-  :args (s/or :arity-1 (s/cat :a number?)
-              :arity-2 (s/and (s/cat :a number? :b number?)
-                              (fn [{a :a b :b}] (> a b)))
-              :arity-varargs
-                (s/and (s/cat :a      string?
-                              :b      boolean?
-                              :c      (s/and #(-> % count (= 2))
-                                             (fn [{:keys [d]}] (keyword? d))
-                                             (fn [{:keys [e]}] (string?  e))
-                                             (fn [{f :f}] (string? f)))
-                              :i      (s/and sequential?
-                                             (fn [[g]] (double? g))
-                                             (fn [[g & h]] (seq? h)))
-                              :arg-4# (s/and vector?
-                                             (fn [[j]] (symbol? j)))
-                              :k      (s/and seq?
-                                             (fn [[l]] (string? l))))
-                       (fn [{a :a
-                             b :b
-                             {:as c :keys [d e] f :f} :c
-                             [g & h :as i] :i
-                             [j] :arg-4#
-                             [l :as k] :k}]
-                         (and (> a b) (contains? c a)
-                              a b c d e f g h i j k l))))
-   :fn   (fn [{ret :ret [arity-kind args] :args}]
-           (case arity-kind
-             :arity-1 (let [{a :a} args]
-                        (number? ret))
-             :arity-2 (let [{a :a b :b} args]
-                        ((s/and number? #(> % a) #(> % b)) ret))
-             :arity-3 (let [{a :a
-                             b :b
-                             {:as c :keys [d e] f :f} :c
-                             [g & h :as i] :i
-                             [j] :arg4#
-                             [l :as k] :k} args]
-                        (number? ret)))))
