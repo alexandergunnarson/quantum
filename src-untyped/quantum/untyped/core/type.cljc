@@ -29,6 +29,8 @@
       :refer [>symbol]]
     [quantum.untyped.core.core                  :as ucore]
     [quantum.untyped.core.data.bits             :as ubit]
+    [quantum.untyped.core.defnt
+      :refer [defns defns-]]
     [quantum.untyped.core.error                 :as uerr
       :refer [err! TODO catch-all]]
     [quantum.untyped.core.fn                    :as ufn
@@ -75,26 +77,23 @@
 
 (defprotocol PSpec)
 
-(udt/deftype ValueSpec [v]
+(udt/deftype ValueSpec [v #_any?]
   {PSpec                 nil
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn      {-edn    ([this] (list `value v))}
    ?Fn                   {invoke  ([_ x] (c/= x v))}
-   ?Object               {equals  ([this that]
+   ?Object               {equals  ([this that #_any?]
                                     (c/or (== this that)
                                           (c/and (instance? ValueSpec that)
-                                                 (c/= v (.-v ^ValueSpec that)))))}})
+                                                 (c/= v (.-v ^ValueSpec that)))))}}
 
-(defn value
+(defns value
   "Creates a spec whose extension is the singleton set containing only the value `v`."
-  [v] (ValueSpec. v))
+  [v _] (ValueSpec. v))
 
-(defn value-spec? [x] (instance? ValueSpec x))
+(defns value-spec? [x _] (instance? ValueSpec x))
 
-(defn value-spec>value [x]
-  (if (value-spec? x)
-      (.-v ^ValueSpec x)
-      (err! "Not a value spec" x)))
+(defns value-spec>value [x value-spec?] (.-v ^ValueSpec x))
 
 ;; -----
 
@@ -109,17 +108,14 @@
    ?Fn     {invoke    ([_ x] (instance? c x))}
    ?Meta   {meta      ([this] meta)
             with-meta ([this meta'] (ClassSpec. meta' c name))}
-   ?Object {equals    ([this that]
+   ?Object {equals    ([this that #_any?]
                         (c/or (== this that)
                               (c/and (instance? ClassSpec that)
                                      (c/= c (.-c ^ClassSpec that)))))}})
 
-(defn class-spec? [x] (instance? ClassSpec x))
+(defns class-spec? [x _] (instance? ClassSpec x))
 
-(defn class-spec>class [spec]
-  (if (class-spec? spec)
-      (.-c ^ClassSpec spec)
-      (err! "Cannot cast to ClassSpec" {:x spec})))
+(defns class-spec>class [spec class-spec?] (.-c ^ClassSpec spec))
 
 (udt/deftype ProtocolSpec
   [meta #_(t/? ::meta)
@@ -132,16 +128,11 @@
    ?Meta                 {meta      ([this] meta)
                           with-meta ([this meta'] (ProtocolSpec. meta' p name))}})
 
-(defn protocol-spec? [x] (instance? ProtocolSpec x))
+(defns protocol-spec? [x _] (instance? ProtocolSpec x))
 
-(defn protocol-spec>protocol [spec]
-  (if (protocol-spec? spec)
-      (.-p ^ProtocolSpec spec)
-      (err! "Cannot cast to ProtocolSpec" {:x spec})))
+(defns protocol-spec>protocol [spec protocol-spec?] (.-p ^ProtocolSpec spec))
 
-(defn- isa?|protocol [p]
-  (assert (utpred/protocol? p))
-  (ProtocolSpec. nil p nil))
+(defns- isa?|protocol [p utpred/protocol?] (ProtocolSpec. nil p nil))
 
 (defn isa? [x]
   (ifs #?(:clj  (utpred/protocol? x)
@@ -228,21 +219,15 @@
 
 (-def spec? (isa? PSpec))
 
-(defn *
+(defns *
   "Denote on a spec that it must be enforced at runtime.
    For use with `defnt`."
-  [spec]
-  (if (spec? spec)
-      (update-meta spec assoc :runtime? true)
-      (err! "Input must be spec" spec)))
+  [spec spec?] (update-meta spec assoc :runtime? true))
 
-(defn ref
+(defns ref
   "Denote on a spec that it must not be expanded to use primitive values.
    For use with `defnt`."
-  [spec]
-  (if (spec? spec)
-      (update-meta spec assoc :ref? true)
-      (err! "Input must be spec" spec)))
+  [spec spec?] (update-meta spec assoc :ref? true))
 
 (udt/deftype DeducibleSpec [*spec #_(t/atom-of t/spec?)]
   {PSpec                 nil
@@ -251,12 +236,9 @@
    ?Atom                 {swap! (([this f] (swap!  *spec f)))
                           reset! ([this v] (reset! *spec v))}})
 
-(defn deducible [x]
-  (if (spec? x)
-      (DeducibleSpec. (atom x))
-      (err! "`x` must be spec to be part of DeducibleSpec" x)))
+(defns deducible [x spec?] (DeducibleSpec. (atom x)))
 
-(defn deducible-spec? [x] (instance? DeducibleSpec x))
+(defns deducible-spec? [x _] (instance? DeducibleSpec x))
 
 ;; ===== EXTENSIONALITY COMPARISON IMPLEMENTATIONS ===== ;;
 
@@ -265,7 +247,7 @@
       (coll&/incremental-every? (aritoid nil (constantly true) t/in>)
         [Long Number]))
 
-(defn compare|class|class*
+(defns compare|class|class*
   "Compare extension (generality|specificity) of ->`c0` to ->`c1`.
    `0`  means they are equally general/specific:
      - ✓ `(t/= c0 c1)`    : the extension of ->`c0` is equal to             that of ->`c1`.
@@ -280,7 +262,7 @@
    `3`  means their generality/specificity is incomparable:
      - ✓ `(t/<> c0 c1)`   : the extension of ->`c0` is disjoint w.r.t. to that of ->`c1`.
    Unboxed primitives are considered to be less general (more specific) than boxed primitives."
-  [^Class c0 ^Class c1]
+  [^Class c0 class? ^Class c1 class?]
   #?(:clj (ifs (== c0 c1)                                0
                (== c0 Object)                            1
                (== c1 Object)                           -1
@@ -302,7 +284,7 @@
 
 (declare compare|dispatch)
 
-(defn compare
+(defns compare
   ;; TODO optimize the `recur`s here as they re-take old code paths
   "Returns the value of the comparison of the extensions of ->`s0` and ->`s1`.
    `-1` means (ex ->`s0`) ⊂                                 (ex ->`s1`)
@@ -313,9 +295,7 @@
 
    Does not compare cardinalities or other relations of sets, but rather only sub/superset
    relations."
-  [s0 s1]
-  (assert (spec? s0) {:s0 s0})
-  (assert (spec? s1) {:s1 s1})
+  [s0 spec?, s1 spec?]
   (let [dispatched (-> compare|dispatch (get (type s0)) (get (type s1)))]
     (if (c/nil? dispatched)
         (err! (str "Specs not handled: " {:s0 s0 :s1 s1}) {:s0 s0 :s1 s1})
