@@ -18,6 +18,8 @@
     [quantum.untyped.core.data.set              :as uset]
     [quantum.untyped.core.data.tuple
       #?@(:cljs [:refer [Tuple]])]
+    [quantum.untyped.core.defnt
+      :refer [defns]]
     [quantum.untyped.core.fn
       :refer [<- fn-> fnl rcomp]]
     [quantum.untyped.core.form.evaluate
@@ -111,8 +113,8 @@
                               :cljs (.-MIN_VALUE js/Number))
              :min         -1.7976931348623157E308
              :max          1.7976931348623157E308 ; Max number in JS
-             :min-int      -9007199254740992 ; -2^53
-             :max-int       9007199254740992 ;  2^53
+             :min-int     -9007199254740992 ; -2^53
+             :max-int      9007199254740992 ;  2^53
    #?@(:clj [:array-ident  "D"
              :outer-type  "[D"
              :boxed       java.lang.Double
@@ -142,7 +144,8 @@
   (zipmap (vals boxed-types) (keys boxed-types))))
 
 #?(:clj
-(def boxed->unboxed-types-evaled (->> unboxed-symbol->type-meta vals (map (juxt :boxed :unboxed)) (into {}) eval)))
+(def boxed->unboxed-types-evaled
+  (->> unboxed-symbol->type-meta vals (map (juxt :boxed :unboxed)) (into {}) eval)))
 
 (def max-values
   (->> unboxed-symbol->type-meta

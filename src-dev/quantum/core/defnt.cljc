@@ -43,8 +43,8 @@
       :refer [kw-map]]
     [quantum.untyped.core.data.map        :as map]
     [quantum.untyped.core.data.set        :as set]
-    [quantum.untyped.core.defns
-      :refer [defns]]
+    [quantum.untyped.core.defnt
+      :refer [defns fns]]
     [quantum.untyped.core.form            :as uform]
     [quantum.untyped.core.form.evaluate   :as ufeval]
     [quantum.untyped.core.form.generate   :as ufgen

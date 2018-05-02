@@ -2,9 +2,6 @@
   (:require
     [quantum.untyped.core.defnt :as this]))
 
-#_(require '[expound.alpha :as expound])
-#_(set! s/*explain-out* expound/printer)
-
 #_(defns abcde "Documentation" {:metadata "abc"}
   ([a #(instance? Long %)] (+ a 1))
   ([b ?, c _ > integer?] {:pre 1} 1 2)

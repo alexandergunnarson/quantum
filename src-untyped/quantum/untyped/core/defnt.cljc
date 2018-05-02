@@ -1,4 +1,5 @@
 (ns quantum.untyped.core.defnt
+  "Primarily for `(de)fns`."
   (:require
     [clojure.spec.alpha                 :as s]
     [quantum.untyped.core.collections   :as c]
@@ -199,7 +200,7 @@
     (rseq context)))
 
 #?(:clj
-(defmacro- spec-fn [[destructuring] [spec sym]]
+(defmacro spec-fn [[destructuring] [spec sym]]
   `(let [spec# ~spec] (fn [~destructuring] (spec# ~sym)))))
 
 (defn keys-syms-strs>arg-specs [binding- binding-kind context]
@@ -295,10 +296,9 @@
                                       :fn   (fn [{~ret-sym :ret [~arity-kind-sym ~args-sym] :args}]
                                               (case ~arity-kind-sym ~@spec-form|fn))))
         fn-form (case kind
-                  :fn   (list* 'fn (-> (if (contains? args' :quantum.core.specs/fn|name)
-                                           [fn|name]
-                                           [])
-                                       (conj overload-forms)))
+                  :fn   (list* 'fn (concat (when (contains? args' :quantum.core.specs/fn|name)
+                                             [fn|name])
+                                           overload-forms))
                   :defn (list* 'defn fn|name overload-forms))
         code `(do ~spec-form ~fn-form)]
     code))

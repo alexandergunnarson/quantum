@@ -1063,7 +1063,7 @@
 
 #?(:clj (def primitive-classes (->> unboxed-symbol->type-meta vals (uc/map+ :unboxed) (join #{}))))
 
-(defn- -spec>classes [spec #_t/spec? classes #_set?] #_> set?
+(defn- -spec>classes [spec #_t/spec? classes #_set?] #_> #_set?
   (cond (class-spec? spec)
           (conj classes (class-spec>class spec))
         (value-spec? spec)
