@@ -27,7 +27,8 @@
 
 (s/def :quantum.core.defnt/spec
   (s/alt :infer #{'?}
-         :spec  any?))
+         :any   #{'_}
+         :spec   any?))
 
 ;; ----- General destructuring ----- ;;
 
@@ -93,7 +94,7 @@
                   :varargs (s/? (s/cat :sym            (fn1 = '&)
                                        :speced-binding :quantum.core.defnt/speced-binding))
                   :pre     (s/? (s/cat :sym            (fn1 = '|)
-                                       :spec           any?))
+                                       :spec           (s/or :any-spec #{'_} :spec any?)))
                   :post    :quantum.core.defnt/output-spec))
          (s/conformer
            #(cond-> % (contains? % :varargs) (update :varargs :speced-binding)
@@ -205,24 +206,27 @@
 
 (defn keys-syms-strs>arg-specs [binding- binding-kind context]
   (->> (get binding- binding-kind) second
-       (mapv (fn [{:keys [binding-form #_symbol?] [_ spec] :spec}]
+       (filter (fn [{[spec-kind _] :spec}] (= spec-kind :spec)))
+       (mapv (fn [{:keys [binding-form #_symbol?] [spec-kind spec] :spec}]
                (let [destructuring (context>destructuring binding-form (conj context [binding-kind nil]))]
                  `(spec-fn [~destructuring] (~spec ~binding-form)))))))
 
-(defn >as-specs [{:as speced-binding [kind binding-] :binding-form [_ spec] :spec} context]
+(defn >as-specs [{:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec} context]
   (let [[k base-spec] (case kind :seq [:sym `clojure.core/seqable?]
                                  :map [1    `clojure.core/map?])]
     (let [as-ident (or (get-in binding- [:as k]) (gensym "as"))
           destructuring (context>destructuring as-ident context)]
-     [`(spec-fn [~destructuring] (~base-spec ~as-ident))
-      `(spec-fn [~destructuring] (~spec      ~as-ident))])))
+      (cond-> [`(spec-fn [~destructuring] (~base-spec ~as-ident))]
+        (= spec-kind :spec) (conj `(spec-fn [~destructuring] (~spec ~as-ident)))))))
 
 (defn speced-binding>arg-specs
   ([speced-binding] (speced-binding>arg-specs speced-binding []))
-  ([{:as speced-binding [kind binding-] :binding-form [_ spec] :spec} #_:quantum.core.defnt/speced-binding context #_vector?]
+  ([{:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec}
+    #_:quantum.core.defnt/speced-binding context #_vector?]
     (case kind
-      :sym [(let [destructuring (context>destructuring binding- context)]
-             `(spec-fn [~destructuring] (~spec ~binding-)))]
+      :sym (when (= spec-kind :spec)
+             [(let [destructuring (context>destructuring binding- context)]
+              `(spec-fn [~destructuring] (~spec ~binding-)))])
       :seq (let [{elems :elems rest- :rest} binding-]
              (apply concat
                (>as-specs speced-binding context)
@@ -248,9 +252,10 @@
   `(s/cat ~@(reduce-2
               (fn [ret speced-binding [_ kw-arg]]
                 (let [arg-specs (speced-binding>arg-specs speced-binding)]
-                  (conj ret kw-arg (if (-> arg-specs count (= 1))
-                                       (first arg-specs)
-                                       `(s/and ~@arg-specs)))))
+                  (conj ret kw-arg (case (count arg-specs)
+                                     0 `clojure.core/any?
+                                     1 (first arg-specs)
+                                     `(s/and ~@arg-specs)))))
               []
               args+varargs kw-args)))
 
@@ -258,11 +263,12 @@
   (assert (= lang #?(:clj :clj :cljs :cljs)) lang)
   (when (= kind :fn) (ulog/warn! "`fn` will ignore spec validation"))
   (let [{:keys [:quantum.core.specs/fn|name overloads :quantum.core.specs/meta] :as args'}
-          (us/validate args (case kind :defn :quantum.core.defnt/defns|code :fn :quantum.core.defnt/fns|code))
+          (us/validate args (case kind (:defn :defn-) :quantum.core.defnt/defns|code
+                                       :fn            :quantum.core.defnt/fns|code))
         ret-sym (gensym "ret") arity-kind-sym (gensym "arity-kind") args-sym (gensym "args")
         {:keys [overload-forms spec-form|args spec-form|fn]}
           (reduce
-            (fn [ret {{:keys [args varargs pre] [_ post] :post :as arglist} :arglist :keys [body]} #_:quantum.core.defnt/arglist+body]
+            (fn [ret {{:keys [args varargs] [pre-kind pre] :pre [_ post] :post :as arglist} :arglist :keys [body]} #_:quantum.core.defnt/arglist+body]
               (let [{:keys [fn-arglist kw-args]}
                       (ur/reducei
                         (fn [ret {:as speced-binding :keys [varargs?]} i|arg]
@@ -276,7 +282,8 @@
                     overload-form     (list* fn-arglist body)
                     arity-ident       (keyword (str "arity-" (if varargs "varargs" (count args))))
                     spec-form|arglist (arglist>spec-form|arglist (cond-> args varargs (conj varargs)) kw-args)
-                    spec-form|pre     (when (contains? arglist :pre) `(fn [~kw-args] ~pre))
+                    spec-form|pre     (when (and (contains? arglist :pre) (= pre-kind :spec))
+                                        `(fn [~kw-args] ~pre))
                     spec-form|args*   (if spec-form|pre
                                           `(s/and ~spec-form|arglist ~spec-form|pre)
                                           spec-form|arglist)
@@ -291,25 +298,32 @@
              :spec-form|args []
              :spec-form|fn   []}
             overloads)
-        spec-form (when (= kind :defn)
+        spec-form (when (#{:defn :defn-} kind)
                     `(s/fdef ~fn|name :args (s/or ~@spec-form|args)
                                       :fn   (fn [{~ret-sym :ret [~arity-kind-sym ~args-sym] :args}]
                                               (case ~arity-kind-sym ~@spec-form|fn))))
         fn-form (case kind
-                  :fn   (list* 'fn (concat (when (contains? args' :quantum.core.specs/fn|name)
-                                             [fn|name])
-                                           overload-forms))
-                  :defn (list* 'defn fn|name overload-forms))
+                  :fn    (list* 'fn (concat (when (contains? args' :quantum.core.specs/fn|name)
+                                              [fn|name])
+                                            overload-forms))
+                  :defn  (list* 'defn fn|name overload-forms)
+                  :defn- (list* 'defn- fn|name overload-forms))
         code `(do ~spec-form ~fn-form)]
     code))
 
 #?(:clj
 (defmacro fns
-  "Like `fnt`, but relies entirely on runtime spec checks. Does not perform type inference."
+  "Like `fnt`, but relies entirely on runtime spec checks. Ignores type inference requests, but
+   allows them for compatibility with `defnt`."
   [& args] (fns|code :fn (ufeval/env-lang) args)))
 
 #?(:clj
 (defmacro defns
-  "Like `defnt`, but relies entirely on runtime spec checks. Does not perform type inference."
+  "Like `defnt`, but relies entirely on runtime spec checks. Ignores type inference requests, but
+   allows them for compatibility with `defnt`."
   [& args] (fns|code :defn (ufeval/env-lang) args)))
 
+#?(:clj
+(defmacro defns-
+  "defns : defns- :: defn : defn-"
+  [& args] (fns|code :defn- (ufeval/env-lang) args)))

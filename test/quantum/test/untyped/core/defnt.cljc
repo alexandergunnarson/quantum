@@ -1,5 +1,6 @@
 (ns quantum.test.untyped.core.defnt
   (:require
+    [clojure.spec.alpha         :as s]
     [quantum.untyped.core.defnt :as this]))
 
 #_(defns abcde "Documentation" {:metadata "abc"}
@@ -12,7 +13,8 @@
 
 ;; TODO assert that the below 2 things are equivalent
 
-(defns fghij "Documentation" {:metadata "abc"}
+(macroexpand
+'(this/defns fghij "Documentation" {:metadata "abc"}
   ([a number? > number?] (inc a))
   ([a number?, b number?
     | (> a b)
@@ -34,7 +36,7 @@
     & [fa string? :as f] seq?
     | (and (> a b) (contains? c a)
            a b c ca cb cc cca ccaa ccab ccabaa ccabab ccababa ccabb d da db ea f fa)
-    > number?] 0))
+    > number?] 0)))
 
 (s/fdef fghijk
   :args (s/or :arity-1 (s/cat :a (let [spec# number?] (fn [a] (spec# a))))
