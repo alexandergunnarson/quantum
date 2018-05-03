@@ -29,6 +29,7 @@
       :refer [>symbol]]
     [quantum.untyped.core.core                  :as ucore]
     [quantum.untyped.core.data.bits             :as ubit]
+    [quantum.untyped.core.data.tuple]
     [quantum.untyped.core.defnt
       :refer [defns defns-]]
     [quantum.untyped.core.error                 :as uerr
@@ -45,7 +46,7 @@
       :refer [educe join]]
     [quantum.untyped.core.refs
       :refer [?deref]]
-    [quantum.untyped.core.data.tuple]
+    [quantum.untyped.core.spec                  :as s]
     [quantum.untyped.core.type.core             :as utcore]
     [quantum.untyped.core.type.defs             :as utdef]
     [quantum.untyped.core.type.predicates       :as utpred]
@@ -301,39 +302,47 @@
         (err! (str "Specs not handled: " {:s0 s0 :s1 s1}) {:s0 s0 :s1 s1})
         (dispatched s0 s1))))
 
-(defn <
+(defns <
   "Computes whether the extension of spec ->`s0` is a strict subset of that of ->`s1`."
-  [s0 s1] (let [ret (compare s0 s1)] (c/= ret -1)))
+  ([s1 spec?] #(< % s1))
+  ([s0 spec?, s1 spec?] (let [ret (compare s0 s1)] (c/= ret -1))))
 
-(defn <=
+(defns <=
   "Computes whether the extension of spec ->`s0` is a (lax) subset of that of ->`s1`."
-  [s0 s1] (let [ret (compare s0 s1)] (c/or (c/= ret -1) (c/= ret 0))))
+  ([s1 spec?] #(<= % s1))
+  ([s0 spec?, s1 spec?] (let [ret (compare s0 s1)] (c/or (c/= ret -1) (c/= ret 0)))))
 
-(defn =
+(defns =
   "Computes whether the extension of spec ->`s0` is equal to that of ->`s1`."
-  [s0 s1] (c/= (compare s0 s1) 0))
+  ([s1 spec?] #(= % s1))
+  ([s0 spec?, s1 spec?] (c/= (compare s0 s1) 0)))
 
-(defn not=
+(defns not=
   "Computes whether the extension of spec ->`s0` is not equal to that of ->`s1`."
-  [s0 s1] (c/not (= s0 s1)))
+  ([s1 spec?] #(not= % s1))
+  ([s0 spec?, s1 spec?] (c/not (= s0 s1))))
 
-(defn >=
+(defns >=
   "Computes whether the extension of spec ->`s0` is a (lax) superset of that of ->`s1`."
-  [s0 s1] (let [ret (compare s0 s1)] (c/or (c/= ret 1) (c/= ret 0))))
+  ([s1 spec?] #(>= % s1))
+  ([s0 spec?, s1 spec?] (let [ret (compare s0 s1)] (c/or (c/= ret 1) (c/= ret 0)))))
 
-(defn >
+(defns >
   "Computes whether the extension of spec ->`s0` is a strict superset of that of ->`s1`."
-  [s0 s1] (c/= (compare s0 s1) 1))
+  ([s1 spec?] #(> % s1))
+  ([s0 spec?, s1 spec?] (c/= (compare s0 s1) 1)))
 
-(defn ><
+(defns ><
   "Computes whether it is the case that the intersect of the extensions of spec ->`s0`
    and ->`s1` is non-empty, and neither ->`s0` nor ->`s1` share a subset/equality/superset
    relationship."
-  [s0 s1] (c/= (compare s0 s1) 2))
+  ([s1 spec?] #(>< % s1))
+  ([s0 spec?, s1 spec?] (c/= (compare s0 s1) 2)))
 
-(defn <>
+(defns <>
   "Computes whether the respective extensions of specs ->`s0` and ->`s1` are disjoint."
-  [s0 s1] (c/= (compare s0 s1) 3))
+  ([s1 spec?] #(<> % s1))
+  ([s0 spec? s1 spec?] (c/= (compare s0 s1) 3)))
 
 (defn inverse [comparison]
   (case comparison
@@ -473,12 +482,9 @@
                                          (c/and (instance? AndSpec that)
                                                 (c/= args (.-args ^AndSpec that)))))}})
 
-(defn and-spec? [x] (instance? AndSpec x))
+(defns and-spec? [x _] (instance? AndSpec x))
 
-(defn and-spec>args [x]
-  (if (instance? AndSpec x)
-      (.-args ^AndSpec x)
-      (err! "Cannot cast to AndSpec" x)))
+(defns and-spec>args [x and-spec?] (.-args ^AndSpec x))
 
 (defn and
   "Sequential/ordered `and`. Analogous to `set/intersection`.
@@ -506,12 +512,9 @@
                                          (c/and (instance? OrSpec that)
                                                 (c/= args (.-args ^OrSpec that)))))}})
 
-(defn or-spec? [x] (instance? OrSpec x))
+(defns or-spec? [x _] (instance? OrSpec x))
 
-(defn or-spec>args [x]
-  (if (instance? OrSpec x)
-      (.-args ^OrSpec x)
-      (err! "Cannot cast to OrSpec" x)))
+(defns or-spec>args [x or-spec?] (.-args ^OrSpec x))
 
 (defn or
   "Sequential/ordered `or`. Analogous to `set/union`.
@@ -535,17 +538,13 @@
                                          (c/and (instance? NotSpec that)
                                                 (c/= spec (.-spec ^NotSpec that)))))}})
 
-(defn not-spec? [x] (instance? NotSpec x))
+(defns not-spec? [x _] (instance? NotSpec x))
 
-(defn not-spec>inner-spec [spec]
-  (if (instance? NotSpec spec)
-      (.-spec ^NotSpec spec)
-      (err! "Cannot cast to NotSpec" {:x spec})))
+(defns not-spec>inner-spec [spec not-spec?] (.-spec ^NotSpec spec))
 
 (declare nil? val?)
 
-(defn not [spec]
-  (assert (spec? spec))
+(defns not [spec spec?]
   (ifs (= spec universal-set) empty-set
        (= spec empty-set)     universal-set
        (= spec val|by-class?) nil?
@@ -558,13 +557,13 @@
 
 (uvar/defalias ! not)
 
-(defn -
+(defns -
   "Computes the difference of `s0` from `s1`: (& s0 (! s1))
    If `s0` =       `s1`, `∅`
    If `s0` <       `s1`, `∅`
    If `s0` <>      `s1`, `s0`
    If `s0` > | ><  `s1`, `s0` with all elements of `s1` removed"
-  [s0 #_spec? s1 #_spec?]
+  [s0 spec?, s1 spec?]
   #_(prl! s0 s1)
   (let [c (compare s0 s1)]
     (case c
@@ -588,10 +587,9 @@
 
 #_(udt/deftype SequentialSpec)
 
-(defn of
-  "Creates a spec that.
-   `pred` must be `t/<=` iterable"
-  [pred spec])
+(defns of
+  "Creates a spec that ... TODO"
+  [pred (<= iterable?), spec spec?] (TODO))
 
 (udt/deftype FnSpec
   [name   #_(t/? t/symbol?)
@@ -613,17 +611,19 @@
    fipp.ednize/IEdn
      {-edn ([this] (list `fn name lookup))}})
 
-(defn fn|args>out-spec
+(defns fn-spec? [x _] (instance? FnSpec x))
+
+(defns fn|args>out-spec
   "Returns nil if args do not match any input spec"
-  [^FnSpec spec args]
+  [^FnSpec spec fn-spec?, args _]
   (when-let [spec-or-arity-specs (get (.-lookup spec) (count args))]
     (if (spec? spec-or-arity-specs)
         spec-or-arity-specs
         (->> spec-or-arity-specs (uc/filter+ #((first %) args)) uc/first second))))
 
-(defn fn-spec
-  [name-  #_(t/? t/symbol?)
-   lookup #_(t/map-of t/integer?
+(defns fn-spec
+  [name-  (? symbol?)
+   lookup _ #_(t/map-of t/integer?
                       (t/or (spec spec? "output-spec")
                             (t/vec-of (t/tuple (t/vec-of (spec spec? "input-spec"))
                                                (spec spec? "output-spec")))))]
@@ -676,7 +676,7 @@
    fipp.ednize/IEdn
      {-edn ([this] `?)}})
 
-(defn infer? [x] (instance? InferSpec x))
+(defns infer? [x _] (instance? InferSpec x))
 
 ;; ===== Comparison ===== ;;
 
@@ -692,7 +692,7 @@
 (def- fn>< (ufn/fn'  2))
 (def- fn<> (ufn/fn'  3))
 
-(defn- compare|todo [s0 s1]
+(defns- compare|todo [s0 spec?, s1 spec?]
   (err! "TODO dispatch" {:s0 s0 :s0|type (type s0)
                          :s1 s1 :s1|type (type s1)}))
 
@@ -700,7 +700,7 @@
 
 (def- compare|universal+empty    fn>)
 
-(defn- compare|universal+not [s0 s1]
+(defns- compare|universal+not [s0 spec?, s1 spec?]
   (let [s1|inner (not-spec>inner-spec s1)]
     (ifs (= s1|inner universal-set) 1
          (= s1|inner empty-set)     0
@@ -716,7 +716,7 @@
 
 ;; ----- EmptySet ----- ;;
 
-(defn- compare|empty+not [s0 s1]
+(defns- compare|empty+not [s0 spec?, s1 spec?]
   (let [s1|inner (not-spec>inner-spec s1)]
     (if (= s1|inner universal-set)
          0
@@ -732,7 +732,7 @@
 
 ;; ----- NotSpec ----- ;;
 
-(defn- compare|not+not [s0 s1]
+(defns- compare|not+not [s0 spec?, s1 spec?]
   (let [c (compare (not-spec>inner-spec s0) (not-spec>inner-spec s1))]
     (case c
       0  0
@@ -741,17 +741,17 @@
       2  2
       3  2)))
 
-(defn- compare|not+or [s0 s1]
+(defns- compare|not+or [s0 spec?, s1 spec?]
   (compare (not-spec>inner-spec s0) (>logical-complement s1)))
 
-(defn- compare|not+and [s0 s1]
+(defns- compare|not+and [s0 spec?, s1 spec?]
   (compare (not-spec>inner-spec s0) (>logical-complement s1)))
 
-(defn- compare|not+protocol [s0 s1]
+(defns- compare|not+protocol [s0 spec?, s1 spec?]
   (let [s0|inner (not-spec>inner-spec s0)]
     (if (= s0|inner empty-set) 1 3)))
 
-(defn- compare|not+class [s0 s1]
+(defns- compare|not+class [s0 spec?, s1 spec?]
   (let [s0|inner (not-spec>inner-spec s0)]
     (if (= s0|inner empty-set)
         1
@@ -760,7 +760,7 @@
           (-1 2) 2
           3      1))))
 
-(defn- compare|not+value [s0 s1]
+(defns- compare|not+value [s0 spec?, s1 spec?]
   (let [s0|inner (not-spec>inner-spec s0)]
     (if (= s0|inner empty-set)
         1
@@ -772,7 +772,7 @@
 ;; ----- OrSpec ----- ;;
 
 ;; TODO performance can be improved here by doing fewer comparisons
-(defn- compare|or+or [^OrSpec s0 ^OrSpec s1]
+(defns- compare|or+or [^OrSpec s0 or-spec?, ^OrSpec s1 or-spec?]
   (let [l (->> s0 .-args (seq-and (fn1 < s1)))
         r (->> s1 .-args (seq-and (fn1 < s0)))]
     (if l
@@ -783,7 +783,7 @@
                 3
                 2)))))
 
-(defn- compare|or+and [^OrSpec s0 ^AndSpec s1]
+(defns- compare|or+and [^OrSpec s0 or-spec?, ^OrSpec s1 or-spec?]
   (let [r (->> s1 .-args (seq-and (fn1 < s0)))]
     (if r 1 3)))
 
@@ -1043,7 +1043,7 @@
 
 #?(:clj (def primitive-classes (->> unboxed-symbol->type-meta vals (uc/map+ :unboxed) (join #{}))))
 
-(defn- -spec>classes [spec #_t/spec? classes #_set?] #_> #_set?
+(defns- -spec>classes [spec spec?, classes set? > set?]
   (cond (class-spec? spec)
           (conj classes (class-spec>class spec))
         (value-spec? spec)
@@ -1062,10 +1062,10 @@
         :else
           (err! "Not sure how to handle spec" spec)))
 
-(defn spec>classes #_> #_set?
+(defns spec>classes
   "Outputs the set of all the classes ->`spec` can embody according to its various conditional branches,
    if any. Ignores nils, treating in Clojure simply as a `java.lang.Object`."
-  [spec] (-spec>classes spec #{}))
+  [spec spec? > set?] (-spec>classes spec #{}))
 
 #?(:clj
 (defn- -spec>?class-value [spec spec-nilable?]
@@ -1091,9 +1091,9 @@
 
         (def basic-type-syms '[boolean byte char short int long float double ref])
 
-#?(:clj (defn- >v-sym [prefix #_symbol? kind  #_symbol?] (symbol (str prefix "|" kind "?"))))
+#?(:clj (defns- >v-sym [prefix symbol?, kind symbol?] (symbol (str prefix "|" kind "?"))))
 
-#?(:clj (defn- >kv-sym [prefix #_symbol? from-type #_symbol? to-type #_symbol?]
+#?(:clj (defns- >kv-sym [prefix symbol?, from-type symbol?, to-type symbol?]
           (symbol (str prefix "|" from-type "->" to-type "?"))))
 
 #?(:clj (defmacro- def-preds|map|same-types [prefix #_symbol?]
@@ -1273,7 +1273,7 @@
                       ;; dense integer values), not extensible
 
 #?(:clj
-(defn >array-nd-type [kind n]
+(defns >array-nd-type [kind symbol?, n (s/and integer? pos?) > class-spec?]
   (let [prefix (apply str (repeat n \[))
         letter (case kind
                  boolean "Z"

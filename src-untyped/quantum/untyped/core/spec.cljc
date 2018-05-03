@@ -12,7 +12,7 @@
     [quantum.untyped.core.convert :as uconv]
     [quantum.untyped.core.data :as udata]
     [quantum.untyped.core.error
-      :refer [catch-all err!]]
+      :refer [catch-all err! TODO]]
     [quantum.untyped.core.fn
       :refer [constantly with-do]]
     [quantum.untyped.core.form.evaluate :as ufeval
@@ -108,30 +108,34 @@
   `(do ~@(->> args (partition-all 2)
                    (map (fn [[v spec]] `(validate-one ~spec ~v)))))))
 
-#?(:clj (quantum.untyped.core.vars/defmalias tuple     clojure.spec.alpha/tuple     cljs.spec.alpha/tuple    ))
-#?(:clj (quantum.untyped.core.vars/defmalias coll-of   clojure.spec.alpha/coll-of   cljs.spec.alpha/coll-of  ))
-#?(:clj (quantum.untyped.core.vars/defmalias map-of    clojure.spec.alpha/map-of    cljs.spec.alpha/map-of   ))
+#?(:clj (quantum.untyped.core.vars/defmalias tuple         clojure.spec.alpha/tuple         cljs.spec.alpha/tuple    ))
+#?(:clj (quantum.untyped.core.vars/defmalias coll-of       clojure.spec.alpha/coll-of       cljs.spec.alpha/coll-of  ))
+#?(:clj (quantum.untyped.core.vars/defmalias map-of        clojure.spec.alpha/map-of        cljs.spec.alpha/map-of   ))
 
-#?(:clj (quantum.untyped.core.vars/defmalias def       clojure.spec.alpha/def       cljs.spec.alpha/def      ))
-#?(:clj (quantum.untyped.core.vars/defmalias fdef      clojure.spec.alpha/fdef      cljs.spec.alpha/fdef     ))
+#?(:clj (quantum.untyped.core.vars/defmalias def           clojure.spec.alpha/def           cljs.spec.alpha/def      ))
+#?(:clj (quantum.untyped.core.vars/defmalias fdef          clojure.spec.alpha/fdef          cljs.spec.alpha/fdef     ))
 
-#?(:clj (quantum.untyped.core.vars/defmalias keys      clojure.spec.alpha/keys      cljs.spec.alpha/keys     ))
-#?(:clj (quantum.untyped.core.vars/defmalias keys*     clojure.spec.alpha/keys*     cljs.spec.alpha/keys*    ))
-#?(:clj (quantum.untyped.core.vars/defmalias merge     clojure.spec.alpha/merge     cljs.spec.alpha/merge    ))
+#?(:clj (quantum.untyped.core.vars/defmalias keys          clojure.spec.alpha/keys          cljs.spec.alpha/keys     ))
+#?(:clj (quantum.untyped.core.vars/defmalias keys*         clojure.spec.alpha/keys*         cljs.spec.alpha/keys*    ))
+#?(:clj (quantum.untyped.core.vars/defmalias merge         clojure.spec.alpha/merge         cljs.spec.alpha/merge    ))
 
-#?(:clj (quantum.untyped.core.vars/defmalias spec      clojure.spec.alpha/spec      cljs.spec.alpha/spec     ))
-#?(:clj (quantum.untyped.core.vars/defmalias +         clojure.spec.alpha/+         cljs.spec.alpha/+        ))
-#?(:clj (quantum.untyped.core.vars/defmalias *         clojure.spec.alpha/*         cljs.spec.alpha/*        ))
-#?(:clj (quantum.untyped.core.vars/defmalias ?         clojure.spec.alpha/?         cljs.spec.alpha/?        ))
+#?(:clj (quantum.untyped.core.vars/defmalias spec          clojure.spec.alpha/spec          cljs.spec.alpha/spec     ))
+#?(:clj (quantum.untyped.core.vars/defmalias +             clojure.spec.alpha/+             cljs.spec.alpha/+        ))
+#?(:clj (quantum.untyped.core.vars/defmalias *             clojure.spec.alpha/*             cljs.spec.alpha/*        ))
+#?(:clj (quantum.untyped.core.vars/defmalias ?             clojure.spec.alpha/?             cljs.spec.alpha/?        ))
 
 ;; Note that `and` results in a spec, and as such creates a new regex context :/
-#?(:clj (quantum.untyped.core.vars/defmalias and       clojure.spec.alpha/and       cljs.spec.alpha/and      ))
-#?(:clj (quantum.untyped.core.vars/defmalias or        clojure.spec.alpha/or        cljs.spec.alpha/or       ))
-#?(:clj (quantum.untyped.core.vars/defmalias every     clojure.spec.alpha/every     cljs.spec.alpha/every    ))
+#?(:clj (quantum.untyped.core.vars/defmalias and           clojure.spec.alpha/and           cljs.spec.alpha/and      ))
+#?(:clj (quantum.untyped.core.vars/defmalias or            clojure.spec.alpha/or            cljs.spec.alpha/or       ))
+#?(:clj (quantum.untyped.core.vars/defmalias every         clojure.spec.alpha/every         cljs.spec.alpha/every    ))
 
-#?(:clj (quantum.untyped.core.vars/defmalias conformer clojure.spec.alpha/conformer cljs.spec.alpha/conformer))
-(defalias conform s/conform)
-(defalias explain s/explain)
+#?(:clj (quantum.untyped.core.vars/defmalias conformer     clojure.spec.alpha/conformer     cljs.spec.alpha/conformer))
+#?(:clj (quantum.untyped.core.vars/defmalias nonconforming clojure.spec.alpha/nonconforming cljs.spec.alpha/nonconforming))
+
+(defalias s/conform)
+(defalias s/explain)
+(defalias s/explain-data)
+(defalias s/describe)
 
 #?(:clj (quantum.untyped.core.vars/defmalias cat clojure.spec.alpha/cat cljs.spec.alpha/cat))
 #?(:clj (defmacro cat* "`or` :`or*` :: `cat` : `cat*`" [& args] `(cat ~@(udata/quote-map-base uconv/>keyword args true))))
@@ -258,17 +262,49 @@
 (defmacro constantly-or [& exprs]
   `(or* ~@(map #(list 'fn [(gensym "_")] %) exprs))))
 
-#?(:clj
-(defmacro set-of [spec] ; TODO fix this up...
-  `(let [spec# ~spec]
-     (or*-forms (and core/set? (coll-of ~spec))
-                (and core/set? (coll-of spec#))
-                (coll-of ~spec :distinct true :into #{})
-                (coll-of spec# :distinct true :into #{})))))
+#?(:clj (defmacro vec-of [spec & opts] `(coll-of ~spec ~@opts :kind core/vector?)))
+#?(:clj (defmacro set-of [spec & opts] `(coll-of ~spec ~@opts :kind core/set?)))
 
-(defn validate:val? [x]
+(defn validate|val? [x]
   (if (nil? x)
       (throw (ex-info "Value is not allowed to be nil but was" {}))
       x))
+
+#?(:clj (defmacro with [extract-f spec] `(nonconforming (and (conformer ~extract-f) ~spec))))
+
+(defn with-gen-spec-impl
+  "Do not call this directly; use 'with-gen-spec'."
+  [extract-f extract-f|form gen-spec gen-spec|form]
+  (let [form `(with-gen-spec ~extract-f|form ~gen-spec|form)
+        gen-spec (fn [x] (let [spec (gen-spec x)
+                               desc (describe spec)
+                               desc (if (= desc ::s/unknown)
+                                        (list 'some-generated-spec gen-spec|form)
+                                        desc)]
+                           (with extract-f (@#'s/spec-impl desc spec nil nil))))]
+    (if (clojure.core/fn? gen-spec)
+        (reify
+          s/Specize
+            (s/specize*  [this] this)
+            (s/specize*  [this _] this)
+          s/Spec
+            (s/conform*  [_ x] (s/conform* (gen-spec x) x))
+            (s/unform*   [_ x] (s/unform* (gen-spec x) x))
+            (s/explain*  [_ path via in x] (s/explain* (gen-spec x) path via in x))
+            (s/gen*      [_ _ _ _] (gen/gen-for-pred gen-spec))
+            (s/with-gen* [_ gen-fn'] (TODO))
+            (s/describe* [_] form))
+        (err! "`wrap-spec` may only be called on fns" {:input gen-spec}))))
+
+#?(:clj
+(defmacro with-gen-spec
+  "`gen-spec` : an fn that returns a spec based on the input.
+   `extract-f`: extracts the piece of data from the input that the generated spec will validate.
+   E.g.:
+   (s/explain
+     (s/with-gen-spec (fn [{:keys [a]}] a) (fn [{:keys [b]}] #(> % b)))
+     {:a 1 :b 1})"
+  [extract-f gen-spec]
+  `(with-gen-spec-impl ~extract-f '~extract-f ~gen-spec '~gen-spec)))
 
 (def any? (constantly true))

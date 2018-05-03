@@ -19,8 +19,6 @@
     [quantum.core.macros
       :refer [macroexpand]]
     [quantum.core.print                :as pr]
-    [quantum.core.spec                 :as s]
-    [quantum.core.specs                :as ss]
     [quantum.core.type.core            :as tcore]
     [quantum.core.type.defs            :as tdef]
     [quantum.untyped.core.analyze.ast  :as ast]
@@ -58,6 +56,8 @@
       :refer [join reducei educe]]
     [quantum.untyped.core.refs            :as ref
       :refer [?deref]]
+    [quantum.untyped.core.spec            :as s]
+    [quantum.untyped.core.specs           :as uss]
     [quantum.untyped.core.type            :as t
       :refer [?]]
     [quantum.untyped.core.type.predicates :as utpred]
@@ -104,35 +104,35 @@
 (do
 
 #?(:clj
-(defn class>simplest-class
+(defns class>simplest-class
   "This ensures that special overloads are not created for non-primitive subclasses
    of java.lang.Object (e.g. String, etc.)."
-  [c #_t/class?]
+  [c class?]
   (if (t/primitive-class? c)
       c
       (or (tcore/boxed->unboxed c) java.lang.Object))))
 
 #?(:clj
-(defn class>most-primitive-class
-  [c #_t/class? nilable?]
+(defns class>most-primitive-class
+  [c class?, nilable? boolean?]
   (if nilable? c (or (tcore/boxed->unboxed c) c))))
 
 #?(:clj
-(defn spec>most-primitive-classes [spec #_t/spec?] #_> #_(set-of (? class?))
+(defns spec>most-primitive-classes [spec t/spec? > (s/set-of (? class?))]
   (let [cs (t/spec>classes spec) nilable? (contains? cs nil)]
     (->> cs
          (c/map+ #(class>most-primitive-class % nilable?))
          (join #{})))))
 
 #?(:clj
-(defn spec>most-primitive-class [spec #_t/spec?] #_> #_(? class?)
+(defns spec>most-primitive-class [spec t/spec? > (? class?)]
   (let [cs (spec>most-primitive-classes spec)]
     (if (-> cs count (not= 1))
         (err! "Not exactly 1 class found" (kw-map spec cs))
         (first cs)))))
 
 #?(:clj
-(defn out-spec>class [spec #_t/spec?]
+(defns out-spec>class [spec t/spec? > (? class?)]
   (let [cs (t/spec>classes spec) cs' (disj cs nil)]
     (if (-> cs' count (not= 1))
         ;; NOTE: we don't need to vary the output class if there are multiple output possibilities or just nil
@@ -158,7 +158,7 @@
   fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "M") (into (array-map) this)))))
 
 #?(:clj
-(defns class->methods [c t/class?]
+(defns class->methods [^Class c class? > map?]
   (->> (.getMethods c)
        (remove+   (fn [^java.lang.reflect.Method x] (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
        (map+      (fn [^java.lang.reflect.Method x] (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
@@ -178,7 +178,7 @@
   fipp.ednize/IOverride
   fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "F") (into (array-map) this))))
 
-(defn class->fields [^Class c]
+(defns class->fields [^Class c class? > map?]
   (->> (.getFields c)
        (remove+   (fn [^java.lang.reflect.Field x] (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
        (map+      (fn [^java.lang.reflect.Field x]
@@ -205,6 +205,7 @@
 
 (def special-symbols '#{do let* deftype* fn* def . if quote new throw}) ; TODO make more complete
 
+;; TODO move
 (deftype WatchableMutable
   [^:unsynchronized-mutable v ^:unsynchronized-mutable ^clojure.lang.IFn watch]
   clojure.lang.IDeref (deref       [this]      v)
@@ -222,6 +223,7 @@
   fipp.ednize/IOverride
   fipp.ednize/IEdn    (-edn [this] (tagged-literal (symbol "!@") v)))
 
+;; TODO move
 (defn !ref
   ([v]       (->WatchableMutable v nil))
   ([v watch] (->WatchableMutable v watch)))
@@ -660,9 +662,9 @@
 (s/def :fnt|overload/variadic?          boolean?)
 
  #_"Must evaluate to an `s/fspec`"
-(s/def :fnt|overload/spec               ::ss/code)
+(s/def :fnt|overload/spec               :quantum.core.specs/code)
 
-#_(s/def :fnt|overload/body-codelist (t/seq-of ::ss/code))
+#_(s/def :fnt|overload/body-codelist (t/seq-of :quantum.core.specs/code))
 (s/def :fnt/overload
   (s/keys :req-un [:fnt|overload/arg-classes ; (t/vector-of t/class?)
                    :fnt|overload/arg-specs
@@ -675,7 +677,7 @@
                    :fnt|overload/variadic?]))
 
 (s/def ::reify|overload
-  (s/keys :req-un [:ss/interface
+  (s/keys :req-un [:quantum.core.specs/interface
                    :reify|overload/out-class
                    :reify/method-sym
                    :reify/arglist-code
@@ -862,7 +864,7 @@
      :out-class     out-class})))
 
 #?(:clj
-(defn fnt|overload-group>reify [{:keys [overload-group #_:fnt/overload-group, i #_integer?, fn|name #_::ss/fn|name]}]
+(defn fnt|overload-group>reify [{:keys [overload-group #_:fnt/overload-group, i #_integer?, fn|name #_:quantum.core.specs/fn|name]}]
   (let [reify-overloads (->> (concat [(:unprimitivized overload-group)]
                                      (:primitivized   overload-group))
                              (c/map fnt|overload>reify-overload))]
@@ -973,7 +975,7 @@
 
 (defn fnt|overloads>protocols
   [{:keys [overloads #_(t/and t/indexed? (t/seq-of :fnt/overload))
-           fn|name   #_::ss/fn|name]}]
+           fn|name   #_:quantum.core.specs/fn|name]}]
   (when (->> overloads (seq-or (fn-> :positional-args-ct (> 2))))
     (TODO "Doesn't yet handle protocol creation for arglist counts of > 2"))
   (when (->> overloads (seq-or :variadic?))
@@ -1018,7 +1020,7 @@
 
 (defn fnt|code [kind lang args]
   (prl! kind lang args)
-  (let [{:keys [::ss/fn|name overloads ::ss/meta] :as args'}
+  (let [{:keys [:quantum.core.specs/fn|name overloads :quantum.core.specs/meta] :as args'}
           (s/validate args (case kind :defn ::defnt :fn ::fnt))
         _ (prl! args')
         inline?
@@ -1062,7 +1064,7 @@
         _ (prl! overloads)
         code (case kind
                :fn   (list* 'fn (concat
-                                  (if (contains? args' ::ss/fn|name)
+                                  (if (contains? args' :quantum.core.specs/fn|name)
                                       [fn|name]
                                       [])
                                   [overloads|code]))

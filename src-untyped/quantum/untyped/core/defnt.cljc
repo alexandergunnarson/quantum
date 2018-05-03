@@ -200,24 +200,20 @@
     arg-ident
     (rseq context)))
 
-#?(:clj
-(defmacro spec-fn [[destructuring] [spec sym]]
-  `(let [spec# ~spec] (fn [~destructuring] (spec# ~sym)))))
-
 (defn keys-syms-strs>arg-specs [binding- binding-kind context]
   (->> (get binding- binding-kind) second
        (filter (fn [{[spec-kind _] :spec}] (= spec-kind :spec)))
        (mapv (fn [{:keys [binding-form #_symbol?] [spec-kind spec] :spec}]
                (let [destructuring (context>destructuring binding-form (conj context [binding-kind nil]))]
-                 `(spec-fn [~destructuring] (~spec ~binding-form)))))))
+                 `(us/with (fn [~destructuring] ~binding-form) ~spec))))))
 
 (defn >as-specs [{:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec} context]
   (let [[k base-spec] (case kind :seq [:sym `clojure.core/seqable?]
                                  :map [1    `clojure.core/map?])]
     (let [as-ident (or (get-in binding- [:as k]) (gensym "as"))
           destructuring (context>destructuring as-ident context)]
-      (cond-> [`(spec-fn [~destructuring] (~base-spec ~as-ident))]
-        (= spec-kind :spec) (conj `(spec-fn [~destructuring] (~spec ~as-ident)))))))
+      (cond-> [`(us/with (fn [~destructuring] ~as-ident) ~base-spec)]
+        (= spec-kind :spec) (conj `(us/with (fn [~destructuring] ~as-ident) ~spec))))))
 
 (defn speced-binding>arg-specs
   ([speced-binding] (speced-binding>arg-specs speced-binding []))
@@ -226,7 +222,7 @@
     (case kind
       :sym (when (= spec-kind :spec)
              [(let [destructuring (context>destructuring binding- context)]
-              `(spec-fn [~destructuring] (~spec ~binding-)))])
+               `(us/with (fn [~destructuring] ~binding-) ~spec))])
       :seq (let [{elems :elems rest- :rest} binding-]
              (apply concat
                (>as-specs speced-binding context)
@@ -288,8 +284,8 @@
                                           `(s/and ~spec-form|arglist ~spec-form|pre)
                                           spec-form|arglist)
                     spec-form|fn*     (if (contains? arglist :post)
-                                          `(let [~kw-args ~args-sym] (~post ~ret-sym))
-                                          `any?)]
+                                          `(let [~kw-args ~args-sym] (s/spec ~post))
+                                          `(s/spec any?))]
                 (-> ret
                     (update :overload-forms conj overload-form)
                     (update :spec-form|args conj arity-ident spec-form|args*)
@@ -300,8 +296,9 @@
             overloads)
         spec-form (when (#{:defn :defn-} kind)
                     `(s/fdef ~fn|name :args (s/or ~@spec-form|args)
-                                      :fn   (fn [{~ret-sym :ret [~arity-kind-sym ~args-sym] :args}]
-                                              (case ~arity-kind-sym ~@spec-form|fn))))
+                                      :fn   (us/with-gen-spec (fn [{~ret-sym :ret}] ~ret-sym)
+                                              (fn [{[~arity-kind-sym ~args-sym] :args}]
+                                                (case ~arity-kind-sym ~@spec-form|fn)))))
         fn-form (case kind
                   :fn    (list* 'fn (concat (when (contains? args' :quantum.core.specs/fn|name)
                                               [fn|name])

@@ -23,4 +23,4 @@
   valid? invalid?
   #?@(:clj [or* or*-forms constantly-or
             set-of])
-  validate:val? any?)
+  validate|val? any?)

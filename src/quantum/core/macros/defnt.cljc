@@ -87,7 +87,8 @@
         (err! "Invalid `defnt` special keyword" {:k x}))))
 
 (def qualified-class-name-map
-  (->> (set/union tcore/primitive-types|unevaled #?(:clj tcore/primitive-array-types))
+  (->> (set/union #_tcore/primitive-types|unevaled ; NOTE: commented this out knowing that this will break this old `defnt`
+                  #?(:clj tcore/primitive-array-types))
        (repeat 2)
        (apply zipmap)))
 
@@ -111,7 +112,7 @@
   (throw-unless ((fn-or symbol? keyword? string?) pred) (>ex-info "Type predicate must be a symbol, keyword, or string." {:pred pred}))
   (cond
     (and (symbol? pred) (anap/possible-type-predicate? pred))
-      (->> tdef/types|unevaled
+      (->> #_tdef/types|unevaled ; NOTE: commented this out knowing that this will break this old `defnt`
            (<- (get lang))
            (<- (get pred))
            (<- (validate contains?))
