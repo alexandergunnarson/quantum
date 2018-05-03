@@ -61,7 +61,7 @@
   {:todo {0 {:desc     "Optimize validation peformance"
              :priority 1}}}
   [opts spec x]
-  (let [error-kind (core/or (:type opts) :spec.validate/failed)]
+  (let [error-ident (core/or (:ident opts) :spec.validate/failed)]
     (case-env
      :cljs `(if (core/or ~(:runtime? opts) cljs.spec.alpha/*compile-asserts*) ; TODO should probably be outside quote like this
                 (if (core/or ~(:runtime? opts) cljs.spec.alpha/*runtime-asserts*)
@@ -69,8 +69,8 @@
                           conformed# (cljs.spec.alpha/conform spec# x#)]
                       (if (= conformed# :cljs.spec.alpha/invalid)
                           (if (core/and ~(:terse? opts) (not verbose?))
-                              (throw (ex-info spec-assertion-failed {:form (list '~'validate '~x '~spec) :type ~error-kind}))
-                              (-validate-one spec# x# (list '~'validate '~x '~spec) (ufeval/locals ~&env) ~(str *ns*) ~(:line (meta &form)) ~error-kind))
+                              (err! ~error-ident spec-assertion-failed {:form (list '~'validate '~x '~spec)})
+                              (-validate-one spec# x# (list '~'validate '~x '~spec) (ufeval/locals ~&env) ~(str *ns*) ~(:line (meta &form)) ~error-ident))
                           conformed#))
                    ~x)
                ~x)
@@ -80,8 +80,8 @@
                     conformed# (clojure.spec.alpha/conform spec# x#)]
                 (if (= conformed# :clojure.spec.alpha/invalid)
                     (if (core/and ~(:terse? opts) (not verbose?))
-                        (throw (ex-info spec-assertion-failed {:form (list '~'validate '~x '~spec) :type ~error-kind}))
-                        (-validate-one spec# x# (list '~'validate '~x '~spec) (ufeval/locals ~&env) ~(str *ns*) ~(:line (meta &form)) ~error-kind))
+                        (err! ~error-ident spec-assertion-failed {:form (list '~'validate '~x '~spec)})
+                        (-validate-one spec# x# (list '~'validate '~x '~spec) (ufeval/locals ~&env) ~(str *ns*) ~(:line (meta &form)) ~error-ident))
                     conformed#))
              ~x)
           x)))))

@@ -28,11 +28,7 @@
 (def clj-dependency  '[org.clojure/clojure       "1.9.0"])
 (def cljs-dependency '[org.clojure/clojurescript "1.9.946"])
 
-(def latest-stable-quantum-version
-  "e188b72d48777833a23ff413f09fcac1e163c9ee"
-  #_"76665af0" ; used by OYM for a while
-  #_"1e583fc7"
-  #_"0.3.0-c7ed558e" #_"0.3.0-f1a3dc08")
+(def latest-stable-quantum-version "e188b72d48777833a23ff413f09fcac1e163c9ee" #_"0.3.0-c7ed558e" #_"0.3.0-f1a3dc08")
 
 (def quantum-source-paths
   {:typed          "../quantum/src"
