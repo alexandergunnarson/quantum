@@ -264,6 +264,8 @@
 
 #?(:clj (defmacro vec-of [spec & opts] `(coll-of ~spec ~@opts :kind core/vector?)))
 #?(:clj (defmacro set-of [spec & opts] `(coll-of ~spec ~@opts :kind core/set?)))
+;; Really, `seqable-of`
+#?(:clj (defmacro seq-of [spec & opts] `(coll-of ~spec ~@opts)))
 
 (defn validate|val? [x]
   (if (nil? x)

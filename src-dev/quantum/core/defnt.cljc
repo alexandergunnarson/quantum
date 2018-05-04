@@ -157,6 +157,8 @@
   fipp.ednize/IOverride
   fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "M") (into (array-map) this)))))
 
+#?(:clj (defns method? [x _] (instance? Method x)))
+
 #?(:clj
 (defns class->methods [^Class c class? > map?]
   (->> (.getMethods c)
@@ -312,9 +314,9 @@
           (log/ppr :warn "Not sure how to handle non-local symbol; resolved it for now" (kw-map sym resolved))
           resolved))))
 
-(defn methods->spec
+(defns methods->spec
   "Creates a spec given ->`methods`."
-  [methods #_(t/seq method?)]
+  [methods (s/seq-of method?) > t/spec?]
   ;; TODO room for plenty of optimization here
   (let [methods|by-ct (->> methods
                            (c/group-by (fn-> :argtypes count))
