@@ -21,10 +21,11 @@
               take   take+   ltake taker-until
               drop   drop+   ldrop
               map    map+    lmap
-              filter filter+ lfilter
+              filter filter+ lfilter ffilter
               remove remove+ lremove
               each
-              reduce join]]
+              reduce join
+              postwalk]]
     [quantum.core.compare                 :as comp]
     [quantum.core.convert                 :as conv]
     [quantum.core.data.complex.xml        :as xml]
@@ -40,7 +41,7 @@
     [quantum.core.log                     :as log
       :refer [prl!]]
     [quantum.core.logic
-      :refer [whenp whenf whenc]]
+      :refer [whenp whenf whenf1 whenc]]
     [quantum.core.macros                  :as macros]
     [quantum.core.meta.repl
       :refer [#?@(:clj [source doc])]]
