@@ -1,27 +1,21 @@
 (ns quantum.untyped.core.defnt
   "Primarily for `(de)fns`."
+  (:refer-clojure :exclude [any? ident? qualified-keyword? simple-symbol?])
   (:require
     [clojure.spec.alpha                 :as s]
-    [quantum.untyped.core.collections   :as c]
     [quantum.untyped.core.convert       :as uconv]
     [quantum.untyped.core.data.map
       :refer [om]]
-    [quantum.untyped.core.data.set      :as uset]
-    [quantum.untyped.core.fn
-      :refer [<- fn-> fn1 fnl]]
     [quantum.untyped.core.form.evaluate :as ufeval]
-    [quantum.untyped.core.log           :as ulog]
-    [quantum.untyped.core.logic         :as ul]
     [quantum.untyped.core.loops
       :refer [reduce-2]]
     [quantum.untyped.core.reducers      :as ur]
     [quantum.untyped.core.spec          :as us]
-    [quantum.untyped.core.specs         :as ss]
-    [quantum.untyped.core.vars
-      :refer [defmacro-]]))
+    [quantum.untyped.core.type.predicates
+      :refer [any? ident? qualified-keyword? simple-symbol?]]))
 
 (s/def :quantum.core.defnt/local-name
-  (s/and simple-symbol? (uset/not #{'& '| '> '?})))
+  (s/and simple-symbol? (complement #{'& '| '> '?})))
 
 ;; ----- Specs ----- ;;
 
@@ -60,7 +54,7 @@
 (s/def :quantum.core.defnt/syms (>keys|syms|strs symbol?))
 (s/def :quantum.core.defnt/strs (>keys|syms|strs simple-symbol?))
 
-(s/def :quantum.core.defnt/or   :quantum.core.specs/or)
+(s/def :quantum.core.defnt/or   (s/map-of simple-symbol? any?))
 (s/def :quantum.core.defnt/as   :quantum.core.defnt/local-name)
 
 (s/def :quantum.core.defnt/map-special-binding
@@ -85,15 +79,15 @@
 ;; ----- Args ----- ;;
 
 (s/def :quantum.core.defnt/output-spec
-  (s/? (s/cat :sym (fn1 = '>) :spec :quantum.core.defnt/spec)))
+  (s/? (s/cat :sym #(= % '>) :spec :quantum.core.defnt/spec)))
 
 (s/def :quantum.core.defnt/arglist
   (s/and vector?
          (s/spec
            (s/cat :args    (s/* :quantum.core.defnt/speced-binding)
-                  :varargs (s/? (s/cat :sym            (fn1 = '&)
+                  :varargs (s/? (s/cat :sym            #(= % '&)
                                        :speced-binding :quantum.core.defnt/speced-binding))
-                  :pre     (s/? (s/cat :sym            (fn1 = '|)
+                  :pre     (s/? (s/cat :sym            #(= % '|)
                                        :spec           (s/or :any-spec #{'_} :spec any?)))
                   :post    :quantum.core.defnt/output-spec))
          (s/conformer
@@ -103,8 +97,8 @@
          (fn [{:keys [args varargs]}]
            ;; so `env` in `fnt` can work properly in the analysis
            ;; TODO need to adjust for destructuring
-           (c/distinct?
-             (concat (c/lmap :binding-form args)
+           (distinct?
+             (concat (map :binding-form args)
                      [(:binding-form varargs)])))))
 
 (s/def :quantum.core.defnt/body (s/alt :body (s/* any?)))
@@ -121,12 +115,12 @@
   (s/conformer
     (fn [f]
       (-> f (update :overloads
-              (fnl mapv (fn [overload]
+              #(mapv (fn [overload]
                           (let [overload' (update overload :body :body)]
-                            (ul/if-let [output-spec (-> f :output-spec :spec)]
-                              (do (us/validate (-> overload' :arglist :post) nil?)
-                                  (c/assoc-in overload' [:arglist :post] output-spec))
-                              overload')))))
+                            (if-let [output-spec (-> f :output-spec :spec)]
+                              (do (us/validate nil? (-> overload' :arglist :post))
+                                  (assoc-in overload' [:arglist :post] output-spec))
+                              overload'))) %))
             (dissoc :output-spec)))))
 
 (s/def :quantum.core.defnt/fnt
@@ -257,10 +251,10 @@
 
 (defn fns|code [kind lang args]
   (assert (= lang #?(:clj :clj :cljs :cljs)) lang)
-  (when (= kind :fn) (ulog/warn! "`fn` will ignore spec validation"))
+  (when (= kind :fn) (println "WARNING: `fn` will ignore spec validation"))
   (let [{:keys [:quantum.core.specs/fn|name overloads :quantum.core.specs/meta] :as args'}
-          (us/validate args (case kind (:defn :defn-) :quantum.core.defnt/defns|code
-                                       :fn            :quantum.core.defnt/fns|code))
+          (us/validate (case kind (:defn :defn-) :quantum.core.defnt/defns|code
+                                  :fn            :quantum.core.defnt/fns|code) args)
         ret-sym (gensym "ret") arity-kind-sym (gensym "arity-kind") args-sym (gensym "args")
         {:keys [overload-forms spec-form|args spec-form|fn]}
           (reduce
