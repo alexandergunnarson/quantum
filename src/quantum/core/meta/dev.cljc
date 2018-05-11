@@ -5,7 +5,8 @@
       :refer [fn1 fn-> fn->>]]
     [quantum.core.logic
       :refer [fn-and]]
-    [quantum.core.print]
+    [quantum.core.print          :as pr]
+    [quantum.core.print.prettier :as pr.prettier]
     [quantum.core.error
       :refer [catch-all]]
     [quantum.core.macros
@@ -60,7 +61,7 @@
                                                   (fn1 contains? :priority)
                                                   (fn-> :priority pred)))
                             (join {})))
-       (filter-vals+ contains?)
+       (filter-vals+ (fn1 contains?))
        (join         todos-map))))
 
 #?(:clj
@@ -75,12 +76,16 @@
     (doseq [ns' (all-ns)]
       (in-ns (ns-name ns'))
       (catch-all
-        (require '[clojure.repl         :refer [source find-doc doc]]
-                 '[clojure.java.javadoc :refer [javadoc]]
+        (require '[clojure.repl          :refer [source find-doc doc]]
+                 '[clojure.java.javadoc  :refer [javadoc]]
+                 '[quantum.core.log      :refer [prl!]]
                  '[quantum.core.meta.dev :refer [all-todos all-todos-with-priority]]
-                 '[quantum.core.macros :refer [macroexpand-all!]]
-                 '[quantum.core.analyze.clojure.core :refer [typeof*]])))
+                 '[quantum.core.macros   :refer [macroexpand-all!]])))
     (in-ns (ns-name ns-0))
+    (pr.prettier/extend-pretty-printing!)
     (clojure.main/repl
-      :print  quantum.core.print/ppr
-      :caught quantum.core.print/ppr))))
+      :print  #(binding [*print-meta* true
+                         pr/*collapse-symbols?* true
+                         pr/*print-as-code?* true]
+                 (pr/ppr %))
+      :caught pr/ppr-error))))

@@ -1,13 +1,6 @@
-#_(:clj
-(do (require '[clojure.tools.namespace.repl :refer [refresh]])
-    (require 'quantum.core.meta.dev)
-    (quantum.core.meta.dev/enable-repl-utils!)
-    (quantum.core.meta.debug/print-pretty-exceptions!)
-    (refresh)))
-
 (ns quantum.dev
   (:refer-clojure :exclude
-    [contains? count reduce filter for])
+    [contains? count drop filter first for map reduce remove second take])
   (:require
     [clojure.core                         :as core]
  #?@(:clj
@@ -43,8 +36,7 @@
     [quantum.core.logic
       :refer [whenp whenf whenf1 whenc]]
     [quantum.core.macros                  :as macros]
-    [quantum.core.meta.repl
-      :refer [#?@(:clj [source doc])]]
+    [quantum.core.meta.dev                :as dev]
     [quantum.core.ns                      :as ns]
     [quantum.core.numeric                 :as num]
     [quantum.core.paths                   :as path]
@@ -72,3 +64,9 @@
 
 #?(:cljs (enable-console-print!))
 (println "Hey console!")
+
+#_
+(require '[clojure.tools.namespace.repl :refer [refresh]])
+
+#_
+(dev/enable-repl-utils!)

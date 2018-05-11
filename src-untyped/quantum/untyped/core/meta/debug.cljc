@@ -5,7 +5,8 @@
     [clojure.string            :as str]
     [fipp.edn]
     [taoensso.timbre]
-    [quantum.untyped.core.core :as ucore]))
+    [quantum.untyped.core.core :as ucore]
+    [quantum.untyped.core.log  :as ulog]))
 
 (ucore/log-this-ns)
 
@@ -24,18 +25,10 @@
 
 ;; ===== Error tracing ===== ;;
 
-(defn trace
-  "Print to *out* a pretty stack trace for a (parsed) exception, by default *e."
-  [& [e]]
-  (taoensso.timbre/error (or e *e)))
-
 #?(:clj
 (def default-exception-handler
-  (reify
-    java.lang.Thread$UncaughtExceptionHandler
-    (^void uncaughtException [_ ^Thread t ^Throwable e]
-      (println "Exception in thread" (str t ":"))
-      (trace e)))))
+  (reify java.lang.Thread$UncaughtExceptionHandler
+    (^void uncaughtException [_ ^Thread t ^Throwable e] (ulog/error! e)))))
 
 #?(:clj
 (defn print-pretty-exceptions!
