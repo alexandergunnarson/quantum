@@ -8,6 +8,7 @@
       :refer [ppr-meta]]
     [quantum.core.vars
       :refer [#?(:clj defmalias) defalias]]
+    [quantum.untyped.core.test :as utest]
     [quantum.untyped.core.type.predicates
       :refer [val?]])
 #?(:cljs
@@ -31,7 +32,8 @@
 #?(:clj (defmalias is      clojure.test/is      cljs.test/is     ))
 #?(:clj (defmalias deftest clojure.test/deftest cljs.test/deftest))
 #?(:clj (defmalias testing clojure.test/testing cljs.test/testing))
-#?(:clj (defalias test-ns test/test-ns))
+#?(:clj (defalias test/test-ns))
+#?(:clj (defalias utest/defspec-test))
 
 #?(:clj
 (defn test-nss-where [pred]

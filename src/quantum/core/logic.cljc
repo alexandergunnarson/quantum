@@ -21,7 +21,6 @@
     [quantum.core.logic          :as self
       :refer [fn-not]])))
 
-; TODO: ; cond-not, for :pre
 ; Java `switch` is implemented using an array and then points to the code.
 ; Java String `switch` is implemented using a map8
 
@@ -140,7 +139,10 @@
 (defaliases u
   if-let   if-not-let
   when-let when-not-let
-  cond-let))
+  cond-let
+  and-let nand-let
+  or-let  nor-let
+  xor-let xnor-let))
 
 ;; ===== `coll-(or|and)` ===== ;;
 
