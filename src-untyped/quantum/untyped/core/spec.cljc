@@ -132,12 +132,15 @@
 #?(:clj (quantum.untyped.core.vars/defmalias every         clojure.spec.alpha/every         cljs.spec.alpha/every    ))
 
 #?(:clj (quantum.untyped.core.vars/defmalias conformer     clojure.spec.alpha/conformer     cljs.spec.alpha/conformer))
-#?(:clj (quantum.untyped.core.vars/defmalias nonconforming clojure.spec.alpha/nonconforming cljs.spec.alpha/nonconforming))
 
 (defalias s/conform)
+(defalias s/nonconforming)
+(defalias • nonconforming)
 (defalias s/explain)
 (defalias s/explain-data)
 (defalias s/describe)
+
+(defalias s/nilable)
 
 #?(:clj (quantum.untyped.core.vars/defmalias cat clojure.spec.alpha/cat cljs.spec.alpha/cat))
 #?(:clj (defmacro cat* "`or` :`or*` :: `cat` : `cat*`" [& args] `(cat ~@(udata/quote-map-base uconv/>keyword args true))))
@@ -273,6 +276,14 @@
   (if (nil? x)
       (throw (ex-info "Value is not allowed to be nil but was" {}))
       x))
+
+(defn assert-conform [spec x]
+  (let [conformed (s/conform spec x)]
+    (if (s/invalid? conformed)
+        (let [ed (core/merge (assoc (s/explain-data* spec [] [] [] x)
+                               ::s/failure :assertion-failed))]
+          (throw (ex-info (str "Spec assertion failed\n" (with-out-str (s/explain-out ed))) ed)))
+        conformed)))
 
 (defn kv
   "Based on `s/map-spec-impl`"

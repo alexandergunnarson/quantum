@@ -7,11 +7,11 @@
     [clojure.core   :as core]
 #?(:clj
     [clojure.future :as fcore])
-    #_[quantum.untyped.core.core :as ucore]
+    [quantum.untyped.core.core :as ucore]
     [quantum.untyped.core.vars
-      :refer [defalias]]))
+      :refer [defalias defaliases]]))
 
-#_(ucore/log-this-ns)
+(ucore/log-this-ns)
 
 ;; The reason we use `resolve` and `eval` here is that currently we need to prefer built-in impls
 ;; where possible in order to leverage their generators
@@ -84,13 +84,7 @@
 
 #?(:clj (defn namespace? [x] (instance? clojure.lang.Namespace x)))
 
-(defn metable? [x]
-  #?(:clj  (instance?  clojure.lang.IMeta x)
-     :cljs (satisfies? cljs.core/IMeta    x)))
-
-(defn with-metable? [x]
-  #?(:clj  (instance?  clojure.lang.IObj   x)
-     :cljs (satisfies? cljs.core/IWithMeta x)))
+(defaliases ucore metable? with-metable?)
 
 (defn derefable? [x]
   #?(:clj  (instance?  clojure.lang.IDeref x)

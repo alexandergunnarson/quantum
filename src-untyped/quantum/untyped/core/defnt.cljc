@@ -1,6 +1,6 @@
 (ns quantum.untyped.core.defnt
   "Primarily for `(de)fns`."
-  (:refer-clojure :exclude [any? ident? qualified-keyword? simple-symbol?])
+  (:refer-clojure :exclude [any? ident? qualified-keyword? seqable? simple-symbol?])
   (:require
     [clojure.spec.alpha                 :as s]
     [clojure.spec.gen.alpha             :as gen]
@@ -14,7 +14,7 @@
     [quantum.untyped.core.spec          :as us]
     [quantum.untyped.core.specs]
     [quantum.untyped.core.type.predicates
-      :refer [any? ident? qualified-keyword? simple-symbol?]]))
+      :refer [any? ident? qualified-keyword? seqable? simple-symbol?]]))
 
 ;; ===== Specs ===== ;;
 
@@ -120,7 +120,7 @@
               #(mapv (fn [overload]
                           (let [overload' (update overload :body :body)]
                             (if-let [output-spec (-> f :output-spec :spec)]
-                              (do (us/validate nil? (-> overload' :arglist :post))
+                              (do (us/assert-conform nil? (-> overload' :arglist :post))
                                   (assoc-in overload' [:arglist :post] output-spec))
                               overload'))) %))
             (dissoc :output-spec)))))
@@ -194,8 +194,8 @@
   [seq-spec #_any? args #_(s/* (s/cat :k keyword? :spec any?))
    & [varargs #_(s/nilable (s/cat :k keyword? :spec any?))]]
   (let [opts    (meta seq-spec)
-        args    (us/validate (s/* (s/cat :k keyword? :spec any?)) args)
-        varargs (us/validate (s/nilable (s/cat :k keyword? :spec any?)) varargs)
+        args    (us/assert-conform (s/* (s/cat :k keyword? :spec any?)) args)
+        varargs (us/assert-conform (s/nilable (s/cat :k keyword? :spec any?)) varargs)
         args-ct>args-kw #(keyword (str "args-" %))
         arity>cat (fn [arg-i]
                    `(s/cat ~@(->> args (take arg-i)
@@ -269,7 +269,7 @@
 
 (defn- speced-binding|seq>spec
   [{:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec}]
-  `(seq-destructure ~spec
+  `(seq-destructure ~(if (= spec-kind :spec) spec `seqable?)
     ~(->> binding- :elems
           (map-indexed
             (fn [i|arg arg|speced-binding]
@@ -291,7 +291,7 @@
 
 (defn- speced-binding|map>spec
   [{:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec}]
-  `(map-destructure ~spec
+  `(map-destructure ~(if (= spec-kind :spec) spec `map?)
     ~(->> (dissoc binding- :as :or)
           (map (fn [[k v]]
                  (case k
@@ -323,8 +323,8 @@
   (assert (= lang #?(:clj :clj :cljs :cljs)) lang)
   (when (= kind :fn) (println "WARNING: `fn` will ignore spec validation"))
   (let [{:keys [:quantum.core.specs/fn|name overloads :quantum.core.specs/meta] :as args'}
-          (us/validate (case kind (:defn :defn-) :quantum.core.defnt/defns|code
-                                  :fn            :quantum.core.defnt/fns|code) args)
+          (us/assert-conform (case kind (:defn :defn-) :quantum.core.defnt/defns|code
+                                        :fn            :quantum.core.defnt/fns|code) args)
         ret-sym (gensym "ret") arity-kind-sym (gensym "arity-kind") args-sym (gensym "args")
         {:keys [overload-forms spec-form|args spec-form|fn]}
           (reduce

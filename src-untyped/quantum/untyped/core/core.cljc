@@ -1,10 +1,8 @@
 (ns quantum.untyped.core.core
   (:require
 #?@(:clj
-   [[environ.core                         :as env]])
-    [cuerdas.core                         :as str+]
-    [quantum.untyped.core.type.predicates :as utpred
-      :refer [with-metable? metable?]]))
+   [[environ.core :as env]])
+    [cuerdas.core :as str+]))
 
 ;; ===== Environment ===== ;;
 
@@ -33,6 +31,16 @@
 
 (defn >sentinel [] #?(:clj (Object.) :cljs #js {}))
 (def >object >sentinel)
+
+;; ===== quantum.untyped.core.type.predicates ===== ;;
+
+(defn metable? [x]
+  #?(:clj  (instance?  clojure.lang.IMeta x)
+     :cljs (satisfies? cljs.core/IMeta    x)))
+
+(defn with-metable? [x]
+  #?(:clj  (instance?  clojure.lang.IObj   x)
+     :cljs (satisfies? cljs.core/IWithMeta x)))
 
 ; ===== COLLECTIONS =====
 
