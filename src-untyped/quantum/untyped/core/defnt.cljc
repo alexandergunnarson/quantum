@@ -3,6 +3,7 @@
   (:refer-clojure :exclude [any? ident? qualified-keyword? simple-symbol?])
   (:require
     [clojure.spec.alpha                 :as s]
+    [clojure.spec.gen.alpha             :as gen]
     [quantum.untyped.core.convert       :as uconv]
     [quantum.untyped.core.data.map
       :refer [om]]
@@ -11,13 +12,14 @@
       :refer [reduce-2]]
     [quantum.untyped.core.reducers      :as ur]
     [quantum.untyped.core.spec          :as us]
+    [quantum.untyped.core.specs]
     [quantum.untyped.core.type.predicates
       :refer [any? ident? qualified-keyword? simple-symbol?]]))
 
+;; ===== Specs ===== ;;
+
 (s/def :quantum.core.defnt/local-name
   (s/and simple-symbol? (complement #{'& '| '> '?})))
-
-;; ----- Specs ----- ;;
 
 (s/def :quantum.core.defnt/spec
   (s/alt :infer #{'?}
@@ -54,7 +56,7 @@
 (s/def :quantum.core.defnt/syms (>keys|syms|strs symbol?))
 (s/def :quantum.core.defnt/strs (>keys|syms|strs simple-symbol?))
 
-(s/def :quantum.core.defnt/or   (s/map-of simple-symbol? any?))
+(s/def :quantum.core.defnt/or   :quantum.core.specs/or)
 (s/def :quantum.core.defnt/as   :quantum.core.defnt/local-name)
 
 (s/def :quantum.core.defnt/map-special-binding
@@ -128,7 +130,7 @@
            (s/cat
              :quantum.core.specs/fn|name   (s/? :quantum.core.specs/fn|name)
              :quantum.core.specs/docstring (s/? :quantum.core.specs/docstring)
-             :quantum.core.specs/meta      (s/? :quantum.core.specs/meta)
+             :pre-meta                     (s/? :quantum.core.specs/meta)
              :output-spec                  :quantum.core.defnt/output-spec
              :overloads                    :quantum.core.defnt/overloads))
          :quantum.core.specs/fn|postchecks
@@ -141,7 +143,7 @@
            (s/cat
              :quantum.core.specs/fn|name   :quantum.core.specs/fn|name
              :quantum.core.specs/docstring (s/? :quantum.core.specs/docstring)
-             :quantum.core.specs/meta      (s/? :quantum.core.specs/meta)
+             :pre-meta                     (s/? :quantum.core.specs/meta)
              :output-spec                  :quantum.core.defnt/output-spec
              :overloads                    :quantum.core.defnt/overloads))
          :quantum.core.specs/fn|postchecks
@@ -153,6 +155,88 @@
   (s/alt :sym :quantum.core.defnt/local-name
          :seq :quantum.core.defnt/seq-binding-form
          :map :quantum.core.defnt/map-binding-form))
+
+;; ===== Implementation ===== ;;
+
+(defn >seq-destructuring-spec
+  "Creates a spec that performs seq destructuring, and provides a default generator for such based
+   on the generators of the destructured args."
+  [positional-destructurer most-complex-positional-destructurer kv-spec or|conformer seq-spec
+   {:as opts generate-from-seq-spec? :gen?}]
+  (let [or|unformer (s/conformer second)
+        most-complex-positional-destructurer|unformer
+          (s/conformer (fn [x] (s/unform most-complex-positional-destructurer x)))]
+    (cond->
+      (s/and seq-spec
+             (s/conformer (fn [xs] {:xs xs :xs|destructured xs}))
+             (us/kv {:xs|destructured (s/and positional-destructurer
+                                             or|unformer
+                                             kv-spec)})
+             (s/conformer (fn [m] (assoc m :xs|positionally-destructured|ct
+                                           (when-not (-> m :xs|destructured (contains? :varargs))
+                                             (-> m :xs|destructured count)))))
+             (us/kv {:xs|destructured
+                      (s/and or|conformer
+                             (s/conformer (fn [x] (s/unform positional-destructurer x))))})
+             (s/conformer (fn [{:keys [xs xs|destructured xs|positionally-destructured|ct]}]
+                            (if xs|positionally-destructured|ct
+                                (concat xs|destructured (drop xs|positionally-destructured|ct xs))
+                                xs|destructured))))
+      (not generate-from-seq-spec?)
+      (s/with-gen
+        #(->> (s/gen kv-spec)
+              (gen/fmap (fn [x] (s/conform most-complex-positional-destructurer|unformer x))))))))
+
+#?(:clj
+(defmacro seq-destructure
+  "If `generate-from-seq-spec?` is true, generates from `seq-spec`'s generator instead of the
+   default generation strategy based on the generators of the destructured args."
+  [seq-spec #_any? args #_(s/* (s/cat :k keyword? :spec any?))
+   & [varargs #_(s/nilable (s/cat :k keyword? :spec any?))]]
+  (let [opts    (meta seq-spec)
+        args    (us/validate (s/* (s/cat :k keyword? :spec any?)) args)
+        varargs (us/validate (s/nilable (s/cat :k keyword? :spec any?)) varargs)
+        args-ct>args-kw #(keyword (str "args-" %))
+        arity>cat (fn [arg-i]
+                   `(s/cat ~@(->> args (take arg-i)
+                                       (map (fn [{:keys [k spec]}] [k `any?]))
+                                       (apply concat))))
+        most-complex-positional-destructurer-sym (gensym "most-complex-positional-destructurer")]
+   `(let [~most-complex-positional-destructurer-sym
+            (s/cat ~@(->> args
+                          (map (fn [{:keys [k]}] [k `any?]))
+                          (apply concat))
+                   ~@(when varargs [(:k varargs) `(s/& (s/+ any?) (s/conformer seq identity))]))
+          positional-destructurer#
+            (s/or :args-0 (s/cat)
+                  ~@(->> (range (count args))
+                         (map (fn [i] [(args-ct>args-kw (inc i)) (arity>cat (inc i))]))
+                         (apply concat))
+                  ~@(when varargs [:varargs most-complex-positional-destructurer-sym]))
+          kv-spec#
+            (us/kv (om ~@(apply concat
+                           (cond-> (->> args (map (fn [{:keys [k spec]}] [k spec])))
+                             varargs (concat [[(:k varargs) (:spec varargs)]])))))
+          or|conformer#
+            (s/conformer
+              (fn or|conformer# [m#]
+                [(case (count m#)
+                    ~@(->> (range (inc (count args)))
+                           (map (juxt identity args-ct>args-kw))
+                           (apply concat))
+                    ~@(when varargs [:varargs]))
+                 m#]))]
+      (>seq-destructuring-spec positional-destructurer# ~most-complex-positional-destructurer-sym
+        kv-spec# or|conformer# ~seq-spec ~opts)))))
+
+#?(:clj
+(defmacro map-destructure [map-spec #_any? kv-specs #_(s/map-of any? any?)]
+  (let [kv-spec-sym (gensym "kv-spec")
+        {:as opts generate-from-map-spec? :gen?} (meta map-spec)]
+    `(let [~kv-spec-sym (us/kv ~kv-specs)]
+       ~(if generate-from-map-spec?
+            `(s/and ~map-spec ~kv-spec-sym)
+            `(s/with-gen (s/and ~map-spec ~kv-spec-sym) (fn [] (s/gen ~kv-spec-sym))))))))
 
 (defn speced-binding>binding [{[kind binding-] :binding-form} #_:quantum.core.defnt/speced-binding]
   (case kind
@@ -181,74 +265,60 @@
           (or (get-in binding- ks)
               (gensym (if i|arg (str "arg-" i|arg "-") "varargs")))))))
 
-(defn context>destructuring [arg-ident #_simple-symbol? context #_vector?]
-  (reduce
-    (fn [destructuring [context-type #_#{:map :seq} k varargs?]]
-      (case context-type
-        :map  {destructuring k}
-        :seq  (let [base (vec (repeatedly k #(gensym "_")))]
-                (if varargs?
-                    (conj base '& destructuring)
-                    (assoc base k destructuring)))
-        (:keys :syms :strs) {context-type [destructuring]}))
-    arg-ident
-    (rseq context)))
+(declare speced-binding>spec)
 
-(defn keys-syms-strs>arg-specs [binding- binding-kind context]
-  (->> (get binding- binding-kind) second
-       (filter (fn [{[spec-kind _] :spec}] (= spec-kind :spec)))
-       (mapv (fn [{:keys [binding-form #_symbol?] [spec-kind spec] :spec}]
-               (let [destructuring (context>destructuring binding-form (conj context [binding-kind nil]))]
-                 `(us/with (fn [~destructuring] ~binding-form) ~spec))))))
+(defn- speced-binding|seq>spec
+  [{:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec}]
+  `(seq-destructure ~spec
+    ~(->> binding- :elems
+          (map-indexed
+            (fn [i|arg arg|speced-binding]
+              [(speced-binding>arg-ident arg|speced-binding i|arg)
+               (speced-binding>spec arg|speced-binding)]))
+          (apply concat)
+          vec)
+    ~@(when-let [varargs|speced-binding (get-in binding- [:rest :form])]
+        [[(speced-binding>arg-ident varargs|speced-binding)
+          (speced-binding>spec varargs|speced-binding)]])))
 
-(defn >as-specs [{:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec} context]
-  (let [[k base-spec] (case kind :seq [:sym `clojure.core/seqable?]
-                                 :map [1    `clojure.core/map?])]
-    (let [as-ident (or (get-in binding- [:as k]) (gensym "as"))
-          destructuring (context>destructuring as-ident context)]
-      (cond-> [`(us/with (fn [~destructuring] ~as-ident) ~base-spec)]
-        (= spec-kind :spec) (conj `(us/with (fn [~destructuring] ~as-ident) ~spec))))))
+(defn- keys||strs||syms>key-specs [kind #_#{:keys :strs :syms} speced-bindings]
+  (let [binding-form>key
+          (case kind :keys uconv/>keyword :strs name :syms identity)]
+    (->> speced-bindings
+         (filter (fn [{[spec-kind _] :spec}] (= spec-kind :spec)))
+         (map (fn [{:keys [binding-form #_symbol?] [_ spec] :spec}]
+                [(binding-form>key binding-form) spec])))))
 
-(defn speced-binding>arg-specs
-  ([speced-binding] (speced-binding>arg-specs speced-binding []))
-  ([{:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec}
-    #_:quantum.core.defnt/speced-binding context #_vector?]
-    (case kind
-      :sym (when (= spec-kind :spec)
-             [(let [destructuring (context>destructuring binding- context)]
-               `(us/with (fn [~destructuring] ~binding-) ~spec))])
-      :seq (let [{elems :elems rest- :rest} binding-]
-             (apply concat
-               (>as-specs speced-binding context)
-               (->> elems
-                    (map-indexed (fn [i speced-binding]
-                                   (speced-binding>arg-specs speced-binding (conj context [:seq i]))))
-                    (apply concat))
-               (when rest-
-                 [(speced-binding>arg-specs (:form rest-) (conj context [:seq (count elems) true]))])))
-      :map (apply concat
-             (>as-specs speced-binding context)
-             (keys-syms-strs>arg-specs binding- :keys context)
-             (keys-syms-strs>arg-specs binding- :syms context)
-             (keys-syms-strs>arg-specs binding- :strs context)
-             (->> (dissoc binding- :as :or :keys :syms :strs)
-                  (map (fn [[k {:as v :keys [key+spec]}]]
-                         (speced-binding>arg-specs
-                           (assoc v :spec (:spec key+spec))
-                           (conj context [:map (:key key+spec)])))))))))
+(defn- speced-binding|map>spec
+  [{:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec}]
+  `(map-destructure ~spec
+    ~(->> (dissoc binding- :as :or)
+          (map (fn [[k v]]
+                 (case k
+                   (:keys :strs :syms)
+                     (keys||strs||syms>key-specs k (second v))
+                   [[(get-in v [:key+spec :key])
+                     (speced-binding>spec
+                       (assoc v :spec (get-in v [:key+spec :spec])))]])))
+          (apply concat)
+          (into {}))))
+
+(defn speced-binding>spec
+  [{:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec}]
+  (case kind
+    :sym (if (= spec-kind :spec) spec `any?)
+    :seq (speced-binding|seq>spec speced-binding)
+    :map (speced-binding|map>spec speced-binding)))
 
 (defn arglist>spec-form|arglist
   [args+varargs kw-args #_:quantum.core.specs/map-binding-form]
   `(s/cat ~@(reduce-2
               (fn [ret speced-binding [_ kw-arg]]
-                (let [arg-specs (speced-binding>arg-specs speced-binding)]
-                  (conj ret kw-arg (case (count arg-specs)
-                                     0 `clojure.core/any?
-                                     1 (first arg-specs)
-                                     `(s/and ~@arg-specs)))))
+                (conj ret kw-arg (speced-binding>spec speced-binding)))
               []
               args+varargs kw-args)))
 
+;; TODO handle duplicate bindings (e.g. `_`) by `s/cat` using unique keys — e.g. :b|arg-2
 (defn fns|code [kind lang args]
   (assert (= lang #?(:clj :clj :cljs :cljs)) lang)
   (when (= kind :fn) (println "WARNING: `fn` will ignore spec validation"))
@@ -284,7 +354,7 @@
                     (update :overload-forms conj overload-form)
                     (update :spec-form|args conj arity-ident spec-form|args*)
                     (update :spec-form|fn   conj arity-ident spec-form|fn*))))
-            {:overloads      []
+            {:overload-forms []
              :spec-form|args []
              :spec-form|fn   []}
             overloads)

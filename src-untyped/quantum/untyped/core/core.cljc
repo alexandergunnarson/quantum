@@ -108,7 +108,8 @@
 (defn merge-meta-from   [to from] (update-meta to merge (meta from)))
 (defn replace-meta-from [to from] (with-meta to (meta from)))
 
-#?(:clj (defn defalias* [^clojure.lang.Var orig-var ns-name- var-name]
+#?(:clj
+(defn defalias* [^clojure.lang.Var orig-var ns-name- var-name]
   (let [;; to avoid warnings
         var-name' (with-meta var-name (-> orig-var meta (select-keys [:dynamic])))
         ^clojure.lang.Var var-

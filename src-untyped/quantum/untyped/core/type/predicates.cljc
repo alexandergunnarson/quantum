@@ -2,19 +2,56 @@
   "For type predicates that are not yet turned into specs.
    TODO excise and place in `quantum.untyped.core.type`."
   (:refer-clojure :exclude
-    [array? boolean? seqable?])
+    [any? array? boolean? double? ident? qualified-keyword? seqable? simple-symbol?])
   (:require
-    [clojure.core :as core]
+    [clojure.core   :as core]
+#?(:clj
+    [clojure.future :as fcore])
     #_[quantum.untyped.core.core :as ucore]))
 
 #_(ucore/log-this-ns)
 
+;; The reason we use `resolve` and `eval` here is that currently we need to prefer built-in impls
+;; where possible in order to leverage their generators
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/any?)
+                               `fcore/any?
+                               `core/any?)))
+   :cljs (defalias core/any?))
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/boolean?)
+                               `fcore/boolean?
+                               `core/boolean?)))
+   :cljs (defalias core/boolean?))
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/double?)
+                               `fcore/double?
+                               `core/double?)))
+   :cljs (defalias core/double?))
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/ident?)
+                               `fcore/ident?
+                               `core/ident?)))
+   :cljs (defalias core/ident?))
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/pos-int?)
+                               `fcore/pos-int?
+                               `core/pos-int?)))
+   :cljs (defalias core/pos-int?))
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/qualified-keyword?)
+                               `fcore/qualified-keyword?
+                               `core/qualified-keyword?)))
+   :cljs (defalias core/qualified-keyword?))
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/simple-symbol?)
+                               `fcore/simple-symbol?
+                               `core/simple-symbol?)))
+   :cljs (defalias core/simple-symbol?))
+
 #?(:clj (defn namespace? [x] (instance? clojure.lang.Namespace x)))
 
 (def val? some?)
-
-(defn boolean? [x] #?(:clj  (instance? Boolean x)
-                      :cljs (or (true? x) (false? x))))
 
 (defn lookup? [x]
   #?(:clj  (instance? clojure.lang.ILookup x)
