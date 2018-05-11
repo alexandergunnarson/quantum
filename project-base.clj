@@ -112,6 +112,8 @@
              :exclusions [org.clojure/clojure]]
 
        ; ==== SPECS ====
+         [clojure-future-spec                   "1.9.0-beta4"
+           :exclusions [org.clojure/clojure]]
          [expound                               "0.5.0"]
          [orchestra                             "2017.11.12-1"]
        ; ==== COLLECTIONS ====

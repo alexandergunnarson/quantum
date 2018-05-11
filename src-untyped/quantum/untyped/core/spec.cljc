@@ -1,6 +1,6 @@
 (ns quantum.untyped.core.spec
   (:refer-clojure :exclude
-    [ident? string? keyword? set? number? fn? any?
+    [ident? string? keyword? set? number? any?
      assert keys merge + * cat and or constantly])
   (:require
     [clojure.core            :as core]

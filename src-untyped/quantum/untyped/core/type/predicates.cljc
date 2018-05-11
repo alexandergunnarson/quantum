@@ -2,12 +2,14 @@
   "For type predicates that are not yet turned into specs.
    TODO excise and place in `quantum.untyped.core.type`."
   (:refer-clojure :exclude
-    [any? array? boolean? double? ident? qualified-keyword? seqable? simple-symbol?])
+    [any? array? boolean? double? ident? pos-int? qualified-keyword? seqable? simple-symbol?])
   (:require
     [clojure.core   :as core]
 #?(:clj
     [clojure.future :as fcore])
-    #_[quantum.untyped.core.core :as ucore]))
+    #_[quantum.untyped.core.core :as ucore]
+    [quantum.untyped.core.vars
+      :refer [defalias]]))
 
 #_(ucore/log-this-ns)
 

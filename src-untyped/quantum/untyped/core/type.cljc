@@ -86,7 +86,7 @@
    ?Object               {equals  ([this that #_any?]
                                     (c/or (== this that)
                                           (c/and (instance? ValueSpec that)
-                                                 (c/= v (.-v ^ValueSpec that)))))}}
+                                                 (c/= v (.-v ^ValueSpec that)))))}})
 
 (defns value
   "Creates a spec whose extension is the singleton set containing only the value `v`."
