@@ -28,9 +28,11 @@
 
 (defprotocol PEduceInit (-educe-init [this f init]))
 
-;; TODO `xs` will hold on to heads of seqs while stepping through; see also http://dev.clojure.org/jira/browse/CLJ-1793
-;; A cross between a `reducer` and a `folder`
-(deftype Transformer [xs prev xf]
+(deftype
+  ^{:doc "A cross between an `r/reducer` and an `r/folder`.
+          NOTE: `xs` will hold on to heads of seqs while stepping through, pre-Clojure-1.9; see also
+                http://dev.clojure.org/jira/browse/CLJ-1793"}
+  Transformer [xs prev xf]
   #?(:clj clojure.lang.IReduce :cljs cljs.core/IReduce)
     (#?(:clj reduce :cljs -reduce) [this f     ] (core/reduce (xf f)      prev))
     (#?(:clj reduce :cljs -reduce) [this f init] (core/reduce (xf f) init prev))
@@ -53,15 +55,15 @@
   {:todo #{"More arity"}}
   ([^long n xf tf]
     (case n
-          0 (fn ([]                   (xf))
-                ([xs]          (tf xs (xf))))
-          1 (fn ([a0]                 (xf a0))
-                ([a0 xs]       (tf xs (xf a0))))
-          2 (fn ([a0 a1]              (xf a0 a1))
-                ([a0 a1 xs]    (tf xs (xf a0 a1))))
-          3 (fn ([a0 a1 a2]           (xf a0 a1 a2))
-                ([a0 a1 a2 xs] (tf xs (xf a0 a1 a2))))
-          (err! "Unhandled arity for transducer"))))
+      0 (fn ([]                   (xf))
+            ([xs]          (tf xs (xf))))
+      1 (fn ([a0]                 (xf a0))
+            ([a0 xs]       (tf xs (xf a0))))
+      2 (fn ([a0 a1]              (xf a0 a1))
+            ([a0 a1 xs]    (tf xs (xf a0 a1))))
+      3 (fn ([a0 a1 a2]           (xf a0 a1 a2))
+            ([a0 a1 a2 xs] (tf xs (xf a0 a1 a2))))
+      (err! "Unhandled arity for transducer"))))
 
 (defn transducer->transformer
   "Converts a transducer into a transformer."
@@ -78,17 +80,16 @@
       ([ret x]
         (let [ret (rf ret x)]
           (if (reduced? ret)
-            (reduced ret)
-            ret)))))
+              (reduced ret)
+              ret)))))
 
 ;; ===== Reduction functions ===== ;;
 
 (defn educe
-  "A marriage of `transduce` and `reduce`.
-   Like `reduce`, does not have a notion of a transforming function
-   (unlike `transduce`). Like `transduce`, uses the seed (0-arity) and
-   completing (1-arity) arities of the reducing function when performing
-   a reduction (unlike `reduce`)."
+  "A blending of `transduce` and `reduce`.
+   Like `reduce`, does not have a notion of a transforming function (unlike `transduce`). Like
+   `transduce`, uses the seed (0-arity) and completing (1-arity) arities of the reducing function
+   when performing a reduction (unlike `reduce`)."
   ([f xs] (educe f (f) xs))
   ([f init xs]
     (if (satisfies? PEduceInit xs)
