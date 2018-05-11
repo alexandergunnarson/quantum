@@ -16,13 +16,21 @@
 
 ;; ===== Logical operators ===== ;;
 
-        ;; tests value-equivalence
-        (defalias =    core/=)
-
-        ;; tests identity-equivalence
-        (defalias ref= identical?)
+;; ----- Unary operators ----- ;;
 
         (defalias not  core/not)
+
+;; ----- Binary operators ----- ;;
+
+        ;; Tests value-equivalence
+        (defalias =    core/=)
+
+        ;; Tests identity-equivalence
+        (defalias ref= identical?)
+
+#?(:clj (defmacro implies? [a b] `(if ~a ~b true)))
+
+;; ----- Infinitary operators ----- ;;
 
 #?(:clj (defalias and  core/and))
 
@@ -43,8 +51,6 @@
 
 ;; TODO `xnor`
 #?(:clj (declare xnor))
-
-#?(:clj (defmacro implies? [a b] `(if ~a ~b true)))
 
 ;; ===== Function-logical operators ===== ;;
 
@@ -218,46 +224,43 @@
 #?(:clj
 (defmacro if-let-base
   {:attribution "alexandergunnarson"}
-  ([cond-sym bindings then]
-    `(if-let-base ~cond-sym ~bindings ~then nil))
-  ([cond-sym [bnd expr & more] then else]
-    `(let [temp# ~expr ~bnd temp#]
-       (~cond-sym temp#
-           ~(if (seq more)
-               `(if-let-base ~cond-sym [~@more] ~then ~else)
-               then)
-           ~else)))))
+  [cond-op #_symbol? [bind expr & more] then else]
+  `(let [temp# ~expr ~bind temp#]
+     (~cond-op temp#
+         ~(if (seq more)
+             `(if-let-base ~cond-op [~@more] ~then ~else)
+             then)
+         ~else))))
 
 #?(:clj
 (defmacro if-let
   "Like `if-let`, but multiple bindings can be used."
-  [& xs] `(if-let-base if ~@xs)))
+  [& args] `(if-let-base if ~@args)))
 
 #?(:clj
 (defmacro if-not-let
   "if : if-let :: if-not : if-not-let. All conditions must be false."
-  [& xs] `(if-let-base if-not ~@xs)))
+  [& args] `(if-let-base if-not ~@args)))
 
 #?(:clj
 (defmacro when-let-base
   {:attribution "alexandergunnarson"}
-  [cond-sym [bnd expr & more] & body]
-    `(let [temp# ~expr ~bnd temp#]
-       (~cond-sym temp#
+  [cond-op #_symbol? [bind expr & more] & body]
+    `(let [temp# ~expr ~bind temp#]
+       (~cond-op temp#
          ~(if (seq more)
-              `(when-let-base ~cond-sym [~@more] ~@body)
+              `(when-let-base ~cond-op [~@more] ~@body)
               `(do ~@body))))))
 
 #?(:clj
 (defmacro when-let
   "Like `when-let`, but multiple bindings can be used."
-  [& xs] `(if-let-base when ~@xs)))
+  [& args] `(if-let-base when ~@args)))
 
 #?(:clj
 (defmacro when-not-let
   "when : when-let :: when-not : when-not-let. All conditions must be false."
-  [& xs] `(when-let-base when-not ~@xs)))
-
+  [& args] `(when-let-base when-not ~@args)))
 
 #?(:clj
 (defmacro cond-let
@@ -265,10 +268,25 @@
   {:attribution "alexandergunnarson"}
   ([] nil) ; no else
   ([else] else)
-  ([bindings then & more]
-   `(if-let ~bindings
-      ~then
-      (cond-let ~@more)))))
+  ([bindings then & more] `(if-let ~bindings ~then (cond-let ~@more)))))
+
+#?(:clj
+(defmacro logical-let-base
+  {:attribution "alexandergunnarson"}
+  ([logical-op #_symbol? [bind expr & more]]
+  `(let [temp# ~expr ~bind temp#]
+     (~logical-op temp#
+        ~(if (seq more)
+            `(logical-let-base ~logical-op [~@more])
+            `(~logical-op)))))))
+
+#?(:clj (defmacro and-let  [bindings] `(logical-let-base and  ~bindings)))
+#?(:clj (defmacro or-let   [bindings] `(logical-let-base or   ~bindings)))
+;; TODO These will require a different, non-incremental approach
+#?(:clj (defmacro nand-let [bindings] (throw (ex-info "TODO" {})) #_`(logical-let-base nand ~bindings)))
+#?(:clj (defmacro nor-let  [bindings] (throw (ex-info "TODO" {})) #_`(logical-let-base nor  ~bindings)))
+#?(:clj (defmacro xor-let  [bindings] (throw (ex-info "TODO" {})) #_`(logical-let-base xor  ~bindings)))
+#?(:clj (defmacro xnor-let [bindings] (throw (ex-info "TODO" {})) #_`(logical-let-base xnor ~bindings)))
 
 ;; ===== `coll-(or|and)` ===== ;;
 
