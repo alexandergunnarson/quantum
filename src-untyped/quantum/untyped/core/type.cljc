@@ -377,7 +377,45 @@
 
 (declare not not-spec? not-spec>inner-spec - and-spec? and-spec>args val|by-class?)
 
-(defns- create-logical-spec|inner [args' _, s _, kind _, comparison-denotes-supersession? c/fn?]
+(defns- create-logical-spec|inner|and
+  [{:as accum :keys [conj-s? c/boolean?, prefer-orig-args? c/boolean?, s' spec?, specs _]} _
+   s* spec?, c* comparisons]
+  (if      ;; Disjointness: the extension of this arg is disjoint w.r.t. that of
+           ;;               at least one other arg
+     (c/or (c/= c* 3)
+           ;; Contradiction/empty-set: (& A (! A))
+           (if (not-spec? s')
+               ;; compare not-spec to all others
+               (= (not-spec>inner-spec s') s*)
+               ;; compare spec to all not-specs
+               (c/and (not-spec? s*) (= s' (not-spec>inner-spec s*)))))
+     (do #_(println "BRANCH 1")
+         (reduced (assoc accum :conj-s? false :specs [empty-set])))
+     (do #_(println "BRANCH 2")
+         (let [conj-s?' (if ;; `s` must be `><` w.r.t. to all other args if it is to be `conj`ed
+                            (c/not= c* 2)
+                            false
+                            conj-s?)
+               ;; TODO might similar logic extend to `:or` as well?
+               ss* (if (not-spec? s')
+                       (let [diff (- s* (not s'))]
+                         (if (and-spec? diff)
+                             ;; preserve inner expansion
+                             (and-spec>args diff)
+                             [diff]))
+                       [s*])]
+           (assoc accum :conj-s? conj-s?' :specs (into specs ss*))))))
+
+(defns- create-logical-spec|inner|or
+  [{:as accum :keys [specs _]} _, s* spec?, c* comparisons]
+  (if-not
+     ;; `s` must be either `><` or `<>` w.r.t. to all other args
+     (case c* (2 3) true false)
+     (reduced (assoc accum :prefer-orig-args? true))
+     (assoc accum :specs (conj specs s*))))
+
+(defns- create-logical-spec|inner
+  [args' _, s spec?, kind #{:or :and}, comparison-denotes-supersession? c/fn?]
   #_(prl! "")
   (let [without-superseded-args
           (->> args'
@@ -393,39 +431,11 @@
                (->> without-superseded-args
                     (educe
                       (fn ([accum] accum)
-                          ([{:as accum :keys [conj-s? prefer-orig-args? s' specs]} [s* c*]]
+                          ([accum [s* c*]]
                             #_(prl! kind conj-s? prefer-orig-args? s' specs s* c*)
                             (case kind
-                              :and (if       ;; Disjointness: the extension of this arg is disjoint w.r.t. that of
-                                             ;;               at least one other arg
-                                       (c/or (c/= c* 3)
-                                             ;; Contradiction/empty-set: (& A (! A))
-                                             (if (not-spec? s')
-                                                 ;; compare not-spec to all others
-                                                 (= (not-spec>inner-spec s') s*)
-                                                 ;; compare spec to all not-specs
-                                                 (c/and (not-spec? s*) (= s' (not-spec>inner-spec s*)))))
-                                       (do (println "BRANCH 1")
-                                           (reduced (assoc accum :conj-s? false :specs [empty-set])))
-                                       (do (println "BRANCH 2")
-                                           (let [conj-s?' (if ;; `s` must be `><` w.r.t. to all other args if it is to be `conj`ed
-                                                              (c/not= c* 2)
-                                                              false
-                                                              conj-s?)
-                                                 ;; TODO might similar logic extend to `:or` as well?
-                                                 ss* (if (not-spec? s')
-                                                         (let [diff (- s* (not s'))]
-                                                           (if (and-spec? diff)
-                                                               ;; preserve inner expansion
-                                                               (and-spec>args diff)
-                                                               [diff]))
-                                                         [s*])]
-                                             (assoc accum :conj-s? conj-s?' :specs (into specs ss*)))))
-                              :or  (if-not
-                                     ;; `s` must be either `><` or `<>` w.r.t. to all other args
-                                     (case c* (2 3) true false)
-                                     (reduced (assoc accum :prefer-orig-args? true))
-                                     (assoc accum :specs (conj specs s*))))))
+                              :and (create-logical-spec|inner|and accum s* c*)
+                              :or  (create-logical-spec|inner|or  accum s* c*))))
                       {:conj-s?            ;; If `s` is a `NotSpec`, and kind is `:and`, then it will be
                                            ;; applied by being `-` from all args, not by being `conj`ed
                                            (c/not (c/and (c/= kind :and) (not-spec? s)))
@@ -437,7 +447,7 @@
                (whenp-> specs conj-s? (conj s')))))))
 
 (defns- create-logical-spec
-  [kind #{:or :and}, construct-fn _, spec-pred _, spec>args _, args (fn-> count (c/> 1))
+  [kind #{:or :and}, construct-fn _, spec-pred _, spec>args _, args (fn-> count (c/>= 1))
    comparison-denotes-supersession? c/fn?]
   (if (-> args count (c/= 1))
       (first args)
@@ -455,7 +465,7 @@
               (->> simp|identity+
                    (educe
                      (fn ([args'] args')
-                         ([args' s]
+                         ([args' s #_spec?]
                            #_(prl! kind args' s)
                            (if (empty? args')
                                (conj args' s)
@@ -588,7 +598,7 @@
 
 #_(udt/deftype SequentialSpec)
 
-(defns of
+#_(defns of
   "Creates a spec that ... TODO"
   [pred (<= iterable?), spec spec?] (TODO))
 
@@ -623,7 +633,7 @@
         (->> spec-or-arity-specs (uc/filter+ #((first %) args)) uc/first second))))
 
 (defns fn-spec
-  [name-  (? symbol?)
+  [name-  (s/nilable c/symbol?)
    lookup _ #_(t/map-of t/integer?
                       (t/or (spec spec? "output-spec")
                             (t/vec-of (t/tuple (t/vec-of (spec spec? "input-spec"))
@@ -632,7 +642,7 @@
                   (uc/map+ (fn [spec-or-arity-specs]
                              (if (spec? spec-or-arity-specs)
                                  spec-or-arity-specs
-                                 (->> spec-or-arity-specs (map ))))))]
+                                 (->> spec-or-arity-specs (map (TODO)))))))]
     (FnSpec. name- lookup spec nil)))
 
 (deftype FnConstantlySpec
@@ -697,6 +707,52 @@
   (err! "TODO dispatch" {:s0 s0 :s0|type (type s0)
                          :s1 s1 :s1|type (type s1)}))
 
+;; ----- Multiple ----- ;;
+
+(defns- compare|atomic+or [s0 spec?, ^OrSpec s1 or-spec? > comparisons]
+  (let [specs (.-args s1)]
+    (first
+      (reduce
+        (fn [[ret found] s]
+          (let [ret'   (compare s0 s)
+                found' (-> found (ubit/conj ret') c/long)]
+            (ifs (c/or (ubit/contains? found' <ident)
+                       (ubit/contains? found' =ident))
+                 (reduced [-1 found'])
+
+                 (c/or (ubit/contains? found' ><ident)
+                       (c/and (ubit/contains? found' >ident)
+                              (ubit/contains? found' <>ident)))
+                 [2 found']
+
+                 [ret' found'])))
+        [3 ubit/empty]
+        specs))))
+
+(defns- compare|atomic+and [s0 spec?, ^AndSpec s1 and-spec? > comparisons]
+  (let [specs (.-args s1)]
+    (first
+      (reduce
+        (fn [[ret found] s]
+          (let [c (compare s0 s)]
+            (if (c/= c 0)
+                (reduced [1 nil])
+                (let [found' (-> found (ubit/conj c) c/long)
+                      ret'   (ifs (ubit/contains? found' ><ident)
+                                  (if (c/= found' (-> (ubit/conj ><ident) (ubit/conj <>ident)))
+                                      3
+                                      2)
+
+                                  (ubit/contains? found' <>ident)
+                                  (ifs (ubit/contains? found' <ident) 3
+                                       (ubit/contains? found' >ident) 1
+                                       c)
+
+                                  c)]
+                  [ret' found']))))
+        [3 ubit/empty]
+        specs))))
+
 ;; ----- UniversalSet ----- ;;
 
 (def- compare|universal+empty    fn>)
@@ -742,11 +798,11 @@
       2  2
       3  2)))
 
-(defns- compare|not+or [s0 spec?, s1 spec? > comparisons]
-  (compare (not-spec>inner-spec s0) (>logical-complement s1)))
+(defns- compare|not+or [s0 not-spec?, s1 or-spec? > comparisons]
+  (compare|atomic+or s0 s1))
 
-(defns- compare|not+and [s0 spec?, s1 spec? > comparisons]
-  (compare (not-spec>inner-spec s0) (>logical-complement s1)))
+(defns- compare|not+and [s0 not-spec?, s1 and-spec? > comparisons]
+  (compare|atomic+and s0 s1))
 
 (defns- compare|not+protocol [s0 spec?, s1 spec? > comparisons]
   (let [s0|inner (not-spec>inner-spec s0)]
@@ -784,46 +840,17 @@
                 3
                 2)))))
 
-(defns- compare|or+and [^OrSpec s0 or-spec?, ^OrSpec s1 or-spec? > comparisons]
+(defns- compare|or+and [^OrSpec s0 or-spec?, ^AndSpec s1 and-spec? > comparisons]
   (let [r (->> s1 .-args (seq-and (fn1 < s0)))]
     (if r 1 3)))
 
 ;; TODO transition to `compare|or+class` when stable
 (defns- compare|class+or [s0 class-spec?, ^OrSpec s1 or-spec? > comparisons]
-  (let [specs (.-args s1)]
-    (first
-      (reduce
-        (fn [[ret found] s]
-          (let [ret'   (compare s0 s)
-                found' (-> found (ubit/conj ret') c/long)]
-            (ifs (c/or (ubit/contains? found' <ident)
-                       (ubit/contains? found' =ident))
-                 (reduced [-1 found'])
-
-                 (c/or (ubit/contains? found' ><ident)
-                       (c/and (ubit/contains? found' >ident)
-                              (ubit/contains? found' <>ident)))
-                 [2 found']
-
-                 [ret' found'])))
-        [3 ubit/empty]
-        specs))))
+  (compare|atomic+or s0 s1))
 
 ;; TODO transition to `compare|or+value` when stable
-(defns- compare|value+or [s0 class-spec?, ^OrSpec s1 or-spec? > comparisons]
-  (let [specs (.-args s1)]
-    (reduce
-       (fn [ret s]
-         (let [ret' (compare s0 s)] ; `1` will never happen
-           (when (c/= ret' 2) (TODO))
-           (if (c/or (c/= ret' -1)
-                     (c/and (c/= ret' 3) (c/= ret 0))
-                     (c/and (c/= ret' 0) (c/= ret 3)))
-               ;; because the extension of `s1` only gets bigger
-               (reduced -1)
-               ret)))
-       3
-       specs)))
+(defns- compare|value+or [s0 value-spec?, ^OrSpec s1 or-spec? > comparisons]
+  (compare|atomic+or s0 s1))
 
 ;; ----- AndSpec ----- ;;
 
@@ -831,39 +858,10 @@
   (TODO))
 
 (defns- compare|class+and [s0 class-spec?, ^AndSpec s1 and-spec? > comparisons]
-  (let [specs (.-args s1)]
-    (first
-      (reduce
-        (fn [[ret found] s]
-          (let [c (compare s0 s)]
-            (if (c/= c 0)
-                (reduced [1 nil])
-                (let [found' (-> found (ubit/conj c) c/long)
-                      ret'   (ifs (ubit/contains? found' ><ident)
-                                  (if (c/= found' (-> (ubit/conj ><ident) (ubit/conj <>ident)))
-                                      3
-                                      2)
-
-                                  (ubit/contains? found' <>ident)
-                                  (ifs (ubit/contains? found' <ident) 3
-                                       (ubit/contains? found' >ident) 1
-                                       c)
-
-                                  c)]
-                  [ret' found']))))
-        [3 ubit/empty]
-        specs))))
+  (compare|atomic+and s0 s1))
 
 (defns- compare|value+and [s0 value-spec?, ^AndSpec s1 and-spec? > comparisons]
-  (let [specs (.-args s1)]
-    (reduce
-      (fn [ret s]
-        (let [ret' (compare s0 s)]
-          (if (c/= ret' 3)
-              (reduced 3)
-              ret')))
-      3
-      specs)))
+  (compare|atomic+and s0 s1))
 
 ;; ----- InferSpec ----- ;;
 
@@ -911,123 +909,124 @@
 
 ;; ----- Dispatch ----- ;;
 
+;; TODO take away var indirection once done
 (def- compare|dispatch
   (let [inverted (fn [f] (fn [s0 s1] (inverse (f s1 s0))))]
     {UniversalSetSpec
-       {UniversalSetSpec fn=
-        EmptySetSpec     compare|universal+empty
-        NotSpec          compare|universal+not
-        OrSpec           compare|universal+or
-        AndSpec          compare|universal+and
-        InferSpec        compare|universal+infer
-        Expression       compare|universal+expr
-        ProtocolSpec     compare|universal+protocol
-        ClassSpec        compare|universal+class
-        ValueSpec        compare|universal+value}
+       {UniversalSetSpec #'fn=
+        EmptySetSpec     #'compare|universal+empty
+        NotSpec          #'compare|universal+not
+        OrSpec           #'compare|universal+or
+        AndSpec          #'compare|universal+and
+        InferSpec        #'compare|universal+infer
+        Expression       #'compare|universal+expr
+        ProtocolSpec     #'compare|universal+protocol
+        ClassSpec        #'compare|universal+class
+        ValueSpec        #'compare|universal+value}
      EmptySetSpec
-       {UniversalSetSpec (inverted compare|universal+empty)
-        EmptySetSpec     fn=
-        NotSpec          compare|empty+not
-        OrSpec           compare|empty+or
-        AndSpec          compare|empty+and
-        InferSpec        compare|empty+infer
-        Expression       compare|empty+expr
-        ProtocolSpec     compare|empty+protocol
-        ClassSpec        compare|empty+class
-        ValueSpec        compare|empty+value}
+       {UniversalSetSpec (inverted #'compare|universal+empty)
+        EmptySetSpec     #'fn=
+        NotSpec          #'compare|empty+not
+        OrSpec           #'compare|empty+or
+        AndSpec          #'compare|empty+and
+        InferSpec        #'compare|empty+infer
+        Expression       #'compare|empty+expr
+        ProtocolSpec     #'compare|empty+protocol
+        ClassSpec        #'compare|empty+class
+        ValueSpec        #'compare|empty+value}
      NotSpec
-       {UniversalSetSpec (inverted compare|universal+not)
-        EmptySetSpec     (inverted compare|empty+not)
-        NotSpec          compare|not+not
-        OrSpec           compare|not+or
-        AndSpec          compare|not+and
-        InferSpec        compare|todo
-        Expression       fn<>
-        ProtocolSpec     compare|not+protocol
-        ClassSpec        compare|not+class
-        ValueSpec        compare|not+value}
+       {UniversalSetSpec (inverted #'compare|universal+not)
+        EmptySetSpec     (inverted #'compare|empty+not)
+        NotSpec          #'compare|not+not
+        OrSpec           #'compare|not+or
+        AndSpec          #'compare|not+and
+        InferSpec        #'compare|todo
+        Expression       #'fn<>
+        ProtocolSpec     #'compare|not+protocol
+        ClassSpec        #'compare|not+class
+        ValueSpec        #'compare|not+value}
      OrSpec
-       {UniversalSetSpec (inverted compare|universal+or)
-        EmptySetSpec     (inverted compare|empty+or)
-        NotSpec          (inverted compare|not+or)
-        OrSpec           compare|or+or
-        AndSpec          compare|or+and
-        InferSpec        compare|todo
-        Expression       fn<>
-        ProtocolSpec     compare|todo
-        ClassSpec        (inverted compare|class+or)
-        ValueSpec        (inverted compare|value+or)}
+       {UniversalSetSpec (inverted #'compare|universal+or)
+        EmptySetSpec     (inverted #'compare|empty+or)
+        NotSpec          (inverted #'compare|not+or)
+        OrSpec           #'compare|or+or
+        AndSpec          #'compare|or+and
+        InferSpec        #'compare|todo
+        Expression       #'fn<>
+        ProtocolSpec     #'compare|todo
+        ClassSpec        (inverted #'compare|class+or)
+        ValueSpec        (inverted #'compare|value+or)}
      AndSpec
-       {UniversalSetSpec (inverted compare|universal+and)
-        EmptySetSpec     (inverted compare|empty+and)
-        NotSpec          compare|todo
-        OrSpec           (inverted compare|or+and)
-        AndSpec          compare|and+and
-        InferSpec        compare|todo
-        Expression       fn<>
-        ProtocolSpec     compare|todo
-        ClassSpec        (inverted compare|class+and)
-        ValueSpec        (inverted compare|value+and)}
+       {UniversalSetSpec (inverted #'compare|universal+and)
+        EmptySetSpec     (inverted #'compare|empty+and)
+        NotSpec          #'compare|todo
+        OrSpec           (inverted #'compare|or+and)
+        AndSpec          #'compare|and+and
+        InferSpec        #'compare|todo
+        Expression       #'fn<>
+        ProtocolSpec     #'compare|todo
+        ClassSpec        (inverted #'compare|class+and)
+        ValueSpec        (inverted #'compare|value+and)}
      ;; TODO review this
      InferSpec
-       {UniversalSetSpec (inverted compare|universal+infer)
-        EmptySetSpec     (inverted compare|empty+infer)
-        NotSpec          compare|todo #_fn>
-        OrSpec           compare|todo #_fn>
-        AndSpec          compare|todo #_fn>
-        InferSpec        compare|todo #_fn=
-        Expression       compare|todo #_fn>
-        ProtocolSpec     compare|todo #_fn>
-        ClassSpec        compare|todo #_fn>
-        ValueSpec        compare|todo #_fn>}
+       {UniversalSetSpec (inverted #'compare|universal+infer)
+        EmptySetSpec     (inverted #'compare|empty+infer)
+        NotSpec          #'compare|todo #_fn>
+        OrSpec           #'compare|todo #_fn>
+        AndSpec          #'compare|todo #_fn>
+        InferSpec        #'compare|todo #_fn=
+        Expression       #'compare|todo #_fn>
+        ProtocolSpec     #'compare|todo #_fn>
+        ClassSpec        #'compare|todo #_fn>
+        ValueSpec        #'compare|todo #_fn>}
      ;; TODO review this
      Expression
-       {UniversalSetSpec (inverted compare|universal+expr)
-        EmptySetSpec     (inverted compare|empty+expr)
-        NotSpec          compare|todo
-        OrSpec           compare|todo
-        AndSpec          compare|todo
-        InferSpec        compare|todo
-        Expression       compare|expr+expr
-        ProtocolSpec     compare|todo
-        ClassSpec        fn<> ; TODO not entirely true
-        ValueSpec        compare|expr+value}
+       {UniversalSetSpec (inverted #'compare|universal+expr)
+        EmptySetSpec     (inverted #'compare|empty+expr)
+        NotSpec          #'compare|todo
+        OrSpec           #'compare|todo
+        AndSpec          #'compare|todo
+        InferSpec        #'compare|todo
+        Expression       #'compare|expr+expr
+        ProtocolSpec     #'compare|todo
+        ClassSpec        #'fn<> ; TODO not entirely true
+        ValueSpec        #'compare|expr+value}
      ProtocolSpec
-       {UniversalSetSpec (inverted compare|universal+protocol)
-        EmptySetSpec     (inverted compare|empty+protocol)
-        NotSpec          (inverted compare|not+protocol)
-        OrSpec           compare|todo
-        AndSpec          compare|todo
-        InferSpec        fn<
-        Expression       fn<>
+       {UniversalSetSpec (inverted #'compare|universal+protocol)
+        EmptySetSpec     (inverted #'compare|empty+protocol)
+        NotSpec          (inverted #'compare|not+protocol)
+        OrSpec           #'compare|todo
+        AndSpec          #'compare|todo
+        InferSpec        #'fn<
+        Expression       #'fn<>
         ProtocolSpec     (fn [s0 s1] (if (identical? (protocol-spec>protocol s0)
                                                      (protocol-spec>protocol s1))
                                          0
                                          3))
-        ClassSpec        compare|todo
-        ValueSpec        (inverted compare|value+protocol)}
+        ClassSpec        #'compare|todo
+        ValueSpec        (inverted #'compare|value+protocol)}
      ClassSpec
-       {UniversalSetSpec (inverted compare|universal+class)
-        EmptySetSpec     (inverted compare|empty+class)
-        NotSpec          (inverted compare|not+class)
-        OrSpec           compare|class+or
-        AndSpec          compare|class+and
-        InferSpec        compare|todo
-        Expression       fn<>
-        ProtocolSpec     compare|todo
+       {UniversalSetSpec (inverted #'compare|universal+class)
+        EmptySetSpec     (inverted #'compare|empty+class)
+        NotSpec          (inverted #'compare|not+class)
+        OrSpec           #'compare|class+or
+        AndSpec          #'compare|class+and
+        InferSpec        #'compare|todo
+        Expression       #'fn<>
+        ProtocolSpec     #'compare|todo
         ClassSpec        (fn [s0 s1] (compare|class|class* (class-spec>class s0) (class-spec>class s1)))
-        ValueSpec        compare|class+value}
+        ValueSpec        #'compare|class+value}
      ValueSpec
-       {UniversalSetSpec (inverted compare|universal+value)
-        EmptySetSpec     (inverted compare|empty+value)
-        NotSpec          (inverted compare|not+value)
-        OrSpec           compare|value+or
-        AndSpec          compare|value+and
-        InferSpec        compare|todo
-        Expression       (inverted compare|expr+value)
-        ProtocolSpec     compare|value+protocol
-        ClassSpec        (inverted compare|class+value)
-        ValueSpec        compare|value+value}}))
+       {UniversalSetSpec (inverted #'compare|universal+value)
+        EmptySetSpec     (inverted #'compare|empty+value)
+        NotSpec          (inverted #'compare|not+value)
+        OrSpec           #'compare|value+or
+        AndSpec          #'compare|value+and
+        InferSpec        #'compare|todo
+        Expression       (inverted #'compare|expr+value)
+        ProtocolSpec     #'compare|value+protocol
+        ClassSpec        (inverted #'compare|class+value)
+        ValueSpec        #'compare|value+value}}))
 
 #?(:clj
 (def boxed-class->unboxed-symbol
