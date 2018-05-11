@@ -42,7 +42,7 @@
     [quantum.untyped.core.data.map        :as map]
     [quantum.untyped.core.data.set        :as set]
     [quantum.untyped.core.defnt
-      :refer [defns fns]]
+      :refer [defns defns- fns]]
     [quantum.untyped.core.form            :as uform]
     [quantum.untyped.core.form.evaluate   :as ufeval]
     [quantum.untyped.core.form.generate   :as ufgen
@@ -101,38 +101,35 @@
 
 ; TODO associative sequence over top of a vector (so it'll display like a seq but behave like a vec)
 
-(do
-
 #?(:clj
 (defns class>simplest-class
   "This ensures that special overloads are not created for non-primitive subclasses
    of java.lang.Object (e.g. String, etc.)."
-  [c class?]
+  [c t/class? > t/class?]
   (if (t/primitive-class? c)
       c
       (or (tcore/boxed->unboxed c) java.lang.Object))))
 
 #?(:clj
-(defns class>most-primitive-class
-  [c class?, nilable? boolean?]
+(defns class>most-primitive-class [c t/class?, nilable? t/boolean? > t/class?]
   (if nilable? c (or (tcore/boxed->unboxed c) c))))
 
 #?(:clj
-(defns spec>most-primitive-classes [spec t/spec? > (s/set-of (? class?))]
+(defns spec>most-primitive-classes [spec t/spec? > (s/set-of (? t/class?))]
   (let [cs (t/spec>classes spec) nilable? (contains? cs nil)]
     (->> cs
          (c/map+ #(class>most-primitive-class % nilable?))
          (join #{})))))
 
 #?(:clj
-(defns spec>most-primitive-class [spec t/spec? > (? class?)]
+(defns spec>most-primitive-class [spec t/spec? > (? t/class?)]
   (let [cs (spec>most-primitive-classes spec)]
     (if (-> cs count (not= 1))
         (err! "Not exactly 1 class found" (kw-map spec cs))
         (first cs)))))
 
 #?(:clj
-(defns out-spec>class [spec t/spec? > (? class?)]
+(defns out-spec>class [spec t/spec? > (? t/class?)]
   (let [cs (t/spec>classes spec) cs' (disj cs nil)]
     (if (-> cs' count (not= 1))
         ;; NOTE: we don't need to vary the output class if there are multiple output possibilities or just nil
@@ -160,7 +157,7 @@
 #?(:clj (defns method? [x _] (instance? Method x)))
 
 #?(:clj
-(defns class->methods [^Class c class? > map?]
+(defns class->methods [^Class c t/class? > t/map?]
   (->> (.getMethods c)
        (remove+   (fn [^java.lang.reflect.Method x] (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
        (map+      (fn [^java.lang.reflect.Method x] (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
@@ -180,7 +177,7 @@
   fipp.ednize/IOverride
   fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "F") (into (array-map) this))))
 
-(defns class->fields [^Class c class? > map?]
+(defns class->fields [^Class c t/class? > t/map?]
   (->> (.getFields c)
        (remove+   (fn [^java.lang.reflect.Field x] (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
        (map+      (fn [^java.lang.reflect.Field x]
@@ -442,10 +439,10 @@
      :field  field-form
      :spec   (-> field :type t/>spec)}))
 
-(defn classes>class
+(defns classes>class
   "Ensure that given a set of classes, that set consists of at most a class C and nil.
    If so, returns C. Otherwise, throws."
-  [cs #_(set-of class?)]
+  [cs (s/set-of t/class?) > t/class?]
   (let [cs' (disj cs nil)]
     (if (-> cs' count (= 1))
         (first cs')
@@ -480,7 +477,7 @@
               method-or-field args-forms))))))
 
 ;; TODO move this
-(defn truthy-expr? [{:as expr :keys [spec]}]
+(defns truthy-expr? [{:as expr :keys [spec _]} _ > t/boolean?]
   (ifs (or (t/= spec t/nil?)
            (t/= spec t/false?)) false
        (or (t/> spec t/nil?)
@@ -712,8 +709,8 @@
    tdef/double  8}))
 
 #?(:clj
-(defn arg-specs>arg-classes-seq|primitivized
-  [arg-specs #_(t/seq-of t/spec?)] #_> #_(t/seq-of (t/vec-of t/class?))
+(defns arg-specs>arg-classes-seq|primitivized
+  [arg-specs (s/seq-of t/spec?) > (s/seq-of (s/vec-of t/class?))]
   (->> arg-specs
        (c/lmap (fn [spec]
                  (if (-> spec meta :ref?)
@@ -824,7 +821,7 @@
 
 (def fnt-method-sym 'invoke)
 
-(defn- class>interface-part-name [c]
+(defns- class>interface-part-name [c t/class? > t/string?]
   (if (= c java.lang.Object)
       "Object"
       (let [illegal-pattern #"\|\+"]
@@ -845,8 +842,10 @@
     `(~'definterface ~interface-sym (~hinted-method-sym ~hinted-args))))
 
 #?(:clj
-(defn fnt|overload>reify-overload #_> #_(seq-of ::reify|overload)
-  [{:as overload #_:fnt/overload :keys [arg-classes arglist-code|reify|unhinted body-form out-class]}]
+(defns fnt|overload>reify-overload
+  [{:as overload
+    :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, out-class _]} :fnt/overload
+   > (s/seq-of ::reify|overload)]
   (prl! overload)
   (let [interface-k {:out out-class :in arg-classes}
         interface
@@ -866,7 +865,8 @@
      :out-class     out-class})))
 
 #?(:clj
-(defn fnt|overload-group>reify [{:keys [overload-group #_:fnt/overload-group, i #_integer?, fn|name #_:quantum.core.specs/fn|name]}]
+(defns fnt|overload-group>reify
+  [{:keys [overload-group :fnt/overload-group, i t/integer?, fn|name :quantum.core.specs/fn|name]} _]
   (let [reify-overloads (->> (concat [(:unprimitivized overload-group)]
                                      (:primitivized   overload-group))
                              (c/map fnt|overload>reify-overload))]
@@ -881,9 +881,10 @@
 (defn >extend-protocol|code [{:keys [protocol|name]}]
   `(extend-protocol ~protocol|name))
 
-(defn >defprotocol|code
-  [{:keys [name      #_:protocol/name
-           overloads #_(t/seqable-of :protocol/overload)]}] ; TODO ensure that overload names do not shadow each other
+(defns >defprotocol|code
+  ;; TODO ensure that overload names do not shadow each other
+  [{:keys [name      :protocol/name
+           overloads (s/seq-of :protocol/overload)]} _]
   `(defprotocol ~name
      ~@(->> overloads
             (sort-by (fn-> :arglist count))
@@ -975,9 +976,9 @@
       nil
       overloads)))
 
-(defn fnt|overloads>protocols
-  [{:keys [overloads #_(t/and t/indexed? (t/seq-of :fnt/overload))
-           fn|name   #_:quantum.core.specs/fn|name]}]
+(defns fnt|overloads>protocols
+  [{:keys [overloads (s/and t/indexed? (s/seq-of :fnt/overload))
+           fn|name   :quantum.core.specs/fn|name]} _]
   (when (->> overloads (seq-or (fn-> :positional-args-ct (> 2))))
     (TODO "Doesn't yet handle protocol creation for arglist counts of > 2"))
   (when (->> overloads (seq-or :variadic?))
@@ -1079,5 +1080,3 @@
 
 (defmacro defnt [& args]
   (fnt|code :defn (ufeval/env-lang) args))
-
-)

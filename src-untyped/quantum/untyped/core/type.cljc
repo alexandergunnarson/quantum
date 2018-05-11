@@ -377,7 +377,7 @@
 
 (declare not not-spec? not-spec>inner-spec - and-spec? and-spec>args val|by-class?)
 
-(defns- create-logical-spec|inner [args' _, s _, kind _, comparison-denotes-supersession? c/boolean?]
+(defns- create-logical-spec|inner [args' _, s _, kind _, comparison-denotes-supersession? c/fn?]
   #_(prl! "")
   (let [without-superseded-args
           (->> args'
@@ -437,8 +437,8 @@
                (whenp-> specs conj-s? (conj s')))))))
 
 (defns- create-logical-spec
-  [kind #{:or :and}, construct-fn _, spec-pred _, spec>args _, args (fn-> count (> 1))
-   comparison-denotes-supersession? c/boolean?]
+  [kind #{:or :and}, construct-fn _, spec-pred _, spec>args _, args (fn-> count (c/> 1))
+   comparison-denotes-supersession? c/fn?]
   (if (-> args count (c/= 1))
       (first args)
       (let [;; simplification via inner expansion ; `(| (| a b) c)` -> `(| a b c)`
