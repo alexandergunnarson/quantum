@@ -24,7 +24,8 @@
 (defn conj
   ([] empty)
   ([v] (conj empty v))
-  ([xs v] (bit-set xs v)))
+  ([xs v] (bit-set xs v))
+  ([xs v0 v1] (-> xs (conj v0) (conj v1))))
 
 (defalias contains? bit-test)
 

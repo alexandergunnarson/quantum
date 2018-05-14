@@ -281,9 +281,21 @@
                3)
      :cljs (TODO)))
 
-;; ===== EXTENSIONALITY COMPARISON ===== ;;
+;; ===== Comparison ===== ;;
 
 (declare compare|dispatch)
+
+(def ^:const <ident  -1)
+(def ^:const =ident   0)
+(def ^:const >ident   1)
+(def ^:const ><ident  2)
+(def ^:const <>ident  3)
+
+(def- fn<  (ufn/fn' -1))
+(def- fn=  (ufn/fn'  0))
+(def- fn>  (ufn/fn'  1))
+(def- fn>< (ufn/fn'  2))
+(def- fn<> (ufn/fn'  3))
 
 (defns compare
   ;; TODO optimize the `recur`s here as they re-take old code paths
@@ -377,65 +389,64 @@
 
 (declare not not-spec? not-spec>inner-spec - and-spec? and-spec>args val|by-class?)
 
+(defns complementary? [s0 spec? s1 spec?] (= s0 (not s1)))
+
+(defns- create-logical-spec|inner|or
+  [{:as accum :keys [s' spec?]} _, s* spec?, c* comparisons]
+  (if ;; `s` must be either `><` or `<>` w.r.t. to all other args
+      (case c* (2 3) true false)
+      (if ;; Tautology/universal-set: (| A (! A))
+          (c/and (c/= c* <>ident) ; optimization before `complementary?`
+                 (complementary? s' s*))
+          (reduced (assoc accum :conj-s? false :specs [universal-set]))
+          (update accum :specs conj s*))
+      (reduced (assoc accum :prefer-orig-args? true))))
+
 (defns- create-logical-spec|inner|and
   [{:as accum :keys [conj-s? c/boolean?, prefer-orig-args? c/boolean?, s' spec?, specs _]} _
    s* spec?, c* comparisons]
-  (if      ;; Disjointness: the extension of this arg is disjoint w.r.t. that of
-           ;;               at least one other arg
-     (c/or (c/= c* 3)
-           ;; Contradiction/empty-set: (& A (! A))
-           (if (not-spec? s')
-               ;; compare not-spec to all others
-               (= (not-spec>inner-spec s') s*)
-               ;; compare spec to all not-specs
-               (c/and (not-spec? s*) (= s' (not-spec>inner-spec s*)))))
-     (do #_(println "BRANCH 1")
-         (reduced (assoc accum :conj-s? false :specs [empty-set])))
-     (do #_(println "BRANCH 2")
-         (let [conj-s?' (if ;; `s` must be `><` w.r.t. to all other args if it is to be `conj`ed
-                            (c/not= c* 2)
-                            false
-                            conj-s?)
-               ;; TODO might similar logic extend to `:or` as well?
-               ss* (if (not-spec? s')
-                       (let [diff (- s* (not s'))]
-                         (if (and-spec? diff)
-                             ;; preserve inner expansion
-                             (and-spec>args diff)
-                             [diff]))
-                       [s*])]
-           (assoc accum :conj-s? conj-s?' :specs (into specs ss*))))))
-
-(defns- create-logical-spec|inner|or
-  [{:as accum :keys [specs _]} _, s* spec?, c* comparisons]
-  (if-not
-     ;; `s` must be either `><` or `<>` w.r.t. to all other args
-     (case c* (2 3) true false)
-     (reduced (assoc accum :prefer-orig-args? true))
-     (assoc accum :specs (conj specs s*))))
+  (if       ;; Contradiction/empty-set: (& A (! A))
+      (c/or (c/= c* <>ident) ; optimization before `complementary?`
+            (complementary? s' s*))
+      (do #_(println "BRANCH 1")
+          (reduced (assoc accum :conj-s? false :specs [empty-set])))
+      (do #_(println "BRANCH 2")
+          (let [conj-s?' (if ;; `s` must be `><` w.r.t. to all other args if it is to be `conj`ed
+                             (c/not= c* ><ident)
+                             false
+                             conj-s?)
+                ;; TODO might similar logic extend to `:or` as well?
+                ss* (if (not-spec? s')
+                        (let [diff (- s* (not s'))]
+                          (if (and-spec? diff)
+                              ;; preserve inner expansion
+                              (and-spec>args diff)
+                              [diff]))
+                        [s*])]
+            (assoc accum :conj-s? conj-s?' :specs (into specs ss*))))))
 
 (defns- create-logical-spec|inner
   [args' _, s spec?, kind #{:or :and}, comparison-denotes-supersession? c/fn?]
-  #_(prl! "")
-  (let [without-superseded-args
+  (let [args+comparisons|without-superseded
           (->> args'
                (uc/map+    (juxt identity #(compare s %)))
                ;; remove all args whose extensions are superseded by `s`
                (uc/remove+ (fn-> second comparison-denotes-supersession?))
                join) ; TODO elide `join`
-        ;_ (prl! without-superseded-args)
-        s-redundant? (->> without-superseded-args (seq-or (fn-> second (c/= 0))))]
-    (ifs s-redundant?                     args'
-         (empty? without-superseded-args) [s]
+        s-redundant? (->> args+comparisons|without-superseded (seq-or (fn-> second (c/= =ident))))]
+    (ifs s-redundant?
+           args'
+         (empty? args+comparisons|without-superseded)
+           [s]
          (let [{:keys [conj-s? prefer-orig-args? s' specs]}
-               (->> without-superseded-args
+               (->> args+comparisons|without-superseded
                     (educe
                       (fn ([accum] accum)
                           ([accum [s* c*]]
                             #_(prl! kind conj-s? prefer-orig-args? s' specs s* c*)
                             (case kind
-                              :and (create-logical-spec|inner|and accum s* c*)
-                              :or  (create-logical-spec|inner|or  accum s* c*))))
+                              :or  (create-logical-spec|inner|or  accum s* c*)
+                              :and (create-logical-spec|inner|and accum s* c*))))
                       {:conj-s?            ;; If `s` is a `NotSpec`, and kind is `:and`, then it will be
                                            ;; applied by being `-` from all args, not by being `conj`ed
                                            (c/not (c/and (c/= kind :and) (not-spec? s)))
@@ -446,31 +457,42 @@
                args'
                (whenp-> specs conj-s? (conj s')))))))
 
+(defn- simplify-logical-spec|inner-expansion+
+  "Simplification via inner expansion: `(| (| a b) c)` -> `(| a b c)`"
+  [spec-pred spec>args spec-args #_(of reducible? spec?)]
+  (->> spec-args
+       (uc/map+ (fn [arg] (if (spec-pred arg)
+                              (spec>args arg)
+                              [arg])))
+       uc/cat+))
+
+(defn- simplify-logical-spec|structural-identity+
+  "Simplification via structural identity: `(| a b a)` -> `(| a b)`"
+  [spec-args #_(of reducible? spec?)]
+  (->> spec-args (uc/map+ >spec) uc/distinct+))
+
+(defn- simplify-logical-spec|comparison
+  "Simplification via intension comparison"
+  [kind comparison-denotes-supersession? spec-args #_(of reducible? spec?)]
+  (educe
+    (fn ([spec-args'] spec-args')
+        ([spec-args' s #_spec?]
+          (if (empty? spec-args')
+              (conj spec-args' s)
+              (create-logical-spec|inner spec-args' s kind comparison-denotes-supersession?))))
+    []
+    spec-args))
+
 (defns- create-logical-spec
-  [kind #{:or :and}, construct-fn _, spec-pred _, spec>args _, args (fn-> count (c/>= 1))
-   comparison-denotes-supersession? c/fn?]
-  (if (-> args count (c/= 1))
-      (first args)
-      (let [;; simplification via inner expansion ; `(| (| a b) c)` -> `(| a b c)`
-            simp|expansion
-              (->> args
-                   (uc/map+ (fn [arg] (if (spec-pred arg)
-                                          (spec>args arg)
-                                          [arg])))
-                   uc/cat+)
-            ;; simplification via structural identity ; `(| a b a)` -> `(| a b)`
-            simp|identity+ (->> simp|expansion (uc/map+ >spec) uc/distinct+)
-            ;; simplification via intension comparison
-            simplified
-              (->> simp|identity+
-                   (educe
-                     (fn ([args'] args')
-                         ([args' s #_spec?]
-                           #_(prl! kind args' s)
-                           (if (empty? args')
-                               (conj args' s)
-                               (create-logical-spec|inner args' s kind comparison-denotes-supersession?))))
-                     []))]
+  [kind #{:or :and}, construct-fn _, spec-pred _, spec>args _, spec-args (fn-> count (c/>= 1))
+   comparison-denotes-supersession? c/fn? > spec?]
+  (if (-> spec-args count (c/= 1))
+      (first spec-args)
+      (let [simplified
+              (->> spec-args
+                   (simplify-logical-spec|inner-expansion+ spec-pred spec>args)
+                   simplify-logical-spec|structural-identity+
+                   (simplify-logical-spec|comparison kind comparison-denotes-supersession?))]
         (assert (-> simplified count (c/>= 1))) ; for internal implementation correctness
         (if (-> simplified count (c/= 1))
             (first simplified)
@@ -575,7 +597,6 @@
    If `s0` <>      `s1`, `s0`
    If `s0` > | ><  `s1`, `s0` with all elements of `s1` removed"
   [s0 spec?, s1 spec? > spec?]
-  #_(prl! s0 s1)
   (let [c (compare s0 s1)]
     (case c
       (0 -1) empty-set
@@ -691,18 +712,6 @@
 
 ;; ===== Comparison ===== ;;
 
-(def ^:const <ident  -1)
-(def ^:const =ident   0)
-(def ^:const >ident   1)
-(def ^:const ><ident  2)
-(def ^:const <>ident  3)
-
-(def- fn<  (ufn/fn' -1))
-(def- fn=  (ufn/fn'  0))
-(def- fn>  (ufn/fn'  1))
-(def- fn>< (ufn/fn'  2))
-(def- fn<> (ufn/fn'  3))
-
 (defns- compare|todo [s0 spec?, s1 spec?]
   (err! "TODO dispatch" {:s0 s0 :s0|type (type s0)
                          :s1 s1 :s1|type (type s1)}))
@@ -714,8 +723,8 @@
     (first
       (reduce
         (fn [[ret found] s]
-          (let [ret'   (compare s0 s)
-                found' (-> found (ubit/conj ret') c/long)]
+          (let [c      (compare s0 s)
+                found' (-> found (ubit/conj c) c/long)]
             (ifs (c/or (ubit/contains? found' <ident)
                        (ubit/contains? found' =ident))
                  (reduced [-1 found'])
@@ -725,7 +734,7 @@
                               (ubit/contains? found' <>ident)))
                  [2 found']
 
-                 [ret' found'])))
+                 [c found'])))
         [3 ubit/empty]
         specs))))
 
@@ -739,7 +748,7 @@
                 (reduced [1 nil])
                 (let [found' (-> found (ubit/conj c) c/long)
                       ret'   (ifs (ubit/contains? found' ><ident)
-                                  (if (c/= found' (-> (ubit/conj ><ident) (ubit/conj <>ident)))
+                                  (if (c/= found' (ubit/conj ><ident <>ident))
                                       3
                                       2)
 
@@ -775,17 +784,15 @@
 
 (defns- compare|empty+not [s0 spec?, s1 spec? > comparisons]
   (let [s1|inner (not-spec>inner-spec s1)]
-    (if (= s1|inner universal-set)
-         0
-        -1)))
+    (if (= s1|inner universal-set) 0 -1)))
 
-(def- compare|empty+or            fn<)
-(def- compare|empty+and           fn<)
-(def- compare|empty+infer         compare|todo)
-(def- compare|empty+expr          compare|todo)
-(def- compare|empty+protocol      fn<)
-(def- compare|empty+class         fn<)
-(def- compare|empty+value         fn<)
+(def- compare|empty+or       fn<)
+(def- compare|empty+and      fn<)
+(def- compare|empty+infer    compare|todo)
+(def- compare|empty+expr     compare|todo)
+(def- compare|empty+protocol fn<)
+(def- compare|empty+class    fn<)
+(def- compare|empty+value    fn<)
 
 ;; ----- NotSpec ----- ;;
 
@@ -844,11 +851,9 @@
   (let [r (->> s1 .-args (seq-and (fn1 < s0)))]
     (if r 1 3)))
 
-;; TODO transition to `compare|or+class` when stable
 (defns- compare|class+or [s0 class-spec?, ^OrSpec s1 or-spec? > comparisons]
   (compare|atomic+or s0 s1))
 
-;; TODO transition to `compare|or+value` when stable
 (defns- compare|value+or [s0 value-spec?, ^OrSpec s1 or-spec? > comparisons]
   (compare|atomic+or s0 s1))
 
@@ -2292,11 +2297,10 @@
                                    (isa? #?(:clj fast_zip.core.ZipperLocation :cljs fast-zip.core/ZipperLocation))
                                    chan?))
 
-#_(t/def ::form (t/or ::literal t/list? t/vector? ...))
-
 #?(:clj  (-def tagged-literal?   (isa? clojure.lang.TaggedLiteral)))
 
          (-def literal?          (or nil? boolean? symbol? keyword? string? #?(:clj long?) double? #?(:clj tagged-literal?)))
+       #_(-def form?             (or literal? +list? +vector? ...))
 
 ;; ===== Generic ===== ;;
 

@@ -321,7 +321,7 @@
 ;; will error if not all return values can be safely converted to the return spec
 (macroexpand '
 (defnt #_:inline >int* > int
-  ([x (t/and t/primitive? (t/not t/boolean?)) #_?] (Primitive/uncheckedIntCast x))
+  ([x (t/- t/primitive? t/boolean?) #_?] (Primitive/uncheckedIntCast x))
   ([x Number] (.intValue x)))
 )
 
@@ -331,11 +331,11 @@
 `(do #_(swap! fn->spec assoc #'>int*|gen
        (xp/casef c/count
          1 (xp/condpf-> t/<= (xp/get 0)
-             (s/and primitive? (s/not boolean?)) t/int?
-             Number                              t/int?)))
+             (t/- t/primitive? t/boolean?) t/int?
+             Number                        t/int?)))
 
      ~@(case (env-lang)
-         :clj ($ [(def ~'>int*|__0 ; `(s/and primitive? (s/not boolean?))`
+         :clj ($ [(def ~'>int*|__0 ; `(t/- t/primitive? t/boolean?)`
                     (reify byte>int   (~(tag "int" 'invoke) [~'_ ~(tag "byte"             'x)] (Primitive/uncheckedIntCast x))
                            short>int  (~(tag "int" 'invoke) [~'_ ~(tag "short"            'x)] (Primitive/uncheckedIntCast x))
                            char>int   (~(tag "int" 'invoke) [~'_ ~(tag "char"             'x)] (Primitive/uncheckedIntCast x))
@@ -369,14 +369,13 @@
 (defnt >long*
   {:source "clojure.lang.RT.uncheckedLongCast"}
   > t/long?
-  ([x (t/or t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)]
-    (Primitive/uncheckedLongCast x))
+  ([x (t/- t/primitive? t/boolean?)] (Primitive/uncheckedLongCast x))
   ([x (t/ref (t/isa? Number))] (.longValue x))))
 
 ;; ----- expanded code ----- ;;
 
 `(do ~@(case (env-lang)
-         :clj ($ [(def ~'>long*|__0 ; `(t/or t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)`
+         :clj ($ [(def ~'>long*|__0 ; `(t/- t/primitive? t/boolean?)`
                     (reify byte>long   (~(tag "long" 'invoke) [~'_ ~(tag "byte"             'x)] (~'Primitive/uncheckedLongCast ~'x))
                            short>long  (~(tag "long" 'invoke) [~'_ ~(tag "short"            'x)] (~'Primitive/uncheckedLongCast ~'x))
                            char>long   (~(tag "long" 'invoke) [~'_ ~(tag "char"             'x)] (~'Primitive/uncheckedLongCast ~'x))
@@ -421,7 +420,7 @@
   ;; TODO handle recursion
   #_([x t/ratio?] (>long (.bigIntegerValue x)))
   ;; TODO handle calling of other `defnt`s
-  #_([x (t/or t/char? t/byte? t/short? t/int? t/long?)] (>long* x))
+  #_([x (t/- t/primitive? t/boolean?)] (>long* x))
   ([x t/float?] (clojure.lang.RT/longCast x)) ; Because primitive casting in Clojure is not supported ; TODO fix
   ([x t/double?] (clojure.lang.RT/longCast x)) ; TODO fix
   ([x t/boolean?] (if x 1 0))

@@ -249,11 +249,11 @@
       (test-comparison -1 (! a)           (! <a0))
       (test-comparison  0 (! (t/value 1)) (! (t/value 1)))
       (test-comparison  2 (! (t/value 1)) (! (t/value 2))))
-    ;; TODO fix + continue to implement
+    ;; TODO continue to implement
     (testing "+ OrSpec"
       (testing "#{<}"
         ;; TODO Technically something like this but can't do the below b/c of simplification
-        #_(test-comparison  ? (! a) (| (| (! a) <a0) (| (! a) <a1))))
+        #_(test-comparison -1 (! a) (| (| (! a) <a0) (| (! a) <a1))))
     #_(testing "#{< =}")         ; Impossible for `OrSpec`
     #_(testing "#{< = >}")       ; Impossible for `OrSpec`
     #_(testing "#{< = > ><}")    ; Impossible for `OrSpec`
@@ -314,39 +314,39 @@
     (testing "+ ProtocolSpec")
     (testing "+ ClassSpec"
       (test-comparison  3 (!     a)     a) ; inner =
-      (test-comparison  3 (!   i|a)   i|a)  ; inner =
-      (test-comparison  3 (!     a)   <a0)  ; inner >
-      (test-comparison  3 (!   i|a) i|<a0)  ; inner >
-      (test-comparison  2 (!     a)    >a)  ; inner <
-      (test-comparison  2 (!   i|a) i|>a0)  ; inner ><
-      (test-comparison  1 (!   a  )   ><0)  ; inner <>
-      (test-comparison  2 (!   i|a) i|><0)  ; inner ><
-      (test-comparison  2 (!     a)    Uc)  ; inner <
-      (test-comparison  2 (!   i|a)    Uc)  ; inner <
-      (test-comparison  2 (!   <a0)     a)  ; inner <
-      (test-comparison  2 (! i|<a0)   i|a)  ; inner <
-      (test-comparison  2 (!   <a0)    >a)  ; inner <
-      (test-comparison  2 (! i|<a0) i|>a0)  ; inner <
-      (test-comparison  1 (!   <a0)   ><0)  ; inner <>
-      (test-comparison  2 (! i|<a0) i|><0)  ; inner ><
-      (test-comparison  2 (!   <a0)    Uc)  ; inner <
-      (test-comparison  2 (! i|<a0)    Uc)  ; inner <
-      (test-comparison  3 (!    >a)     a)  ; inner >
-      (test-comparison  3 (! i|>a0)   i|a)  ; inner >
-      (test-comparison  3 (!    >a)   <a0)  ; inner >
-      (test-comparison  3 (! i|>a0) i|<a0)  ; inner >
-      (test-comparison  1 (!    >a)   ><0)  ; inner <>
-      (test-comparison  2 (! i|>a0) i|><0)  ; inner ><
-      (test-comparison  2 (!    >a)    Uc)  ; inner <
-      (test-comparison  2 (! i|>a0)    Uc)  ; inner <
-      (test-comparison  1 (!   ><0)     a)  ; inner <>
-      (test-comparison  2 (! i|><0)   i|a)  ; inner ><
-      (test-comparison  1 (!   ><0)   <a0)  ; inner <>
-      (test-comparison  2 (! i|><0) i|<a0)  ; inner ><
-      (test-comparison  1 (!   ><0)    >a)  ; inner <>
-      (test-comparison  2 (! i|><0) i|>a0)  ; inner ><
-      (test-comparison  2 (!   ><0)    Uc)  ; inner <
-      (test-comparison  2 (! i|><0)    Uc)  ; inner <
+      (test-comparison  3 (!   i|a)   i|a) ; inner =
+      (test-comparison  3 (!     a)   <a0) ; inner >
+      (test-comparison  3 (!   i|a) i|<a0) ; inner >
+      (test-comparison  2 (!     a)    >a) ; inner <
+      (test-comparison  2 (!   i|a) i|>a0) ; inner ><
+      (test-comparison  1 (!   a  )   ><0) ; inner <>
+      (test-comparison  2 (!   i|a) i|><0) ; inner ><
+      (test-comparison  2 (!     a)    Uc) ; inner <
+      (test-comparison  2 (!   i|a)    Uc) ; inner <
+      (test-comparison  2 (!   <a0)     a) ; inner <
+      (test-comparison  2 (! i|<a0)   i|a) ; inner <
+      (test-comparison  2 (!   <a0)    >a) ; inner <
+      (test-comparison  2 (! i|<a0) i|>a0) ; inner <
+      (test-comparison  1 (!   <a0)   ><0) ; inner <>
+      (test-comparison  2 (! i|<a0) i|><0) ; inner ><
+      (test-comparison  2 (!   <a0)    Uc) ; inner <
+      (test-comparison  2 (! i|<a0)    Uc) ; inner <
+      (test-comparison  3 (!    >a)     a) ; inner >
+      (test-comparison  3 (! i|>a0)   i|a) ; inner >
+      (test-comparison  3 (!    >a)   <a0) ; inner >
+      (test-comparison  3 (! i|>a0) i|<a0) ; inner >
+      (test-comparison  1 (!    >a)   ><0) ; inner <>
+      (test-comparison  2 (! i|>a0) i|><0) ; inner ><
+      (test-comparison  2 (!    >a)    Uc) ; inner <
+      (test-comparison  2 (! i|>a0)    Uc) ; inner <
+      (test-comparison  1 (!   ><0)     a) ; inner <>
+      (test-comparison  2 (! i|><0)   i|a) ; inner ><
+      (test-comparison  1 (!   ><0)   <a0) ; inner <>
+      (test-comparison  2 (! i|><0) i|<a0) ; inner ><
+      (test-comparison  1 (!   ><0)    >a) ; inner <>
+      (test-comparison  2 (! i|><0) i|>a0) ; inner ><
+      (test-comparison  2 (!   ><0)    Uc) ; inner <
+      (test-comparison  2 (! i|><0)    Uc) ; inner <
     (testing "+ ValueSpec"
       (test-comparison -1 (t/value 1)  (! (t/value 2)))
       (test-comparison  3 (t/value "") (! t/string?))))
@@ -571,9 +571,8 @@
           (test-comparison -1 t/byte?        (& t/number?   t/comparable?)))
         (testing "Final Concrete"
           (test-comparison -1 t/string?      (& t/char-seq? t/comparable?)))
-        ;; TODO fix
-        #_(testing "Extensible Concrete"
-          (test-comparison -1 t/!array-list? (& t/iterable? (t/isa? java.util.RandomAccess))))
+        (testing "Extensible Concrete"
+          (test-comparison -1 a (& t/iterable? (t/isa? java.util.RandomAccess))))
         (testing "Abstract"
           (test-comparison -1 (t/isa? java.util.AbstractMap$SimpleEntry) (& (t/isa? java.util.Map$Entry) (t/isa? java.io.Serializable))))
         (testing "Interface"
@@ -608,27 +607,26 @@
       (testing "#{= ><}"
         (test-comparison  1 i|a            (& i|a i|><0 i|><1))
         (test-comparison  1 t/char-seq?    (& t/char-seq?   t/java-set?))
-        (test-comparison  1 t/char-seq?    (& t/char-seq?   t/java-set? t/!array-list?)))
+        (test-comparison  1 t/char-seq?    (& t/char-seq?   t/java-set? a)))
       (testing "#{= >< <>}") ; <- TODO comparison should be 1
       ;; TODO fix
-      #_(testing "#{= <>}"
-        (test-comparison  1 t/!array-list? (& t/!array-list? t/java-set?)))
+      (testing "#{= <>}"
+        (test-comparison  1 a              (& a t/java-set?)))
       (testing "#{>}"
         (test-comparison  1 i|a            (& i|<a+b i|<a0 i|<a1)))
       (testing "#{> ><}"
         (test-comparison  2 i|a            (& i|<a+b i|<a0 i|><0 i|><1))
-        ;; TODO fix
-        #_(test-comparison  2 t/!array-list? (& (t/isa? javax.management.AttributeList) t/java-set?))
+        (test-comparison  2 a              (& (t/isa? javax.management.AttributeList) t/java-set?))
         (test-comparison  2 t/comparable?  (& (t/isa? java.nio.ByteBuffer) t/java-set?)))
       (testing "#{> >< <>}"
-        (test-comparison  2 i|a            (& i|<a0 i|><0 t/!array-list?)))
+        (test-comparison  2 i|a            (& i|<a0 i|><0 a)))
       (testing "#{> <>}") ; <- TODO comparison should be 1
       (testing "#{><}"
         (test-comparison  2 i|a            (& i|><0 i|><1))
-        (test-comparison  2 t/char-seq?    (& t/java-set? t/!array-list?)))
+        (test-comparison  2 t/char-seq?    (& t/java-set? a)))
       (testing "#{>< <>}") ; <- TODO comparison should be 3
       (testing "#{<>}"
-        (test-comparison  3 t/string?      (& t/!array-list? t/java-set?))))
+        (test-comparison  3 t/string?      (& a t/java-set?))))
     (testing "+ ValueSpec"
       (testing "#{<}"
         (test-comparison -1 (t/value "a")  (& t/char-seq? t/comparable?)))
@@ -647,7 +645,7 @@
     #_(testing "#{< ><}")        ; `><` not possible for `ValueSpec`
     #_(testing "#{< >< <>}")     ; `><` not possible for `ValueSpec`
       (testing "#{< <>}"
-        (test-comparison  3 (t/value "a") (& t/char-seq? t/!array-list?))
+        (test-comparison  3 (t/value "a") (& t/char-seq? a))
         (test-comparison  3 (t/value "a") (& t/char-seq? t/java-set?)))
     #_(testing "#{=}")           ; not possible for `AndSpec`
     #_(testing "#{= >}")         ; not possible for `AndSpec`; `>` not possible for `ValueSpec`
@@ -664,7 +662,7 @@
     #_(testing "#{><}")          ; `><` not possible for `ValueSpec`
     #_(testing "#{>< <>}")       ; `><` not possible for `ValueSpec`
       (testing "#{<>}"
-        (test-comparison  3 (t/value "a") (& t/!array-list? t/java-set?)))))
+        (test-comparison  3 (t/value "a") (& a t/java-set?)))))
   (testing "InferSpec"
     (testing "+ InferSpec")
     (testing "+ Expression")
@@ -722,7 +720,7 @@
         (testing "< , >"
           (test-comparison -1 t/string? t/object?))
         (testing "<>"
-          (test-comparison  3 t/string? t/!array-list?)))
+          (test-comparison  3 t/string? a)))
       (testing "Final Concrete + Abstract")
       (testing "Final Concrete + Interface"
         (testing "< , >"
@@ -732,18 +730,18 @@
       (testing "Extensible Concrete + Extensible Concrete"
         (test-comparison 0 t/object? t/object?)
         (testing "< , >"
-          (test-comparison -1 t/!array-list? t/object?))
+          (test-comparison -1 a t/object?))
         (testing "<>"
-          (test-comparison  3 t/!array-list? t/thread?)))
+          (test-comparison  3 a t/thread?)))
       (testing "Extensible Concrete + Abstract"
         (testing "< , >"
           (test-comparison -1 (t/isa? java.util.AbstractCollection) t/object?)
-          (test-comparison -1 t/!array-list? (t/isa? java.util.AbstractCollection)))
+          (test-comparison -1 a (t/isa? java.util.AbstractCollection)))
         (testing "<>"
           (test-comparison  3 t/thread? (t/isa? java.util.AbstractCollection))
           (test-comparison  3 (t/isa? java.util.AbstractCollection) t/thread?)))
       (testing "Extensible Concrete + Interface"
-        (test-comparison 2 t/!array-list? t/char-seq?))
+        (test-comparison 2 a t/char-seq?))
       (testing "Abstract + Abstract"
         (test-comparison 0 (t/isa? java.util.AbstractCollection) (t/isa? java.util.AbstractCollection))
         (testing "< , >"
@@ -848,8 +846,7 @@
            (| a b ><0 ><1))
       (is= (| (| a b) (| ><0 ><1))
            (| a b ><0 ><1)))
-    ;; TODO fix impl
-    #_(testing "via `not`"
+    (testing "via `not`"
       (is= (| a (! a))
            t/universal-set)
       (is= (| a b (! a))
@@ -962,19 +959,16 @@
              t/empty-set)
         (is= (& a b (! a))
              t/empty-set)
-        ;; TODO fix impl
-        #_(is= (& (| a b) (! a))
+        (is= (& (| a b) (! a))
              b)
-        ;; TODO fix impl
+        ;; TODO fix impls
         #_(is= (& (! a) (| a b))
              b)
-        ;; TODO fix impl
-        #_(is= (& (| a b) (! b) (| b a))
-             b)
+        (is= (& (| a b) (! b) (| b a))
+             a)
         (is= (& (| a b) (! b) (| ><0 b))
              t/empty-set))
-      ;; TODO fix impl
-      #_(is= (& t/primitive? (! t/boolean?))
+      (is= (& t/primitive? (! t/boolean?))
            (| t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)))
     (testing "#{<+ =} -> #{=}"
       (is= (& i|>a+b i|>a0 i|a)
@@ -993,11 +987,10 @@
            [i|<a+b i|<a0 i|><0 i|><1]))))
 
 (deftest test|=
-  ;; TODO fix impl
-  #_(test-comparison 0
-    (| t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)
-    (& (| t/boolean? t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)
-       (! t/boolean?)))
+  ;; Takes an inordinately long time to do `test-comparison 0 ...` even without instrumentation
+  (is= (| t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)
+       (& (| t/boolean? t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)
+          (! t/boolean?)))
   (test-comparison 0 t/any? t/universal-set)
   (testing "universal class(-set) identity"
     (is (t/= t/val? (& t/any? t/val?)))))

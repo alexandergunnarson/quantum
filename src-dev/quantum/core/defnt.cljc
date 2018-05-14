@@ -105,13 +105,13 @@
 (defns class>simplest-class
   "This ensures that special overloads are not created for non-primitive subclasses
    of java.lang.Object (e.g. String, etc.)."
-  [c t/class? > t/class?]
+  [c (? t/class?) > (? t/class?)]
   (if (t/primitive-class? c)
       c
       (or (tcore/boxed->unboxed c) java.lang.Object))))
 
 #?(:clj
-(defns class>most-primitive-class [c t/class?, nilable? t/boolean? > t/class?]
+(defns class>most-primitive-class [c (? t/class?), nilable? t/boolean? > (? t/class?)]
   (if nilable? c (or (tcore/boxed->unboxed c) c))))
 
 #?(:clj
@@ -227,26 +227,28 @@
   ([v]       (->WatchableMutable v nil))
   ([v watch] (->WatchableMutable v watch)))
 
+(s/def ::env (s/map-of t/symbol? t/any?))
+
 (declare analyze*)
 
-(defn analyze-non-map-seqable
+(defns- analyze-non-map-seqable
   "Analyzes a non-map seqable."
   {:params-doc
     '{merge-types-fn "2-arity fn that merges two types (or sets of types).
                       The first argument is the current deduced type of the
                       overall expression; the second is the deduced type of
                       the current subexpression."}}
-  [env form empty-form rf]
+  [env ::env, form _, empty-form _, rf _]
   (prl! env form empty-form)
   (->> form
        (reducei (fn [accum form' i] (rf accum (analyze* (:env accum) form') i))
          {:env env :form (transient empty-form)})
        (persistent!-and-add-file-context form)))
 
-(defn analyze-map
+(defns- analyze-map
   {:todo #{"If the map is bound to a variable, preserve type info for it such that lookups
             can start out with a guarantee of a certain type."}}
-  [env form]
+  [env ::env, form _]
   (TODO "analyze-map")
   #_(->> form
        (reduce-kv (fn [{env' :env forms :form} form'k form'v]
@@ -258,7 +260,7 @@
          (->expr-info {:env env :form (transient {})}))
        (persistent!-and-add-file-context form)))
 
-(defn analyze-seq|do [env form body]
+(defns- analyze-seq|do [env ::env, form _, body _]
   (prl! env body)
   (if (empty? body)
       (ast/do {:env  env
@@ -276,7 +278,7 @@
                  :body (>vec body)
                  :spec (:spec expr)}))))
 
-(defn analyze-seq|let*|bindings [env bindings]
+(defns analyze-seq|let*|bindings [env ::env, bindings _]
   (TODO "`let*|bindings` analysis")
   #_(->> bindings
        (partition-all+ 2)
@@ -290,7 +292,7 @@
          (->expr-info {:env env :form (transient [])}))
        (persistent!-and-add-file-context bindings)))
 
-(defn analyze-seq|let* [env [bindings & body]]
+(defns analyze-seq|let* [env ::env, [bindings _ & body _] _]
   (TODO "`let*` analysis")
   #_(let [{env' :env bindings' :form}
           (analyze-seq|let*|bindings env bindings)
@@ -301,7 +303,7 @@
                   :type-info type-info'})))
 
 (defns ?resolve-with-env
-  [sym t/symbol?, env _]
+  [sym t/symbol?, env ::env]
   (let [local (c/get env sym)]
     (if (some? local)
         (if (ast/unbound? local)
@@ -381,11 +383,11 @@
         t/double?
       nil))))
 
-(defn analyze-seq|dot|method-call
+(defns- analyze-seq|dot|method-call
   "A note will be made of what methods match the argument types.
    If only one method is found, that is noted too. If no matching method is found, an
    exception is thrown."
-  [env form target target-class #_class? static? #_boolean? method-form #_unqualified-symbol? args-forms #_(seq-of form?)]
+  [env ::env, form _, target _, target-class t/class?, static? t/boolean?, method-form simple-symbol?, args-forms _ #_(seq-of form?)]
   ;; TODO cache spec by method
   (if-not-let [methods-for-name (-> target-class class->methods|with-cache (c/get (name method-form)))]
     (if (empty? args-forms)
@@ -430,8 +432,8 @@
                     #_(s/validate (-> with-ret-spec :args first :spec) #(t/>= % (t/numerically ?cast-spec))))]
             with-ret-spec))))))
 
-(defns analyze-seq|dot|field-access
-  [env _, form _, target _, field-form _ #_t/unqualified-symbol?, field Field]
+(defns- analyze-seq|dot|field-access
+  [env ::env, form _, target _, field-form simple-symbol?, field (t/isa? Field)]
   (ast/field-access
     {:env    env
      :form   form
@@ -449,7 +451,7 @@
         (err! "Found more than one class" cs))))
 
 ;; TODO spec these arguments; e.g. check that ?method||field, if present, is an unqualified symbol
-(defn analyze-seq|dot [env form [target-form ?method-or-field & ?args]]
+(defns- analyze-seq|dot [env ::env, form _, [target-form _, ?method-or-field _ & ?args _] _]
   {:pre  [(prl! env form target-form ?method-or-field ?args)]
    :post [(prl! %)]}
   (let [target          (analyze* #_?resolve-with-env env target-form)
@@ -484,10 +486,10 @@
            (t/> spec t/false?)) nil ; representing "unknown"
        true))
 
-(defn analyze-seq|if
+(defns- analyze-seq|if
   "If `*conditional-branch-pruning?*` is falsey, the dead branch's original form will be
    retained, but it will not be type-analyzed."
-  [env form [pred-form true-form false-form :as body]]
+  [env ::env, form _, [pred-form _, true-form _, false-form _ :as body] _]
   {:post [(prl! %)]}
   (if (-> body count (not= 3))
       (err! "`if` accepts exactly 3 arguments: one predicate test and two branches; received" {:body body})
@@ -514,11 +516,11 @@
                                                 (assoc :form (list 'if pred-form true-form          (:form @false-expr))))))
           nil       @whole-expr))))
 
-(defn analyze-seq|quote [env form body]
+(defns- analyze-seq|quote [env ::env, form _, body _]
   {:post [(prl! %)]}
   (ast/quoted env form (tcore/most-primitive-class-of body)))
 
-(defn analyze-seq|new [env form [c|form #_class? & args :as body]]
+(defns- analyze-seq|new [env ::env, form _ [c|form _ #_t/class? & args _ :as body] _]
   {:pre [(prl! env form body)]}
   (let [c|analyzed (analyze* env c|form)]
     (if-not (and (-> c|analyzed :spec t/value-spec?)
@@ -532,7 +534,7 @@
                              :args  args|analyzed
                              :spec  (t/isa? c)})))))
 
-(defn analyze-seq|throw [env form [arg :as body]]
+(defns- analyze-seq|throw [env ::env, form _ [arg _ :as body] _]
   {:pre [(prl! env form body)]}
   (if (-> body count (not= 1))
       (err! "Must supply exactly one input to `throw`; supplied" {:body body})
@@ -546,10 +548,10 @@
                            ;; `t/none?` because nothing is actually returned
                            :spec t/none?})))))
 
-(defn analyze-seq*
+(defns- analyze-seq*
   "Analyze a seq after it has been macro-expanded.
    The ->`form` is post- incremental macroexpansion."
-  [env [caller|form & body :as form]]
+  [env ::env, [caller|form _ & body _ :as form] _]
   (ifs (special-symbols caller|form)
        (case caller|form
          do       (analyze-seq|do    env form body)
@@ -605,7 +607,7 @@
                        :args   args
                        :spec   spec}))))))
 
-(defn analyze-seq [env form]
+(defns- analyze-seq [env ::env, form _]
   {:post [(prl! %)]}
   (prl! form)
   (let [expanded-form (macroexpand form)]
@@ -613,7 +615,7 @@
         (analyze-seq* env expanded-form)
         (ast/macro-call {:env env :form form :expanded (analyze-seq* env expanded-form)}))))
 
-(defn analyze-symbol [env form]
+(defns- analyze-symbol [env _, form t/symbol?]
   {:post [(prl! %)]}
   (let [resolved (?resolve-with-env form env)]
     (if-not resolved
@@ -631,7 +633,7 @@
                t/any?
              (TODO "Unsure of what to do in this case" (kw-map env form resolved)))))))
 
-(defn analyze* [env form]
+(defns- analyze* [env ::env, form _]
   (prl! env form)
   (when (> (swap! *analyze-i inc) 100) (throw (ex-info "Stack too deep" {:form form})))
   (ifs (symbol? form)
@@ -647,33 +649,33 @@
          (analyze-seq env form)
        (throw (ex-info "Unrecognized form" {:form form}))))
 
-(defn analyze
-  ([body] (analyze {} body))
-  ([env body]
+(defns analyze
+  ([body _] (analyze {} body))
+  ([env ::env, body _]
     (reset! *analyze-i 0)
     (analyze* env body)))
 
 ;; ===== (DE)FNT ===== ;;
 
 #_(s/def :fnt|overload/arglist-code (t/vec-of arg?))
-#_(s/def :fnt|overload/args-classes (t/vec-of t/class?))
-(s/def :fnt|overload/positional-args-ct integer?)
-(s/def :fnt|overload/variadic?          boolean?)
 
  #_"Must evaluate to an `s/fspec`"
 (s/def :fnt|overload/spec               :quantum.core.specs/code)
 
 #_(s/def :fnt|overload/body-codelist (t/seq-of :quantum.core.specs/code))
-(s/def :fnt/overload
-  (s/keys :req-un [:fnt|overload/arg-classes ; (t/vector-of t/class?)
-                   :fnt|overload/arg-specs
-                   :fnt|overload/arglist-code|fn|hinted
-                   :fnt|overload/arglist-code|reify|unhinted
-                   :fnt|overload/body-form
-                   :fnt|overload/positional-args-ct
-                   :fnt|overload/out-spec
-                   :fnt|overload/out-class
-                   :fnt|overload/variadic?]))
+
+;; Internal
+(s/def ::fnt|overload
+  (s/kv {:arg-classes                 (s/vec-of t/class?)
+         :arg-specs                   t/any?
+         :arglist-code|fn|hinted      t/any?
+         :arglist-code|reify|unhinted t/any?
+         :body-form                   t/any?
+         :positional-args-ct          (s/and t/integer? #(>= % 0))
+         :out-spec                    t/spec?
+         :out-class                   (? t/class?)
+         ;; When present, varargs are considered to be of class Object
+         :variadic?                   t/boolean?}))
 
 (s/def ::reify|overload
   (s/keys :req-un [:quantum.core.specs/interface
@@ -710,13 +712,23 @@
 
 #?(:clj
 (defns arg-specs>arg-classes-seq|primitivized
+  "'primitivized' meaning given an arglist whose specs are `[t/any?]` this will output:
+   [[java.lang.Object]
+    [boolean]
+    [byte]
+    [short]
+    [char]
+    [int]
+    [long]
+    [float]
+    [double]]
+   which includes all primitive subclasses of the spec."
   [arg-specs (s/seq-of t/spec?) > (s/seq-of (s/vec-of t/class?))]
   (->> arg-specs
-       (c/lmap (fn [spec]
+       (c/lmap (fn [spec #_t/spec?]
                  (if (-> spec meta :ref?)
                      (-> spec t/spec>classes (disj nil) seq)
                      (let [cs (spec>most-primitive-classes spec)]
-
                        (let [base-classes (->> cs (c/map+ class>simplest-class) >set)
                              base-classes (cond-> base-classes (contains? cs nil) (conj java.lang.Object))]
                          (->> cs (c/map+ tcore/class>prim-subclasses)
@@ -726,13 +738,16 @@
        (apply combo/cartesian-product)
        (c/lmap >vec))))
 
+(s/def ::lang #{:clj :cljs})
+
 #?(:clj
-(defn- >fnt|overload
-  [{:keys [arg-bindings arg-classes|pre-analyze arg-specs|pre-analyze|base args
-           body-codelist|pre-analyze lang post-form varargs varargs-binding]}]
+(defns- >fnt|overload
+  [{:keys [arg-bindings _, arg-classes|pre-analyze _, arg-specs|pre-analyze|base _, args _
+           body-codelist|pre-analyze _, lang ::lang, post-form _, varargs _, varargs-binding _]} _
+   > ::fnt|overload]
   (let [arg-specs|pre-analyze
           (c/mergev-with
-            (fn [_ spec c #_t/class?]
+            (fn [_ spec #_t/spec? c #_t/class?]
               (cond-> spec (t/primitive-class? c) (t/and c)))
             arg-specs|pre-analyze|base arg-classes|pre-analyze)
         env         (->> (zipmap arg-bindings arg-specs|pre-analyze)
@@ -754,10 +769,10 @@
         out-spec (if post-spec
                      (if post-spec|runtime?
                          (case (t/compare post-spec (:spec analyzed))
-                           -1   post-spec
-                            1   (:spec analyzed)
-                            0   post-spec
-                            nil (err! "Body and output spec are unrelated" {:body analyzed :output-spec post-spec}))
+                           -1     post-spec
+                            1     (:spec analyzed)
+                            0     post-spec
+                            (2 3) (err! "Body and output spec comparison not handled" {:body analyzed :output-spec post-spec}))
                          (if (t/<= (:spec analyzed) post-spec)
                              (:spec analyzed)
                              (err! "Body does not match output spec" {:body analyzed :output-spec post-spec})))
@@ -777,7 +792,6 @@
        :positional-args-ct          (count args)
        :out-spec                    out-spec
        :out-class                   (out-spec>class out-spec)
-       ;; when present, varargs are considered to be of class Object
        :variadic?                   (boolean varargs)})))
 
 #?(:clj ; really, reserve for metalanguage
@@ -791,20 +805,23 @@
    we decide instead to evaluate specs in languages in which the metalanguage (compiler language) is the same as
    the object language (e.g. Clojure), and symbolically analyze specs in the rest (e.g. vanilla ClojureScript),
    deferring code analyzed as functions to be enforced at runtime."
-  [{:as in {:keys [args varargs] pre-form :pre post-form :post} ::fnt|arglist body-codelist|pre-analyze :body}
-   {:as opts :keys [lang symbolic-analysis?]}]
+  [{:as in {:keys [args varargs] pre-form :pre post-form :post} :arglist body-codelist|pre-analyze :body}
+   {:as opts :keys [lang #_::lang symbolic-analysis? #_t/boolean?]}]
   (if symbolic-analysis?
       (err! "Symbolic analysis not supported yet")
       (let [_ (when pre-form (TODO "Need to handle pre"))
             varargs-binding (when varargs
-                              ;; TODO this validation is purely temporary until destructuring is supported
-                              (s/validate (:arg-binding varargs) simple-symbol?))
-            arg-bindings (mapv :arg-binding args)
-            ;; TODO this validation is purely temporary until destructuring is supported
-            _ (s/validate arg-bindings (fnl fn-and simple-symbol?))
+                              ;; TODO this assertion is purely temporary until destructuring is supported
+                              (assert (-> varargs :binding-form first (= :sym))))
+            arg-bindings
+              (->> args
+                   (mapv (fn [{[kind binding-] :binding-form}]
+                           ;; TODO this assertion is purely temporary until destructuring is supported
+                           (assert kind :sym)
+                           binding-)))
             arg-specs|pre-analyze|base
               (->> args
-                   (mapv (fn [{[kind spec] ::fnt|arg-spec}]
+                   (mapv (fn [{[kind #_#{:any :infer :spec}, spec #_t/form?] :spec}]
                            (case kind :any   t/any?
                                       :infer t/?
                                       :spec  (-> spec eval t/>spec)))))
@@ -829,11 +846,11 @@
             (err! "Class cannot contain pattern" {:class c :pattern illegal-pattern})
             (-> c >name (str/replace "." "|"))))))
 
-(defn fnt-overload>interface-sym [args-classes out-class]
+(defns fnt-overload>interface-sym [args-classes (s/seq-of t/class?), out-class t/class? > t/symbol?]
   (>symbol (str (->> args-classes (lmap class>interface-part-name) (str/join "+"))
                 ">" (class>interface-part-name out-class))))
 
-(defn fnt-overload>interface [args-classes out-class]
+(defns fnt-overload>interface [args-classes _, out-class t/class?]
   (let [interface-sym     (fnt-overload>interface-sym args-classes out-class)
         hinted-method-sym (ufth/with-type-hint fnt-method-sym (ufth/>interface-method-tag out-class))
         hinted-args       (ufth/hint-arglist-with
@@ -844,7 +861,7 @@
 #?(:clj
 (defns fnt|overload>reify-overload
   [{:as overload
-    :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, out-class _]} :fnt/overload
+    :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, out-class t/class?]} :fnt/overload
    > (s/seq-of ::reify|overload)]
   (prl! overload)
   (let [interface-k {:out out-class :in arg-classes}
@@ -868,7 +885,7 @@
 (defns fnt|overload-group>reify
   [{:keys [overload-group :fnt/overload-group, i t/integer?, fn|name :quantum.core.specs/fn|name]} _]
   (let [reify-overloads (->> (concat [(:unprimitivized overload-group)]
-                                     (:primitivized   overload-group))
+                                      (:primitivized   overload-group))
                              (c/map fnt|overload>reify-overload))]
     `(~'def ~(>symbol (str fn|name "|__" i))
        (reify ~@(->> reify-overloads
@@ -878,7 +895,7 @@
                                   ~arglist-code ~body-form)]))
                      lcat))))))
 
-(defn >extend-protocol|code [{:keys [protocol|name]}]
+(defns >extend-protocol|code [{:keys [protocol|name t/symbol?]} _]
   `(extend-protocol ~protocol|name))
 
 (defns >defprotocol|code
@@ -978,7 +995,10 @@
 
 (defns fnt|overloads>protocols
   [{:keys [overloads (s/and t/indexed? (s/seq-of :fnt/overload))
-           fn|name   :quantum.core.specs/fn|name]} _]
+           fn|name   :quantum.core.specs/fn|name]} _
+   > (s/kv {:defprotocol      t/any?
+            :extend-protocols t/any?
+            :defn             t/any?})]
   (when (->> overloads (seq-or (fn-> :positional-args-ct (> 2))))
     (TODO "Doesn't yet handle protocol creation for arglist counts of > 2"))
   (when (->> overloads (seq-or :variadic?))
@@ -1004,13 +1024,13 @@
   ;; `String` is final, so they're mutually exclusive
   clojure.lang.Named (name|gen [x] (.invoke name|gen|__1 x))))
 
-(defn gen-register-spec
+(defns gen-register-spec
   "Registers in the map of qualified symbol to input spec, to output spec
 
    Example output:
    (swap! ... assoc `abcde
      (fn [args] (case (count args) 1 <out-spec>)))"
-  [{:keys [fn|name arg-ct->spec variadic-overload]}]
+  [{:keys [fn|name :quantum.core.specs/fn|name, arg-ct->spec _, variadic-overload _]} _]
   (unify-gensyms
    `(swap! *fn->spec assoc '~(qualify fn|name)
       (xp/>expr
@@ -1021,7 +1041,7 @@
                                 (err! "Arg count not enough for variadic overload"))])))))
     true))
 
-(defn fnt|code [kind lang args]
+(defns fnt|code [kind #{:fn :defn}, lang ::lang, args _]
   (prl! kind lang args)
   (let [{:keys [:quantum.core.specs/fn|name overloads :quantum.core.specs/meta] :as args'}
           (s/validate args (case kind :defn ::defnt :fn ::fnt))
@@ -1035,7 +1055,8 @@
                     fn|name)
         fnt|overload-groups (->> overloads (mapv #(fnt|overload-data>overload-group % {:lang lang})))
         ;; only one variadic arg allowed
-        _ (s/validate fnt|overload-groups (fn->> (c/lmap :unprimitivized) (c/lfilter :variadic?) count (<- (<= 1))))
+        _ (s/validate fnt|overload-groups
+                      (fn->> (c/lmap :unprimitivized) (c/lfilter :variadic?) count (<- (<= 1))))
         arg-ct->spec (->> fnt|overload-groups
                           (c/map+     :unprimitivized)
                           (remove+    :variadic?)
@@ -1075,8 +1096,5 @@
                             ~@fn-codelist))]
     code))
 
-(defmacro fnt [& args]
-  (fnt|code :fn (ufeval/env-lang) args))
-
-(defmacro defnt [& args]
-  (fnt|code :defn (ufeval/env-lang) args))
+#?(:clj (defmacro fnt   [& args] (fnt|code :fn   (ufeval/env-lang) args)))
+#?(:clj (defmacro defnt [& args] (fnt|code :defn (ufeval/env-lang) args)))
