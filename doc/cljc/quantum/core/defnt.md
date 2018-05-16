@@ -228,3 +228,56 @@ Output constraints:
 
 Unlike most static languages, a `nil` value is not considered as having a type
 except that of nil.
+
+## Why type inference is not a great idea
+
+Take the below code:
+
+```clojure
+(defnt transduce
+  ([      f ?,         xs ?] (transduce identity f     xs))
+  ([xf ?, f ?,         xs ?] (transduce xf       f (f) xs))
+  ([xf ?, f ?, init ?, xs ?]
+    (let [f' (xf f)] (f' (reduce f' init xs)))))
+```
+
+- For the `f` in the 1-arity overload:
+  - Inferred from `(transduce identity f xs)`
+  - The `f` in the 3-arity overload is then inferred:
+    - We know that `xf` can be called on `f`, so `xf` must be at least a 1-arity `t/callable?` on `f`
+    - We know that `f'` can be called on `(reduce f' init xs)`, so `xf` must be at least a 1-arity `t/callable?` on `f`
+    - Other than that we don't really have any information about `f`
+- For the `f` in the 2-arity overload:
+  - We know that `f` can be called with no arguments, so it must be at least a 0-arity `t/callable?`
+  - We know that it can be passed to `(transduce xf f (f) xs)`
+  - We tried to infer the `f` in the 3-arity but it can't be known
+
+It is infeasible to do inferences in the general case for the following reasons:
+- The code will be complex and greatly increase time it takes to get any value out of `defnt`
+- The code will likely have high computational complexity even if some impressive algorithm comes out of it
+- Even if the code could do it instantly, it would still be a maintenance issue to try to mentally work out for each inference what that ends up being. Labels help quite a lot.
+
+I think the best approach is not inference, but rather being able to at least do:
+- Input/output specs that rely on the input/output specs of other spec'ed fns
+- Conditional specs
+
+Thus the code turns into:
+*(TODO: conditionally optional arities etc.)*
+
+```clojure
+(t/def rf? "Reducing function"
+  (t/fn [    {:doc "seed arity"}]
+        [_   {:doc "completing arity"}]
+        [_ _ {:doc "reducing arity"}]))
+
+(t/def xf? "Transforming function"
+  (t/fn [rf? > rf?]))
+
+(defnt transduce
+  ([        f rf?,        xs t/reducible?] (transduce identity f     xs))
+  ([xf xf?, f rf?,        xs t/reducible?] (transduce xf       f (f) xs))
+  ([xf xf?, f rf?, init _ xs t/reducible?]
+    (let [f' (xf f)] (f' (reduce f' init xs)))))
+```
+
+which is much, much nicer because it's much better documented, much more clear what each input and output does, and just overall much easier to follow and reason about, without introducing a meaningful increase in code size, and certainly without adding unnecessary information.
