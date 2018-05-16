@@ -1,6 +1,7 @@
 (ns quantum.test.core.defnt
   (:require
-    [clojure.core :as core]
+    [clojure.core    :as core]
+    [criterium.core  :as bench]
     [quantum.core.fn :as fn
       :refer [fn->]]
     [quantum.core.logic
@@ -8,20 +9,20 @@
     [quantum.core.defnt        :as this
       :refer [!ref analyze defnt]]
     [quantum.core.macros.type-hint :as th]
-    [quantum.core.spec         :as s]
-    [quantum.core.test         :as test
-      :refer [deftest testing is is= throws]]
     [quantum.core.type.defs    :as tdef]
     [quantum.untyped.core.analyze.ast  :as ast]
     [quantum.untyped.core.analyze.expr :as xp]
+    [quantum.untyped.core.core
+      :refer [code=]]
     [quantum.untyped.core.form
       :refer [$]]
     [quantum.untyped.core.form.type-hint
       :refer [tag]]
-    [quantum.untyped.core.core
-      :refer [code=]]
+    [quantum.untyped.core.spec         :as s]
     [quantum.untyped.core.string
       :refer [istr]]
+    [quantum.untyped.core.test         :as test
+      :refer [deftest testing is is= throws]]
     [quantum.untyped.core.type :as t])
 #?(:clj
   (:import
@@ -604,7 +605,73 @@
 
 
 
+;; ===== Dynamicity ===== ;;
 
+(definterface Abcde (^long abcdemethod [^int a ^byte b]))
+(def ^Abcde abcde (reify Abcde (abcdemethod [this a b] (inc a))))
+(defn fghij [] (.abcdemethod abcde 1 5))
+(is= (fghij) 2)
+(def ^Abcde abcde (reify Abcde (abcdemethod [this a b] (+ a 2))))
+(is= (fghij) 3)
+(def abcde nil) ; To simulate clearing of unnecessary/invalid code
+(throws NullPointerException (fghij))
+
+;; This approach then benefits from the optional staticizing of vars in 1.8
+
+;; ===== Performance ===== ;;
+
+;; As we can see, there is definitely benefit (50% performance increase in this case) to be gained
+;; from primitive overloads, but there is no apparent benefit to pre-casting in the reify for
+;; reference types.
+;; This is actually nice because we don't have to generate as much interface code.
+
+(definterface PrimitiveIntTest (^long invoke [^int a]))
+(def ^PrimitiveIntTest primitive-int-test|reify
+  (reify PrimitiveIntTest (invoke [this a] (Numeric/add a 1))))
+(defn primitive-int-test|primitive-fn [^long a] (Numeric/add a 1))
+(defn primitive-int-test|fn [a] (Numeric/add (long a) 1))
+
+(let [a (int 1)
+      ^PrimitiveIntTest primitive-int-test|reify|direct @#'primitive-int-test|reify
+      primitive-int-test|primitive-fn|direct @#'primitive-int-test|primitive-fn
+      primitive-int-test|fn|direct @#'primitive-int-test|fn]
+  ;; ~3.33 ns
+  (bench/quick-bench (.invoke primitive-int-test|reify|direct a))
+  ;; ~7.24 ns
+  (bench/quick-bench (.invoke ^PrimitiveIntTest @#'primitive-int-test|reify a))
+  ;; ~5.00 ns
+  (bench/quick-bench (primitive-int-test|primitive-fn|direct a))
+  ;; ~7.93 ns
+  (bench/quick-bench (@#'primitive-int-test|primitive-fn a))
+  ;; ~4.99 ns
+  (bench/quick-bench (primitive-int-test|fn|direct a))
+  ;; ~7.98 ns
+  (bench/quick-bench (@#'primitive-int-test|fn a)))
+
+(definterface String>Object|Test (^Object invoke [^String a]))
+(def ^String>Object|Test string-test|reify
+  (reify String>Object|Test (invoke [this a] (.length a))))
+(definterface Object>Object|Test (^Object invoke [^Object a]))
+(def ^Object>Object|Test string-test|generic-reify
+  (reify Object>Object|Test (invoke [this a] (let [^String a a] (.length a)))))
+(defn string-test|fn [^String a] (.length a))
+
+(let [a ""
+      ^String>Object|Test string-test|reify|direct @#'string-test|reify
+      ^Object>Object|Test string-test|generic-reify|direct @#'string-test|generic-reify
+      string-test|fn|direct @#'string-test|fn]
+  ;; ~4.09 ns
+  (bench/quick-bench (.invoke string-test|reify|direct a))
+  ;; ~7.60 ns
+  (bench/quick-bench (.invoke ^String>Object|Test @#'string-test|reify a))
+  ;; ~3.94 ns
+  (bench/quick-bench (.invoke string-test|generic-reify|direct a))
+  ;; ~7.61 ns
+  (bench/quick-bench (.invoke ^Object>Object|Test @#'string-test|generic-reify a))
+  ;; ~3.94 ns
+  (bench/quick-bench (string-test|fn|direct a))
+  ;; ~7.55 ns
+  (bench/quick-bench (@#'string-test|fn a)))
 
 ;; ============== Taken from untyped tests; should be modified in lock step =============== ;;
 

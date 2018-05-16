@@ -76,24 +76,31 @@
 
 #_(:clj (ns-unmap (find-ns 'quantum.core.defnt) 'reformat-string))
 
-;; TODO look at https://github.com/clojure/core.typed/blob/master/module-rt/src/main/clojure/clojure/core/typed/
+#_"
+- With `defnt`, protocols and interfaces aren't needed. You can just create `t/fn`s that you can
+  then conform your fns to.
+- `dotyped`, `defnt`, and `fnt` create typed contexts in which their internal forms are analyzed
+  and overloads are resolved.
+- `defnt` is intended to catch many runtime errors at compile time, but cannot catch all of them;
+  types will very often have to be validated at runtime.
 
-;; Apparently I independently came up with an algorithm that is essentially Hindley-Milner (having not seen it before I implemented it)...
-;; - `dotyped`, `defnt`, and `fnt` create typed contexts in which their internal forms are analyzed
-;; and overloads are resolved.
-;; - When a function with type overloads is referenced outside of a typed context, then the
-;; overload resolution will be done via protocol dispatch unless the function's overloads only
-;; differ by arity. In either case, runtime type checks are required.
-;; - Even if the `defnt` is redefined, you won't have interface problems.
-
-;; Any `defnt` argument, if it requires a non-nilable primitive-like value, will be marked as a primitive.
-;; If nilable, it will be boxed.
-;; The same thing goes for return values.
-;; All other cases of primitiveness fall out of these two.
-
-;; `defnt` is meant to enforce syntactic correctness.
-;; It is intended to catch many runtime errors at compile time, but cannot catch
-;; all of them; specs will very often have to be validated at runtime.
+[ ] Runtime dispatch
+    [—] Protocol generation
+        - For now we won't do it because we can very often find the correct overload at compile
+          time. For now, worst case it'll be a linear check of the specs, `cond`-style.
+        - It will be left as an optimization.
+[ ] Interface generation
+    - Even if the `defnt` is redefined, you won't have interface problems.
+[ ] Reify generation
+[ ] Dispatch
+    - Any argument, if it requires a non-nilable primitive-like value, will be marked as a primitive.
+    - If nilable, will it be boxed or will there be one overload for nil and one for primitive?
+    - When a `fnt` with type overloads is referenced outside of a typed context, then the overload
+      resolution will be done via Runtime Dispatch.
+[ ] Types yielding generative specs
+[—] Types using the clojure.spec interface
+    - Not yet; wait for it to come out of alpha
+"
 
 ; TODO associative sequence over top of a vector (so it'll display like a seq but behave like a vec)
 

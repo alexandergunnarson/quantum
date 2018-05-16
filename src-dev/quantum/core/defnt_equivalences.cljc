@@ -315,7 +315,7 @@
 ;; auto-upcasts to long or double (because 64-bit) unless you tell it otherwise
 ;; will error if not all return values can be safely converted to the return spec
 (macroexpand '
-(defnt #_:inline >int* > int?
+(defnt #_:inline >int* > t/int?
   ([x (t/- t/primitive? t/boolean?)] (Primitive/uncheckedIntCast x))
   ([x (t/ref (t/isa? Number))] (.intValue x)))
 )
@@ -678,7 +678,7 @@
 ;; ----- expanded code ----- ;;
 
 #?(:clj
-`(do (swap! fn->spec assoc #'seq
+`(do (assoc-meta! #'seq :type
        (t/fn > (t/? (t/isa? ISeq))
          [t/nil?]
          [t/array?]
@@ -688,44 +688,78 @@
          [t/char-seq?]
          [t/java-map?]))
 
+     ;; Each of these `(def ... (reify ...))`s will keep their label (`__2__0` or whatever) as long
+     ;; as the original type of the `reify` is `t/=` to the new type of that reify
+     ;; If a redefined `defnt` doesn't have that spec then the previous reify is uninterned and made
+     ;; unavailable
+     ;; That way, according to the dynamicity tests in `quantum.test.core.defnt`, we can redefine
+     ;; implementations at will as long as the specs don't change
      ~(case-env
-        :clj  `(do ;; `nil?`
-                   (def seq|__0    (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'xs] nil)))
-                   ;; `array?`
-                   (def seq|__1__0 (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'xs] (ArraySeq/createFromObject xs))))
-                   ...
-                   ;; `ASeq`
-                   (def seq|__2    (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'xs] xs)))
-                   ;; `LazySeq`
-                   (def seq|__3__0 (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'xs] (.seq ^LazySeq xs))))
-                   ;; `Seqable`
-                   (def seq|__3__1 (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'xs] (.seq ^Seqable xs))))
-                   ;; `Iterable`
-                   (def seq|__4    (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
-                                                              (clojure.lang.RT/chunkIteratorSeq (.iterator ^Iterator xs)))))
-                   ;; `CharSequence`
-                   (def seq|__5    (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'xs] (StringSeq/create ^CharSequence xs))))
-                   ;; `Map`
-                   (def seq|__6    (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'xs] (seq (.entrySet ^Map xs)))))
+        :clj
+          `(do ;; `nil?`
+               (def ^Object>Object seq|__0__0
+                 (reify Object>Object
+                   (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
+                     nil)))
+               ;; `array?`
+               (def ^Object>Object seq|__1__0
+                 (reify Object>Object
+                   (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
+                     (ArraySeq/createFromObject xs))))
+               ...
+               ;; `(t/isa? ASeq)`
+               (def ^Object>Object seq|__2__0
+                 (reify Object>Object
+                   (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
+                     (let [^ASeq xs xs] xs))))
+               ;; `(t/or (t/isa? LazySeq) (t/isa? Seqable))` : `(t/isa? LazySeq)`
+               (def ^Object>Object seq|__3__0
+                 (reify Object>Object
+                   (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
+                     (let [^LazySeq xs xs] (.seq xs)))))
+               ;; `(t/or (t/isa? LazySeq) (t/isa? Seqable))` : `(t/isa? Seqable)`
+               (def ^Object>Object seq|__3__1
+                 (reify Object>Object
+                   (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
+                     (let [^Seqable xs xs] (.seq xs)))))
+               ;; `t/iterable?`
+               (def ^Object>Object seq|__4__0
+                 (reify Object>Object
+                   (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
+                     (let [^Iterable xs xs] (clojure.lang.RT/chunkIteratorSeq (.iterator xs))))))
+               ;; `t/char-seq?`
+               (def ^Object>Object seq|__5__0
+                 (reify Object>Object
+                   (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
+                     (let [^CharSequence xs xs] (StringSeq/create xs)))))
+               ;; `t/java-map?`
+               (def ^Object>Object seq|__6
+                 (reify Object>Object
+                   (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
+                     ;; This is after expansion; it's the first one that matches the overload
+                     ;; If no overload is found it'll have to be dispatched at runtime (protocol or
+                     ;; equivalent) and potentially a configurable warning can be emitted
+                     (let [^Map xs xs] (.invoke seq|__4__0 (.entrySet xs))))))
 
-                   (defprotocol seq__Protocol
-                     (seq [a0]))
-                   (extend-protocol seq__Protocol
-                     ;; `array?`
-                     ...
-                     ASeq    (seq [^ASeq    a0] (.invoke seq|__2 a0))
-                     LazySeq (seq [^LazySeq a0] (.invoke seq|__3__0 a0))
-                     Object  (seq [a0]
-                               ;; these are sequential dispatch because none of these are concrete or abstract classes
-                               ;; (most are interfaces etc.)
-                               (ifs (nil? a0)                   (.invoke seq|__0 a0)
-                                    (instance? ASeq         a0) (.invoke seq|__2 a0)
-                                    (instance? Seqable      a0) (.invoke seq|__3__1 a0)
-                                    (instance? Iterable     a0) (.invoke seq|__4 a0)
-                                    (instance? CharSequence a0) (.invoke seq|__5 a0)
-                                    (instance? Map          a0) (.invoke seq|__6 a0)
-                                    (unsupported! `seq a0)))))
-        :cljs `(do ...))))
+               (defprotocol seq__Protocol
+                 (seq [a0]))
+               (extend-protocol seq__Protocol
+                 ;; `array?`
+                 ...
+                 ASeq    (seq [^ASeq    a0] (.invoke seq|__2 a0))
+                 LazySeq (seq [^LazySeq a0] (.invoke seq|__3__0 a0))
+                 Object  (seq [a0]
+                           ;; these are sequential dispatch because none of these are concrete or abstract classes
+                           ;; (most are interfaces etc.)
+                           (ifs (nil? a0)                   (.invoke seq|__0 a0)
+                                (instance? ASeq         a0) (.invoke seq|__2 a0)
+                                (instance? Seqable      a0) (.invoke seq|__3__1 a0)
+                                (instance? Iterable     a0) (.invoke seq|__4 a0)
+                                (instance? CharSequence a0) (.invoke seq|__5 a0)
+                                (instance? Map          a0) (.invoke seq|__6 a0)
+                                (unsupported! `seq a0)))))
+        :cljs
+          `(do ...))))
 
 ;; =====|=====|=====|=====|===== ;;
 
