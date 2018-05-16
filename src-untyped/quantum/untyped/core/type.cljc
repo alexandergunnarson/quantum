@@ -666,19 +666,6 @@
                                  (->> spec-or-arity-specs (map (TODO)))))))]
     (FnSpec. name- lookup spec nil)))
 
-(deftype FnConstantlySpec
-  [name         #_(t/? t/symbol?)
-   f            #_t/fn?
-   inner-object #_t/_]
-  PSpec
-  fipp.ednize/IOverride
-  fipp.ednize/IEdn
-    (-edn [this] (c/or name (list `fn' inner-object))))
-
-#?(:clj
-(defmacro fn' [x]
-  `(let [x# ~x] (FnConstantlySpec. nil (ufn/fn' x#) x#))))
-
 (defn unkeyed
   "Creates an unkeyed collection spec, in which the collection may
    or may not be sequential or even seqable, but must not have key-value
@@ -689,26 +676,10 @@
   [x] (TODO))
 
 (defns ?
-  "Denotes type inference should be performed.
-   Arity 1: Computes a spec denoting a nilable value satisfying `spec`.
+  "Arity 1: Computes a spec denoting a nilable value satisfying `spec`.
    Arity 2: Computes whether `x` is nil or satisfies `spec`."
   ([x _ > spec?] (or nil? (>spec x)))
   ([spec spec?, x _ > c/boolean?] (c/or (c/nil? x) (spec x))))
-
-;; This sadly gets a java.lang.AbstractMethodError when one tries to do as simple as:
-;; `(def ? (InferSpec. nil))`
-;; `(def abcde (? 1))
-(udt/deftype InferSpec [meta #_(t/? ::meta)]
-  {PSpec nil
-   ?Fn {invoke (([this x] (? x))
-                ([this spec x] (? spec x)))}
-   ?Meta {meta      ([this] meta)
-          with-meta ([this meta'] (InferSpec. meta'))}
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn
-     {-edn ([this] `?)}})
-
-(defns infer? [x _ > c/boolean?] (instance? InferSpec x))
 
 ;; ===== Comparison ===== ;;
 
@@ -774,7 +745,6 @@
 
 (def- compare|universal+or       fn>)
 (def- compare|universal+and      fn>)
-(def- compare|universal+infer    compare|todo)
 (def- compare|universal+expr     compare|todo)
 (def- compare|universal+protocol fn>)
 (def- compare|universal+class    fn>)
@@ -788,7 +758,6 @@
 
 (def- compare|empty+or       fn<)
 (def- compare|empty+and      fn<)
-(def- compare|empty+infer    compare|todo)
 (def- compare|empty+expr     compare|todo)
 (def- compare|empty+protocol fn<)
 (def- compare|empty+class    fn<)
@@ -868,8 +837,6 @@
 (defns- compare|value+and [s0 value-spec?, ^AndSpec s1 and-spec? > comparisons]
   (compare|atomic+and s0 s1))
 
-;; ----- InferSpec ----- ;;
-
 ;; ----- Expression ----- ;;
 
 (defns- compare|expr+expr [s0 _, s1 _ > comparisons] (if (c/= s0 s1) 0 3))
@@ -923,7 +890,6 @@
         NotSpec          #'compare|universal+not
         OrSpec           #'compare|universal+or
         AndSpec          #'compare|universal+and
-        InferSpec        #'compare|universal+infer
         Expression       #'compare|universal+expr
         ProtocolSpec     #'compare|universal+protocol
         ClassSpec        #'compare|universal+class
@@ -934,7 +900,6 @@
         NotSpec          #'compare|empty+not
         OrSpec           #'compare|empty+or
         AndSpec          #'compare|empty+and
-        InferSpec        #'compare|empty+infer
         Expression       #'compare|empty+expr
         ProtocolSpec     #'compare|empty+protocol
         ClassSpec        #'compare|empty+class
@@ -945,7 +910,6 @@
         NotSpec          #'compare|not+not
         OrSpec           #'compare|not+or
         AndSpec          #'compare|not+and
-        InferSpec        #'compare|todo
         Expression       #'fn<>
         ProtocolSpec     #'compare|not+protocol
         ClassSpec        #'compare|not+class
@@ -956,7 +920,6 @@
         NotSpec          (inverted #'compare|not+or)
         OrSpec           #'compare|or+or
         AndSpec          #'compare|or+and
-        InferSpec        #'compare|todo
         Expression       #'fn<>
         ProtocolSpec     #'compare|todo
         ClassSpec        (inverted #'compare|class+or)
@@ -967,23 +930,10 @@
         NotSpec          #'compare|todo
         OrSpec           (inverted #'compare|or+and)
         AndSpec          #'compare|and+and
-        InferSpec        #'compare|todo
         Expression       #'fn<>
         ProtocolSpec     #'compare|todo
         ClassSpec        (inverted #'compare|class+and)
         ValueSpec        (inverted #'compare|value+and)}
-     ;; TODO review this
-     InferSpec
-       {UniversalSetSpec (inverted #'compare|universal+infer)
-        EmptySetSpec     (inverted #'compare|empty+infer)
-        NotSpec          #'compare|todo #_fn>
-        OrSpec           #'compare|todo #_fn>
-        AndSpec          #'compare|todo #_fn>
-        InferSpec        #'compare|todo #_fn=
-        Expression       #'compare|todo #_fn>
-        ProtocolSpec     #'compare|todo #_fn>
-        ClassSpec        #'compare|todo #_fn>
-        ValueSpec        #'compare|todo #_fn>}
      ;; TODO review this
      Expression
        {UniversalSetSpec (inverted #'compare|universal+expr)
@@ -991,7 +941,6 @@
         NotSpec          #'compare|todo
         OrSpec           #'compare|todo
         AndSpec          #'compare|todo
-        InferSpec        #'compare|todo
         Expression       #'compare|expr+expr
         ProtocolSpec     #'compare|todo
         ClassSpec        #'fn<> ; TODO not entirely true
@@ -1002,7 +951,6 @@
         NotSpec          (inverted #'compare|not+protocol)
         OrSpec           #'compare|todo
         AndSpec          #'compare|todo
-        InferSpec        #'fn<
         Expression       #'fn<>
         ProtocolSpec     (fn [s0 s1] (if (identical? (protocol-spec>protocol s0)
                                                      (protocol-spec>protocol s1))
@@ -1016,7 +964,6 @@
         NotSpec          (inverted #'compare|not+class)
         OrSpec           #'compare|class+or
         AndSpec          #'compare|class+and
-        InferSpec        #'compare|todo
         Expression       #'fn<>
         ProtocolSpec     #'compare|todo
         ClassSpec        (fn [s0 s1] (compare|class|class* (class-spec>class s0) (class-spec>class s1)))
@@ -1027,7 +974,6 @@
         NotSpec          (inverted #'compare|not+value)
         OrSpec           #'compare|value+or
         AndSpec          #'compare|value+and
-        InferSpec        #'compare|todo
         Expression       (inverted #'compare|expr+value)
         ProtocolSpec     #'compare|value+protocol
         ClassSpec        (inverted #'compare|class+value)
@@ -1173,7 +1119,7 @@
 
          (-def primitive? (or boolean? #?@(:clj [byte? char? short? int? long? float?]) double?))
 
-#_(:clj  (-def comparable-primitive? (and primitive? (not boolean?))))
+#?(:clj  (-def comparable-primitive? (- primitive? boolean?)))
 
 ;; ===== Booleans ===== ;;
 
@@ -2190,29 +2136,32 @@
 
 ;; ===== Miscellaneous ===== ;;
 
-#?(:clj  (-def thread?      (isa? java.lang.Thread)))
+         (-def metable?      (isa? #?(:clj clojure.lang.IMeta :cljs cljs.core/IMeta)))
+         (-def with-metable? (isa? #?(:clj clojure.lang.IObj  :cljs cljs.core/IWithMeta)))
+
+#?(:clj  (-def thread?       (isa? java.lang.Thread)))
 
          ;; Able to be used with `throw`
-         (-def throwable?   #?(:clj (isa? java.lang.Throwable) :cljs any?))
+         (-def throwable?    #?(:clj (isa? java.lang.Throwable) :cljs any?))
 
-         (-def regex?       (isa? #?(:clj java.util.regex.Pattern :cljs js/RegExp)))
+         (-def regex?        (isa? #?(:clj java.util.regex.Pattern :cljs js/RegExp)))
 
-         (-def chan?        (isa? #?(:clj  clojure.core.async.impl.protocols/Channel
-                                     :cljs cljs.core.async.impl.protocols/Channel)))
+         (-def chan?         (isa? #?(:clj  clojure.core.async.impl.protocols/Channel
+                                      :cljs cljs.core.async.impl.protocols/Channel)))
 
-         (-def keyword?     (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
-         (-def symbol?      (isa? #?(:clj clojure.lang.Symbol  :cljs cljs.core/Symbol)))
+         (-def keyword?      (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
+         (-def symbol?       (isa? #?(:clj clojure.lang.Symbol  :cljs cljs.core/Symbol)))
 
          ;; `js/File` isn't always available! Use an abstraction
-#?(:clj  (-def file?        (isa? java.io.File)))
+#?(:clj  (-def file?         (isa? java.io.File)))
 
-         (-def comparable?  #?(:clj  (isa? java.lang.Comparable)
-                               ;; TODO other things are comparable; really it depends on the two objects in question
-                               :cljs (or nil? (isa? cljs.core/IComparable))))
+         (-def comparable?   #?(:clj  (isa? java.lang.Comparable)
+                                ;; TODO other things are comparable; really it depends on the two objects in question
+                                :cljs (or nil? (isa? cljs.core/IComparable))))
 
-         (-def record?      (isa? #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
+         (-def record?       (isa? #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
 
-         (-def transformer? (isa? quantum.untyped.core.reducers.Transformer))
+         (-def transformer?  (isa? quantum.untyped.core.reducers.Transformer))
 
 ;; ----- Collections ----- ;;
 

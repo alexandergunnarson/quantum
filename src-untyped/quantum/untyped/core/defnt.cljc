@@ -19,11 +19,10 @@
 ;; ===== Specs ===== ;;
 
 (s/def :quantum.core.defnt/local-name
-  (s/and simple-symbol? (complement #{'& '| '> '?})))
+  (s/and simple-symbol? (complement #{'& '| '>})))
 
 (s/def :quantum.core.defnt/spec
-  (s/alt :infer #{'?}
-         :any   #{'_}
+  (s/alt :any   #{'_}
          :spec   any?))
 
 ;; ----- General destructuring ----- ;;
@@ -374,14 +373,12 @@
 
 #?(:clj
 (defmacro fns
-  "Like `fnt`, but relies entirely on runtime spec checks. Ignores type inference requests, but
-   allows them for compatibility with `defnt`."
+  "Like `fnt`, but relies entirely on runtime spec checks."
   [& args] (fns|code :fn (ufeval/env-lang) args)))
 
 #?(:clj
 (defmacro defns
-  "Like `defnt`, but relies entirely on runtime spec checks. Ignores type inference requests, but
-   allows them for compatibility with `defnt`."
+  "Like `defnt`, but relies entirely on runtime spec checks."
   [& args] (fns|code :defn (ufeval/env-lang) args)))
 
 #?(:clj

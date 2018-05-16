@@ -87,7 +87,6 @@
 ;; - When a function with type overloads is referenced outside of a typed context, then the
 ;; overload resolution will be done via protocol dispatch unless the function's overloads only
 ;; differ by arity. In either case, runtime type checks are required.
-;; - At some later date, the analyzer will do its best to infer types.
 ;; - Even if the `defnt` is redefined, you won't have interface problems.
 
 ;; Any `defnt` argument, if it requires a non-nilable primitive-like value, will be marked as a primitive.
@@ -418,14 +417,7 @@
                       (update call' :args conj arg-node)))
                 with-ret-spec
                   (update with-arg-specs :spec
-                    (fn [ret-spec]
-                      (let [arg-specs (->> with-arg-specs :args (mapv :spec))]
-                        (if (seq-or t/infer? arg-specs)
-                            (err! "TODO arg spec" (kw-map arg-specs ret-spec (ret-spec arg-specs)))
-                            #_(if (t/infer? arg-spec)
-                                  (swap! arg-spec t/and (get ret-spec i))
-                                  ((get ret-spec i) arg-spec))
-                            (ret-spec arg-specs)))))
+                    (fn [ret-spec] (->> with-arg-specs :args (mapv :spec) ret-spec)))
                 ?cast-spec (?cast-call->spec target-class method-form)
                 _ (when ?cast-spec
                     (ppr :warn "Not yet able to statically validate whether primitive cast will succeed at runtime" {:form form})
@@ -764,7 +756,9 @@
                           lang
                           (c/count args)
                           varargs)))
-        post-spec   (when post-form (-> post-form eval t/>spec))
+        post-spec   (cond (nil? post-form) nil
+                          (= post-form '_) t/any?
+                          :else            (eval post-form))
         post-spec|runtime? (-> post-spec meta :runtime?)
         out-spec (if post-spec
                      (if post-spec|runtime?
@@ -805,7 +799,7 @@
    we decide instead to evaluate specs in languages in which the metalanguage (compiler language) is the same as
    the object language (e.g. Clojure), and symbolically analyze specs in the rest (e.g. vanilla ClojureScript),
    deferring code analyzed as functions to be enforced at runtime."
-  [{:as in {:keys [args varargs] pre-form :pre post-form :post} :arglist body-codelist|pre-analyze :body}
+  [{:as in {:keys [args varargs] pre-form :pre [post-type post-form] :post} :arglist body-codelist|pre-analyze :body}
    {:as opts :keys [lang #_::lang symbolic-analysis? #_t/boolean?]}]
   (if symbolic-analysis?
       (err! "Symbolic analysis not supported yet")
@@ -821,9 +815,8 @@
                            binding-)))
             arg-specs|pre-analyze|base
               (->> args
-                   (mapv (fn [{[kind #_#{:any :infer :spec}, spec #_t/form?] :spec}]
+                   (mapv (fn [{[kind #_#{:any :spec}, spec #_t/form?] :spec}]
                            (case kind :any   t/any?
-                                      :infer t/?
                                       :spec  (-> spec eval t/>spec)))))
             arg-classes-seq|pre-analyze (arg-specs>arg-classes-seq|primitivized arg-specs|pre-analyze|base)
             ;; `unprimitivized` is first because of class sorting
@@ -863,7 +856,6 @@
   [{:as overload
     :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, out-class t/class?]} :fnt/overload
    > (s/seq-of ::reify|overload)]
-  (prl! overload)
   (let [interface-k {:out out-class :in arg-classes}
         interface
           (-> *interfaces
