@@ -4,7 +4,7 @@
       :refer [deftest is is= testing]]
     [quantum.untyped.core.collections :as this]))
 
-(deftest test:flatten
+(deftest test|flatten
   (is= (this/flatten [[0 1] [2 3 4]] 0)
        [[0 1] [2 3 4]])
 

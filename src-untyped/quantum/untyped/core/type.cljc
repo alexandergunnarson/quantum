@@ -262,7 +262,13 @@
 
 #?(:clj (uvar/defalias -def define))
 
-(-def type? (isa? PType))
+(-def type?          (isa? PType))
+(-def not-type?      (isa? NotType))
+(-def or-type?       (isa? OrType))
+(-def and-type?      (isa? AndType))
+(-def protocol-type? (isa? ProtocolType))
+(-def class-type?    (isa? ClassType))
+(-def value-type?    (isa? ValueType))
 
 ;; ===== Miscellaneous ===== ;;
 
