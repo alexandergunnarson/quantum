@@ -1,16 +1,15 @@
 (ns quantum.core.convert.primitive
   (:require
   #?(:cljs [com.gfredericks.goog.math.Integer :as int])
-    [clojure.core              :as core]
-    [quantum.core.data.bits    :as bits
+    [clojure.core           :as core]
+    [quantum.core.data.bits :as bits
       :refer [&&]]
-    [quantum.core.error        :as err
+    [quantum.core.error     :as err
       :refer [>ex-info]]
-    [quantum.core.defnt        :as macros
+    [quantum.core.type      :as t
       :refer [defnt]]
-    [quantum.core.vars         :as var
-      :refer [defalias]]
-    [quantum.untyped.core.type :as t])
+    [quantum.core.vars      :as var
+      :refer [defalias]])
 #?(:cljs
   (:require-macros
     [quantum.core.convert.primitive]))

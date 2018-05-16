@@ -6,10 +6,10 @@
     [unsigned-bit-shift-right bit-shift-left bit-shift-right
      bit-or bit-and bit-xor bit-not])
   (:require
-    [clojure.core        :as core  ]
-    [quantum.core.macros :as macros
+    [clojure.core      :as core  ]
+    [quantum.core.type :as t
       :refer [defnt]]
-    [quantum.core.vars   :as var
+    [quantum.core.vars :as var
       :refer [defalias]])
   #?(:clj (:import #_[quantum.core Numeric]
                       java.nio.ByteBuffer)))

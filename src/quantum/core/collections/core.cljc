@@ -39,14 +39,13 @@
             [quantum.core.collections.logic
               :refer [seq-or]]
             [quantum.core.macros            :as macros
-              :refer [defnt #?(:clj defnt') case-env env-lang]]
-            [quantum.core.macros.defnt      :as defnt]
+              :refer [case-env env-lang]]
             [quantum.core.macros.optimization
               :refer [identity*]]
-            [quantum.core.reducers.reduce   :as red
-              :refer [reduce reducei transformer]]
+            [quantum.core.reducers.reduce   :as r
+              :refer [reduce reducei]]
             [quantum.core.type              :as t
-              :refer [val? class regex?]]
+              :refer [class defnt fnt regex? val?]]
             [quantum.core.type.defs         :as tdef]
             [quantum.core.type.core         :as tcore]
             [quantum.core.vars              :as var
@@ -127,46 +126,47 @@
 ; Very useful sequence and data structure info.
 
 #?(:clj
-(defn dropr+ ; This is extremely slow by comparison. About twice as slow
-  ; TODO for O(1) reversible inputs, you can just do that with `drop+`
-  ; TODO this is not suitable for `fold` contexts
+(defnt dropr+ ; This is extremely slow by comparison. About twice as slow
+  ;; TODO CLJS
+  ;; TODO for O(1) reversible inputs, you can just do that with `drop+`
+  ;; TODO this is not suitable for `fold` contexts
   {:attribution "Christophe Grand - http://grokbase.com/t/gg/clojure/1388ev2krx/butlast-with-reducers"}
-  [n xs]
-   (transformer xs
-     (fn [rf]
-       (let [buffer (java.util.ArrayDeque. (int n))]
-         (fn ([] (rf))
-             ([ret x]
-               (let [ret (if (= (.size buffer) n) ; because Java object
-                             (rf ret (.pop buffer))
-                             ret)]
-                 (.add buffer x)
-                 ret))))))))
+  [n (t/numerically t/int?), xs t/reducible? > t/reducible?]
+  (let [n' (>int n)]
+    (r/transformer xs
+      (fnt [rf r/rf?]
+        (let [buffer (java.util.ArrayDeque. n')]
+          (fnt ([] (rf))
+               ([ret _, x _]
+                 (let [ret' (if (identical? (.size buffer) n')
+                                (rf ret (.pop buffer))
+                                ret)]
+                   (.add buffer x)
+                   ret')))))))))
 
 #?(:clj
 (defn taker+
-  ; TODO for O(1) reversible inputs, you can just do that with `take+`
-  ; TODO this is not suitable for `fold` contexts
+  ;; TODO for CLJS
+  ;; TODO for O(1) reversible inputs, you can just do that with `take+`
+  ;; TODO this is not suitable for `fold` contexts
   {:attribution "Christophe Grand - http://grokbase.com/t/gg/clojure/1388ev2krx/butlast-with-reducers"}
-  [n coll]
-  ; TODO use `reducer`
-  ; TODO for CLJS
-   (reify
-     clojure.core.protocols.CollReduce
-     ;#+cljs cljs.core/IReduce
-     (coll-reduce [this f1]
-       (clojure.core.protocols/coll-reduce this f1 (f1)))
-     (coll-reduce [_ f1 init]
-       (clojure.core.protocols/coll-reduce
-         (clojure.core.protocols/coll-reduce
-           coll
-           (fn [^java.util.Deque q x]
-             (when (= (.size q) n)
-               (.pop q))
-             (.add q x)
-             q)
-           (java.util.ArrayDeque. (int n)))
-         f1 init)))))
+  [n xs]
+  (reify
+    clojure.core.protocols.CollReduce
+    ;#+cljs cljs.core/IReduce
+    (coll-reduce [this f1]
+      (clojure.core.protocols/coll-reduce this f1 (f1)))
+    (coll-reduce [_ f1 init]
+      (clojure.core.protocols/coll-reduce
+        (clojure.core.protocols/coll-reduce
+          coll
+          (fn [^java.util.Deque q x]
+            (when (= (.size q) n)
+              (.pop q))
+            (.add q x)
+            q)
+          (java.util.ArrayDeque. (int n)))
+        f1 init)))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={        EQUIVALENCE       }=====================================================
 ;=================================================={       =, identical?      }=====================================================

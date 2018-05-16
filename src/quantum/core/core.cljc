@@ -4,7 +4,9 @@
             [clojure.spec.alpha        :as s]
     #?(:clj [clojure.core.specs.alpha  :as ss])
             [cuerdas.core              :as str+]
-   #?(:clj  [environ.core              :as env])
+    #?(:clj [environ.core              :as env])
+            [quantum.core.type         :as t
+              :refer [defnt defmacrot defprotocolt]]
             [quantum.untyped.core.core :as u]
             [quantum.untyped.core.vars
               :refer [defalias defaliases]]))
@@ -25,17 +27,25 @@
 
 (defaliases u >sentinel >object)
 
+;; TODO typed
+;; TODO excise
 (def unchecked-inc-long
   #?(:clj  (fn [^long x] (unchecked-inc x))
      :cljs inc))
 
 ;; ===== Mutability/Effects ===== ;;
 
-(defprotocol IValue
+;; TODO excise when typed
+#_(defprotocol IValue
   (get [this])
   (set [this newv]))
 
-#?(:clj
+(defprotocolt IValue
+  (get [this _])
+  (set [this _, newv _]))
+
+;; TODO excise when typed
+#_(:clj
 (defmacro with
   "Evaluates @expr, then @body, then returns @expr.
    For (side) effects."
@@ -43,3 +53,10 @@
   `(let [expr# ~expr]
     ~@body
     expr#)))
+
+#?(:clj
+(defmacrot with
+  "Evaluates @expr, then @body, then returns @expr.
+   For (side) effects."
+  [expr t/form? & body (? (t/seq-of t/form?))]
+  `(let [expr# ~expr] ~@body expr#)))
