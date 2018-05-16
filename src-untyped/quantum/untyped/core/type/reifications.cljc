@@ -7,14 +7,14 @@
 #?@(:cljs    [:refer [Expression]])]
             [quantum.untyped.core.compare
               :refer [== not==]]
+            [quantum.untyped.core.core                  :as ucore]
             [quantum.untyped.core.defnt
               :refer [defns]]
             [quantum.untyped.core.form.generate.deftype :as udt])
  #?(:clj  (:import
             [quantum.untyped.core.analyze.expr Expression])))
 
-(defonce *type-registry (atom {}))
-(swap! *type-registry empty)
+(ucore/log-this-ns)
 
 (defprotocol PType)
 

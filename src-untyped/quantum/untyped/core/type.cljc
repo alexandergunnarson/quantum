@@ -1,65 +1,75 @@
 (ns quantum.untyped.core.type
   "Essentially, set-theoretic definitions and operations on types."
   {:todo "Maybe reduce dependencies and distribute predicates to other namespaces"}
-  (:refer-clojure :exclude
-    [< <= = not= >= > == compare * -
-     and or not
-     boolean  byte         char  short  int  long  float  double
-     boolean? byte? bytes? char? short? int? long? float? double?
-     isa?
-     nil? any? class? tagged-literal? #?(:cljs object?)
-     number? decimal? bigdec? integer? ratio?
-     true? false? keyword? string? symbol?
-     associative? coll? counted? indexed? list? map? map-entry? record?
-     seq? seqable? sequential? set? sorted? vector?
-     fn? ifn?
-     meta ref volatile?])
-  (:require
-    [clojure.core                               :as c]
-    [clojure.string                             :as str]
-    [quantum.untyped.core.analyze.expr          :as xp
-      :refer [>expr #?(:cljs Expression)]]
-    [quantum.untyped.core.classes               :as uclass]
-    [quantum.untyped.core.collections           :as uc]
-    [quantum.untyped.core.collections.logic
-      :refer [seq-and seq-or]]
-    [quantum.untyped.core.compare               :as ucomp
-      :refer [== not==]]
-    [quantum.untyped.core.convert               :as uconv
-      :refer [>symbol]]
-    [quantum.untyped.core.core                  :as ucore]
-    [quantum.untyped.core.data.bits             :as ubit]
-    [quantum.untyped.core.data.tuple]
-    [quantum.untyped.core.defnt
-      :refer [defns defns-]]
-    [quantum.untyped.core.error                 :as uerr
-      :refer [err! TODO catch-all]]
-    [quantum.untyped.core.fn                    :as ufn
-      :refer [fn1 rcomp <- fn->]]
-    [quantum.untyped.core.form.generate.deftype :as udt]
-    [quantum.untyped.core.logic
-      :refer [fn-and ifs whenp->]]
-    [quantum.untyped.core.numeric               :as unum]
-    [quantum.untyped.core.print                 :as upr]
-    [quantum.untyped.core.qualify               :as qual]
-    [quantum.untyped.core.reducers              :as ur
-      :refer [educe join]]
-    [quantum.untyped.core.refs
-      :refer [?deref]]
-    [quantum.untyped.core.spec                  :as s]
-    [quantum.untyped.core.type.core             :as utcore]
-    [quantum.untyped.core.type.defs             :as utdef]
-    [quantum.untyped.core.type.predicates       :as utpred]
-    [quantum.untyped.core.vars                  :as uvar
-      :refer [def- defmacro- update-meta]])
-  #?(:clj (:import quantum.untyped.core.analyze.expr.Expression
-                   quantum.untyped.core.data.tuple.Tuple))
-#?(:cljs
-  (:require-macros
-    [quantum.untyped.core.type :as self
-      :refer [-def]])))
+         (:refer-clojure :exclude
+           [< <= = not= >= > == compare * -
+            and or not
+            boolean  byte         char  short  int  long  float  double
+            boolean? byte? bytes? char? short? int? long? float? double?
+            isa?
+            nil? any? class? tagged-literal? #?(:cljs object?)
+            number? decimal? bigdec? integer? ratio?
+            true? false? keyword? string? symbol?
+            associative? coll? counted? indexed? list? map? map-entry? record?
+            seq? seqable? sequential? set? sorted? vector?
+            fn? ifn?
+            meta
+            ref volatile?])
+         (:require
+           [clojure.core                               :as c]
+           [clojure.string                             :as str]
+           [quantum.untyped.core.analyze.expr
+             :refer [>expr #?(:cljs Expression)]]
+           [quantum.untyped.core.collections           :as uc]
+           [quantum.untyped.core.collections.logic
+             :refer [seq-and seq-or]]
+           [quantum.untyped.core.compare
+             :refer [==]]
+           [quantum.untyped.core.convert
+             :refer [>symbol]]
+           [quantum.untyped.core.core                  :as ucore]
+           [quantum.untyped.core.data.bits             :as ubit]
+           [quantum.untyped.core.data.tuple]
+           [quantum.untyped.core.defnt
+             :refer [defns defns-]]
+           [quantum.untyped.core.error                 :as uerr
+             :refer [err! TODO catch-all]]
+           [quantum.untyped.core.fn                    :as ufn
+             :refer [fn1 rcomp <- fn->]]
+           [quantum.untyped.core.form.generate.deftype :as udt]
+           [quantum.untyped.core.logic
+             :refer [fn-and ifs whenp->]]
+           [quantum.untyped.core.numeric               :as unum]
+           [quantum.untyped.core.print                 :as upr]
+           [quantum.untyped.core.qualify               :as qual]
+           [quantum.untyped.core.reducers              :as ur
+             :refer [educe join]]
+           [quantum.untyped.core.refs
+             :refer [?deref]]
+           [quantum.untyped.core.spec                  :as s]
+           [quantum.untyped.core.type.compare          :as utc
+             :refer [<ident =ident >ident ><ident <>ident]]
+           [quantum.untyped.core.type.core             :as utcore]
+           [quantum.untyped.core.type.defs             :as utdef]
+           [quantum.untyped.core.type.predicates       :as utpred]
+           [quantum.untyped.core.type.reifications     :as utr
+             :refer [->AndType ->OrType PType]]
+           [quantum.untyped.core.vars                  :as uvar
+             :refer [def- defmacro- update-meta]])
+#?(:cljs (:require-macros
+           [quantum.untyped.core.type :as self
+           :refer [-def]]))
+#?(:clj  (:import
+           [quantum.untyped.core.analyze.expr Expression]
+           [quantum.untyped.core.type.reifications
+              UniversalSetType EmptySetType
+              NotType OrType AndType
+              ProtocolType ClassType
+              ValueType])))
 
 (ucore/log-this-ns)
+
+;; ===== TODOS ===== ;;
 
 #_(defmacro ->
   ("Anything that is coercible to x"
@@ -71,164 +81,203 @@
 
 #_(defmacro range-of)
 
-(defonce *spec-registry (atom {}))
-(swap! *spec-registry empty)
+(declare
+  - create-logical-type nil? val?
+  and or val|by-class?)
 
-;; ===== SPECS ===== ;;
+(defonce *type-registry (atom {}))
+;; TODO remove this
+(swap! *type-registry empty)
 
-(defprotocol PSpec)
+;; ===== Comparison ===== ;;
 
-(udt/deftype ValueSpec [v #_any?]
-  {PSpec                 nil
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn      {-edn    ([this] (list `value v))}
-   ?Fn                   {invoke  ([_ x] (c/= x v))}
-   ?Object               {equals  ([this that #_any?]
-                                    (c/or (== this that)
-                                          (c/and (instance? ValueSpec that)
-                                                 (c/= v (.-v ^ValueSpec that)))))}})
+(uvar/defaliases utc compare < <= = not= >= > >< <> inverse)
+
+;; ===== Type Reification Constructors ===== ;;
+
+;; ----- UniversalSetType (`t/U`) ----- ;;
+
+(uvar/defalias utr/universal-set)
+
+;; ----- EmptySetType (`t/∅`) ----- ;;
+
+(uvar/defalias utr/empty-set)
+
+;; ----- NotType (`t/not` / `t/!`) ----- ;;
+
+(defns not [t utr/type? > utr/type?]
+  (ifs (= t universal-set) empty-set
+       (= t empty-set)     universal-set
+       (= t val|by-class?) nil?
+       (utr/not-type? t)   (utr/not-type>inner-type t)
+       ;; DeMorgan's Law
+       (utr/or-type?  t)   (->> t utr/or-type>args  (uc/lmap not) (apply and))
+       ;; DeMorgan's Law
+       (utr/and-type? t)   (->> t utr/and-type>args (uc/lmap not) (apply or ))
+       (NotType. t)))
+
+(uvar/defalias ! not)
+
+;; ----- OrType (`t/or` / `t/|`) ----- ;;
+
+(defn or
+  "Sequential/ordered `or`. Analogous to `set/union`.
+   Applies as much 'compression'/deduplication/simplification as possible to the supplied types.
+   Effectively computes the union of the extension of the ->`args`."
+  [arg & args]
+  (create-logical-type :or ->OrType utr/or-type? utr/or-type>args
+    (cons arg args) (fn1 c/= >ident)))
+
+(uvar/defalias | or)
+
+;; ----- AndType (`t/and` | `t/&`) ----- ;;
+
+(defn and
+  "Sequential/ordered `and`. Analogous to `set/intersection`.
+   Applies as much 'compression'/deduplication/simplification as possible to the supplied types.
+   Effectively computes the intersection of the extension of the ->`args`."
+  [arg & args]
+  (create-logical-type :and ->AndType utr/and-type? utr/and-type>args
+    (cons arg args) (fn1 c/= <ident)))
+
+(uvar/defalias & and)
+
+;; ----- Expression ----- ;;
+
+;; ----- ProtocolType ----- ;;
+
+(defns- isa?|protocol [p utpred/protocol?] (ProtocolType. nil p nil))
+
+;; ----- ClassType ----- ;;
+
+(defns- isa?|class [c #?(:clj c/class? :cljs c/fn?)] (ClassType. nil c nil))
+
+;; ----- ValueType ----- ;;
 
 (defns value
-  "Creates a spec whose extension is the singleton set containing only the value `v`."
-  [v _] (ValueSpec. v))
+  "Creates a type whose extension is the singleton set containing only the value `v`."
+  [v _] (ValueType. v))
 
-(defns value-spec? [x _] (instance? ValueSpec x))
+;; ----- General ----- ;;
 
-(defns value-spec>value [x value-spec?] (.-v ^ValueSpec x))
-
-;; -----
-
-(udt/deftype ClassSpec
-  [       meta #_(t/? ::meta)
-   ^Class c    #_t/class?
-          name #_(t/? t/symbol?)]
-  {PSpec                 nil
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn
-     {-edn ([this] (c/or name (list `isa? c)))}
-   ?Fn     {invoke    ([_ x] (instance? c x))}
-   ?Meta   {meta      ([this] meta)
-            with-meta ([this meta'] (ClassSpec. meta' c name))}
-   ?Object {equals    ([this that #_any?]
-                        (c/or (== this that)
-                              (c/and (instance? ClassSpec that)
-                                     (c/= c (.-c ^ClassSpec that)))))}})
-
-(defns class-spec? [x _] (instance? ClassSpec x))
-
-(defns class-spec>class [spec class-spec?] (.-c ^ClassSpec spec))
-
-(udt/deftype ProtocolSpec
-  [meta #_(t/? ::meta)
-   p    #_t/protocol?
-   name #_(t/? t/symbol?)]
-  {PSpec                 nil
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn      {-edn      ([this] (c/or name (list `isa?|protocol (:on p))))}
-   ?Fn                   {invoke    ([_ x] (satisfies? p x))}
-   ?Meta                 {meta      ([this] meta)
-                          with-meta ([this meta'] (ProtocolSpec. meta' p name))}})
-
-(defns protocol-spec? [x _] (instance? ProtocolSpec x))
-
-(defns protocol-spec>protocol [spec protocol-spec?] (.-p ^ProtocolSpec spec))
-
-(defns- isa?|protocol [p utpred/protocol?] (ProtocolSpec. nil p nil))
+(defns -
+  "Computes the difference of `t0` from `t1`: (& t0 (! t1))
+   If `t0` =       `t1`, `∅`
+   If `t0` <       `t1`, `∅`
+   If `t0` <>      `t1`, `t0`
+   If `t0` > | ><  `t1`, `t0` with all elements of `t1` removed"
+  [t0 utr/type?, t1 utr/type? > utr/type?]
+  (let [c (compare t0 t1)]
+    (case c
+      (0 -1) empty-set
+       3     t0
+      (1 2)
+        (let [c0 (c/class t0) c1 (c/class t1)]
+          ;; TODO add dispatch?
+          (condp == c0
+            NotType (condp == (-> t0 utr/not-type>inner-type c/class)
+                      ClassType (condp == c1
+                                  ClassType (AndType. [t0 (not t1)] (atom nil)))
+                      ValueType (condp == c1
+                                  ValueType (AndType. [t0 (not t1)] (atom nil))))
+            OrType  (condp == c1
+                      ClassType (let [args (->> t0 utr/or-type>args (uc/remove (fn1 = t1)))]
+                                  (case (count args)
+                                    0 empty-set
+                                    1 (first args)
+                                    (OrType. args (atom nil))))))))))
 
 (defn isa? [x]
-  (ifs #?(:clj  (utpred/protocol? x)
-                ;; Unfortunately there's no better check in CLJS, at least as of 03/18/2018
-          :cljs (c/and (c/fn? x) (c/= (str x) "function (){}")))
+  (ifs (utpred/protocol? x)
        (isa?|protocol x)
 
-       (#?(:clj c/class? c/fn?) x)
-       (ClassSpec. nil x nil)))
+       (#?(:clj c/class? :cljs c/fn?) x)
+       (isa?|class x)))
 
-;; ===== CREATION ===== ;;
-
-(defonce *spec-registry (atom {}))
-
-#?(:clj (extend-protocol PSpec Expression))
-
-(declare nil?)
-
-(defns >spec
-  "Coerces ->`x` to a spec, recording its ->`name-sym` if provided."
-  ([x _ > (isa? PSpec)] (>spec x nil))
-  ([x _, name-sym (s/nilable c/symbol?) > (isa? PSpec)]
+;; TODO clean up
+(defns >type
+  "Coerces ->`x` to a type, recording its ->`name-sym` if provided."
+  ([x _ > utr/type?] (>type x nil))
+  ([x _, name-sym (s/nilable c/symbol?) > utr/type?]
     #?(:clj
-        (cond (satisfies? PSpec x)
-                x ; TODO should add in its name?
-              (c/class? x)
-                (let [x (c/or #?(:clj (utcore/unboxed->boxed x)) x)
-                      reg (if (c/nil? name-sym)
-                              @*spec-registry
-                              (swap! *spec-registry
-                                (c/fn [reg]
-                                  (if-let [spec (get reg name-sym)]
-                                    (if (c/= (.-name ^ClassSpec spec) name-sym)
-                                        reg
-                                        (err! "Class already registered with spec; must first undef" {:class x :spec-name name-sym}))
-                                    (let [spec (ClassSpec. nil x name-sym)]
-                                      (uc/assoc-in reg [name-sym]    spec
-                                                       [:by-class x] spec))))))]
-                  (c/or (get-in reg [:by-class x])
-                        (ClassSpec. nil ^Class x name-sym)))
-              (c/fn? x)
-                (let [sym (c/or name-sym (>symbol x))
-                      _ (when-not name-sym
-                          (let [resolved (?deref (ns-resolve *ns* sym))]
-                            (assert (== resolved x) {:x x :sym sym :resolved resolved})))]
-                  (Expression. sym x))
-              (c/nil? x)
-                nil?
-              (utpred/protocol? x)
-                (ProtocolSpec. nil x name-sym)
-              :else
-                (value x))
+        (ifs
+          (satisfies? PType x)
+            x ; TODO should add in its name?
+          (c/class? x)
+            (let [x (c/or #?(:clj (utcore/unboxed->boxed x)) x)
+                  reg (if (c/nil? name-sym)
+                          @*type-registry
+                          (swap! *type-registry
+                            (c/fn [reg]
+                              (if-let [t (get reg name-sym)]
+                                (if (c/= (.-name ^ClassType t) name-sym)
+                                    reg
+                                    (err! "Class already registered with type; must first undef" {:class x :type-name name-sym}))
+                                (let [t (ClassType. nil x name-sym)]
+                                  (uc/assoc-in reg [name-sym]    t
+                                                   [:by-class x] t))))))]
+              (c/or (get-in reg [:by-class x])
+                    (ClassType. nil ^Class x name-sym)))
+          (c/fn? x)
+            (let [sym (c/or name-sym (>symbol x))
+                  _ (when-not name-sym
+                      (let [resolved (?deref (ns-resolve *ns* sym))]
+                        (assert (== resolved x) {:x x :sym sym :resolved resolved})))]
+              (Expression. sym x))
+          (c/nil? x)
+            nil?
+          (utpred/protocol? x)
+            (ProtocolType. nil x name-sym)
+          (value x))
        :cljs nil)))
 
-;; ===== Definition ===== ;;
+;; ===== Definition/Registration ===== ;;
 
-(defns register-spec! [sym c/symbol?, spec (isa? PSpec)]
+(defns register-type! [sym c/symbol?, t utr/type?]
   (TODO))
 
+;; TODO clean up
 #?(:clj
-(defmacro define [sym spec]
-  `(~'def ~sym (let [spec# ~spec]
-                 (assert (satisfies? PSpec spec#) spec#)
-                 #_(register-spec! '~(qual/qualify sym) spec#)
-                 spec#))))
+(defmacro define [sym t]
+  `(~'def ~sym (let [t# ~t]
+                 (assert (utr/type? t#) t#)
+                 #_(register-type! '~(qual/qualify sym) t#)
+                 t#))))
 
+;; TODO clean up
 (defn undef [reg sym]
-  (if-let [spec (get reg sym)]
+  (if-let [t (get reg sym)]
     (let [reg' (dissoc reg sym)]
-      (if (instance? ClassSpec spec)
-          (uc/dissoc-in reg' [:by-class (.-c ^ClassSpec spec)])
+      (if (instance? ClassType t)
+          (uc/dissoc-in reg' [:by-class (.-c ^ClassType t)])
           (TODO)))
     reg))
 
-(defn undef! [sym] (swap! *spec-registry undef sym))
+;; TODO clean up
+(defn undef! [sym] (swap! *type-registry undef sym))
 
 #_(:clj
-(defmacro defalias [sym spec]
-  `(~'def ~sym (>spec ~spec))))
+(defmacro defalias [sym t]
+  `(~'def ~sym (>type ~t))))
 
 #?(:clj (uvar/defalias -def define))
 
-(-def spec? (isa? PSpec))
+(-def type? (isa? PType))
+
+;; ===== Miscellaneous ===== ;;
 
 (defns *
-  "Denote on a spec that it must be enforced at runtime.
+  "Denote on a type that it must be enforced at runtime.
    For use with `defnt`."
-  [spec spec? > spec?] (update-meta spec assoc :runtime? true))
+  [t utr/type? > utr/type?] (update-meta t assoc :runtime? true))
 
 (defns ref
-  "Denote on a spec that it must not be expanded to use primitive values.
+  "Denote on a type that it must not be expanded to use primitive values.
    For use with `defnt`."
-  [spec spec? > spec?] (update-meta spec assoc :ref? true))
+  [t utr/type? > utr/type?] (update-meta t assoc :ref? true))
 
-(udt/deftype DeducibleSpec [*spec #_(t/atom-of t/spec?)]
+;; TODO figure this out
+#_(do (udt/deftype DeducibleSpec [*spec #_(t/atom-of t/spec?)]
   {PSpec                 nil
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn      {-edn ([this] (list `deducible @*spec))}
@@ -237,393 +286,141 @@
 
 (defns deducible-spec? [x _] (instance? DeducibleSpec x))
 
-(defns deducible [x spec? > deducible-spec?] (DeducibleSpec. (atom x)))
+(defns deducible [x spec? > deducible-spec?] (DeducibleSpec. (atom x))))
 
-;; ===== Extensionality comparison implementations ===== ;;
+;; ===== Logical ===== ;;
 
-#_(is (coll&/incremental-every? (aritoid nil (constantly true) t/in>)
-        [String Comparable Object])
-      (coll&/incremental-every? (aritoid nil (constantly true) t/in>)
-        [Long Number]))
+(defns >logical-complement
+  "Returns the content inside a `t/not` applied to the `args` of an n-ary logical type (e.g. `or`,
+   `and`). Stored in such types to more easily compare them with `not` types.
+   E.g. `(>logical-complement (and a b))` -> `(or  (not a) (not b))`
+        `(>logical-complement (or  a b))` -> `(and (not a) (not b))`."
+  [t utr/type? > utr/type?]
+  (cond (utr/or-type?  t) (c/or @(.-*logical-complement ^OrType  t)
+                                (reset! (.-*logical-complement ^OrType  t) (not t)))
+        (utr/and-type? t) (c/or @(.-*logical-complement ^AndType t)
+                                (reset! (.-*logical-complement ^AndType t) (not t)))
+        :else             (err! "`>logical-complement` not supported on type" {:type t})))
 
-(def comparisons #{-1 0 1 2 3})
+(defns complementary? [t0 utr/type? t1 utr/type?] (= t0 (not t1)))
 
-(defns compare|class|class*
-  "Compare extension (generality|specificity) of ->`c0` to ->`c1`.
-   `0`  means they are equally general/specific:
-     - ✓ `(t/= c0 c1)`    : the extension of ->`c0` is equal to             that of ->`c1`.
-   `-1` means ->`c0` is less general (more specific) than ->`c1`.
-     - ✓ `(t/< c0 c1)`    : the extension of ->`c0` is a strict subset   of that of ->`c1`.
-   `1`  means ->`c0` is more general (less specific) than ->`c1`:
-     - ✓ `(t/> c0 c1)`    : the extension of ->`c0` is a strict superset of that of ->`c1`.
-   `2`  means:
-     - ✓ `(t/>< c0 c1)`   : the intersect of the extensions of ->`c0` and ->`c1` is non-empty,
-                             but neither ->`c0` nor ->`c1` share a subset/equality/superset
-                             relationship.
-   `3`  means their generality/specificity is incomparable:
-     - ✓ `(t/<> c0 c1)`   : the extension of ->`c0` is disjoint w.r.t. to that of ->`c1`.
-   Unboxed primitives are considered to be less general (more specific) than boxed primitives."
-  [^Class c0 c/class? ^Class c1 c/class? > comparisons]
-  #?(:clj (ifs (== c0 c1)                                0
-               (== c0 Object)                            1
-               (== c1 Object)                           -1
-               (== (utcore/boxed->unboxed c0) c1)        1
-               (== c0 (utcore/boxed->unboxed c1))       -1
-               ;; we'll consider the two unrelated
-               (c/not (utcore/array-depth-equal? c0 c1)) 3
-               (.isAssignableFrom c0 c1)                 1
-               (.isAssignableFrom c1 c0)                -1
-               ;; multiple inheritance of interfaces
-               (c/or (c/and (uclass/interface? c0)
-                            (c/not (uclass/final? c1)))
-                     (c/and (uclass/interface? c1)
-                            (c/not (uclass/final? c0)))) 2
-               3)
-     :cljs (TODO)))
-
-;; ===== Comparison ===== ;;
-
-(declare compare|dispatch)
-
-(def ^:const <ident  -1)
-(def ^:const =ident   0)
-(def ^:const >ident   1)
-(def ^:const ><ident  2)
-(def ^:const <>ident  3)
-
-(def- fn<  (ufn/fn' -1))
-(def- fn=  (ufn/fn'  0))
-(def- fn>  (ufn/fn'  1))
-(def- fn>< (ufn/fn'  2))
-(def- fn<> (ufn/fn'  3))
-
-(defns compare
-  ;; TODO optimize the `recur`s here as they re-take old code paths
-  "Returns the value of the comparison of the extensions of ->`s0` and ->`s1`.
-   `-1` means (ex ->`s0`) ⊂                                 (ex ->`s1`)
-    `0` means (ex ->`s0`) =                                 (ex ->`s1`)
-    `1` means (ex ->`s0`) ⊃                                 (ex ->`s1`)
-    `2` means (ex ->`s0`) shares other intersect w.r.t. (∩) (ex ->`s1`)
-    `3` means (ex ->`s0`) disjoint               w.r.t. (∅) (ex ->`s1`)
-
-   Does not compare cardinalities or other relations of sets, but rather only sub/superset
-   relations."
-  [s0 spec?, s1 spec? > comparisons]
-  (let [dispatched (-> compare|dispatch (get (type s0)) (get (type s1)))]
-    (if (c/nil? dispatched)
-        (err! (str "Specs not handled: " {:s0 s0 :s1 s1}) {:s0 s0 :s1 s1})
-        (dispatched s0 s1))))
-
-(defns <
-  "Computes whether the extension of spec ->`s0` is a strict subset of that of ->`s1`."
-  ([s1 spec?] #(< % s1))
-  ([s0 spec?, s1 spec? > c/boolean?] (let [ret (compare s0 s1)] (c/= ret -1))))
-
-(defns <=
-  "Computes whether the extension of spec ->`s0` is a (lax) subset of that of ->`s1`."
-  ([s1 spec?] #(<= % s1))
-  ([s0 spec?, s1 spec? > c/boolean?] (let [ret (compare s0 s1)] (c/or (c/= ret -1) (c/= ret 0)))))
-
-(defns =
-  "Computes whether the extension of spec ->`s0` is equal to that of ->`s1`."
-  ([s1 spec?] #(= % s1))
-  ([s0 spec?, s1 spec? > c/boolean?] (c/= (compare s0 s1) 0)))
-
-(defns not=
-  "Computes whether the extension of spec ->`s0` is not equal to that of ->`s1`."
-  ([s1 spec?] #(not= % s1))
-  ([s0 spec?, s1 spec? > c/boolean?] (c/not (= s0 s1))))
-
-(defns >=
-  "Computes whether the extension of spec ->`s0` is a (lax) superset of that of ->`s1`."
-  ([s1 spec?] #(>= % s1))
-  ([s0 spec?, s1 spec? > c/boolean?] (let [ret (compare s0 s1)] (c/or (c/= ret 1) (c/= ret 0)))))
-
-(defns >
-  "Computes whether the extension of spec ->`s0` is a strict superset of that of ->`s1`."
-  ([s1 spec?] #(> % s1))
-  ([s0 spec?, s1 spec? > c/boolean?] (c/= (compare s0 s1) 1)))
-
-(defns ><
-  "Computes whether it is the case that the intersect of the extensions of spec ->`s0`
-   and ->`s1` is non-empty, and neither ->`s0` nor ->`s1` share a subset/equality/superset
-   relationship."
-  ([s1 spec?] #(>< % s1))
-  ([s0 spec?, s1 spec? > c/boolean?] (c/= (compare s0 s1) 2)))
-
-(defns <>
-  "Computes whether the respective extensions of specs ->`s0` and ->`s1` are disjoint."
-  ([s1 spec?] #(<> % s1))
-  ([s0 spec? s1 spec? > c/boolean?] (c/= (compare s0 s1) 3)))
-
-(defns inverse [comparison comparisons > comparisons]
-  (case comparison
-    -1       1
-     1      -1
-    (0 2 3) comparison))
-
-;; ===== LOGICAL ===== ;;
-
-(defprotocol PLogicalComplement
-  (>logical-complement [this]
-    "Returns the content inside a `t/not` applied to the `args` of an n-ary logical
-     spec (e.g. `or`, `and`). Stored in such specs to more easily compare them with
-     `not` specs.
-     E.g. `(>logical-complement (and a b))` -> `(or  (not a) (not b))`
-          `(>logical-complement (or  a b))` -> `(and (not a) (not b))`."))
-
-(udt/deftype ^{:doc "Equivalent to `(constantly false)`"} EmptySetSpec []
-  {PSpec                 nil
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn      {-edn ([this] `∅)}})
-
-(def empty-set (EmptySetSpec.))
-
-(udt/deftype ^{:doc "Equivalent to `(constantly true)`"} UniversalSetSpec []
-  {PSpec                 nil
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn      {-edn ([this] `U)}})
-
-;; The set of all sets that do not include themselves (including the empty set)
-(def universal-set (UniversalSetSpec.))
-
-(declare not not-spec? not-spec>inner-spec - and-spec? and-spec>args val|by-class?)
-
-(defns complementary? [s0 spec? s1 spec?] (= s0 (not s1)))
-
-(defns- create-logical-spec|inner|or
-  [{:as accum :keys [s' spec?]} _, s* spec?, c* comparisons]
+(defns- create-logical-type|inner|or
+  [{:as accum :keys [t' utr/type?]} _, t* utr/type?, c* utc/comparison?]
   (if ;; `s` must be either `><` or `<>` w.r.t. to all other args
       (case c* (2 3) true false)
       (if ;; Tautology/universal-set: (| A (! A))
           (c/and (c/= c* <>ident) ; optimization before `complementary?`
-                 (complementary? s' s*))
-          (reduced (assoc accum :conj-s? false :specs [universal-set]))
-          (update accum :specs conj s*))
+                 (complementary? t' t*))
+          (reduced (assoc accum :conj-t? false :types [universal-set]))
+          (update accum :types conj t*))
       (reduced (assoc accum :prefer-orig-args? true))))
 
-(defns- create-logical-spec|inner|and
-  [{:as accum :keys [conj-s? c/boolean?, prefer-orig-args? c/boolean?, s' spec?, specs _]} _
-   s* spec?, c* comparisons]
+(defns- create-logical-type|inner|and
+  [{:as accum :keys [conj-t? c/boolean?, prefer-orig-args? c/boolean?, t' utr/type?, types _]} _
+   t* utr/type?, c* utc/comparison?]
   (if       ;; Contradiction/empty-set: (& A (! A))
       (c/or (c/= c* <>ident) ; optimization before `complementary?`
-            (complementary? s' s*))
+            (complementary? t' t*))
       (do #_(println "BRANCH 1")
-          (reduced (assoc accum :conj-s? false :specs [empty-set])))
+          (reduced (assoc accum :conj-t? false :types [empty-set])))
       (do #_(println "BRANCH 2")
-          (let [conj-s?' (if ;; `s` must be `><` w.r.t. to all other args if it is to be `conj`ed
+          (let [conj-t?' (if ;; `s` must be `><` w.r.t. to all other args if it is to be `conj`ed
                              (c/not= c* ><ident)
                              false
-                             conj-s?)
+                             conj-t?)
                 ;; TODO might similar logic extend to `:or` as well?
-                ss* (if (not-spec? s')
-                        (let [diff (- s* (not s'))]
-                          (if (and-spec? diff)
+                tt* (if (utr/not-type? t')
+                        (let [diff (- t* (not t'))]
+                          (if (utr/and-type? diff)
                               ;; preserve inner expansion
-                              (and-spec>args diff)
+                              (utr/and-type>args diff)
                               [diff]))
-                        [s*])]
-            (assoc accum :conj-s? conj-s?' :specs (into specs ss*))))))
+                        [t*])]
+            (assoc accum :conj-t? conj-t?' :types (into types tt*))))))
 
-(defns- create-logical-spec|inner
-  [args' _, s spec?, kind #{:or :and}, comparison-denotes-supersession? c/fn?]
+(defns- create-logical-type|inner
+  [args' _, t utr/type?, kind #{:or :and}, comparison-denotes-supersession? c/fn?]
   (let [args+comparisons|without-superseded
           (->> args'
-               (uc/map+    (juxt identity #(compare s %)))
-               ;; remove all args whose extensions are superseded by `s`
+               (uc/map+    (juxt identity #(compare t %)))
+               ;; remove all args whose extensions are superseded by `t`
                (uc/remove+ (fn-> second comparison-denotes-supersession?))
                join) ; TODO elide `join`
-        s-redundant? (->> args+comparisons|without-superseded (seq-or (fn-> second (c/= =ident))))]
-    (ifs s-redundant?
+        t-redundant? (->> args+comparisons|without-superseded (seq-or (fn-> second (c/= =ident))))]
+    (ifs t-redundant?
            args'
          (empty? args+comparisons|without-superseded)
-           [s]
-         (let [{:keys [conj-s? prefer-orig-args? s' specs]}
+           [t]
+         (let [{:keys [conj-t? prefer-orig-args? t' types]}
                (->> args+comparisons|without-superseded
                     (educe
                       (c/fn ([accum] accum)
-                            ([accum [s* c*]]
-                              #_(prl! kind conj-s? prefer-orig-args? s' specs s* c*)
+                            ([accum [t* c*]]
+                              #_(prl! kind conj-s? prefer-orig-args? t' types t* c*)
                               (case kind
-                                :or  (create-logical-spec|inner|or  accum s* c*)
-                                :and (create-logical-spec|inner|and accum s* c*))))
-                      {:conj-s?            ;; If `s` is a `NotSpec`, and kind is `:and`, then it will be
+                                :or  (create-logical-type|inner|or  accum t* c*)
+                                :and (create-logical-type|inner|and accum t* c*))))
+                      {:conj-t?            ;; If `t` is a `NotType`, and kind is `:and`, then it will be
                                            ;; applied by being `-` from all args, not by being `conj`ed
-                                           (c/not (c/and (c/= kind :and) (not-spec? s)))
+                                           (c/not (c/and (c/= kind :and) (utr/not-type? t)))
                        :prefer-orig-args? false
-                       :s'                s
-                       :specs             []}))]
+                       :t'                t
+                       :types             []}))]
            (if prefer-orig-args?
                args'
-               (whenp-> specs conj-s? (conj s')))))))
+               (whenp-> types conj-t? (conj t')))))))
 
-(defn- simplify-logical-spec|inner-expansion+
+(defn- simplify-logical-type|inner-expansion+
   "Simplification via inner expansion: `(| (| a b) c)` -> `(| a b c)`"
-  [spec-pred spec>args spec-args #_(of reducible? spec?)]
-  (->> spec-args
-       (uc/map+ (c/fn [arg] (if (spec-pred arg)
-                                (spec>args arg)
+  [type-pred type>args type-args #_(of reducible? utr/type?)]
+  (->> type-args
+       (uc/map+ (c/fn [arg] (if (type-pred arg)
+                                (type>args arg)
                                 [arg])))
        uc/cat+))
 
-(defn- simplify-logical-spec|structural-identity+
+(defn- simplify-logical-type|structural-identity+
   "Simplification via structural identity: `(| a b a)` -> `(| a b)`"
-  [spec-args #_(of reducible? spec?)]
-  (->> spec-args (uc/map+ >spec) uc/distinct+))
+  [type-args #_(of reducible? utr/type?)]
+  (->> type-args (uc/map+ >type) uc/distinct+))
 
-(defn- simplify-logical-spec|comparison
+(defn- simplify-logical-type|comparison
   "Simplification via intension comparison"
-  [kind comparison-denotes-supersession? spec-args #_(of reducible? spec?)]
+  [kind comparison-denotes-supersession? type-args #_(of reducible? utr/type?)]
   (educe
-    (c/fn ([spec-args'] spec-args')
-          ([spec-args' s #_spec?]
-            (if (empty? spec-args')
-                (conj spec-args' s)
-                (create-logical-spec|inner spec-args' s kind comparison-denotes-supersession?))))
+    (c/fn ([type-args'] type-args')
+          ([type-args' t #_utr/type?]
+            (if (empty? type-args')
+                (conj type-args' t)
+                (create-logical-type|inner type-args' t kind comparison-denotes-supersession?))))
     []
-    spec-args))
+    type-args))
 
-(defns- create-logical-spec
-  [kind #{:or :and}, construct-fn _, spec-pred _, spec>args _, spec-args (fn-> count (c/>= 1))
-   comparison-denotes-supersession? c/fn? > spec?]
-  (if (-> spec-args count (c/= 1))
-      (first spec-args)
+(defns- create-logical-type
+  [kind #{:or :and}, construct-fn _, type-pred _, type>args _, type-args (fn-> count (c/>= 1))
+   comparison-denotes-supersession? c/fn? > utr/type?]
+  (if (-> type-args count (c/= 1))
+      (first type-args)
       (let [simplified
-              (->> spec-args
-                   (simplify-logical-spec|inner-expansion+ spec-pred spec>args)
-                   simplify-logical-spec|structural-identity+
-                   (simplify-logical-spec|comparison kind comparison-denotes-supersession?))]
+              (->> type-args
+                   (simplify-logical-type|inner-expansion+ type-pred type>args)
+                   simplify-logical-type|structural-identity+
+                   (simplify-logical-type|comparison kind comparison-denotes-supersession?))]
         (assert (-> simplified count (c/>= 1))) ; for internal implementation correctness
         (if (-> simplified count (c/= 1))
             (first simplified)
             (construct-fn simplified (atom nil))))))
 
-;; ===== AND ===== ;;
-
-(udt/deftype AndSpec [args #_(t/and t/indexed? (t/seq spec?)) *logical-complement]
-  {PSpec                 nil
-   PLogicalComplement    {>logical-complement
-                           ([this] (c/or @*logical-complement (reset! *logical-complement (not this))))}
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn      {-edn ([this] (list* `and args))}
-   ?Fn                   {invoke ([_ x] (reduce (c/fn [_ pred] (c/or (pred x) (reduced false)))
-                                          true ; vacuously
-                                          args))}
-   ?Object               ;; Tests for structural equivalence
-                         {equals ([this that]
-                                   (c/or (== this that)
-                                         (c/and (instance? AndSpec that)
-                                                (c/= args (.-args ^AndSpec that)))))}})
-
-(defns and-spec? [x _ > c/boolean?] (instance? AndSpec x))
-
-(defns and-spec>args [x and-spec?] (.-args ^AndSpec x))
-
-(defn and
-  "Sequential/ordered `and`. Analogous to `set/intersection`.
-   Applies as much 'compression'/deduplication/simplification as possible to the supplied specs.
-   Effectively computes the intersection of the extension of the ->`args`."
-  [arg & args]
-  (create-logical-spec :and ->AndSpec and-spec? and-spec>args (cons arg args) (fn1 c/= -1)))
-
-(uvar/defalias & and)
-
-;; ===== OR ===== ;;
-
-(udt/deftype OrSpec [args #_(t/and t/indexed? (t/seq spec?)) *logical-complement]
-  {PSpec                 nil
-   PLogicalComplement    {>logical-complement
-                           ([this] (c/or @*logical-complement (reset! *logical-complement (not this))))}
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn      {-edn ([this] (list* `or args))}
-   ?Fn                   {invoke ([_ x] (reduce (c/fn [_ pred] (let [p (pred x)] (c/and p (reduced p))))
-                                          true ; vacuously
-                                          args))}
-   ?Object               ;; Tests for structural equivalence
-                         {equals ([this that]
-                                   (c/or (== this that)
-                                         (c/and (instance? OrSpec that)
-                                                (c/= args (.-args ^OrSpec that)))))}})
-
-(defns or-spec? [x _ > c/boolean?] (instance? OrSpec x))
-
-(defns or-spec>args [x or-spec?] (.-args ^OrSpec x))
-
-(defn or
-  "Sequential/ordered `or`. Analogous to `set/union`.
-   Applies as much 'compression'/deduplication/simplification as possible to the supplied specs.
-   Effectively computes the union of the extension of the ->`args`."
-  [arg & args]
-  (create-logical-spec :or ->OrSpec or-spec? or-spec>args (cons arg args) (fn1 c/= 1)))
-
-(uvar/defalias | or)
-
-;; ===== OR ===== ;;
-
-(udt/deftype NotSpec [spec #_t/spec?]
-  {PSpec                 nil
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn      {-edn   ([this] (list `not spec))}
-   ?Fn                   {invoke ([_ x] (spec x))}
-   ?Object               ;; Tests for structural equivalence
-                         {equals ([this that]
-                                   (c/or (== this that)
-                                         (c/and (instance? NotSpec that)
-                                                (c/= spec (.-spec ^NotSpec that)))))}})
-
-(defns not-spec? [x _ > c/boolean?] (instance? NotSpec x))
-
-(defns not-spec>inner-spec [spec not-spec?] (.-spec ^NotSpec spec))
-
-(declare nil? val?)
-
-(defns not [spec spec? > spec?]
-  (ifs (= spec universal-set) empty-set
-       (= spec empty-set)     universal-set
-       (= spec val|by-class?) nil?
-       (not-spec? spec)       (not-spec>inner-spec spec)
-       ;; DeMorgan's Law
-       (or-spec?  spec)       (->> spec or-spec>args  (uc/lmap not) (apply and))
-       ;; DeMorgan's Law
-       (and-spec? spec)       (->> spec and-spec>args (uc/lmap not) (apply or ))
-       (NotSpec. spec)))
-
-(uvar/defalias ! not)
-
-(defns -
-  "Computes the difference of `s0` from `s1`: (& s0 (! s1))
-   If `s0` =       `s1`, `∅`
-   If `s0` <       `s1`, `∅`
-   If `s0` <>      `s1`, `s0`
-   If `s0` > | ><  `s1`, `s0` with all elements of `s1` removed"
-  [s0 spec?, s1 spec? > spec?]
-  (let [c (compare s0 s1)]
-    (case c
-      (0 -1) empty-set
-       3     s0
-      (1 2)
-        (let [c0 (c/class s0) c1 (c/class s1)]
-          ;; TODO add dispatch?
-          (condp == c0
-            NotSpec (condp == (-> s0 not-spec>inner-spec c/class)
-                      ClassSpec (condp == c1
-                                  ClassSpec (AndSpec. [s0 (not s1)] (atom nil)))
-                      ValueSpec (condp == c1
-                                  ValueSpec (AndSpec. [s0 (not s1)] (atom nil))))
-            OrSpec  (condp == c1
-                      ClassSpec (let [args (->> s0 or-spec>args (uc/remove (fn1 = s1)))]
-                                  (case (count args)
-                                    0 empty-set
-                                    1 (first args)
-                                    (OrSpec. args (atom nil))))))))))
-
-#_(udt/deftype SequentialSpec)
+;; TODO do this?
+#_(udt/deftype SequentialType)
 
 #_(defns of
-  "Creates a spec that ... TODO"
-  [pred (<= iterable?), spec spec?] (TODO))
+  "Creates a type that ... TODO"
+  [pred (<= iterable?), t utr/type?] (TODO))
 
 ;; TODO do this
+(do
+
 (udt/deftype FnSpec
   [name   #_(t/? t/symbol?)
    dispatch ...
@@ -637,8 +434,7 @@
    ?Meta {meta      ([this] meta)
           with-meta ([this meta'] (FnSpec. name lookup spec meta'))}
    fipp.ednize/IOverride nil
-   fipp.ednize/IEdn
-     {-edn ([this] (list `fn name lookup))}})
+   fipp.ednize/IEdn {-edn ([this] (list `fn name lookup))}})
 
 (defns fn-spec? [x _ > c/boolean?] (instance? FnSpec x))
 
@@ -663,8 +459,10 @@
                                  (->> spec-or-arity-specs (map (TODO)))))))]
     (FnSpec. name- lookup spec nil)))
 
+)
+
 (defn unkeyed
-  "Creates an unkeyed collection spec, in which the collection may
+  "Creates an unkeyed collection type, in which the collection may
    or may not be sequential or even seqable, but must not have key-value
    pairs like a map.
    Examples of unkeyed collections include a vector (despite its associativity),
@@ -673,308 +471,12 @@
   [x] (TODO))
 
 (defns ?
-  "Arity 1: Computes a spec denoting a nilable value satisfying `spec`.
-   Arity 2: Computes whether `x` is nil or satisfies `spec`."
-  ([spec spec? > spec?] (or nil? spec))
-  ([spec spec?, x _ > c/boolean?] (c/or (c/nil? x) (spec x))))
+  "Arity 1: Computes a type denoting a nilable value satisfying `t`.
+   Arity 2: Computes whether `x` is nil or satisfies `t`."
+  ([t utr/type? > utr/type?] (or nil? t))
+  ([t utr/type?, x _ > c/boolean?] (c/or (c/nil? x) (t x))))
 
-;; ===== Comparison ===== ;;
-
-(defns- compare|todo [s0 spec?, s1 spec?]
-  (err! "TODO dispatch" {:s0 s0 :s0|type (type s0)
-                         :s1 s1 :s1|type (type s1)}))
-
-;; ----- Multiple ----- ;;
-
-(defns- compare|atomic+or [s0 spec?, ^OrSpec s1 or-spec? > comparisons]
-  (let [specs (.-args s1)]
-    (first
-      (reduce
-        (c/fn [[ret found] s]
-          (let [c      (compare s0 s)
-                found' (-> found (ubit/conj c) c/long)]
-            (ifs (c/or (ubit/contains? found' <ident)
-                       (ubit/contains? found' =ident))
-                 (reduced [-1 found'])
-
-                 (c/or (ubit/contains? found' ><ident)
-                       (c/and (ubit/contains? found' >ident)
-                              (ubit/contains? found' <>ident)))
-                 [2 found']
-
-                 [c found'])))
-        [3 ubit/empty]
-        specs))))
-
-(defns- compare|atomic+and [s0 spec?, ^AndSpec s1 and-spec? > comparisons]
-  (let [specs (.-args s1)]
-    (first
-      (reduce
-        (c/fn [[ret found] s]
-          (let [c (compare s0 s)]
-            (if (c/= c 0)
-                (reduced [1 nil])
-                (let [found' (-> found (ubit/conj c) c/long)
-                      ret'   (ifs (ubit/contains? found' ><ident)
-                                  (if (c/= found' (ubit/conj ><ident <>ident))
-                                      3
-                                      2)
-
-                                  (ubit/contains? found' <>ident)
-                                  (ifs (ubit/contains? found' <ident) 3
-                                       (ubit/contains? found' >ident) 1
-                                       c)
-
-                                  c)]
-                  [ret' found']))))
-        [3 ubit/empty]
-        specs))))
-
-;; ----- UniversalSet ----- ;;
-
-(def- compare|universal+empty    fn>)
-
-(defns- compare|universal+not [s0 spec?, s1 spec? > comparisons]
-  (let [s1|inner (not-spec>inner-spec s1)]
-    (ifs (= s1|inner universal-set) 1
-         (= s1|inner empty-set)     0
-         (compare s0 s1|inner))))
-
-(def- compare|universal+or       fn>)
-(def- compare|universal+and      fn>)
-(def- compare|universal+expr     compare|todo)
-(def- compare|universal+protocol fn>)
-(def- compare|universal+class    fn>)
-(def- compare|universal+value    fn>)
-
-;; ----- EmptySet ----- ;;
-
-(defns- compare|empty+not [s0 spec?, s1 spec? > comparisons]
-  (let [s1|inner (not-spec>inner-spec s1)]
-    (if (= s1|inner universal-set) 0 -1)))
-
-(def- compare|empty+or       fn<)
-(def- compare|empty+and      fn<)
-(def- compare|empty+expr     compare|todo)
-(def- compare|empty+protocol fn<)
-(def- compare|empty+class    fn<)
-(def- compare|empty+value    fn<)
-
-;; ----- NotSpec ----- ;;
-
-(defns- compare|not+not [s0 spec?, s1 spec? > comparisons]
-  (let [c (compare (not-spec>inner-spec s0) (not-spec>inner-spec s1))]
-    (case c
-      0  0
-     -1  1
-      1 -1
-      2  2
-      3  2)))
-
-(defns- compare|not+or [s0 not-spec?, s1 or-spec? > comparisons]
-  (compare|atomic+or s0 s1))
-
-(defns- compare|not+and [s0 not-spec?, s1 and-spec? > comparisons]
-  (compare|atomic+and s0 s1))
-
-(defns- compare|not+protocol [s0 spec?, s1 spec? > comparisons]
-  (let [s0|inner (not-spec>inner-spec s0)]
-    (if (= s0|inner empty-set) 1 3)))
-
-(defns- compare|not+class [s0 spec?, s1 spec? > comparisons]
-  (let [s0|inner (not-spec>inner-spec s0)]
-    (if (= s0|inner empty-set)
-        1
-        (case (compare s0|inner s1)
-          ( 1 0) 3
-          (-1 2) 2
-          3      1))))
-
-(defns- compare|not+value [s0 spec?, s1 spec? > comparisons]
-  (let [s0|inner (not-spec>inner-spec s0)]
-    (if (= s0|inner empty-set)
-        1
-        ;; nothing is ever < ValueSpec (and therefore never ><)
-        (case (compare s0|inner s1)
-          (1 0) 3
-          3     1))))
-
-;; ----- OrSpec ----- ;;
-
-;; TODO performance can be improved here by doing fewer comparisons
-(defns- compare|or+or [^OrSpec s0 or-spec?, ^OrSpec s1 or-spec? > comparisons]
-  (let [l (->> s0 .-args (seq-and (fn1 < s1)))
-        r (->> s1 .-args (seq-and (fn1 < s0)))]
-    (if l
-        (if r 0 -1)
-        (if r
-            1
-            (if (->> s0 .-args (seq-and (fn1 <> s1)))
-                3
-                2)))))
-
-(defns- compare|or+and [^OrSpec s0 or-spec?, ^AndSpec s1 and-spec? > comparisons]
-  (let [r (->> s1 .-args (seq-and (fn1 < s0)))]
-    (if r 1 3)))
-
-(defns- compare|class+or [s0 class-spec?, ^OrSpec s1 or-spec? > comparisons]
-  (compare|atomic+or s0 s1))
-
-(defns- compare|value+or [s0 value-spec?, ^OrSpec s1 or-spec? > comparisons]
-  (compare|atomic+or s0 s1))
-
-;; ----- AndSpec ----- ;;
-
-(defns- compare|and+and [^AndSpec s0 and-spec?, ^AndSpec s1 and-spec? > comparisons]
-  (TODO))
-
-(defns- compare|class+and [s0 class-spec?, ^AndSpec s1 and-spec? > comparisons]
-  (compare|atomic+and s0 s1))
-
-(defns- compare|value+and [s0 value-spec?, ^AndSpec s1 and-spec? > comparisons]
-  (compare|atomic+and s0 s1))
-
-;; ----- Expression ----- ;;
-
-(defns- compare|expr+expr [s0 _, s1 _ > comparisons] (if (c/= s0 s1) 0 3))
-
-(def- compare|expr+value fn<>)
-
-;; ----- ProtocolSpec ----- ;;
-
-;; TODO transition to `compare|protocol+value` when stable
-(defns- compare|value+protocol [s0 value-spec?, s1 protocol-spec? > comparisons]
-  (let [v (value-spec>value       s0)
-        p (protocol-spec>protocol s1)]
-    (if (satisfies? p v) -1 3)))
-
-;; ----- ClassSpec ----- ;;
-
-(defns- compare|class+value [s0 class-spec?, s1 value-spec? > comparisons]
-  (let [c (class-spec>class s0)
-        v (value-spec>value s1)]
-    (if (instance? c v) 1 3)))
-
-;; ----- ValueSpec ----- ;;
-
-(defns- compare|value+value
-  "What we'd really like is to have a different version of .equals or .equiv
-   like .equivBehavior in which it returns whether any behavior is different
-   whatsoever between two objects. For instance, `[52]` behaves differently from
-   `(list 52)` because `(get [52] 0)` -> `52` while `(get (list 52) 0)` -> `nil`.
-
-   The issue with this is that yes, one could implement a `strict=` that tries to
-   emulate this behavior, but even though it is implementable for 'transparent'
-   objects such as collections, it is not for 'opaque' objects, which would
-   potentially have to have custom equality behavior per class. So we will simply
-   reluctantly accept whatever `=` tells us as well as the fallout that results.
-   Thus, `(t/or (t/value []) (t/value (list)))` will result in `(t/value [])`,
-   which is not ideal but both feasible and better than the alternative."
-  [s0 value-spec?, s1 value-spec? > comparisons]
-  (if (c/= (value-spec>value s0)
-           (value-spec>value s1))
-      0
-      3))
-
-;; ----- Dispatch ----- ;;
-
-;; TODO take away var indirection once done
-(def- compare|dispatch
-  (let [inverted (c/fn [f] (c/fn [s0 s1] (inverse (f s1 s0))))]
-    {UniversalSetSpec
-       {UniversalSetSpec #'fn=
-        EmptySetSpec     #'compare|universal+empty
-        NotSpec          #'compare|universal+not
-        OrSpec           #'compare|universal+or
-        AndSpec          #'compare|universal+and
-        Expression       #'compare|universal+expr
-        ProtocolSpec     #'compare|universal+protocol
-        ClassSpec        #'compare|universal+class
-        ValueSpec        #'compare|universal+value}
-     EmptySetSpec
-       {UniversalSetSpec (inverted #'compare|universal+empty)
-        EmptySetSpec     #'fn=
-        NotSpec          #'compare|empty+not
-        OrSpec           #'compare|empty+or
-        AndSpec          #'compare|empty+and
-        Expression       #'compare|empty+expr
-        ProtocolSpec     #'compare|empty+protocol
-        ClassSpec        #'compare|empty+class
-        ValueSpec        #'compare|empty+value}
-     NotSpec
-       {UniversalSetSpec (inverted #'compare|universal+not)
-        EmptySetSpec     (inverted #'compare|empty+not)
-        NotSpec          #'compare|not+not
-        OrSpec           #'compare|not+or
-        AndSpec          #'compare|not+and
-        Expression       #'fn<>
-        ProtocolSpec     #'compare|not+protocol
-        ClassSpec        #'compare|not+class
-        ValueSpec        #'compare|not+value}
-     OrSpec
-       {UniversalSetSpec (inverted #'compare|universal+or)
-        EmptySetSpec     (inverted #'compare|empty+or)
-        NotSpec          (inverted #'compare|not+or)
-        OrSpec           #'compare|or+or
-        AndSpec          #'compare|or+and
-        Expression       #'fn<>
-        ProtocolSpec     #'compare|todo
-        ClassSpec        (inverted #'compare|class+or)
-        ValueSpec        (inverted #'compare|value+or)}
-     AndSpec
-       {UniversalSetSpec (inverted #'compare|universal+and)
-        EmptySetSpec     (inverted #'compare|empty+and)
-        NotSpec          #'compare|todo
-        OrSpec           (inverted #'compare|or+and)
-        AndSpec          #'compare|and+and
-        Expression       #'fn<>
-        ProtocolSpec     #'compare|todo
-        ClassSpec        (inverted #'compare|class+and)
-        ValueSpec        (inverted #'compare|value+and)}
-     ;; TODO review this
-     Expression
-       {UniversalSetSpec (inverted #'compare|universal+expr)
-        EmptySetSpec     (inverted #'compare|empty+expr)
-        NotSpec          #'compare|todo
-        OrSpec           #'compare|todo
-        AndSpec          #'compare|todo
-        Expression       #'compare|expr+expr
-        ProtocolSpec     #'compare|todo
-        ClassSpec        #'fn<> ; TODO not entirely true
-        ValueSpec        #'compare|expr+value}
-     ProtocolSpec
-       {UniversalSetSpec (inverted #'compare|universal+protocol)
-        EmptySetSpec     (inverted #'compare|empty+protocol)
-        NotSpec          (inverted #'compare|not+protocol)
-        OrSpec           #'compare|todo
-        AndSpec          #'compare|todo
-        Expression       #'fn<>
-        ProtocolSpec     (c/fn [s0 s1] (if (identical? (protocol-spec>protocol s0)
-                                                       (protocol-spec>protocol s1))
-                                           0
-                                           3))
-        ClassSpec        #'compare|todo
-        ValueSpec        (inverted #'compare|value+protocol)}
-     ClassSpec
-       {UniversalSetSpec (inverted #'compare|universal+class)
-        EmptySetSpec     (inverted #'compare|empty+class)
-        NotSpec          (inverted #'compare|not+class)
-        OrSpec           #'compare|class+or
-        AndSpec          #'compare|class+and
-        Expression       #'fn<>
-        ProtocolSpec     #'compare|todo
-        ClassSpec        (c/fn [s0 s1] (compare|class|class* (class-spec>class s0) (class-spec>class s1)))
-        ValueSpec        #'compare|class+value}
-     ValueSpec
-       {UniversalSetSpec (inverted #'compare|universal+value)
-        EmptySetSpec     (inverted #'compare|empty+value)
-        NotSpec          (inverted #'compare|not+value)
-        OrSpec           #'compare|value+or
-        AndSpec          #'compare|value+and
-        Expression       (inverted #'compare|expr+value)
-        ProtocolSpec     #'compare|value+protocol
-        ClassSpec        (inverted #'compare|class+value)
-        ValueSpec        #'compare|value+value}}))
+;; ===== Etc. ===== ;;
 
 #?(:clj
 (def boxed-class->unboxed-symbol
@@ -991,47 +493,47 @@
 
 #?(:clj (def primitive-classes (->> unboxed-symbol->type-meta vals (uc/map+ :unboxed) (join #{}))))
 
-(defns- -spec>classes [spec spec?, classes c/set? > (s/set-of (s/nilable c/class?))]
-  (cond (class-spec? spec)
-          (conj classes (class-spec>class spec))
-        (value-spec? spec)
-          (conj classes (value-spec>value spec))
-        (c/= spec universal-set)
+(defns- -type>classes [t utr/type?, classes c/set? > (s/set-of (s/nilable c/class?))]
+  (cond (utr/class-type? t)
+          (conj classes (utr/class-type>class t))
+        (utr/value-type? t)
+          (conj classes (utr/value-type>value t))
+        (c/= t universal-set)
           #?(:clj  #{nil java.lang.Object}
              :cljs (TODO "Not sure what to do in the case of universal CLJS set"))
-        (c/= spec empty-set)
+        (c/= t empty-set)
           #{}
-        (and-spec? spec)
-          (reduce (c/fn [classes' spec'] (-spec>classes spec' classes'))
-            classes (and-spec>args spec))
-        (or-spec? spec)
-          (reduce (c/fn [classes' spec'] (-spec>classes spec' classes'))
-            classes (or-spec>args spec))
+        (utr/and-type? t)
+          (reduce (c/fn [classes' t'] (-type>classes t' classes'))
+            classes (utr/and-type>args t))
+        (utr/or-type? t)
+          (reduce (c/fn [classes' t'] (-type>classes t' classes'))
+            classes (utr/or-type>args t))
         :else
-          (err! "Not sure how to handle spec" spec)))
+          (err! "Not sure how to handle type" t)))
 
-(defns spec>classes
-  "Outputs the set of all the classes ->`spec` can embody according to its various conditional branches,
-   if any. Ignores nils, treating in Clojure simply as a `java.lang.Object`."
-  [spec spec? > (s/set-of (s/nilable c/class?))] (-spec>classes spec #{}))
+(defns type>classes
+  "Outputs the set of all the classes ->`t` can embody according to its various conditional
+   branches, if any. Ignores nils, treating in Clojure simply as a `java.lang.Object`."
+  [t utr/type? > (s/set-of (s/nilable c/class?))] (-type>classes t #{}))
 
 #?(:clj
-(defns- -spec>?class-value [spec spec?, spec-nilable? c/boolean?]
-  (if (value-spec? spec)
-      (let [v (value-spec>value spec)]
-        (when (c/class? v) {:class v :nilable? spec-nilable?}))
+(defns- -type>?class-value [t utr/type?, type-nilable? c/boolean?]
+  (if (utr/value-type? t)
+      (let [v (utr/value-type>value t)]
+        (when (c/class? v) {:class v :nilable? type-nilable?}))
       nil)))
 
 #?(:clj
-(defns spec>?class-value
-  "Outputs the single class value embodied by ->`spec`.
-   If a spec is extensionally equal the *value* of a class, outputs that class.
+(defns type>?class-value
+  "Outputs the single class value embodied by ->`t`.
+   If a type is extensionally equal the *value* of a class, outputs that class.
 
-   However, if a spec does not embody the value of a class but rather merely embodies (as all specs)
+   However, if a type does not embody the value of a class but rather merely embodies (as all types)
    an extensional subset of the set of all objects conforming to a class, outputs nil."
-  {:examples `{(spec>?class-value (value String)) {:class String :nilable? false}
-               (spec>?class-value (isa? String))  nil}}
-  [spec spec?] (-spec>?class-value spec false)))
+  {:examples `{(type>?class-value (value String)) {:class String :nilable? false}
+               (type>?class-value (isa? String))  nil}}
+  [t utr/type?] (-type>?class-value t false)))
 
 ;; ---------------------- ;;
 ;; ===== Predicates ===== ;;
@@ -1086,6 +588,7 @@
                                     (value Long/TYPE)
                                     (value Float/TYPE)
                                     (value Double/TYPE))))
+         ;; TODO for CLJS
 #?(:clj  (-def protocol?        (>expr (ufn/fn-> :on-interface class?))))
 
 ;; ===== Primitives ===== ;;
@@ -1170,9 +673,9 @@
        #_(-def int-like?                   (and integer-value? numerically-int?))
 
 #_(defn numerically
-  [spec]
-  (assert (instance? ClassSpec spec))
-  (let [c (.-c ^ClassSpec spec)]
+  [t]
+  (assert (utr/class-type? t))
+  (let [c (.-c ^ClassType t)]
     (case (.getName ^Class c)
       "java.lang.Byte"      numerically-byte?
       "java.lang.Short"     numerically-short?
@@ -1182,7 +685,7 @@
       "java.lang.Float"     numerically-float?
       ;; TODO fix
       ;;"java.lang.Double"    numerically-double?
-      (err! "Could not find numerical range spec for class" {:c c}))))
+      (err! "Could not find numerical range type for class" {:c c}))))
 
 ;; ========== Collections ========== ;;
 
@@ -1222,7 +725,7 @@
                       ;; dense integer values), not extensible
 
 #?(:clj
-(defns >array-nd-type [kind c/symbol?, n utpred/pos-int? > class-spec?]
+(defns >array-nd-type [kind c/symbol?, n utpred/pos-int? > utr/class-type?]
   (let [prefix (apply str (repeat n \[))
         letter (case kind
                  boolean "Z"
@@ -1237,7 +740,7 @@
     (isa? (Class/forName (str prefix letter))))))
 
 #?(:clj
-(defns >array-nd-types [n utpred/pos-int? > spec?]
+(defns >array-nd-types [n utpred/pos-int? > utr/type?]
   (->> '[boolean byte char short int long float double object]
        (map #(>array-nd-type % n))
        (apply or))))
@@ -2095,7 +1598,7 @@
 
          (-def ifn?         (isa? #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
 
-         (-def fnt?         (and fn? (>expr (fn-> c/meta :spec))))
+         (-def fnt?         (and fn? (>expr (fn-> c/meta :type))))
 
          (-def multimethod? (isa? #?(:clj clojure.lang.MultiFn :cljs cljs.core/IMultiFn)))
 

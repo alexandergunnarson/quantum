@@ -10,6 +10,7 @@
             [quantum.untyped.core.classes           :as uclass]
             [quantum.untyped.core.compare
               :refer [==]]
+            [quantum.untyped.core.core              :as ucore]
             [quantum.untyped.core.data.bits         :as ubit]
             [quantum.untyped.core.defnt
               :refer [defns defns-]]
@@ -37,6 +38,8 @@
                ProtocolType ClassType
                ValueType])))
 
+(ucore/log-this-ns)
+
 (declare compare < <= = not= >= > >< <>)
 
 ;; ===== (Comparison) idents ===== ;;
@@ -54,8 +57,9 @@
 (def- fn<> (fn' <>ident))
 
 (def comparisons #{<ident =ident >ident ><ident <>ident})
+(def comparison? comparisons)
 
-(defns inverse [comparison comparisons > comparisons]
+(defns inverse [comparison comparison? > comparison?]
   (case comparison
     -1      >ident
      1      <ident
@@ -69,7 +73,7 @@
 
 ;; ----- Multiple ----- ;;
 
-(defns- compare|atomic+or [t0 type?, ^OrType t1 or-type? > comparisons]
+(defns- compare|atomic+or [t0 type?, ^OrType t1 or-type? > comparison?]
   (let [ts (.-args t1)]
     (first
       (reduce
@@ -89,7 +93,7 @@
         [<>ident ubit/empty]
         ts))))
 
-(defns- compare|atomic+and [t0 type?, ^AndType t1 and-type? > comparisons]
+(defns- compare|atomic+and [t0 type?, ^AndType t1 and-type? > comparison?]
   (let [ts (.-args t1)]
     (first
       (reduce
@@ -117,7 +121,7 @@
 
 (def- compare|universal+empty fn>)
 
-(defns- compare|universal+not [t0 type?, t1 not-type? > comparisons]
+(defns- compare|universal+not [t0 type?, t1 not-type? > comparison?]
   (let [t1|inner (utr/not-type>inner-type t1)]
     (ifs (= t1|inner universal-set) >ident
          (= t1|inner empty-set)     =ident
@@ -132,7 +136,7 @@
 
 ;; ----- EmptySet ----- ;;
 
-(defns- compare|empty+not [t0 type?, t1 not-type? > comparisons]
+(defns- compare|empty+not [t0 type?, t1 not-type? > comparison?]
   (let [t1|inner (utr/not-type>inner-type t1)]
     (if (= t1|inner universal-set) =ident <ident)))
 
@@ -145,7 +149,7 @@
 
 ;; ----- NotType ----- ;;
 
-(defns- compare|not+not [t0 not-type?, t1 not-type? > comparisons]
+(defns- compare|not+not [t0 not-type?, t1 not-type? > comparison?]
   (let [c (compare (utr/not-type>inner-type t0) (utr/not-type>inner-type t1))]
     (case c
       0 =ident
@@ -158,11 +162,11 @@
 
 (def- compare|not+and compare|atomic+and)
 
-(defns- compare|not+protocol [t0 not-type?, t1 protocol-type? > comparisons]
+(defns- compare|not+protocol [t0 not-type?, t1 protocol-type? > comparison?]
   (let [t0|inner (utr/not-type>inner-type t0)]
     (if (= t0|inner empty-set) >ident <>ident)))
 
-(defns- compare|not+class [t0 not-type?, t1 class-type? > comparisons]
+(defns- compare|not+class [t0 not-type?, t1 class-type? > comparison?]
   (let [t0|inner (utr/not-type>inner-type t0)]
     (if (= t0|inner empty-set)
         >ident
@@ -171,7 +175,7 @@
           (-1 2) ><ident
           3      >ident))))
 
-(defns- compare|not+value [t0 not-type?, t1 value-type? > comparisons]
+(defns- compare|not+value [t0 not-type?, t1 value-type? > comparison?]
   (let [t0|inner (utr/not-type>inner-type t0)]
     (if (= t0|inner empty-set)
         >ident
@@ -183,7 +187,7 @@
 ;; ----- OrType ----- ;;
 
 ;; TODO performance can be improved here by doing fewer comparisons
-(defns- compare|or+or [^OrType t0 or-type?, ^OrType t1 or-type? > comparisons]
+(defns- compare|or+or [^OrType t0 or-type?, ^OrType t1 or-type? > comparison?]
   (let [l (->> t0 .-args (seq-and (fn1 < t1)))
         r (->> t1 .-args (seq-and (fn1 < t0)))]
     (if l
@@ -194,7 +198,7 @@
                 <>ident
                 ><ident)))))
 
-(defns- compare|or+and [^OrType t0 or-type?, ^AndType t1 and-type? > comparisons]
+(defns- compare|or+and [^OrType t0 or-type?, ^AndType t1 and-type? > comparison?]
   (let [r (->> t1 .-args (seq-and (fn1 < t0)))]
     (if r >ident <>ident)))
 
@@ -203,7 +207,7 @@
 
 ;; ----- AndType ----- ;;
 
-(defns- compare|and+and [^AndType t0 and-type?, ^AndType t1 and-type? > comparisons]
+(defns- compare|and+and [^AndType t0 and-type?, ^AndType t1 and-type? > comparison?]
   (TODO))
 
 (def- compare|class+and compare|atomic+and)
@@ -211,19 +215,19 @@
 
 ;; ----- Expression ----- ;;
 
-(defns- compare|expr+expr [t0 _, t1 _ > comparisons] (if (c/= t0 t1) =ident <>ident))
+(defns- compare|expr+expr [t0 _, t1 _ > comparison?] (if (c/= t0 t1) =ident <>ident))
 
 (def- compare|expr+value fn<>)
 
 ;; ----- ProtocolType ----- ;;
 
-(defns- compare|protocol+protocol [t0 protocol-type?, t1 protocol-type? > comparisons]
+(defns- compare|protocol+protocol [t0 protocol-type?, t1 protocol-type? > comparison?]
   (if (== (utr/protocol-type>protocol t0) (utr/protocol-type>protocol t1))
       =ident
       <>ident))
 
 ;; TODO transition to `compare|protocol+value` when stable
-(defns- compare|value+protocol [t0 value-type?, t1 protocol-type? > comparisons]
+(defns- compare|value+protocol [t0 value-type?, t1 protocol-type? > comparison?]
   (let [v (utr/value-type>value       t0)
         p (utr/protocol-type>protocol t1)]
     (if (satisfies? p v) <ident <>ident)))
@@ -245,7 +249,7 @@
    `3`  means their generality/specificity is incomparable:
      - ✓ `(t/<> c0 c1)`   : the extension of ->`c0` is disjoint w.r.t. to that of ->`c1`.
    Unboxed primitives are considered to be less general (more specific) than boxed primitives."
-  [^Class c0 class? ^Class c1 class? > comparisons]
+  [^Class c0 class? ^Class c1 class? > comparison?]
   #?(:clj (ifs (== c0 c1)                                =ident
                (== c0 Object)                            >ident
                (== c1 Object)                            <ident
@@ -263,10 +267,10 @@
                <>ident)
      :cljs (TODO)))
 
-(defns- compare|class+class [t0 class-type?, t1 class-type? > comparisons]
+(defns- compare|class+class [t0 class-type?, t1 class-type? > comparison?]
   (compare|class+class* (utr/class-type>class t0) (utr/class-type>class t1)))
 
-(defns- compare|class+value [t0 class-type?, t1 value-type? > comparisons]
+(defns- compare|class+value [t0 class-type?, t1 value-type? > comparison?]
   (let [c (utr/class-type>class t0)
         v (utr/value-type>value t1)]
     (if (instance? c v) >ident <>ident)))
@@ -286,7 +290,7 @@
    reluctantly accept whatever `=` tells us as well as the fallout that results.
    Thus, `(t/or (t/value []) (t/value (list)))` will result in `(t/value [])`,
    which is not ideal but both feasible and better than the alternative."
-  [t0 value-type?, t1 value-type? > comparisons]
+  [t0 value-type?, t1 value-type? > comparison?]
   (if (c/= (utr/value-type>value t0)
            (utr/value-type>value t1))
       =ident
@@ -401,7 +405,7 @@
 
    Does not compare cardinalities or other relations of sets, but rather only sub/superset
    relations."
-  [t0 type?, t1 type? > comparisons]
+  [t0 type?, t1 type? > comparison?]
   (let [dispatched (-> compare|dispatch (get (type t0)) (get (type t1)))]
     (if (nil? dispatched)
         (err! (str "Types not handled: " {:t0 t0 :t1 t1}) {:t0 t0 :t1 t1})
