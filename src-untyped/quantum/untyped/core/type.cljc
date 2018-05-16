@@ -164,7 +164,7 @@
                       reg (if (c/nil? name-sym)
                               @*spec-registry
                               (swap! *spec-registry
-                                (fn [reg]
+                                (c/fn [reg]
                                   (if-let [spec (get reg name-sym)]
                                     (if (c/= (.-name ^ClassSpec spec) name-sym)
                                         reg
@@ -188,7 +188,7 @@
                 (value x))
        :cljs nil)))
 
-;; ===== DEFINITION ===== ;;
+;; ===== Definition ===== ;;
 
 (defns register-spec! [sym c/symbol?, spec (isa? PSpec)]
   (TODO))
@@ -239,7 +239,7 @@
 
 (defns deducible [x spec? > deducible-spec?] (DeducibleSpec. (atom x)))
 
-;; ===== EXTENSIONALITY COMPARISON IMPLEMENTATIONS ===== ;;
+;; ===== Extensionality comparison implementations ===== ;;
 
 #_(is (coll&/incremental-every? (aritoid nil (constantly true) t/in>)
         [String Comparable Object])
@@ -441,12 +441,12 @@
          (let [{:keys [conj-s? prefer-orig-args? s' specs]}
                (->> args+comparisons|without-superseded
                     (educe
-                      (fn ([accum] accum)
-                          ([accum [s* c*]]
-                            #_(prl! kind conj-s? prefer-orig-args? s' specs s* c*)
-                            (case kind
-                              :or  (create-logical-spec|inner|or  accum s* c*)
-                              :and (create-logical-spec|inner|and accum s* c*))))
+                      (c/fn ([accum] accum)
+                            ([accum [s* c*]]
+                              #_(prl! kind conj-s? prefer-orig-args? s' specs s* c*)
+                              (case kind
+                                :or  (create-logical-spec|inner|or  accum s* c*)
+                                :and (create-logical-spec|inner|and accum s* c*))))
                       {:conj-s?            ;; If `s` is a `NotSpec`, and kind is `:and`, then it will be
                                            ;; applied by being `-` from all args, not by being `conj`ed
                                            (c/not (c/and (c/= kind :and) (not-spec? s)))
@@ -461,9 +461,9 @@
   "Simplification via inner expansion: `(| (| a b) c)` -> `(| a b c)`"
   [spec-pred spec>args spec-args #_(of reducible? spec?)]
   (->> spec-args
-       (uc/map+ (fn [arg] (if (spec-pred arg)
-                              (spec>args arg)
-                              [arg])))
+       (uc/map+ (c/fn [arg] (if (spec-pred arg)
+                                (spec>args arg)
+                                [arg])))
        uc/cat+))
 
 (defn- simplify-logical-spec|structural-identity+
@@ -475,11 +475,11 @@
   "Simplification via intension comparison"
   [kind comparison-denotes-supersession? spec-args #_(of reducible? spec?)]
   (educe
-    (fn ([spec-args'] spec-args')
-        ([spec-args' s #_spec?]
-          (if (empty? spec-args')
-              (conj spec-args' s)
-              (create-logical-spec|inner spec-args' s kind comparison-denotes-supersession?))))
+    (c/fn ([spec-args'] spec-args')
+          ([spec-args' s #_spec?]
+            (if (empty? spec-args')
+                (conj spec-args' s)
+                (create-logical-spec|inner spec-args' s kind comparison-denotes-supersession?))))
     []
     spec-args))
 
@@ -506,7 +506,7 @@
                            ([this] (c/or @*logical-complement (reset! *logical-complement (not this))))}
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn      {-edn ([this] (list* `and args))}
-   ?Fn                   {invoke ([_ x] (reduce (fn [_ pred] (c/or (pred x) (reduced false)))
+   ?Fn                   {invoke ([_ x] (reduce (c/fn [_ pred] (c/or (pred x) (reduced false)))
                                           true ; vacuously
                                           args))}
    ?Object               ;; Tests for structural equivalence
@@ -536,7 +536,7 @@
                            ([this] (c/or @*logical-complement (reset! *logical-complement (not this))))}
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn      {-edn ([this] (list* `or args))}
-   ?Fn                   {invoke ([_ x] (reduce (fn [_ pred] (let [p (pred x)] (c/and p (reduced p))))
+   ?Fn                   {invoke ([_ x] (reduce (c/fn [_ pred] (let [p (pred x)] (c/and p (reduced p))))
                                           true ; vacuously
                                           args))}
    ?Object               ;; Tests for structural equivalence
@@ -623,13 +623,10 @@
   "Creates a spec that ... TODO"
   [pred (<= iterable?), spec spec?] (TODO))
 
+;; TODO do this
 (udt/deftype FnSpec
   [name   #_(t/? t/symbol?)
-   lookup #_(t/map-of t/integer?
-                      (t/or (spec spec? "output-spec")
-                            (t/vec-of (t/tuple (spec spec? "input-spec")
-                                               (spec spec? "output-spec")))))
-   spec   #_spec?
+   dispatch ...
    meta]
   {PSpec nil
    ;; Outputs whether the args match any input spec
@@ -653,14 +650,14 @@
         spec-or-arity-specs
         (->> spec-or-arity-specs (uc/filter+ #((first %) args)) uc/first second))))
 
-(defns fn-spec
+(defns fn
   [name-  (s/nilable c/symbol?)
    lookup _ #_(t/map-of t/integer?
                       (t/or (spec spec? "output-spec")
                             (t/vec-of (t/tuple (t/vec-of (spec spec? "input-spec"))
                                                (spec spec? "output-spec")))))]
   (let [spec (->> lookup vals
-                  (uc/map+ (fn [spec-or-arity-specs]
+                  (uc/map+ (c/fn [spec-or-arity-specs]
                              (if (spec? spec-or-arity-specs)
                                  spec-or-arity-specs
                                  (->> spec-or-arity-specs (map (TODO)))))))]
@@ -678,7 +675,7 @@
 (defns ?
   "Arity 1: Computes a spec denoting a nilable value satisfying `spec`.
    Arity 2: Computes whether `x` is nil or satisfies `spec`."
-  ([x _ > spec?] (or nil? (>spec x)))
+  ([spec spec? > spec?] (or nil? spec))
   ([spec spec?, x _ > c/boolean?] (c/or (c/nil? x) (spec x))))
 
 ;; ===== Comparison ===== ;;
@@ -693,7 +690,7 @@
   (let [specs (.-args s1)]
     (first
       (reduce
-        (fn [[ret found] s]
+        (c/fn [[ret found] s]
           (let [c      (compare s0 s)
                 found' (-> found (ubit/conj c) c/long)]
             (ifs (c/or (ubit/contains? found' <ident)
@@ -713,7 +710,7 @@
   (let [specs (.-args s1)]
     (first
       (reduce
-        (fn [[ret found] s]
+        (c/fn [[ret found] s]
           (let [c (compare s0 s)]
             (if (c/= c 0)
                 (reduced [1 nil])
@@ -883,7 +880,7 @@
 
 ;; TODO take away var indirection once done
 (def- compare|dispatch
-  (let [inverted (fn [f] (fn [s0 s1] (inverse (f s1 s0))))]
+  (let [inverted (c/fn [f] (c/fn [s0 s1] (inverse (f s1 s0))))]
     {UniversalSetSpec
        {UniversalSetSpec #'fn=
         EmptySetSpec     #'compare|universal+empty
@@ -952,10 +949,10 @@
         OrSpec           #'compare|todo
         AndSpec          #'compare|todo
         Expression       #'fn<>
-        ProtocolSpec     (fn [s0 s1] (if (identical? (protocol-spec>protocol s0)
-                                                     (protocol-spec>protocol s1))
-                                         0
-                                         3))
+        ProtocolSpec     (c/fn [s0 s1] (if (identical? (protocol-spec>protocol s0)
+                                                       (protocol-spec>protocol s1))
+                                           0
+                                           3))
         ClassSpec        #'compare|todo
         ValueSpec        (inverted #'compare|value+protocol)}
      ClassSpec
@@ -966,7 +963,7 @@
         AndSpec          #'compare|class+and
         Expression       #'fn<>
         ProtocolSpec     #'compare|todo
-        ClassSpec        (fn [s0 s1] (compare|class|class* (class-spec>class s0) (class-spec>class s1)))
+        ClassSpec        (c/fn [s0 s1] (compare|class|class* (class-spec>class s0) (class-spec>class s1)))
         ValueSpec        #'compare|class+value}
      ValueSpec
        {UniversalSetSpec (inverted #'compare|universal+value)
@@ -1005,10 +1002,10 @@
         (c/= spec empty-set)
           #{}
         (and-spec? spec)
-          (reduce (fn [classes' spec'] (-spec>classes spec' classes'))
+          (reduce (c/fn [classes' spec'] (-spec>classes spec' classes'))
             classes (and-spec>args spec))
         (or-spec? spec)
-          (reduce (fn [classes' spec'] (-spec>classes spec' classes'))
+          (reduce (c/fn [classes' spec'] (-spec>classes spec' classes'))
             classes (or-spec>args spec))
         :else
           (err! "Not sure how to handle spec" spec)))
@@ -1157,18 +1154,18 @@
 
        #_(-def numeric-primitive?          (and primitive? (not boolean?)))
 
-       #_(-def numerically-byte?           (and integer-value? (>expr (fn [x] (c/<= -128                 x 127)))))
-       #_(-def numerically-short?          (and integer-value? (>expr (fn [x] (c/<= -32768               x 32767)))))
-       #_(-def numerically-char?           (and integer-value? (>expr (fn [x] (c/<=  0                   x 65535)))))
+       #_(-def numerically-byte?           (and integer-value? (>expr (c/fn [x] (c/<= -128                 x 127)))))
+       #_(-def numerically-short?          (and integer-value? (>expr (c/fn [x] (c/<= -32768               x 32767)))))
+       #_(-def numerically-char?           (and integer-value? (>expr (c/fn [x] (c/<=  0                   x 65535)))))
        #_(-def numerically-unsigned-short? numerically-char?)
-       #_(-def numerically-int?            (and integer-value? (>expr (fn [x] (c/<= -2147483648          x 2147483647)))))
-       #_(-def numerically-long?           (and integer-value? (>expr (fn [x] (c/<= -9223372036854775808 x 9223372036854775807)))))
+       #_(-def numerically-int?            (and integer-value? (>expr (c/fn [x] (c/<= -2147483648          x 2147483647)))))
+       #_(-def numerically-long?           (and integer-value? (>expr (c/fn [x] (c/<= -9223372036854775808 x 9223372036854775807)))))
        #_(-def numerically-float?          (and number?
-                                                (>expr (fn [x] (c/<= -3.4028235E38 x 3.4028235E38)))
-                                                (>expr (fn [x] (-> x #?(:clj clojure.lang.RT/floatCast :cljs c/float) (c/== x))))))
+                                                (>expr (c/fn [x] (c/<= -3.4028235E38 x 3.4028235E38)))
+                                                (>expr (c/fn [x] (-> x #?(:clj clojure.lang.RT/floatCast :cljs c/float) (c/== x))))))
        #_(-def numerically-double?         (and number?
-                                                (>expr (fn [x] (c/<= -1.7976931348623157E308 x 1.7976931348623157E308)))
-                                                (>expr (fn [x] (-> x clojure.lang.RT/doubleCast (c/== x))))))
+                                                (>expr (c/fn [x] (c/<= -1.7976931348623157E308 x 1.7976931348623157E308)))
+                                                (>expr (c/fn [x] (-> x clojure.lang.RT/doubleCast (c/== x))))))
 
        #_(-def int-like?                   (and integer-value? numerically-int?))
 
