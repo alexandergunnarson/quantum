@@ -601,3 +601,60 @@
                :c ::example|c
                :d ::example|d)
   :fn   ::example|__ret)
+
+
+
+
+
+;; ============== Taken from untyped tests; should be modified in lock step =============== ;;
+
+;; ----- Implicit compilation tests ----- ;;
+
+(this/defnt abcde "Documentation" {:metadata "fhgjik"}
+  ([a number? > number?] (inc a))
+  ([a pos-int?, b pos-int?
+    | (> a b)
+    > (s/and number? #(> % a) #(> % b))] (+ a b))
+  ([a #{"a" "b" "c"}
+    b boolean?
+    {:as   c
+     :keys [ca keyword? cb string?]
+     {:as cc
+      {:as   cca
+       :keys [ccaa keyword?]
+       [[ccabaa some? {:as ccabab :keys [ccababa some?]} some?] some? ccabb some? & ccabc some? :as ccab]
+       [:ccab seq?]}
+      [:cca map?]}
+     [:cc map?]}
+    #(-> % count (= 3))
+    [da double? & db seq? :as d] sequential?
+    [ea symbol?] ^:gen? (s/coll-of symbol? :kind vector?)
+    & [fa #{"a" "b" "c"} :as f] seq?
+    | (and (> da 50) (contains? c a)
+           a b c ca cb cc cca ccaa ccab ccabaa ccabab ccababa ccabb ccabc d da db ea f fa)
+    > number?] 0))
+
+(this/defns basic [a number? > number?] (rand))
+
+(defspec-test test|basic `basic)
+
+(this/defns equality [a number? > #(= % a)] a)
+
+(defspec-test test|equality `equality)
+
+(this/defns pre-post [a number? | (> a 3) > #(> % 4)] (inc a))
+
+(defspec-test test|pre-post `pre-post)
+
+(this/defns gen|seq|0 [[a number? b number? :as b] ^:gen? (s/tuple double? double?)])
+
+(defspec-test test|gen|seq|0 `gen|seq|0)
+
+(this/defns gen|seq|1
+  [[a number? b number? :as b] ^:gen? (s/nonconforming (s/cat :a double? :b double?))])
+
+(defspec-test test|gen|seq|1 `gen|seq|1)
+
+
+
+

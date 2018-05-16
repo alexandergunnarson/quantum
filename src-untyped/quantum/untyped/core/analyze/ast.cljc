@@ -15,73 +15,73 @@
 
 (do
 
-;; ===== CONSTITUENT SPECS ===== ;;
+;; ===== Constituent types ===== ;;
 
 (#?(:clj definterface :cljs defprotocol) INode
   (getForm [#?(:cljs this)])
-  (getSpec [#?(:cljs this)]))
+  (getType [#?(:cljs this)]))
 
 (defn node? [x] (instance? INode x))
 
 #_(t/def ::node (t/isa? INode))
 #_(t/def ::env  (t/map-of t/symbol? ::node))
 
-;; ===== NODES ===== ;;
+;; ===== Nodes ===== ;;
 
-(defrecord Unbound [env #_::env, form #_t/symbol?, minimum-spec #_t/spec?, spec #_t/spec?] ;; TODO `spec` should be `t/deducible-spec?`
+(defrecord Unbound [env #_::env, form #_t/symbol?, minimum-type #_t/type?, type #_t/type?] ;; TODO `type` should be `t/deducible-type?`
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `unbound form {:minimum minimum-spec :deduced spec})))
+    (-edn [this] (list `unbound form {:minimum minimum-type :deduced type})))
 
 (defn unbound
-  ([form spec] (unbound nil form spec))
-  ([env form spec] (Unbound. env form spec spec))) ; TODO should wrap second `spec` in `t/deducible`
+  ([form t] (unbound nil form t))
+  ([env form t] (Unbound. env form t t))) ; TODO should wrap second `t` in `t/deducible`
 
 (defn unbound? [x] (instance? Unbound x))
 
-(defrecord Literal [env #_::env, form #_::t/literal, spec #_::t/spec]
+(defrecord Literal [env #_::env, form #_::t/literal, type #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `literal form spec)))
+    (-edn [this] (list `literal form type)))
 
 (defn literal
-  ([form spec] (literal nil form spec))
-  ([env form spec] (Literal. env form spec)))
+  ([form t] (literal nil form t))
+  ([env form t] (Literal. env form t)))
 
 (defrecord Symbol
   [env  #_::env
    form #_t/symbol?
-   spec #_::t/spec]
+   type #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (list `symbol (into (array-map) this))))
 
 (defn symbol
-  ([form spec] (symbol nil form spec))
-  ([env form spec] (Symbol. env form spec)))
+  ([form t] (symbol nil form t))
+  ([env form t] (Symbol. env form t)))
 
 (defn symbol? [x] (instance? Symbol x))
 
-;; ===== SPECIAL CALLS ===== ;;
+;; ===== Special calls ===== ;;
 
 (defrecord Quoted
-  [env #_::env, form #_::t/form, spec #_::t/spec]
+  [env #_::env, form #_::t/form, type #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `quoted form spec)))
+    (-edn [this] (list `quoted form type)))
 
-(defn quoted [form spec] (Quoted. nil form spec))
+(defn quoted [form t] (Quoted. nil form t))
 
 (defrecord Let*
   [env      #_::env
    form     #_::t/body
    bindings #_::env
    body     #_(t/and t/sequential? t/indexed? (t/every? ::node))
-   spec     #_::t/spec]
+   type     #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -93,7 +93,7 @@
   [env  #_::env
    form #_::t/form
    body #_(t/and t/sequential? t/indexed? (t/every? ::node))
-   spec #_::t/spec]
+   type #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -105,13 +105,13 @@
   [env      #_::env
    form     #_::t/form
    expanded #_::node
-   spec     #_::t/spec]
+   type     #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (list `macro-call (into (array-map) this))))
 
-(defn macro-call [m] (-> m map->MacroCall (assoc :spec (-> m :expanded :spec))))
+(defn macro-call [m] (-> m map->MacroCall (assoc :type (-> m :expanded :type))))
 
 (defrecord IfExpr
   [env        #_::env
@@ -119,7 +119,7 @@
    pred-expr  #_::node
    true-expr  #_::node
    false-expr #_::node
-   spec       #_::t/spec]
+   type       #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -134,7 +134,7 @@
    form   #_::t/form
    target #_::node
    field  #_t/unqualified-symbol?
-   spec   #_::t/spec]
+   type   #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -148,7 +148,7 @@
    target #_::node
    method #_::t/unqualified-symbol?
    args   #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
-   spec   #_::t/spec]
+   type   #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -161,7 +161,7 @@
    form   #_::t/form
    caller #_::node
    args   #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
-   spec   #_::t/spec]
+   type   #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -174,7 +174,7 @@
    form  #_::t/form
    class #_t/class?
    args  #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
-   spec  #_::t/spec]
+   type  #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -186,7 +186,7 @@
   [env  #_::env
    form #_::t/form
    arg  #_::node
-   spec #_t/nil?]
+   type #_t/nil?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn

@@ -15,6 +15,8 @@
 #?(:clj (defmalias testing clojure.test/testing cljs.test/testing))
 #?(:clj (defalias test/test-ns))
 
+#?(:clj (defn test-nss [& ns-syms] (->> ns-syms (map test-ns) doall)))
+
 #?(:clj
 (defn test-nss-where [pred]
   (->> (all-ns) (filter #(-> % ns-name name pred)) (map test-ns) doall)))

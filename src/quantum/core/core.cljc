@@ -5,7 +5,7 @@
     #?(:clj [clojure.core.specs.alpha  :as ss])
             [cuerdas.core              :as str+]
     #?(:clj [environ.core              :as env])
-            [quantum.core.type         :as t
+            #_[quantum.core.type         :as t
               :refer [defnt defmacrot defprotocolt]]
             [quantum.untyped.core.core :as u]
             [quantum.untyped.core.vars
@@ -36,16 +36,16 @@
 ;; ===== Mutability/Effects ===== ;;
 
 ;; TODO excise when typed
-#_(defprotocol IValue
+(defprotocol IValue
   (get [this])
   (set [this newv]))
 
-(defprotocolt IValue
+#_(defprotocolt IValue
   (get [this _])
   (set [this _, newv _]))
 
 ;; TODO excise when typed
-#_(:clj
+#?(:clj
 (defmacro with
   "Evaluates @expr, then @body, then returns @expr.
    For (side) effects."
@@ -54,7 +54,7 @@
     ~@body
     expr#)))
 
-#?(:clj
+#_(:clj
 (defmacrot with
   "Evaluates @expr, then @body, then returns @expr.
    For (side) effects."

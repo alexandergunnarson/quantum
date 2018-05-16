@@ -38,7 +38,8 @@
   loaded-libs load-lib! load-package! load-dep!
   assert-ns-aliased)
 
-#?(:clj
+;; TODO type and enable
+#_(:clj
 (defn alias-ns
   "Create vars in the current namespace to alias each of the public vars in
   the supplied namespace.
@@ -47,4 +48,4 @@
   [ns-name-]
   (require ns-name-)
   (doseq [[name var] (ns-publics (the-ns ns-name-))]
-    (alias-var name var))))
+    (uvar/alias-var name var))))
