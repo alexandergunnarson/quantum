@@ -93,7 +93,7 @@
   (let [ts (.-args t1)]
     (first
       (reduce
-        (c/fn [[ret found] t]
+        (fn [[ret found] t]
           (let [c (compare t0 t)]
             (if (c/= c =ident)
                 (reduced [>ident nil])
@@ -245,21 +245,21 @@
    `3`  means their generality/specificity is incomparable:
      - ✓ `(t/<> c0 c1)`   : the extension of ->`c0` is disjoint w.r.t. to that of ->`c1`.
    Unboxed primitives are considered to be less general (more specific) than boxed primitives."
-  [^Class c0 c/class? ^Class c1 c/class? > comparisons]
+  [^Class c0 class? ^Class c1 class? > comparisons]
   #?(:clj (ifs (== c0 c1)                                =ident
                (== c0 Object)                            >ident
                (== c1 Object)                            <ident
                (== (utcore/boxed->unboxed c0) c1)        >ident
                (== c0 (utcore/boxed->unboxed c1))        <ident
                ;; we'll consider the two unrelated
-               (c/not (utcore/array-depth-equal? c0 c1)) <>ident
+               (not (utcore/array-depth-equal? c0 c1)) <>ident
                (.isAssignableFrom c0 c1)                 >ident
                (.isAssignableFrom c1 c0)                 <ident
                ;; multiple inheritance of interfaces
-               (c/or (c/and (uclass/interface? c0)
-                            (c/not (uclass/final? c1)))
-                     (c/and (uclass/interface? c1)
-                            (c/not (uclass/final? c0)))) ><ident
+               (or (and (uclass/interface? c0)
+                        (not (uclass/final? c1)))
+                   (and (uclass/interface? c1)
+                        (not (uclass/final? c0)))) ><ident
                <>ident)
      :cljs (TODO)))
 
@@ -296,7 +296,7 @@
 
 ;; TODO take away var indirection once done
 (def- compare|dispatch
-  (let [inverted (c/fn [f] (c/fn [t0 t1] (inverse (f t1 t0))))]
+  (let [inverted (fn [f] (fn [t0 t1] (inverse (f t1 t0))))]
     {UniversalSetType
        {UniversalSetType #'fn=
         EmptySetType     #'compare|universal+empty
@@ -403,51 +403,51 @@
    relations."
   [t0 type?, t1 type? > comparisons]
   (let [dispatched (-> compare|dispatch (get (type t0)) (get (type t1)))]
-    (if (c/nil? dispatched)
+    (if (nil? dispatched)
         (err! (str "Types not handled: " {:t0 t0 :t1 t1}) {:t0 t0 :t1 t1})
         (dispatched t0 t1))))
 
 (defns <
   "Computes whether the extension of type ->`t0` is a strict subset of that of ->`t1`."
   ([t1 type?] #(< % t1))
-  ([t0 type?, t1 type? > c/boolean?] (c/= (compare t0 t1) <ident)))
+  ([t0 type?, t1 type? > boolean?] (c/= (compare t0 t1) <ident)))
 
 (defns <=
   "Computes whether the extension of type ->`t0` is a (lax) subset of that of ->`t1`."
   ([t1 type?] #(<= % t1))
-  ([t0 type?, t1 type? > c/boolean?]
-    (let [ret (compare t0 t1)] (c/or (c/= ret <ident) (c/= ret =ident)))))
+  ([t0 type?, t1 type? > boolean?]
+    (let [ret (compare t0 t1)] (or (c/= ret <ident) (c/= ret =ident)))))
 
 (defns =
   "Computes whether the extension of type ->`t0` is equal to that of ->`t1`."
   ([t1 type?] #(= % t1))
-  ([t0 type?, t1 type? > c/boolean?] (c/= (compare t0 t1) =ident)))
+  ([t0 type?, t1 type? > boolean?] (c/= (compare t0 t1) =ident)))
 
 (defns not=
   "Computes whether the extension of type ->`t0` is not equal to that of ->`t1`."
   ([t1 type?] #(not= % t1))
-  ([t0 type?, t1 type? > c/boolean?] (c/not (= t0 t1))))
+  ([t0 type?, t1 type? > boolean?] (not (= t0 t1))))
 
 (defns >=
   "Computes whether the extension of type ->`t0` is a (lax) superset of that of ->`t1`."
   ([t1 type?] #(>= % t1))
-  ([t0 type?, t1 type? > c/boolean?]
-    (let [ret (compare t0 t1)] (c/or (c/= ret >ident) (c/= ret =ident)))))
+  ([t0 type?, t1 type? > boolean?]
+    (let [ret (compare t0 t1)] (or (c/= ret >ident) (c/= ret =ident)))))
 
 (defns >
   "Computes whether the extension of type ->`t0` is a strict superset of that of ->`t1`."
   ([t1 type?] #(> % t1))
-  ([t0 type?, t1 type? > c/boolean?] (c/= (compare t0 t1) >ident)))
+  ([t0 type?, t1 type? > boolean?] (c/= (compare t0 t1) >ident)))
 
 (defns ><
   "Computes whether it is the case that the intersect of the extensions of type ->`t0`
    and ->`t1` is non-empty, and neither ->`t0` nor ->`t1` share a subset/equality/superset
    relationship."
   ([t1 type?] #(>< % t1))
-  ([t0 type?, t1 type? > c/boolean?] (c/= (compare t0 t1) ><ident)))
+  ([t0 type?, t1 type? > boolean?] (c/= (compare t0 t1) ><ident)))
 
 (defns <>
   "Computes whether the respective extensions of types ->`t0` and ->`t1` are disjoint."
   ([t1 type?] #(<> % t1))
-  ([t0 type? t1 type? > c/boolean?] (c/= (compare t0 t1) <>ident)))
+  ([t0 type? t1 type? > boolean?] (c/= (compare t0 t1) <>ident)))
 
