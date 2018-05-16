@@ -40,7 +40,7 @@ public class NumberLessThan7 {
   public final Number x;
 
   public NumberLessThan7 (Number x_) {
-    if (lessThan(x_, 7)) {// imagine here a `lessThan` function that worked on any two numbers
+    if (lessThan(x_, 7)) {// imagine here a `lessThan` function that worked on any two `Number`s
       x = x_;
     } else {
       throw new Exception("Number must be less than 7");
