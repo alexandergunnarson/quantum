@@ -59,9 +59,10 @@
   #?(:clj  (instance? clojure.lang.ILookup x)
      :cljs (satisfies? ILookup x)))
 
-#?(:clj
 (defn protocol? [x]
-  (and (lookup? x) (-> x (get :on-interface) class?))))
+  #?(:clj  (and (lookup? x) (-> x (get :on-interface) class?))
+           ;; Unfortunately there's no better check in CLJS, at least as of 03/18/2018
+     :cljs (and (fn? x) (= (str x) "function (){}"))))
 
 (defn regex? [x] (instance? #?(:clj java.util.regex.Pattern :cljs js/RegExp) x))
 
