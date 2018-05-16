@@ -48,7 +48,7 @@
 ;; ----- expanded code ----- ;;
 
 ($ (do (swap! *fn->spec assoc #'pid
-         (t/fn [~'> (? t/string?)]))
+         (t/fn [:> (? t/string?)]))
 
        (def ~'pid|__0
          (reify >Object
@@ -129,9 +129,9 @@
 ;; ----- expanded code ----- ;;
 
 ($ (do (swap! *fn->spec assoc #'name
-         (t/fn [t/string?       > t/string?]
-               [(t/isa? Named)  > (* t/string?)]
-               [(t/isa? INamed) > (* t/string?)]))
+         (t/fn [t/string?       :> t/string?]
+               [(t/isa? Named)  :> (* t/string?)]
+               [(t/isa? INamed) :> (* t/string?)]))
 
        ~@(case (env-lang)
            :clj  ($ [;; Only direct dispatch for primitives or for Object, not for subclasses of Object
@@ -446,8 +446,8 @@
 ;; ----- expanded code ----- ;;
 
 `(do (swap! fn->spec assoc #'!str
-       (t/fn > #?(:clj  (t/isa? StringBuilder)
-                  :cljs (t/isa? StringBuffer))
+       (t/fn :> #?(:clj  (t/isa? StringBuilder)
+                   :cljs (t/isa? StringBuffer))
          []
  #?(:clj [t/string?])
          [#?(:clj  (t/or t/char-seq? t/int?)
@@ -489,8 +489,8 @@
 ;; ----- expanded code ----- ;;
 
 `(do (swap! fn->spec assoc #'>
-       (t/fn #?(:clj  [t/comparable-primitive? t/comparable-primitive? > t/boolean?]
-                :cljs [t/double?               t/double?               > (t/assume t/boolean?)])))
+       (t/fn #?(:clj  [t/comparable-primitive? t/comparable-primitive? :> t/boolean?]
+                :cljs [t/double?               t/double?               :> (t/assume t/boolean?)])))
 
      ~(case-env
         :clj  `(do (def >|__0
@@ -584,8 +584,8 @@
          []
          [t/nil?]
 #?(:clj  [(t/isa? Object)])
-#?(:cljs [t/any? > (t/assume t/string?)])
-         [(t/fn> str t/any?) & (? (t/seq-of t/any?)) #?@(:cljs [> (t/assume t/string?)])]))
+#?(:cljs [t/any? :> (t/assume t/string?)])
+         [(t/fn> str t/any?) :& (? (t/seq-of t/any?)) #?@(:cljs [:> (t/assume t/string?)])]))
 
      ~(case-env
         :clj  `(do (def str|__0
@@ -627,10 +627,10 @@
 ;; ----- expanded code ----- ;;
 
 `(do (swap! fn->spec assoc #'count
-       (t/fn > t/pos-integer?
-         [t/array?  > t/nneg-int?]
-         [t/string? > #?(:clj t/nneg-int? :cljs (t/assume t/nneg-int?))]
-         [!+vector? > t/nneg-int?]))
+       (t/fn :> t/pos-integer?
+         [t/array?  :> t/nneg-int?]
+         [t/string? :> #?(:clj t/nneg-int? :cljs (t/assume t/nneg-int?))]
+         [!+vector? :> t/nneg-int?]))
 
      ~(case-env
         :clj  `(do ;; `array?`
@@ -651,7 +651,7 @@
 ;; ----- expanded code ----- ;;
 
 `(do (swap! fn->spec assoc #'count
-       (t/fn > t/pos-integer?
+       (t/fn :> t/pos-integer?
          [t/array?  (t/numerically t/int?)]
          [t/string? (t/numerically t/int?)]
          [!+vector? t/any?]))
@@ -777,9 +777,9 @@
 ;; TODO: conditionally optional arities etc. for t/fn
 
 (t/def rf? "Reducing function"
-  (t/fn ("seed arity"       [])
-        ("completing arity" [_])
-        ("reducing arity"   [_ _])))
+  (t/fn "seed arity"       []
+        "completing arity" [_]
+        "reducing arity"   [_ _]))
 
 (defnt reduce
   "Much of this content taken from clojure.core.protocols for inlining and
@@ -889,7 +889,7 @@
 ;; =====|=====|=====|=====|===== ;;
 
 (do (t/def xf? "Transforming function"
-      (t/fn [rf? > rf?]))
+      (t/fn [rf? :> rf?]))
 
     (defnt transduce
       ([        f rf?,        xs t/reducible?] (transduce identity f     xs))
