@@ -30,9 +30,10 @@
           Equivalent to `(constantly true)`."}
   UniversalSetType []
   {PType          nil
-   ?Hash          {hash      ([this] (hash UniversalSetType))}
-   ?Object        {equals    ([this that] (or (== this that) (instance? UniversalSetType that)))
-                   hash-code ([this] (uhash/code UniversalSetType))}
+   ?Fn            {invoke    ([_ x] true)}
+   ?Hash          {hash      ([this] (hash       UniversalSetType))}
+   ?Object        {hash-code ([this] (uhash/code UniversalSetType))
+                   equals    ([this that] (or (== this that) (instance? UniversalSetType that)))}
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] 'quantum.untyped.core.type/U)}})
 
@@ -45,9 +46,10 @@
           Equivalent to `(constantly false)`."}
   EmptySetType []
   {PType          nil
-   ?Hash          {hash      ([this] (hash UniversalSetType))}
-   ?Object        {equals    ([this that] (or (== this that) (instance? EmptySetType that)))
-                   hash-code ([this] (uhash/code EmptySetType))}
+   ?Fn            {invoke    ([_ x] false)}
+   ?Hash          {hash      ([this] (hash       UniversalSetType))}
+   ?Object        {hash-code ([this] (uhash/code EmptySetType))
+                   equals    ([this that] (or (== this that) (instance? EmptySetType that)))}
    fedn/IOverride nil
    fedn/IEdn      {-edn ([this] 'quantum.untyped.core.type/∅)}})
 
@@ -55,17 +57,18 @@
 
 ;; ----- NotType (`t/not` / `t/!`) ----- ;;
 
-(udt/deftype NotType [^int ^:unsynchronized-mutable hash
-                      ^int ^:unsynchronized-mutable hash-code
-                      t #_t/type?]
+(udt/deftype NotType
+  [^int ^:unsynchronized-mutable hash
+   ^int ^:unsynchronized-mutable hash-code
+   t #_t/type?]
   {PType          nil
-   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash NotType t))}
-   ?Fn            {invoke    ([_ x] (t x))}
-   ?Object        {equals    ([this that]
+   ?Fn            {invoke    ([_ x] (not (t x)))}
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      NotType t))}
+   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code NotType t))
+                   equals    ([this that]
                                (or (== this that)
                                    (and (instance? NotType that)
-                                        (= t (.-t ^NotType that)))))
-                   hash-code ([this] (uhash/caching-set-code! hash-code NotType t))}
+                                        (= t (.-t ^NotType that)))))}
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] (list 'quantum.untyped.core.type/not t))}})
 
@@ -75,20 +78,26 @@
 
 ;; ----- OrType (`t/or` / `t/|`) ----- ;;
 
-(udt/deftype OrType [args #_(t/and t/indexed? (t/seq t/type?)) *logical-complement]
+(udt/deftype OrType
+  [^int ^:unsynchronized-mutable hash
+   ^int ^:unsynchronized-mutable hash-code
+   args #_(t/and t/indexed? (t/seq t/type?))
+   *logical-complement]
   {PType          nil
+   ?Fn            {invoke    ([_ x] (reduce
+                                      (fn [_ t]
+                                        (let [satisfies-type? (t x)]
+                                          (and satisfies-type? (reduced satisfies-type?))))
+                                      true ; vacuously
+                                      args))}
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      OrType args))}
+   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code OrType args))
+                   equals    ([this that]
+                               (or (== this that)
+                                   (and (instance? OrType that)
+                                        (= args (.-args ^OrType that)))))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn ([this] (list* 'quantum.untyped.core.type/or args))}
-   ?Fn            {invoke ([_ x] (reduce
-                                   (fn [_ t]
-                                     (let [satisfies-type? (t x)]
-                                       (and satisfies-type? (reduced satisfies-type?))))
-                                   true ; vacuously
-                                   args))}
-   ?Object        {equals ([this that]
-                            (or (== this that)
-                                (and (instance? OrType that)
-                                     (= args (.-args ^OrType that)))))}})
+   fedn/IEdn      {-edn ([this] (list* 'quantum.untyped.core.type/or args))}})
 
 (defns or-type? [x _ > boolean?] (instance? OrType x))
 
@@ -96,18 +105,23 @@
 
 ;; ----- AndType (`t/and` | `t/&`) ----- ;;
 
-(udt/deftype AndType [args #_(t/and t/indexed? (t/seq t/type?)) *logical-complement]
+(udt/deftype AndType
+  [^int ^:unsynchronized-mutable hash
+   ^int ^:unsynchronized-mutable hash-code
+   args #_(t/and t/indexed? (t/seq t/type?))
+   *logical-complement]
   {PType          nil
    fedn/IOverride nil
-   fedn/IEdn      {-edn ([this] (list* 'quantum.untyped.core.type/and args))}
-   ?Fn            {invoke ([_ x] (reduce (fn [_ t] (or (t x) (reduced false)))
-                                   true ; vacuously
-                                   args))}
-   ?Object        ;; Tests for structural equivalence
-                  {equals ([this that]
-                            (or (== this that)
-                                (and (instance? AndType that)
-                                     (= args (.-args ^AndType that)))))}})
+   fedn/IEdn      {-edn      ([this] (list* 'quantum.untyped.core.type/and args))}
+   ?Fn            {invoke    ([_ x] (reduce (fn [_ t] (or (t x) (reduced false)))
+                                      true ; vacuously
+                                      args))}
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      AndType args))}
+   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code AndType args))
+                   equals    ([this that]
+                               (or (== this that)
+                                   (and (instance? AndType that)
+                                        (= args (.-args ^AndType that)))))}})
 
 (defns and-type? [x _ > boolean?] (instance? AndType x))
 
@@ -120,7 +134,9 @@
 ;; ----- ProtocolType ----- ;;
 
 (udt/deftype ProtocolType
-  [meta #_(t/? ::meta)
+  [^int ^:unsynchronized-mutable hash
+   ^int ^:unsynchronized-mutable hash-code
+   meta #_(t/? ::meta)
    p    #_t/protocol?
    name #_(t/? t/symbol?)]
   {PType          nil
@@ -128,8 +144,10 @@
    fedn/IEdn      {-edn ([this] (or name (list 'quantum.untyped.core.type/isa?|protocol (:on p))))}
    ?Fn            {invoke    ([_ x] (satisfies? p x))}
    ?Meta          {meta      ([this] meta)
-                   with-meta ([this meta'] (ProtocolType. meta' p name))}
-   ?Object        {equals    ([this that #_any?]
+                   with-meta ([this meta'] (ProtocolType. hash hash-code meta' p name))}
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      ProtocolType p))}
+   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code ProtocolType p))
+                   equals    ([this that #_any?]
                                (or (== this that)
                                    (and (instance? ProtocolType that)
                                         (= p (.-p ^ProtocolType that)))))}})
@@ -141,7 +159,9 @@
 ;; ----- ClassType ----- ;;
 
 (udt/deftype ClassType
-  [       meta #_(t/? ::meta)
+  [^int ^:unsynchronized-mutable hash
+   ^int ^:unsynchronized-mutable hash-code
+          meta #_(t/? ::meta)
    ^Class c    #_t/class?
           name #_(t/? t/symbol?)]
   {PType          nil
@@ -149,8 +169,10 @@
    fedn/IEdn      {-edn ([this] (or name (list 'quantum.untyped.core.type/isa? c)))}
    ?Fn            {invoke    ([_ x] (instance? c x))}
    ?Meta          {meta      ([this] meta)
-                   with-meta ([this meta'] (ClassType. meta' c name))}
-   ?Object        {equals    ([this that #_any?]
+                   with-meta ([this meta'] (ClassType. hash hash-code meta' c name))}
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      ClassType c))}
+   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code ClassType c))
+                   equals    ([this that #_any?]
                                (or (== this that)
                                    (and (instance? ClassType that)
                                         (= c (.-c ^ClassType that)))))}})
@@ -161,12 +183,17 @@
 
 ;; ----- ValueType ----- ;;
 
-(udt/deftype ValueType [v #_any?]
+(udt/deftype ValueType
+  [^int ^:unsynchronized-mutable hash
+   ^int ^:unsynchronized-mutable hash-code
+   v #_any?]
   {PType          nil
    fedn/IOverride nil
    fedn/IEdn      {-edn   ([this] (list 'quantum.untyped.core.type/value v))}
    ?Fn            {invoke ([_ x] (= x v))}
-   ?Object        {equals ([this that #_any?]
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      ValueType v))}
+   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code ValueType v))
+                   equals ([this that #_any?]
                             (or (== this that)
                                 (and (instance? ValueType that)
                                      (= v (.-v ^ValueType that)))))}})

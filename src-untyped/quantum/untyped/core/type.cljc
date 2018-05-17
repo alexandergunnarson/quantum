@@ -29,6 +29,7 @@
              :refer [>symbol]]
            [quantum.untyped.core.core                  :as ucore]
            [quantum.untyped.core.data.bits             :as ubit]
+           [quantum.untyped.core.data.hash             :as uhash]
            [quantum.untyped.core.data.tuple]
            [quantum.untyped.core.defnt
              :refer [defns defns-]]
@@ -112,7 +113,7 @@
        (utr/or-type?  t)   (->> t utr/or-type>args  (uc/lmap not) (apply and))
        ;; DeMorgan's Law
        (utr/and-type? t)   (->> t utr/and-type>args (uc/lmap not) (apply or ))
-       (NotType. -1 -1 t)))
+       (NotType. uhash/default uhash/default t)))
 
 (uvar/defalias ! not)
 
@@ -144,17 +145,19 @@
 
 ;; ----- ProtocolType ----- ;;
 
-(defns- isa?|protocol [p utpred/protocol?] (ProtocolType. nil p nil))
+(defns- isa?|protocol [p utpred/protocol?]
+  (ProtocolType. uhash/default uhash/default nil p nil))
 
 ;; ----- ClassType ----- ;;
 
-(defns- isa?|class [c #?(:clj c/class? :cljs c/fn?)] (ClassType. nil c nil))
+(defns- isa?|class [c #?(:clj c/class? :cljs c/fn?)]
+  (ClassType. uhash/default uhash/default nil c nil))
 
 ;; ----- ValueType ----- ;;
 
 (defns value
   "Creates a type whose extension is the singleton set containing only the value `v`."
-  [v _] (ValueType. v))
+  [v _] (ValueType. uhash/default uhash/default v))
 
 ;; ----- General ----- ;;
 
@@ -175,15 +178,15 @@
             (condp == c0
               NotType (condp == (-> t0 utr/not-type>inner-type c/class)
                         ClassType (condp == c1
-                                    ClassType (AndType. [t0 (not t1)] (atom nil)))
+                                    ClassType (AndType. uhash/default uhash/default [t0 (not t1)] (atom nil)))
                         ValueType (condp == c1
-                                    ValueType (AndType. [t0 (not t1)] (atom nil))))
+                                    ValueType (AndType. uhash/default uhash/default [t0 (not t1)] (atom nil))))
               OrType  (condp == c1
                         ClassType (let [args (->> t0 utr/or-type>args (uc/remove (fn1 = t1)))]
                                     (case (count args)
                                       0 empty-set
                                       1 (first args)
-                                      (OrType. args (atom nil))))))))))
+                                      (OrType. uhash/default uhash/default args (atom nil))))))))))
   ([t0 utr/type?, t1 utr/type? & ts (s/seq-of utr/type?) > utr/type?] (reduce - (- t0 t1) ts)))
 
 (defn isa? [x]
@@ -212,11 +215,11 @@
                                 (if (c/= (.-name ^ClassType t) name-sym)
                                     reg
                                     (err! "Class already registered with type; must first undef" {:class x :type-name name-sym}))
-                                (let [t (ClassType. nil x name-sym)]
+                                (let [t (ClassType. uhash/default uhash/default nil x name-sym)]
                                   (uc/assoc-in reg [name-sym]    t
                                                    [:by-class x] t))))))]
               (c/or (get-in reg [:by-class x])
-                    (ClassType. nil ^Class x name-sym)))
+                    (ClassType. uhash/default uhash/default nil ^Class x name-sym)))
           (c/fn? x)
             (let [sym (c/or name-sym (>symbol x))
                   _ (when-not name-sym
@@ -226,7 +229,7 @@
           (c/nil? x)
             nil?
           (utpred/protocol? x)
-            (ProtocolType. nil x name-sym)
+            (ProtocolType. uhash/default uhash/default nil x name-sym)
           (value x))
        :cljs nil)))
 
@@ -414,7 +417,7 @@
         (assert (-> simplified count (c/>= 1))) ; for internal implementation correctness
         (if (-> simplified count (c/= 1))
             (first simplified)
-            (construct-fn simplified (atom nil))))))
+            (construct-fn uhash/default uhash/default simplified (atom nil))))))
 
 ;; TODO do this?
 #_(udt/deftype SequentialType)

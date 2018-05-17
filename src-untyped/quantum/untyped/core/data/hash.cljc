@@ -4,6 +4,8 @@
   (:require
     [clojure.core :as core]))
 
+(def ^:const default -1)
+
 (def hash core/hash)
 
 (defn code [x]
@@ -21,7 +23,7 @@
 
    See also https://clojure.org/reference/data_structures."
   [field #_simple-symbol? & args]
-  `(if (identical? ~field -1)
+  `(if (identical? ~field default)
        (set! ~field
          (-> 0 ~@(->> args (map (fn [arg] `(unchecked-add-int (hash ~arg)))))
                (mix-collection-hash ~(count args))
@@ -35,7 +37,7 @@
 
    See also https://clojure.org/reference/data_structures."
   [field #_simple-symbol? & args]
-  `(if (identical? ~field -1)
+  `(if (identical? ~field default)
        (set! ~field
          (-> 1 ~@(->> args (map (fn [arg]
                                   `(-> (unchecked-multiply-int 31)
@@ -53,6 +55,6 @@
   "Tries to retrive a cached hash-code value at the provided field. If not found, sets the field
    with a computed hash-code using the sum of the hash-codes of the provided args."
   [field #_simple-symbol? & args]
-  `(if (identical? ~field -1)
+  `(if (identical? ~field default)
        (set! ~field (-> 0 ~@(->> args (map (fn [arg] `(unchecked-add-int (code ~arg)))))))
        ~field)))

@@ -148,8 +148,7 @@
            [>a ><0 ><1]))))
 
 (deftest test|and
-  (testing "equality"
-    (is= (& i|a i|b) (& i|a i|b)))
+  (test-equality #(& i|a i|b))
   (testing "null set / universal set"
     (is= (& t/universal-set t/universal-set)
          t/universal-set)
@@ -248,9 +247,14 @@
       (is= (utr/and-type>args (& i|>a+b i|>a0 i|a i|<a+b i|<a0 i|><0 i|><1))
            [i|<a+b i|<a0 i|><0 i|><1]))))
 
+(deftest test|protocol
+  (test-equality #(t/isa? utr/PType)))
+
+(deftest test|class
+  (test-equality #(t/isa? Object)))
+
 (deftest test|value
-  (testing "equality"
-    (is= (t/value 1) (t/value 1)))
+  (test-equality #(t/value 1))
   (testing "hash equality"
     (is= (hash (t/value 1)) (hash (t/value 1)))
     (is= 1 (count (hash-set (t/value 1)
