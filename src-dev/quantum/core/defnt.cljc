@@ -91,7 +91,7 @@
       resolution will be done via Runtime Dispatch.
     - TODO Should we take into account 'actual' types (not just 'declared' types) when performing
       dispatch / overload resolution?
-      - Let's take the example of `(f (rand/int-between -10 -2))`.
+      - Let's take the example of `(defnt abcde [] (f (rand/int-between -10 -2)))`.
         - Let's say `rand/int-between`'s output is labeled `t/int?`. However, we know based on
           further static analysis of its implementation that the output is not only `t/int?` but
           also `t/neg?`, or perhaps even further, `(< -10 % -2)`.
@@ -113,6 +113,25 @@
             nothing else than to ensure that our implementation (as characterized by its 'actual'
             output type) matches what we expect (as characterized by its 'expected'/'declared'
             output type).
+          - One option (Option A) is to turn off compile-time overload resolution during development.
+            This would mean it might get very slow during that time. But if it's in the same `defnt`
+            (ignoring `extend-defnt!` for a minute) — like a recursive call — you could always leave
+            on compile-time resolution for that.
+          - Option B — probably better  (though we'd still like to have all this configurable) —
+            is to have each function know its dependencies (this would actually have the bonus
+            property of enabling `clojure.tools.namespace.repl/refresh`-style function-level
+            smart auto-recompilation which is nice). So let's go back to the previous example.
+            `abcde` could keep track of (or the `defnt` ns could keep track of it, but you get the
+            point) the fact that it depends on `rand/int-between` and `f`. It has a compile-time-
+            resolvable call site that depends only on the output type of `rand/int-between` so if
+            `rand/int-between`'s computed/actual output type (when given the inputs in question)
+            ever changes, `abcde` needs to be recompiled and `abcde`'s output type recomputed. If,
+            on the other hand, `f`'s output type (given the input) ever changes, `abcde` need not be
+            recompiled, but rather, only its output type need be recomputed.
+          - I think this reactive approach (do we need a library for that? probably not?) should
+            solve our problems and let us code in a very flexible way. It'll just (currently) be a
+            way that depends on a compiler in which the metalanguage and object language are
+            identical.
 [ ] Runtime (Dynamic) Dispatch
     [—] Protocol generation
         - For now we won't do it because we can very often find the correct overload at compile
@@ -141,7 +160,6 @@
             with that label and replace the typedef in the typedef-set
           - Else a new label will be given to the `reify`; the typedef will be added to the
             typedef-set
-
     - [ ] One reify per type that cannot be split
           - Only `t/or`s can be split for now
     - [ ] `(= (hash (t/or t/long? t/float?)) (hash (t/or t/long? t/float?)))`
@@ -150,6 +168,9 @@
 [ ] Types yielding generative specs
 [—] Types using the clojure.spec interface
     - Not yet; wait for it to come out of alpha
+[—] Support for compilers in which the metalanguage differs from the object language (i.e. 'normal'
+    non-CLJS-in-CLJS CLJS)
+    - This will have to be approached later. We'll figure it out; maybe just not yet.
 [—] `extend-defnt!`
     - Not yet; probably complicated and we don't need it right now
 "
