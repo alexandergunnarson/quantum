@@ -401,18 +401,18 @@
    :repl-options
      {:init '(do (require
                    '[no.disassemble :refer [disassemble]]
-                   'quantum.core.error
-                   'quantum.core.print
-                   'quantum.core.print.prettier
-                   '[quantum.core.log :refer [prl!]])
-                 (quantum.core.print.prettier/extend-pretty-printing!)
-                 (reset! quantum.core.error/*pr-data-to-str? true)
+                   'quantum.untyped.core.error
+                   'quantum.untyped.core.print
+                   'quantum.untyped.core.print.prettier
+                   '[quantum.untyped.core.log :refer [prl!]])
+                 (quantum.untyped.core.print.prettier/extend-pretty-printing!)
+                 (reset! quantum.untyped.core.error/*pr-data-to-str? true)
                  (clojure.main/repl
                    :print  #(binding [*print-meta* true
-                                      quantum.core.print/*collapse-symbols?* true
-                                      quantum.core.print/*print-as-code?* true]
-                              (quantum.core.print/ppr %))
-                   :caught #'quantum.core.print/ppr-error))}})
+                                      quantum.untyped.core.print/*collapse-symbols?* true
+                                      quantum.untyped.core.print/*print-as-code?* true]
+                              (quantum.untyped.core.print/ppr %))
+                   :caught #'quantum.untyped.core.print/ppr-error))}})
 
 (defn >cljsbuild-builds
   "Note that for Figwheel to work, no character in the build IDs can necessitate an
