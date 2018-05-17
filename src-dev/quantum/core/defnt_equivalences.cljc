@@ -887,13 +887,13 @@
   "Taken from `clojure.lang.RT/seq`"
   > (t/? (t/isa? ISeq))
   ([xs t/nil?                 ] nil)
-  ([xs t/array?               ] (ArraySeq/createFromObject xs))
   ([xs (t/isa? ASeq)          ] xs)
   ([xs (t/or (t/isa? LazySeq)
              (t/isa? Seqable))] (.seq xs))
   ([xs t/iterable?            ] (clojure.lang.RT/chunkIteratorSeq (.iterator xs)))
   ([xs t/char-seq?            ] (StringSeq/create xs))
-  ([xs (t/isa? Map)           ] (seq (.entrySet xs)))))
+  ([xs (t/isa? Map)           ] (seq (.entrySet xs)))
+  ([xs t/array?               ] (ArraySeq/createFromObject xs))))
 )
 
 ;; ----- expanded code ----- ;;
@@ -910,65 +910,48 @@
                      ;; Notice, no casting for nil input
                      nil)))
 
-               ;; [t/array?]
-
-               ;; TODO perhaps at some point figure out that it doesn't need to create any more
-               ;; overloads here than just one?
-               (def seq|__1|input-types (*<> (t/isa? (Class/forName "[Z"))))
-               (def ^Object>Object seq|__1
-                 (reify Object>Object
-                   (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
-                     (let* [^"[Z" xs xs] (ArraySeq/createFromObject xs)))))
-
-               (def seq|__2|input-types (*<> (t/isa? (Class/forName "[B"))))
-               (def ^Object>Object seq|__2
-                 (reify Object>Object
-                   (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
-                     (let* [^"[B" xs xs] (ArraySeq/createFromObject xs)))))
-               ...
-
                ;; [(t/isa? ASeq)]
 
-               (def seq|__30|input-types (*<> (t/isa? ASeq)))
-               (def ^Object>Object seq|__30
+               (def seq|__2|input-types (*<> (t/isa? ASeq)))
+               (def ^Object>Object seq|__2
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      (let* [^ASeq xs xs] xs))))
 
                ;; [(t/or (t/isa? LazySeq) (t/isa? Seqable))]
 
-               (def seq|__31|input-types (*<> (t/isa? LazySeq)))
-               (def ^Object>Object seq|__31
+               (def seq|__3|input-types (*<> (t/isa? LazySeq)))
+               (def ^Object>Object seq|__3
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      (let* [^LazySeq xs xs] (.seq xs)))))
 
-               (def seq|__32|input-types (*<> (t/isa? Seqable)))
-               (def ^Object>Object seq|__32
+               (def seq|__4|input-types (*<> (t/isa? Seqable)))
+               (def ^Object>Object seq|__4
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      (let* [^Seqable xs xs] (.seq xs)))))
 
                ;; [t/iterable?]
 
-               (def seq|__33|input-types (*<> t/iterable?))
-               (def ^Object>Object seq|__33
+               (def seq|__5|input-types (*<> t/iterable?))
+               (def ^Object>Object seq|__5
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      (let* [^Iterable xs xs] (clojure.lang.RT/chunkIteratorSeq (.iterator xs))))))
 
                ;; [t/char-seq?]
 
-               (def seq|__34|input-types (*<> t/iterable?))
-               (def ^Object>Object seq|__34
+               (def seq|__6|input-types (*<> t/iterable?))
+               (def ^Object>Object seq|__6
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      (let* [^CharSequence xs xs] (StringSeq/create xs)))))
 
                ;; [(t/isa? Map)]
 
-               (def seq|__35|input-types (*<> (t/isa? Map)))
-               (def ^Object>Object seq|__35
+               (def seq|__7|input-types (*<> (t/isa? Map)))
+               (def ^Object>Object seq|__7
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      ;; This is after expansion; it's the first one that matches the overload
@@ -976,17 +959,34 @@
                      ;; equivalent) and potentially a configurable warning can be emitted
                      (let [^Map xs xs] (.invoke seq|__4__0 (.entrySet xs))))))
 
+               ;; [t/array?]
+
+               ;; TODO perhaps at some point figure out that it doesn't need to create any more
+               ;; overloads here than just one?
+               (def seq|__8|input-types (*<> (t/isa? (Class/forName "[Z"))))
+               (def ^Object>Object seq|__8
+                 (reify Object>Object
+                   (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
+                     (let* [^"[Z" xs xs] (ArraySeq/createFromObject xs)))))
+
+               (def seq|__9|input-types (*<> (t/isa? (Class/forName "[B"))))
+               (def ^Object>Object seq|__9
+                 (reify Object>Object
+                   (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
+                     (let* [^"[B" xs xs] (ArraySeq/createFromObject xs)))))
+               ...
+
                (defn seq
                  "Taken from `clojure.lang.RT/seq`"
                  {::t/type
                    (t/fn > (t/? (t/isa? ISeq))
                      [t/nil?]
-                     [t/array?]
                      [(t/isa? ASeq)]
                      [(t/or (t/isa? LazySeq) (t/isa? Seqable))]
                      [t/iterable?]
                      [t/char-seq?]
-                     [(t/isa? Map)])}
+                     [(t/isa? Map)]
+                     [t/array?])}
                  [a0]
                  (ifs ((Array/get seq|__0|input-types  0) a0) (.invoke seq|__0  a0)
                       ((Array/get seq|__1|input-types  0) a0) (.invoke seq|__1  a0)

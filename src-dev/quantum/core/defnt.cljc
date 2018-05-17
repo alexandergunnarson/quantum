@@ -89,25 +89,58 @@
     - If nilable, will it be boxed or will there be one overload for nil and one for primitive?
     - When a `fnt` with type overloads is referenced outside of a typed context, then the overload
       resolution will be done via Runtime Dispatch.
+    - TODO Should we take into account 'actual' types (not just 'declared' types) when performing
+      dispatch / overload resolution?
+      - Let's take the example of `(f (rand/int-between -10 -2))`.
+        - Let's say `rand/int-between`'s output is labeled `t/int?`. However, we know based on
+          further static analysis of its implementation that the output is not only `t/int?` but
+          also `t/neg?`, or perhaps even further, `(< -10 % -2)`.
+        - In this case, should we take advantage of this knowledge?
+          - Let's say we do. Then `(.invoke reify|we-know-specifics (rand/int-between -10 -2))`.
+            Yay for efficiency! But let's then say we then change the implementation even if we
+            don't change the 'interface'/typedefs. Now `rand/int-between` returns `(<= -10 % -2)` —
+            that is, it's now numerically *inclusive* (for instance, maybe the implementation's
+            previous behavior of generating numbers numerically *exclusive*ly was mistaken).
+            `reify|we-know-specifics` would then still be invoked but incorrectly (and unsafely) so.
+          - To be fair, we'll tend to change output specs/typedefs all the time as we do
+            development. Do we need to keep track of every call site it affects and recompile
+            accordingly? Perhaps. It seems like overkill though. It should be configurable in any
+            case.
+          - I think that because of this last point, we can and should rely on implementational
+            specifics wherever available to boost performance (Maybe this should be configurable so
+            it doesn't slow down development? The more we change the implementation, the more it has
+            to recompile, ostensibly). We can take advantage of the output specs, certainly, if for
+            nothing else than to ensure that our implementation (as characterized by its 'actual'
+            output type) matches what we expect (as characterized by its 'expected'/'declared'
+            output type).
 [ ] Runtime (Dynamic) Dispatch
     [—] Protocol generation
         - For now we won't do it because we can very often find the correct overload at compile
           time. We will resort to using the `fn`.
         - It will be left as an optimization.
     [ ] `fn` generation
-        - Performs a worst-case linear check of the types, `cond`-style.
+        - Performs a worst-case linear check of the typedefs, `cond`-style.
 [ ] Interface generation
     - Even if the `defnt` is redefined, you won't have interface problems.
 [ ] `reify` generation
     - Which `reify`s get generated is mainly up to the inputs but partially up to the fn body —
       If any typed fns are called in the fn body then this can change what gets generated.
       - TODO explain this more
-    - Each of the `reify`s will keep their label (`__2__0` or whatever) as long as the original type
-      of the `reify` is `t/=` to the new type of that reify
+    - Each of the `reify`s will keep their label (`__2__0` or whatever) as long as the original
+      typedef of the `reify` is `t/=` to the new typedef of that reify
       - If a redefined `defnt` doesn't have that type overload then the previous reify is uninterned
         and thus made unavailable
       - That way, according to the dynamicity tests in `quantum.test.core.defnt`, we can redefine
         implementations at will as long as the specs don't change
+      - To make this process faster we maintain a set of typedefs so at least cheap c/= checks can
+        be performed
+        - If c/= succeeds, great; the `reify` corresponding the label (and reify-type) will be
+          replaced; the typedef-set will remain unchanged
+        - Else it must find a corresponding typedef by t/=
+          - Then if it is found by t/= it will replace the `reify` and the typedef corresponding
+            with that label and replace the typedef in the typedef-set
+          - Else a new label will be given to the `reify`; the typedef will be added to the
+            typedef-set
 
     - [ ] One reify per type that cannot be split
           - Only `t/or`s can be split for now
