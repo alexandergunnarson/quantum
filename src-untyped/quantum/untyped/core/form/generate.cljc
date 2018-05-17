@@ -60,9 +60,9 @@
 ;; ===== Gensym unification ===== ;;
 ;; Adapted from Potemkin for use with both CLJ and CLJS
 
-(def unified-gensym-regex #"([a-zA-Z0-9\-\'\*]+)#__\d+__auto__$")
+(def unified-gensym-regex #"([a-zA-Z0-9\-\_\'\*]+)#__\d+__auto__$")
 
-(def gensym-regex #"(_|[a-zA-Z0-9\-\'\*]+)#?_+(\d+_*#?)+(auto__)?$")
+(def gensym-regex #"(_|[a-zA-Z0-9\-\_\'\*]+)#?_+(\d+_*#?)+(auto__)?$")
 
 (defn unified-gensym?
   {:attribution 'potemkin.macros}
@@ -83,7 +83,7 @@
 
 (def ^:dynamic *reproducible-gensym* nil)
 
-(defn reproducible-gensym|generator []
+(defn >reproducible-gensym|generator []
   (let [*counter (atom -1)]
     (memoize #(symbol (str % (swap! *counter inc))))))
 
@@ -96,7 +96,7 @@
   ([body reproducible-gensyms?]
     (let [gensym* (or *reproducible-gensym*
                       (memoize (if reproducible-gensyms?
-                                   (reproducible-gensym|generator)
+                                   (>reproducible-gensym|generator)
                                    gensym)))]
       (ucore/postwalk
         #(if (unified-gensym? %)
