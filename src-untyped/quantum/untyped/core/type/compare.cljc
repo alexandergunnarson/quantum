@@ -250,20 +250,20 @@
      - ✓ `(t/<> c0 c1)`   : the extension of ->`c0` is disjoint w.r.t. to that of ->`c1`.
    Unboxed primitives are considered to be less general (more specific) than boxed primitives."
   [^Class c0 class? ^Class c1 class? > comparison?]
-  #?(:clj (ifs (== c0 c1)                                =ident
-               (== c0 Object)                            >ident
-               (== c1 Object)                            <ident
-               (== (utcore/boxed->unboxed c0) c1)        >ident
-               (== c0 (utcore/boxed->unboxed c1))        <ident
+  #?(:clj (ifs (== c0 c1)                              =ident
+               (== c0 Object)                          >ident
+               (== c1 Object)                          <ident
+               (== (utcore/boxed->unboxed c0) c1)      >ident
+               (== c0 (utcore/boxed->unboxed c1))      <ident
                ;; we'll consider the two unrelated
                (not (utcore/array-depth-equal? c0 c1)) <>ident
-               (.isAssignableFrom c0 c1)                 >ident
-               (.isAssignableFrom c1 c0)                 <ident
+               (.isAssignableFrom c0 c1)               >ident
+               (.isAssignableFrom c1 c0)               <ident
                ;; multiple inheritance of interfaces
                (or (and (uclass/interface? c0)
                         (not (uclass/final? c1)))
                    (and (uclass/interface? c1)
-                        (not (uclass/final? c0)))) ><ident
+                        (not (uclass/final? c0))))     ><ident
                <>ident)
      :cljs (TODO)))
 
