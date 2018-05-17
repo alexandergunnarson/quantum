@@ -258,16 +258,16 @@
           code `(do (def ~conformer-sym ~conformer)
                     (deftype/deftype ~(with-meta sym {:no-factory? true}) ~'[v]
                       {~'?Object
-                        {~'hash     ([_#] (.hashCode ~'v))
-                         ~'equals   ~(std-equals sym other '=)}
-                       ~'?HashEq
-                         {~'hash-eq ([_#] (int (bit-xor ~type-hash (~(case-env :clj '.hashEq :cljs '-hash) ~'v))))}
+                        {~'hash-code ([_#] (.hashCode ~'v))
+                         ~'equals    ~(std-equals sym other '=)}
+                       ~'?Hash
+                         {~'hash     ([_#] (int (bit-xor ~type-hash (~(case-env :clj '.hashEq :cljs '-hash) ~'v))))}
                        ~'?Deref
-                         {~'deref   ([_#] ~'v)}
+                         {~'deref    ([_#] ~'v)}
                        quantum.core.core/IValue
-                         {~'get     ([_#] ~'v)
-                          ~'set     ([_# v#] (new ~sym (-> v# ~(if-not conformer `identity* conformer-sym)
-                                                           (s/validate ~spec-name))))}})
+                         {~'get      ([_#] ~'v)
+                          ~'set      ([_# v#] (new ~sym (-> v# ~(if-not conformer `identity* conformer-sym)
+                                                            (s/validate ~spec-name))))}})
                     (def ~spec-base ~spec)
                     (s/def ~spec-name
                       (s/conformer (fn [x#] (if (instance? ~sym x#)
@@ -468,7 +468,7 @@
                                 #_(enforce-get ~empty-record ~sym ~spec-sym k#)
                                 (~(case-env :clj '.entryAt :cljs nil) ~'v k#))}
              ~'?Object
-               {~'hash        ([_#] (.hashCode ~'v))
+               {~'hash-code   ([_#] (.hashCode ~'v))
                 ~'equals      ~(std-equals sym other (case-env :clj '.equiv :cljs '.equiv))}
              ~'?Iterable
                {~'iterator    ([_#] (~(case-env :clj '.iterator :cljs '-iterator) ~'v))}
@@ -477,8 +477,8 @@
                 ~'with-meta   ([_# new-meta#] (new ~sym (with-meta ~'v new-meta#)))}
              ~'?Print
                {~'pr          ([_# w# opts#] (~'-pr-writer ~'v w# opts#))}
-             ~'?HashEq
-               {~'hash-eq     ([_#] (int (bit-xor ~type-hash (~(case-env :clj '.hashEq :cljs '-hash) ~'v))))}
+             ~'?Hash
+               {~'hash        ([_#] (int (bit-xor ~type-hash (~(case-env :clj '.hashEq :cljs '-hash) ~'v))))}
              quantum.core.core/IValue
                {~'get         ([_#] ~'v)
                 ~'set         ([_# v#] (if (instance? ~sym v#) v# (new ~sym (~create v#))))}})

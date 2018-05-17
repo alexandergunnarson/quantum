@@ -343,9 +343,9 @@
 (deftype/deftype CountedDoubleList [tree mdata]
   {?Object
       {equals    ([_ x] (seq= tree x))
-       hash      ([this] (hashcode (map identity this)))}
-   ?HashEq
-      {hash-eq   ([this] (hash-ordered this))}
+       hash-code ([this] (hashcode (map identity this)))}
+   ?Hash
+      {hash      ([this] (hash-ordered this))}
    ?Meta
       {meta      ([_]    mdata)
        with-meta ([_ mdata] (CountedDoubleList. tree mdata))}

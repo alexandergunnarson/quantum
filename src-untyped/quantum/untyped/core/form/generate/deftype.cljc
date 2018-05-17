@@ -23,7 +23,7 @@
 (defn ?Counted       [lang] (case lang :clj 'clojure.lang.Counted               :cljs 'cljs.core/ICounted    ))
 (defn ?Deref         [lang] (case lang :clj 'clojure.lang.IDeref                :cljs 'cljs.core/IDeref      ))
 (defn ?Fn            [lang] (case lang :clj 'clojure.lang.IFn                   :cljs 'cljs.core/IFn         ))
-(defn ?HashEq        [lang] (case lang :clj 'clojure.lang.IHashEq               :cljs 'cljs.core/IHash       ))
+(defn ?Hash          [lang] (case lang :clj 'clojure.lang.IHashEq               :cljs 'cljs.core/IHash       ))
 (defn ?Indexed       [lang] (case lang :clj 'clojure.lang.Indexed               :cljs 'cljs.core/IIndexed    ))
 (defn ?Iterable      [lang] (case lang :clj 'java.lang.Iterable                 :cljs 'cljs.core/IIterable   ))
 (defn ?Lookup        [lang] (case lang :clj 'clojure.lang.ILookup               :cljs 'cljs.core/ILookup     ))
@@ -112,14 +112,14 @@
         (case lang
           :clj
             `[~(?Object lang)
-               ~@(p-arity 'equals   (get impls 'equals))
-               ~@(p-arity 'hashCode (get impls 'hash  ))]
+               ~@(p-arity 'equals   (get impls 'equals   ))
+               ~@(p-arity 'hashCode (get impls 'hash-code))]
           :cljs
             `[~(?Object lang)
                ~@(p-arity 'equiv    (get impls 'equals))])
       ?Hash
-        `[~(?HashEq lang)
-          ~@(p-arity (case lang :clj 'hashEq :cljs '-hash) (get impls 'hash-eq))]
+        `[~(?Hash lang)
+          ~@(p-arity (case lang :clj 'hasheq :cljs '-hash) (get impls 'hash))]
       ?Meta
         (case lang
           :clj
