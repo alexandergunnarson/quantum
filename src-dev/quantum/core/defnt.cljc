@@ -84,25 +84,42 @@
 - `defnt` is intended to catch many runtime errors at compile time, but cannot catch all of them;
   types will very often have to be validated at runtime.
 
-[ ] Runtime dispatch
-    [—] Protocol generation
-        - For now we won't do it because we can very often find the correct overload at compile
-          time. For now, worst case it'll be a linear check of the specs, `cond`-style.
-        - It will be left as an optimization.
-[ ] Interface generation
-    - Even if the `defnt` is redefined, you won't have interface problems.
-[ ] Reify generation
-[ ] Dispatch
+[ ] Compile-Time (Direct) Dispatch
     - Any argument, if it requires a non-nilable primitive-like value, will be marked as a primitive.
     - If nilable, will it be boxed or will there be one overload for nil and one for primitive?
     - When a `fnt` with type overloads is referenced outside of a typed context, then the overload
       resolution will be done via Runtime Dispatch.
+[ ] Runtime (Dynamic) Dispatch
+    [—] Protocol generation
+        - For now we won't do it because we can very often find the correct overload at compile
+          time. We will resort to using the `fn`.
+        - It will be left as an optimization.
+    [ ] `fn` generation
+        - Performs a worst-case linear check of the types, `cond`-style.
+[ ] Interface generation
+    - Even if the `defnt` is redefined, you won't have interface problems.
+[ ] `reify` generation
+    - Which `reify`s get generated is mainly up to the inputs but partially up to the fn body —
+      If any typed fns are called in the fn body then this can change what gets generated.
+      - TODO explain this more
+    - Each of the `reify`s will keep their label (`__2__0` or whatever) as long as the original type
+      of the `reify` is `t/=` to the new type of that reify
+      - If a redefined `defnt` doesn't have that type overload then the previous reify is uninterned
+        and thus made unavailable
+      - That way, according to the dynamicity tests in `quantum.test.core.defnt`, we can redefine
+        implementations at will as long as the specs don't change
+
+    - [ ] One reify per type that cannot be split
+          - Only `t/or`s can be split for now
+    - [ ] `(= (hash (t/or t/long? t/float?)) (hash (t/or t/long? t/float?)))`
+          - Currently this isn't the case; we'd like to have it so, so we can more efficiently look
+            up what overloads we've generated so far
 [ ] Types yielding generative specs
 [—] Types using the clojure.spec interface
     - Not yet; wait for it to come out of alpha
+[—] `extend-defnt!`
+    - Not yet; probably complicated and we don't need it right now
 "
-
-; TODO associative sequence over top of a vector (so it'll display like a seq but behave like a vec)
 
 #?(:clj
 (defns class>simplest-class
@@ -680,10 +697,6 @@
                    :reify/arglist-code
                    :reify|overload/body-form]))
 
-(s/def :protocol/overload
-  (s/keys :req-un [:protocol|overload/name    #_simple-symbol?
-                   :protocol|overload/arglist #_(t/vector-of simple-symbol?)]))
-
 #_(:clj
 (defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
   (cond (not= k :spec) java.lang.Object; default class
@@ -891,58 +904,6 @@
                                   ~arglist-code ~body-form)]))
                      lcat))))))
 
-(defns >extend-protocol|code [{:keys [protocol|name t/symbol?]} _]
-  `(extend-protocol ~protocol|name))
-
-(defns >defprotocol|code
-  ;; TODO ensure that overload names do not shadow each other
-  [{:keys [name      :protocol/name
-           overloads (s/seq-of :protocol/overload)]} _]
-  `(defprotocol ~name
-     ~@(->> overloads
-            (sort-by (fn-> :arglist count))
-            (sort-by :name)
-            (c/lmap (fn [{:keys [name arglist]}]
-                      `(~name ~arglist))))))
-
-(defn fnt|overload-groups>protocol [_])
-
-#_(is (code= (defnt|code>protocols 'abc (do defnt|code|class|=|2|1) :clj)
-        [{:defprotocol
-            ($ (defprotocol ~'abc|__Protocol__java|io|FilterOutputStream
-                 (~'abc|__protofn__java|io|FilterOutputStream [~'x0 ~'x1])))
-          :extend-protocols
-            [($ (extend-protocol ~'abc|__Protocol__java|io|FilterOutputStream
-                  java.io.FilterOutputStream
-                    (~'abc|__protofn__java|io|FilterOutputStream
-                      [~(tag "java.io.FilterOutputStream" 'x1) ~(tag "java.io.FilterOutputStream" 'x0)]
-                        (.invoke ~'abc|__0 ~'x0 ~'x1))))]
-          :defn nil}
-         {:defprotocol
-            ($ (defprotocol ~'abc|__Protocol__long
-                 (~'abc|__protofn__long [~'x0 ~'x1])))
-          :extend-protocols
-            [($ (extend-protocol ~'abc|__Protocol__long
-                  java.io.FilterOutputStream
-                    (~'abc|__protofn__long
-                      [~(tag "java.io.FilterOutputStream" 'x1) ~(tag "long" 'x0)]
-                        (.invoke ~'abc|__0 ~'x0 ~'x1))))]
-          :defn nil}
-         {:defprotocol
-            ($ (defprotocol ~'abc|__Protocol
-                 (~'abc [~'x0 ~'x1])))
-          :extend-protocols
-            [($ (extend-protocol ~'abc|__Protocol
-                  java.io.FilterOutputStream
-                    (~'abc
-                      [~(tag "java.io.FilterOutputStream" 'x0) ~'x1]
-                        (~'abc|__protofn__java|io|FilterOutputStream ~'x1 ~'x0))
-                  java.lang.Long
-                    (~'abc
-                      [~(tag "long"                       'x0) ~'x1]
-                        (~'abc|__protofn__long ~'x1 ~'x0))))]
-          :defn nil}]))
-
 (def allowed-shorthand-tag-chars "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 (defn >all-shorthand-tags []
@@ -988,37 +949,6 @@
         overload)
       nil
       overloads)))
-
-(defns fnt|overloads>protocols
-  [{:keys [overloads (s/and t/indexed? (s/seq-of :fnt/overload))
-           fn|name   :quantum.core.specs/fn|name]} _
-   > (s/kv {:defprotocol      t/any?
-            :extend-protocols t/any?
-            :defn             t/any?})]
-  (when (->> overloads (seq-or (fn-> :positional-args-ct (> 2))))
-    (TODO "Doesn't yet handle protocol creation for arglist counts of > 2"))
-  (when (->> overloads (seq-or :variadic?))
-    (TODO "Doesn't yet handle protocol creation for variadic overloads"))
-  (let [overloads|grouped-by-arity (->> overloads c/indexed+ (c/group-by (fn-> second :positional-args-ct)))]
-    (assert-monotonically-increasing-types! overloads|grouped-by-arity))
-  (let [all-arg-classes  (->> overloads (mapv :arg-classes))
-        protocol|name    (str fn|name "__Protocol__" )
-        extend-protocols nil #_(for []
-                           (>extend-protocol|code (kw-map protocol|name)))]
-    {:defprotocol      (>defprotocol|code {:name      protocol|name
-                                           :overloads []})
-     :extend-protocols extend-protocols
-     :defn             nil #_defn-definition}))
-
-;; This protocol is so suffixed because of the position of the argument on which
-                       ;; it dispatches
-#_(do (defprotocol name|gen__Protocol__0
-  (name|gen [~'x]))
-(extend-protocol name|gen__Protocol__0
-  java.lang.String   (name|gen [x] (.invoke name|gen|__0 x))
-  ;; this is part of the protocol because even though `Named` is an interface,
-  ;; `String` is final, so they're mutually exclusive
-  clojure.lang.Named (name|gen [x] (.invoke name|gen|__1 x))))
 
 (defns gen-register-type
   "Registers in the map of qualified symbol to input type, to output type
@@ -1066,13 +996,7 @@
             :clj  (for [[i fnt|overload-group] (c/lindexed fnt|overload-groups)]
                     (fnt|overload-group>reify (assoc (kw-map i fn|name) :overload-group fnt|overload-group)))
             :cljs (TODO))
-        dynamic-dispatch-codelist
-          (case lang
-            :clj  (let [protocol (fnt|overload-groups>protocol {:overload-groups fnt|overload-groups :fn|name fn|name})]
-                    `[~(:defprotocol protocol)
-                      ~@(:extend-protocols protocol)])
-            :cljs (TODO))
-        base-fn-codelist []
+        base-fn-codelist [] ; TODO
         fn-codelist
           (case lang
             :clj  (->> `[~@direct-dispatch-codelist

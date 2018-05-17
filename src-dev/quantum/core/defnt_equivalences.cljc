@@ -11,6 +11,8 @@
       :refer [diff]]
     [quantum.untyped.core.core :as ucore
       :refer [code=]]
+    [quantum.untyped.core.data.array
+      :refer [*<>]]
     [quantum.untyped.core.form
       :refer [$]]
     [quantum.untyped.core.form.evaluate
@@ -23,7 +25,8 @@
     [quantum.untyped.core.test         :as test
       :refer [deftest testing is is= throws]]
     [quantum.untyped.core.type :as t
-      :refer [? *]])
+      :refer [? *]]
+    [quantum.untyped.core.type.reifications :as utr])
   (:import
     clojure.lang.Named
     clojure.lang.Reduced
@@ -47,14 +50,14 @@
 
 ;; ----- expanded code ----- ;;
 
-($ (do (swap! *fn->spec assoc #'pid
-         (t/fn [:> (? t/string?)]))
-
-       (def ~'pid|__0
+($ (do (def ~'pid|__0
          (reify >Object
            (~(tag "java.lang.Object" 'invoke) [~'_]
              (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
-                  (.getName)))))))
+                  (.getName)))))
+
+       #_(defn ~'pid
+         {::t/spec (t/fn [:> (? t/string?)])})))
 
 ))
 
@@ -74,32 +77,30 @@
 
 ;; ----- expanded code ----- ;;
 
-($ (do (swap! *fn->spec assoc #'identity|uninlined
-         (t/fn [t/any?]))
+(case (env-lang)
+  :clj  ($ (do ;; [t/any?]
+               (def ~(tag "[Ljava.lang.Object;" 'identity|uninlined|__0|input-types)
+                 (*<> t/any?))
+               (def ~'identity|uninlined|__0
+                 (reify
+                   Object>Object   (~(tag "java.lang.Object" 'invoke) [_## ~(tag "java.lang.Object" 'x)] ~'x)
+                   boolean>boolean (~(tag "boolean"          'invoke) [_## ~(tag "boolean"          'x)] ~'x)
+                   byte>byte       (~(tag "byte"             'invoke) [_## ~(tag "byte"             'x)] ~'x)
+                   short>short     (~(tag "short"            'invoke) [_## ~(tag "short"            'x)] ~'x)
+                   char>char       (~(tag "char"             'invoke) [_## ~(tag "char"             'x)] ~'x)
+                   int>int         (~(tag "int"              'invoke) [_## ~(tag "int"              'x)] ~'x)
+                   long>long       (~(tag "long"             'invoke) [_## ~(tag "long"             'x)] ~'x)
+                   float>float     (~(tag "float"            'invoke) [_## ~(tag "float"            'x)] ~'x)
+                   double>double   (~(tag "double"           'invoke) [_## ~(tag "double"           'x)] ~'x)))
 
-       ~@(case (env-lang)
-                      ;; Because for `any?` it includes primitives as well
-           :clj  ($ [;; Direct dispatch
-                     ;; One reify per overload
-                     (def ~'identity|uninlined|__0 ; `[x t/any?]`
-                       (reify
-                         Object>Object   (~(tag "java.lang.Object" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] ~'x)
-                         boolean>boolean (~(tag "boolean"          'invoke) [~'_ ~(tag "boolean"          'x)] ~'x)
-                         byte>byte       (~(tag "byte"             'invoke) [~'_ ~(tag "byte"             'x)] ~'x)
-                         short>short     (~(tag "short"            'invoke) [~'_ ~(tag "short"            'x)] ~'x)
-                         char>char       (~(tag "char"             'invoke) [~'_ ~(tag "char"             'x)] ~'x)
-                         int>int         (~(tag "int"              'invoke) [~'_ ~(tag "int"              'x)] ~'x)
-                         long>long       (~(tag "long"             'invoke) [~'_ ~(tag "long"             'x)] ~'x)
-                         float>float     (~(tag "float"            'invoke) [~'_ ~(tag "float"            'x)] ~'x)
-                         double>double   (~(tag "double"           'invoke) [~'_ ~(tag "double"           'x)] ~'x)))
-                     ;; TODO implement this
-                     ;; Dynamic dispatch (invoked only if incomplete type information (incl. in untyped context))
-                     ;; in this case no protocol is necessary because it boxes arguments anyway
-                     ;; Var indirection may be avoided by making and using static fields via the Clojure 1.8 flag
-                     #_(defn ~'identity|uninlined [~'x] (.invoke identity|uninlined|__0 ~'x))])
-           :cljs ;; Direct dispatch will be simple functions, not `reify`s; not necessary here
-                 ;; Dynamic dispatch will be approached later; not clear yet whether there is a huge savings
-                 ($ [(defn ~'identity|uninlined [~'x] ~'x)])))))
+               #_(defn ~'identity|uninlined
+                 {::t/type (t/fn [t/any?])}
+                 [a0##]
+                 (ifs ((Array/get identity|uninlined|__0|input-types 0) a0##)
+                        (.invoke identity|uninlined|__0 a0##)
+                      (unsupported! `identity|uninlined [a0##] 0)))))
+  :cljs ;; Direct dispatch will be simple functions, not `reify`s
+        ($ (do (defn ~'identity|uninlined [~'x] ~'x)))))
 
 )
 
@@ -128,42 +129,47 @@
 
 ;; ----- expanded code ----- ;;
 
-($ (do (swap! *fn->spec assoc #'name
-         (t/fn [t/string?       :> t/string?]
-               [(t/isa? Named)  :> (* t/string?)]
-               [(t/isa? INamed) :> (* t/string?)]))
+(case (env-lang)
+  :clj  ($ (do ;; Only direct dispatch for primitives or for Object, not for subclasses of
+               ;; Object
+               ;; Return value can be primitive; in this case it's not
+               ;; The macro in a typed context will find the appropriate dispatch at compile
+               ;; time
 
-       ~@(case (env-lang)
-           :clj  ($ [;; Only direct dispatch for primitives or for Object, not for subclasses of Object
-                     ;; Return value can be primitive; in this case it's not
-                     ;; The macro in a typed context will find the appropriate dispatch at compile time
-                     (def ~'name|__0
-                       (reify Object>Object
-                         (~(tag "java.lang.Object" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)]
-                           (let* [~(tag "java.lang.String" 'x) ~'x]
-                             ~'x))))
-                     (def ~'name|__1
-                       (reify Object>Object
-                         (~(tag "java.lang.Object" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)]
-                           (let* [~(tag "clojure.lang.Named" 'x) ~'x]
-                             (let [~'out (.getName ~'x)]
-                               (s/validate ~'out t/string?))))))
-                     ;; TODO implement this
-                     ;; This protocol is so suffixed because of the position of the argument on which
-                     ;; it dispatches
-                     #_(defprotocol name__Protocol__0
-                       (name [~'x]))
-                     #_(extend-protocol name__Protocol__0
-                       java.lang.String   (name [x] (.invoke name|__0 x))
-                       ;; this is part of the protocol because even though `Named` is an interface,
-                       ;; `String` is final, so they're mutually exclusive
-                       clojure.lang.Named (name [x] (.invoke name|__1 x)))])
-           :cljs ($ [;; No protocol in ClojureScript; consider adding this if a performance increase is
-                     ;; demonstrated when using a protocol
-                     (defn ~'name [~'x]
-                       (ifs (string? x)           x
-                            (satisfies? INamed x) (-name x)
-                            (err! "Not supported for type" {:fn `name :type (type x)})))]))))
+               ;; [t/string?]
+
+               (def ~(tag "[Ljava.lang.Object;" 'name|__0|input-types)
+                 (*<> t/string?))
+               (def ~(tag `Object>Object 'name|__0)
+                 (reify Object>Object
+                   (~(tag "java.lang.Object" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
+                     (let* [~(tag "java.lang.String" 'x) ~'x]
+                       ~'x))))
+
+               ;; [(t/isa? Named)]
+
+               (def ~(tag "[Ljava.lang.Object;" 'name|__1|input-types)
+                 (*<> (t/isa? Named)))
+               (def ~(tag `Object>Object 'name|__1)
+                 (reify Object>Object
+                   (~(tag "java.lang.Object" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
+                     (let* [~(tag "clojure.lang.Named" 'x) ~'x]
+                       (let* [~'out (.getName ~'x)]
+                         (t/validate ~'out t/string?))))))
+
+             #_(defn ~'name
+                 {::t/type
+                   (t/fn  [t/string?       :> t/string?]
+                 #?(:clj  [(t/isa? Named)  :> (* t/string?)]
+                    :cljs [(t/isa? INamed) :> (* t/string?)]))}
+                 [a0##]
+                 (ifs ((Array/get name|__0|input-types 0) a0##)
+                        (.invoke name|__0 a0##)
+                      (unsupported! `>name [a0##] 0)))))
+  :cljs ($ (do (defn ~'name [~'x]
+                 (ifs (string? x)           x
+                      (satisfies? INamed x) (-name x)
+                      (err! "Not supported for type" {:fn `name :type (type x)}))))))
 
 ))
 
@@ -181,33 +187,35 @@
 
 ;; ----- expanded code ----- ;;
 
-($ (do (swap! fn->spec assoc #'some?
-         (t/fn [t/nil?]
-               [t/any?]))
+(case (env-lang)
+  :clj  ($ (do ;; [x t/nil?]
 
-       ~@(case (env-lang)
-           :clj  ($ [(def ~'some?|__0 ; `[x t/nil?]`
-                       (reify
-                         Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)))
-                     (def ~'some?|__1 ; `[x t/any?]`
-                       (reify
-                         Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] true)
-                         boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] true)
-                         byte>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "byte"             'x)] true)
-                         short>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "short"            'x)] true)
-                         char>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "char"             'x)] true)
-                         int>boolean     (~(tag "boolean" 'invoke) [~'_ ~(tag "int"              'x)] true)
-                         long>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "long"             'x)] true)
-                         float>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "float"            'x)] true)
-                         double>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "double"           'x)] true)))
-                     ;; TODO implement this
-                     ;; Dynamic dispatch
-                     #_(defn ~'some? [~'x]
-                       (ifs (nil? x) (.invoke some?|__0 x)
-                            (.invoke some?|__1 x)))])
-           :cljs ($ [(defn ~'some? [~'x]
-                       (ifs (nil? x) false
-                            true))]))))
+               (def ~'some?|__0
+                 (reify
+                   Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)))
+
+               ;; [x t/any?]
+
+               (def ~'some?|__1
+                 (reify
+                   Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] true)
+                   boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] true)
+                   byte>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "byte"             'x)] true)
+                   short>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "short"            'x)] true)
+                   char>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "char"             'x)] true)
+                   int>boolean     (~(tag "boolean" 'invoke) [~'_ ~(tag "int"              'x)] true)
+                   long>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "long"             'x)] true)
+                   float>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "float"            'x)] true)
+                   double>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "double"           'x)] true)))
+
+             #_(defn ~'some?
+                 {::t/type (t/fn [t/nil?]
+                                 [t/any?])}
+                 ...
+                 )))
+  :cljs ($ (do (defn ~'some? [~'x]
+                 (ifs (nil? x) false
+                      true)))))
 
 ))
 
@@ -225,34 +233,36 @@
 
 ;; ----- expanded code ----- ;;
 
-($ (do (swap! fn->spec assoc #'reduced?
-         (t/fn [(t/isa? Reduced)]
-               [t/any?]))
+(case (env-lang)
+  :clj  ($ (do ;;[(t/isa? Reduced)]
 
-       ~@(case (env-lang)
-           :clj  ($ [(def ~'reduced?|__0 ; `[x Reduced]`
-                       (reify
-                         Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)]
-                                           (let* [~(tag "clojure.lang.Reduced" 'x) ~'x]
-                                             true))))
-                     (def ~'reduced?|__1 ; `[x t/any?]`
-                       (reify
-                         Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)
-                         boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] false)
-                         byte>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "byte"             'x)] false)
-                         short>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "short"            'x)] false)
-                         char>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "char"             'x)] false)
-                         int>boolean     (~(tag "boolean" 'invoke) [~'_ ~(tag "int"              'x)] false)
-                         long>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "long"             'x)] false)
-                         float>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "float"            'x)] false)
-                         double>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "double"           'x)] false)))
-                     ;; TODO implement
-                     ;; No protocol because just one class; TODO evaluate whether this is better performance-wise? probably is
-                     #_(defn ~'reduced? [~'x]
-                       (ifs (instance? Reduced x) (.invoke reduced?|__0 ~'x)
-                            (.invoke reduced?|__1 ~'x)))])
-           :cljs ($ [(defn ~'reduced? [~'x]
-                       (ifs (instance? Reduced x) true false))]))))
+               (def ~'reduced?|__0
+                 (reify
+                   Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)]
+                                     (let* [~(tag "clojure.lang.Reduced" 'x) ~'x]
+                                       true))))
+
+               ;; [t/any?]
+
+               (def ~'reduced?|__1
+                 (reify
+                   Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)
+                   boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] false)
+                   byte>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "byte"             'x)] false)
+                   short>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "short"            'x)] false)
+                   char>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "char"             'x)] false)
+                   int>boolean     (~(tag "boolean" 'invoke) [~'_ ~(tag "int"              'x)] false)
+                   long>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "long"             'x)] false)
+                   float>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "float"            'x)] false)
+                   double>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "double"           'x)] false)))
+
+             #_(defn ~'reduced?
+                 {::t/type (t/fn [(t/isa? Reduced)]
+                                 [t/any?])}
+                 ...
+                 )))
+  :cljs ($ (do (defn ~'reduced? [~'x]
+                 (ifs (instance? Reduced x) true false)))))
 
 ))
 
@@ -263,6 +273,7 @@
 (macroexpand '
 (defnt #_:inline >boolean
    ([x t/boolean?] x)
+   ;; Implicitly, `(- t/nil? t/boolean?)`
    ([x t/nil?]     false)
    ;; Implicitly, `(- t/any? t/nil? t/boolean?)`
    ([x t/any?]     true))
@@ -270,41 +281,43 @@
 
 ;; ----- expanded code ----- ;;
 
-($ (do (swap! fn->spec assoc #'>boolean
-         (t/fn [t/boolean?]
-               [t/nil?]
-               [t/any?]))
+(case (env-lang)
+  :clj  ($ (do ;; [t/boolean?]
 
-       ~@(case (env-lang)
-           :clj  ($ [(def ~'>boolean|__0 ; `[x t/boolean?]`
-                       (reify
-                         boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] ~'x)))
-                     (def ~'>boolean|__1 ; `[x t/nil?]`
-                       (reify
-                         Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)))
-                     (def ~'>boolean|__2 ; `[x t/any?]`
-                       (reify
-                         Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] true)
-                         boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] true)
-                         byte>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "byte"             'x)] true)
-                         short>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "short"            'x)] true)
-                         char>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "char"             'x)] true)
-                         int>boolean     (~(tag "boolean" 'invoke) [~'_ ~(tag "int"              'x)] true)
-                         long>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "long"             'x)] true)
-                         float>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "float"            'x)] true)
-                         double>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "double"           'x)] true)))
-                     ;; TODO implement this
-                     #_(defprotocol >boolean__Protocol
-                       (>boolean [~'x]))
-                     #_(extend-protocol >boolean__Protocol
-                       java.lang.Boolean (>boolean [^java.lang.Boolean x] (.invoke >boolean|__0 x))
-                       java.lang.Object  (>boolean [x]
-                                           (ifs (nil? x) (.invoke >boolean|__1 x)
-                                                (.invoke >boolean|__2 x))))])
-           :cljs ($ [(defn ~'>boolean [~'x]
-                       (ifs (boolean? x) x
-                            (nil?     x) false
-                            true))]))))
+               (def ~'>boolean|__0
+                 (reify
+                   boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] ~'x)))
+
+               ;; [t/nil?]
+
+               (def ~'>boolean|__1
+                 (reify
+                   Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)))
+
+               ;; [t/any?]
+
+               (def ~'>boolean|__2
+                 (reify
+                   Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] true)
+                   boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] true)
+                   byte>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "byte"             'x)] true)
+                   short>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "short"            'x)] true)
+                   char>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "char"             'x)] true)
+                   int>boolean     (~(tag "boolean" 'invoke) [~'_ ~(tag "int"              'x)] true)
+                   long>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "long"             'x)] true)
+                   float>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "float"            'x)] true)
+                   double>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "double"           'x)] true)))
+
+             #_(defn ~'>boolean
+                 {::t/type (t/fn [t/boolean?]
+                                 [t/nil?]
+                                 [t/any?])}
+                 ...
+                 )))
+  :cljs ($ (do (defn ~'>boolean [~'x]
+                 (ifs (boolean? x) x
+                      (nil?     x) false
+                      true)))))
 
 ))
 
@@ -356,126 +369,6 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
-(is (code=
-
-(macroexpand '
-(defnt >long*
-  {:source "clojure.lang.RT.uncheckedLongCast"}
-  > t/long?
-  ([x (t/- t/primitive? t/boolean?)] (Primitive/uncheckedLongCast x))
-  ([x (t/ref (t/isa? Number))] (.longValue x))))
-
-;; ----- expanded code ----- ;;
-
-`(do ~@(case (env-lang)
-         :clj ($ [(def ~'>long*|__0 ; `(t/- t/primitive? t/boolean?)`
-                    (reify byte>long   (~(tag "long" 'invoke) [~'_ ~(tag "byte"             'x)] (~'Primitive/uncheckedLongCast ~'x))
-                           short>long  (~(tag "long" 'invoke) [~'_ ~(tag "short"            'x)] (~'Primitive/uncheckedLongCast ~'x))
-                           char>long   (~(tag "long" 'invoke) [~'_ ~(tag "char"             'x)] (~'Primitive/uncheckedLongCast ~'x))
-                           int>long    (~(tag "long" 'invoke) [~'_ ~(tag "int"              'x)] (~'Primitive/uncheckedLongCast ~'x))
-                           long>long   (~(tag "long" 'invoke) [~'_ ~(tag "long"             'x)] (~'Primitive/uncheckedLongCast ~'x))
-                           float>long  (~(tag "long" 'invoke) [~'_ ~(tag "float"            'x)] (~'Primitive/uncheckedLongCast ~'x))
-                           double>long (~(tag "long" 'invoke) [~'_ ~(tag "double"           'x)] (~'Primitive/uncheckedLongCast ~'x))))
-                  (def ~'>long*|__1 ; `Number`
-                    (reify Object>long (~(tag "long" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)]
-                      (let* [~(tag "java.lang.Number" 'x) ~'x] (.longValue ~'x)))))
-                  ;; TODO implement this
-                #_(defprotocol >long*__Protocol
-                    (>long* [~'x]))
-                #_(extend-protocol >int*|__Protocol
-                    java.lang.Byte      (>long* [~(tag "java.lang.Byte"      x)] (.invoke >long*__0 x))
-                    java.lang.Short     (>long* [~(tag "java.lang.Short"     x)] (.invoke >long*__0 x))
-                    java.lang.Character (>long* [~(tag "java.lang.Character" x)] (.invoke >long*__0 x))
-                    java.lang.Integer   (>long* [~(tag "java.lang.Integer"   x)] (.invoke >long*__0 x))
-                    java.lang.Long      (>long* [~(tag "java.lang.Long"      x)] (.invoke >long*__0 x))
-                    java.lang.Float     (>long* [~(tag "java.lang.Float"     x)] (.invoke >long*__0 x))
-                    java.lang.Double    (>long* [~(tag "java.lang.Double"    x)] (.invoke >long*__0 x))
-                    java.lang.Number    (>long* [~(tag "java.lang.Object"    x)] (.invoke >long*__1 x)))])))
-
-))
-
-;; =====|=====|=====|=====|===== ;;
-
-(is (code=
-
-(macroexpand '
-(defnt >long
-  {:source "clojure.lang.RT.longCast"}
-  > t/long?
-  ([x (t/isa? clojure.lang.BigInt)]
-    (if (nil? (.bipart x))
-        (.lpart x)
-        (throw (Exception. "Long out of range"))))
-  ([x (t/isa? java.math.BigInteger)]
-    (if (< (.bitLength x) 64)
-        (.longValue x)
-        (throw (Exception. "Long out of range"))))
-  ;; TODO handle recursion
-  #_([x t/ratio?] (>long (.bigIntegerValue x)))
-  ;; TODO handle calling of other `defnt`s
-  #_([x (t/- t/primitive? t/boolean?)] (>long* x))
-  ([x t/float?] (clojure.lang.RT/longCast x)) ; Because primitive casting in Clojure is not supported ; TODO fix
-  ([x t/double?] (clojure.lang.RT/longCast x)) ; TODO fix
-  ([x t/boolean?] (if x 1 0))
-  ;; TODO handle recursion
-  #_([x t/string?] (-> x Long/parseLong >long))
-  ([x t/string?, radix t/int?] (Long/parseLong x radix))))
-
-;; ----- expanded code ----- ;;
-
-`(do ~@(case (env-lang)
-         :clj ($ [
-                  ])))
-
-))
-
-;; =====|=====|=====|=====|===== ;;
-
-(macroexpand '
-(defnt !str > #?(:clj  (t/isa? StringBuilder)
-                 :cljs (t/isa? StringBuffer))
-        ([] #?(:clj (StringBuilder.) :cljs (StringBuffer.)))
-        ;; If we had combined this arity, `t/or`ing the `t/string?` means it wouldn't have been
-        ;; handled any differently than `t/char-seq?`
-#?(:clj ([x t/string?] (StringBuilder. x)))
-        ([x #?(:clj  (t/or t/char-seq? t/int?)
-               :cljs t/val?)]
-          #?(:clj (StringBuilder. x) :cljs (StringBuffer. x))))
-)
-
-;; ----- expanded code ----- ;;
-
-`(do (swap! fn->spec assoc #'!str
-       (t/fn :> #?(:clj  (t/isa? StringBuilder)
-                   :cljs (t/isa? StringBuffer))
-         []
- #?(:clj [t/string?])
-         [#?(:clj  (t/or t/char-seq? t/int?)
-             :cljs t/val?)]))
-
-     ~(case-env
-        :clj  `(do (def !str|__0
-                     (reify >Object       (^java.lang.Object invoke [_#                      ] (StringBuilder.))))
-                   ;; `(?* {:any-in-numeric-range? true})`
-                   (def !str|__1__0 ; (StringBuilder. <CharSequence>)
-                     (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'x] (StringBuilder. ^CharSequence x))))
-                   (def !str|__1__1 ; (StringBuilder. <(range-of t/int?)>)
-                     (reify int>Object    (^java.lang.Object invoke [_# ^int              ~'x] (StringBuilder. x)))
-                     ...)
-                   (def !str|__1__2 ; (StringBuilder. <String>)
-                     (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'x] (StringBuilder. ^String x))))
-
-                   (defprotocol !str__Protocol
-                     (!str__protocol [~'x]))
-                   (extend-protocol !str__Protocol
-                     ...)
-                   (defn !str ([  ] (.invoke !str|__0))
-                              ([a0] (!str__protocol a0))))
-        :cljs `(do (defn !str ([]   (StringBuffer.))
-                              ([a0] (let [x a0] (StringBuffer. x)))))))
-
-;; =====|=====|=====|=====|===== ;;
-
 (macroexpand '
 (defnt #_:inline >
            ;; This is admittedly a place where inference might be nice, but luckily there are no
@@ -488,11 +381,7 @@
 
 ;; ----- expanded code ----- ;;
 
-`(do (swap! fn->spec assoc #'>
-       (t/fn #?(:clj  [t/comparable-primitive? t/comparable-primitive? :> t/boolean?]
-                :cljs [t/double?               t/double?               :> (t/assume t/boolean?)])))
-
-     ~(case-env
+`(do ~(case-env
         :clj  `(do (def >|__0
                      (reify byte+byte>boolean     (^boolean invoke [_# ^byte   a ^byte   b] (Numeric/gt a b))
                             byte+char>boolean     (^boolean invoke [_# ^byte   a ^char   b] (Numeric/gt a b))
@@ -544,17 +433,353 @@
                             double+float>boolean  (^boolean invoke [_# ^double a ^float  b] (Numeric/gt a b))
                             double+double>boolean (^boolean invoke [_# ^double a ^double b] (Numeric/gt a b))))
 
-                   (defprotocol >__Protocol
-                     (> [~'a0 ~'a1]))
-                   (extend-protocol >__Protocol
-                     ...))
+                   (defn >
+                     {::t/type
+                       (t/fn #?(:clj  [t/comparable-primitive? t/comparable-primitive?
+                                       :> t/boolean?]
+                                :cljs [t/double?               t/double?
+                                       :> (t/assume t/boolean?)]))}
+                     ([a0 a1]
+                             (ifs (t/byte? a0)
+                                    (ifs (t/byte? a1) (.invoke ^byte+byte>boolean >|__0 a0 a1)
+                                         (t/char? a1) (.invoke ...)
+                                         ...)
+                                  (t/char? a0)
+                                    (ifs (t/byte? a1) (.invoke ^char+byte>boolean >|__0 a0 a1)
+                                         ...)
+                                  ...
+                                  (unsupported! `> [a0 a1] 0)))))
         :cljs `(do (defn >
                      ([a0 a1]
                        (ifs (double? a0)
                               (ifs (double? a1)
-                                     (let [a a0 b a1] (cljs.core/> a b))
-                                   (unsupported! `> [a0 a1]))
-                            (unsupported! `> [a0 a1])))))))
+                                     (let* [a a0 b a1] (cljs.core/> a b))
+                                   (unsupported! `> [a0 a1] 1))
+                            (unsupported! `> [a0 a1] 0)))))))
+
+;; =====|=====|=====|=====|===== ;;
+
+(is (code=
+
+(macroexpand '
+(defnt #_:inline >long*
+  {:source "clojure.lang.RT.uncheckedLongCast"}
+  > t/long?
+  ([x (t/- t/primitive? t/boolean?)] (Primitive/uncheckedLongCast x))
+  ([x (t/ref (t/isa? Number))] (.longValue x))))
+
+;; ----- expanded code ----- ;;
+
+(case (env-lang)
+  :clj ($ (do ;; [(t/- t/primitive? t/boolean?)]
+
+              (def ~'>long*|__0|input-types (*<> t/byte?))
+              (def ~'>long*|__0
+                (reify byte>long   (~(tag "long" 'invoke) [_## ~(tag "byte"             'x)]
+                  ~'(Primitive/uncheckedLongCast x))))
+
+              (def ~'>long*|__1|input-types (*<> t/char?))
+              (def ~'>long*|__1
+                (reify char>long   (~(tag "long" 'invoke) [_## ~(tag "char"             'x)]
+                  ~'(Primitive/uncheckedLongCast x))))
+
+              (def ~'>long*|__2|input-types (*<> t/short?))
+              (def ~'>long*|__2
+                (reify short>long  (~(tag "long" 'invoke) [_## ~(tag "short"            'x)]
+                  ~'(Primitive/uncheckedLongCast x))))
+
+              (def ~'>long*|__3|input-types (*<> t/int?))
+              (def ~'>long*|__3
+                (reify int>long    (~(tag "long" 'invoke) [_## ~(tag "int"              'x)]
+                  ~'(Primitive/uncheckedLongCast x))))
+
+              (def ~'>long*|__4|input-types (*<> t/long?))
+              (def ~'>long*|__4
+                (reify long>long   (~(tag "long" 'invoke) [_## ~(tag "long"             'x)]
+                  ~'(Primitive/uncheckedLongCast x))))
+
+              (def ~'>long*|__5|input-types (*<> t/float?))
+              (def ~'>long*|__5
+                (reify float>long  (~(tag "long" 'invoke) [_## ~(tag "float"            'x)]
+                  ~'(Primitive/uncheckedLongCast x))))
+
+              (def ~'>long*|__6|input-types (*<> t/double?))
+              (def ~'>long*|__6
+                (reify double>long (~(tag "long" 'invoke) [_## ~(tag "double"           'x)]
+                  ~'(Primitive/uncheckedLongCast x))))
+
+              ;; [(t/ref (t/isa? Number))]
+
+              (def ~'>long*|__7|input-types (*<> (t/isa? Number)))
+              (def ~'>long*|__7
+                (reify Object>long (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
+                  (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(.longValue x)))))
+
+              (defn >long*
+                {::t/type (t/fn [(t/- t/primitive? t/boolean?)]
+                                [(t/ref (t/isa? Number))])}
+                [a0##] (ifs ((Array/get >long*|__0|input-types 0) a0##)
+                              (.invoke >long*|__0 a0##)
+                            ...))
+
+              )))
+
+))
+
+;; =====|=====|=====|=====|===== ;;
+
+(is (code=
+
+(macroexpand '
+(defnt >long
+  {:source "clojure.lang.RT.longCast"}
+  > t/long?
+  ([x (t/- t/primitive? t/boolean? t/float? t/double?)] (>long* x))
+  ([x (t/and (t/or t/double? t/float?)
+             (fnt [x (t/or double? float?)] (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
+    (>long* x))
+  ([x (t/and (t/isa? clojure.lang.BigInt)
+             (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
+    (.lpart x))
+  ([x (t/and (t/isa? java.math.BigInteger)
+             (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
+    (.longValue x))
+  ([x t/ratio?] (>long (.bigIntegerValue x)))
+  ([x (t/value true)]  1)
+  ([x (t/value false)] 0)
+  ([x t/string?] (Long/parseLong x))
+  ([x t/string?, radix t/int?] (Long/parseLong x radix))))
+
+;; ----- expanded code ----- ;;
+
+(case (env-lang)
+  :clj ($ (do
+
+
+              #_[(t/- t/primitive? t/boolean? t/float? t/double?)]
+
+              (def ~'>long|__0|input-types (*<> t/byte?))
+              (def ~'>long|__0
+                (reify byte>long
+                  (~(tag "long" 'invoke) [_## ~(tag "byte" 'x)]
+                    ;; Resolved from `(>long* x)`
+                    (.invoke >long*|__0 ~'x))))
+
+              (def ~'>long|__1|input-types (*<> t/char?))
+              (def ~'>long|__1
+                (reify char>long
+                  (~(tag "long" 'invoke) [_## ~(tag "char" 'x)]
+                    ;; Resolved from `(>long* x)`
+                    (.invoke >long*|__1 ~'x))))
+
+              (def ~'>long|__2|input-types (*<> t/short?))
+              (def ~'>long|__2
+                (reify short>long
+                  (~(tag "long" 'invoke) [_## ~(tag "short" 'x)]
+                    ;; Resolved from `(>long* x)`
+                    (.invoke >long*|__2 ~'x))))
+
+              (def ~'>long|__3|input-types (*<> t/int?))
+              (def ~'>long|__3
+                (reify int>long
+                  (~(tag "long" 'invoke) [_## ~(tag "int" 'x)]
+                    ;; Resolved from `(>long* x)`
+                    (.invoke >long*|__3 ~'x))))
+
+              (def ~'>long|__4|input-types (*<> t/long?))
+              (def ~'>long|__4
+                (reify long>long
+                  (~(tag "long" 'invoke) [_## ~(tag "long" 'x)]
+                    ;; Resolved from `(>long* x)`
+                    (.invoke >long*|__4 ~'x))))
+
+              #_[(t/and (t/or t/double? t/float?)
+                        (fnt [x (t/or double? float?)]
+                          (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
+
+              (def ~'>long|__5|input-types
+                (*<> (t/and t/double?
+                            (fnt [x (t/or double? float?)]
+                              (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))))
+              (def ~'>long|__5
+                (reify double>long
+                  (~(tag "long" 'invoke) [_## ~(tag "double" 'x)]
+                    ;; Resolved from `(>long* x)`
+                    (.invoke >long*|__6 ~'x))))
+
+              (def ~'>long|__6|input-types
+                (*<> (t/and t/float?
+                            (fnt [x (t/or double? float?)]
+                              (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))))
+              (def ~'>long|__6
+                (reify float>long
+                  (~(tag "long" 'invoke) [_## ~(tag "float" 'x)]
+                    ;; Resolved from `(>long* x)`
+                    (.invoke >long*|__5 ~'x))))
+
+              #_[(t/and (t/isa? clojure.lang.BigInt)
+                        (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
+
+              (def ~'>long|__7|input-types
+                (*<> (t/and (t/isa? clojure.lang.BigInt)
+                            (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))))
+              (def ~'>long|__7
+                (reify Object>long
+                  (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
+                    (let* [~(tag "clojure.lang.BigInt" 'x) ~'x] ~'(.lpart x)))))
+
+              #_[(t/and (t/isa? java.math.BigInteger)
+                        (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
+
+
+              (def ~'>long|__8|input-types
+                (*<> (t/and (t/isa? java.math.BigInteger)
+                            (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))))
+              (def ~'>long|__8
+                (reify Object>long
+                  (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
+                    (let* [~(tag "java.math.BigInteger" 'x) ~'x] ~'(.longValue x)))))
+
+              #_[t/ratio?]
+
+              (def ~'>long|__9|input-types
+                (*<> t/ratio?))
+              (def ~'>long|__9|conditions
+                (*<> (-> long|__8|input-types (get 0) utr/and-type>args (get 1))))
+              (def ~'>long|__9
+                (reify Object>long
+                  (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
+                    (let* [~(tag "clojure.lang.Ratio" 'x) ~'x]
+                      ;; Resolved from `(>long (.bigIntegerValue x))`
+                      ;; In this case, `(t/compare (type-of '(.bigIntegerValue x)) overload-type)`:
+                      ;; - `(t/- t/primitive? t/boolean? t/float? t/double?)` -> t/<>
+                      ;; - `(t/and (t/or t/double? t/float?) ...)`            -> t/<>
+                      ;; - `(t/and (t/isa? clojure.lang.BigInt) ...)`         -> t/<>
+                      ;; - `(t/and (t/isa? java.math.BigInteger) ...)`        -> t/>
+                      ;; - `t/ratio?`                                         -> t/<>
+                      ;; - `(t/value true)`                                   -> t/<>
+                      ;; - `(t/value false)`                                  -> t/<>
+                      ;; - `t/string?`                                        -> t/<>
+                      ;;
+                      ;; Since there is no overload that results in t/<, no compile-time match can
+                      ;; be found, but a possible runtime match lies in the overload that results in
+                      ;; t/>. The remaining uncertainty will have to be resolved at compile time.
+                      ;; Note that if there had been multiple overloads with t/>, we would have had
+                      ;; to dispatch on that and resolve accordingly.
+                      (let [x## ~'(.bigIntegerValue x)]
+                        (if ((Array/get >long|__9|conditions 0) x##)
+                            (.invoke >long|__8 x##)
+                            (unsupported! `>long x##)))))))
+
+              #_[(t/value true)]
+
+              (def ~'>long|__10|input-types
+                (*<> (t/value true)))
+              (def ~'>long|__10
+                (reify boolean>long
+                  (~(tag "long" 'invoke) [_## ~(tag "boolean" 'x)] 1)))
+
+              #_[(t/value false)]
+
+              (def ~'>long|__11|input-types
+                (*<> (t/value false)))
+              (def ~'>long|__11
+                (reify boolean>long
+                  (~(tag "long" 'invoke) [_## ~(tag "boolean" 'x)] 0)))
+
+              #_[t/string?]
+
+              (def ~'>long|__12|input-types
+                (*<> t/string?))
+              (def ~'>long|__12
+                (reify Object>long
+                  (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
+                    ~'(Long/parseLong x))))
+
+              #_[t/string?]
+
+              (def ~'>long|__13|input-types
+                (*<> t/string? t/int?))
+              (def ~'>long|__13
+                (reify Object+int>long
+                  (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x) ~(tag "int" 'radix)]
+                    ~'(Long/parseLong x radix))))
+
+              (defn >long
+                {::t/type
+                  (t/fn
+                    [(t/- t/primitive? t/boolean? t/float? t/double?)]
+                    [(t/and (t/or t/double? t/float?)
+                            (fnt [x (t/or double? float?)]
+                              (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
+                    [(t/and (t/isa? clojure.lang.BigInt)
+                            (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
+                    [(t/and (t/isa? java.math.BigInteger)
+                            (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
+                    [t/ratio?]
+                    [(t/value true)]
+                    [(t/value false)]
+                    [t/string?]
+                    [t/string? t/int?])}
+                ([x0##] (ifs ((Array/get >long|__0|input-types 0) x0##)
+                               (.invoke >long|__0 x0##)
+                             ((Array/get >long|__1|input-types 0) x0##)
+                               (.invoke >long|__0 x0##)
+                             ((Array/get >long|__2|input-types 0) x0##)
+                               (.invoke >long|__2 x0##)))
+                ([x0## x1##] ...)))))
+
+))
+
+;; =====|=====|=====|=====|===== ;;
+
+(macroexpand '
+(defnt !str > #?(:clj  (t/isa? StringBuilder)
+                 :cljs (t/isa? StringBuffer))
+        ([] #?(:clj (StringBuilder.) :cljs (StringBuffer.)))
+        ;; If we had combined this arity, `t/or`ing the `t/string?` means it wouldn't have been
+        ;; handled any differently than `t/char-seq?`
+#?(:clj ([x t/string?] (StringBuilder. x)))
+        ([x #?(:clj  (t/or t/char-seq? t/int?)
+               :cljs t/val?)]
+          #?(:clj (StringBuilder. x) :cljs (StringBuffer. x))))
+)
+
+;; ----- expanded code ----- ;;
+
+`(do (swap! fn->spec assoc #'!str
+       (t/fn :> #?(:clj  (t/isa? StringBuilder)
+                   :cljs (t/isa? StringBuffer))
+         []
+ #?(:clj [t/string?])
+         [#?(:clj  (t/or t/char-seq? t/int?)
+             :cljs t/val?)]))
+
+     ~(case-env
+        :clj  `(do (def ^>Object !str|__0
+                     (reify >Object
+                       (^java.lang.Object invoke [_#]
+                         (StringBuilder.))))
+                   ;; `t/string?`
+                   (def ^Object>Object !str|__1 ; `t/string?`
+                     (reify Object>Object
+                       (^java.lang.Object invoke [_# ^java.lang.Object ~'x]
+                         (let* [^String x x] (StringBuilder. x)))))
+                   ;; `(t/or t/char-seq? t/int?)`
+                   (def ^Object>Object !str|__2 ; `t/char-seq?`
+                     (reify Object>Object
+                       (^java.lang.Object invoke [_# ^java.lang.Object ~'x]
+                         (let* [^CharSequence x x] (StringBuilder. x)))))
+                   (def ^int>Object !str|__3 ; `t/int?`
+                     (reify int>Object (^java.lang.Object invoke [_# ^int ~'x]
+                       (StringBuilder. x))))
+
+                   (defn !str ([  ] (.invoke !str|__0))
+                              ([a0] (ifs (t/string? a0)   (.invoke !str|__1 a0)
+                                         (t/char-seq? a0) (.invoke !str|__2 a0)
+                                         (t/int? a0)      (.invoke !str|__3 a0)))))
+        :cljs `(do (defn !str ([]   (StringBuffer.))
+                              ([a0] (let* [x a0] (StringBuffer. x)))))))
 
 ;; =====|=====|=====|=====|===== ;;
 
@@ -571,7 +796,7 @@
            ;; least pre-variadic args, if not variadic
            ;; TODO should have automatic currying?
            ([x (t/fn> str t/any?) & xs (? (t/seq-of t/any?)) #?@(:cljs [> (t/assume t/string?)])]
-             (let [sb (-> x str !str)] ; determined to be StringBuilder
+             (let* [sb (-> x str !str)] ; determined to be StringBuilder
                ;; TODO is `doseq` the right approach, or using reduction?
                (doseq [x' xs] (.append sb (str x')))
                (.toString sb))))
@@ -579,15 +804,7 @@
 
 ;; ----- expanded code ----- ;;
 
-`(do (swap! fn->spec assoc #'str
-       (t/fn > t/string?
-         []
-         [t/nil?]
-#?(:clj  [(t/isa? Object)])
-#?(:cljs [t/any? :> (t/assume t/string?)])
-         [(t/fn> str t/any?) :& (? (t/seq-of t/any?)) #?@(:cljs [:> (t/assume t/string?)])]))
-
-     ~(case-env
+`(do ~(case-env
         :clj  `(do (def str|__0
                      (reify >Object       (^java.lang.Object invoke [_#                      ] "")))
                    (def str|__1 ; `nil?`
@@ -595,22 +812,27 @@
                    (def str|__2 ; `Object`
                      (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'x] (.toString x))))
 
-                   ;; No protocol needed because overloads of protocolizable arity (n>=1, not variadic) do not vary by class
                    (defn str
+                     {::t/type
+                       (t/fn :> t/string?
+                         []
+                         [t/nil?]
+                #?(:clj  [(t/isa? Object)])
+                #?(:cljs [t/any? :> (t/assume t/string?)])
+                         [(t/fn> str t/any?) :& (? (t/seq-of t/any?)) #?@(:cljs [:> (t/assume t/string?)])])}
                      ([  ] (.invoke !str|__0))
                      ([a0] (ifs (nil? x) (.invoke !str|__1)
                                 (.invoke !str|__2 a0)))
                      ([x & xs]
-                       (let [sb (!str (str x))]
+                       (let* [sb (!str (str x))]
                          (doseq [x' xs] (.append sb (str x'))) ; TODO is `doseq` the right approach?
                          (.toString sb)))))
-        :cljs `(do ;; No protocol needed because overloads of protocolizable arity (n>=1, not variadic) do not vary by class
-                   (defn str
+        :cljs `(do (defn str
                      ([  ] "")
                      ([a0] (ifs (nil? x) ""
                                 (.join #js [x] "")))
                      ([x & xs]
-                       (let [sb (!str (str x))]
+                       (let* [sb (!str (str x))]
                          (doseq [x' xs] (.append sb (str x'))) ; TODO is `doseq` the right approach?
                          (.toString sb)))))))
 
@@ -635,9 +857,7 @@
      ~(case-env
         :clj  `(do ;; `array?`
                    (def count|__0__1 (reify Object>int (^int invoke [_# ^java.lang.Object ~'xs] (Array/count ^"[B" xs))))
-                   ...
-
-                   (defprotocol count__Protocol ...))
+                   ...)
         :cljs `(do ...)))
 
 ;; =====|=====|=====|=====|===== ;;
@@ -666,74 +886,89 @@
 (defnt seq
   "Taken from `clojure.lang.RT/seq`"
   > (t/? (t/isa? ISeq))
-  ([xs t/nil?                ] nil)
-  ([xs t/array?              ] (ArraySeq/createFromObject xs))
-  ([xs (t/isa? ASeq)         ] xs)
-  ([xs (t/or (t/isa? LazySeq) (t/isa? Seqable))] (.seq xs))
-  ([xs t/iterable?           ] (clojure.lang.RT/chunkIteratorSeq (.iterator xs)))
-  ([xs t/char-seq?           ] (StringSeq/create xs))
-  ([xs t/java-map?           ] (seq (.entrySet xs)))))
+  ([xs t/nil?                 ] nil)
+  ([xs t/array?               ] (ArraySeq/createFromObject xs))
+  ([xs (t/isa? ASeq)          ] xs)
+  ([xs (t/or (t/isa? LazySeq)
+             (t/isa? Seqable))] (.seq xs))
+  ([xs t/iterable?            ] (clojure.lang.RT/chunkIteratorSeq (.iterator xs)))
+  ([xs t/char-seq?            ] (StringSeq/create xs))
+  ([xs (t/isa? Map)           ] (seq (.entrySet xs)))))
 )
 
 ;; ----- expanded code ----- ;;
 
 #?(:clj
-`(do (assoc-meta! #'seq :type
-       (t/fn > (t/? (t/isa? ISeq))
-         [t/nil?]
-         [t/array?]
-         [(t/isa? ASeq)]
-         [(t/or (t/isa? LazySeq) (t/isa? Seqable))]
-         [t/iterable?]
-         [t/char-seq?]
-         [t/java-map?]))
-
-     ;; Each of these `(def ... (reify ...))`s will keep their label (`__2__0` or whatever) as long
-     ;; as the original type of the `reify` is `t/=` to the new type of that reify
-     ;; If a redefined `defnt` doesn't have that spec then the previous reify is uninterned and made
-     ;; unavailable
-     ;; That way, according to the dynamicity tests in `quantum.test.core.defnt`, we can redefine
-     ;; implementations at will as long as the specs don't change
-     ~(case-env
+`(do ~(case-env
         :clj
-          `(do ;; `nil?`
-               (def ^Object>Object seq|__0__0
+          `(do ;; [t/nil?]
+
+               (def seq|__0|input-types (*<> t/nil?))
+               (def ^Object>Object seq|__0
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
+                     ;; Notice, no casting for nil input
                      nil)))
-               ;; `array?`
-               (def ^Object>Object seq|__1__0
+
+               ;; [t/array?]
+
+               ;; TODO perhaps at some point figure out that it doesn't need to create any more
+               ;; overloads here than just one?
+               (def seq|__1|input-types (*<> (t/isa? (Class/forName "[Z"))))
+               (def ^Object>Object seq|__1
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
-                     (ArraySeq/createFromObject xs))))
+                     (let* [^"[Z" xs xs] (ArraySeq/createFromObject xs)))))
+
+               (def seq|__2|input-types (*<> (t/isa? (Class/forName "[B"))))
+               (def ^Object>Object seq|__2
+                 (reify Object>Object
+                   (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
+                     (let* [^"[B" xs xs] (ArraySeq/createFromObject xs)))))
                ...
-               ;; `(t/isa? ASeq)`
-               (def ^Object>Object seq|__2__0
+
+               ;; [(t/isa? ASeq)]
+
+               (def seq|__30|input-types (*<> (t/isa? ASeq)))
+               (def ^Object>Object seq|__30
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
-                     (let [^ASeq xs xs] xs))))
-               ;; `(t/or (t/isa? LazySeq) (t/isa? Seqable))` : `(t/isa? LazySeq)`
-               (def ^Object>Object seq|__3__0
+                     (let* [^ASeq xs xs] xs))))
+
+               ;; [(t/or (t/isa? LazySeq) (t/isa? Seqable))]
+
+               (def seq|__31|input-types (*<> (t/isa? LazySeq)))
+               (def ^Object>Object seq|__31
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
-                     (let [^LazySeq xs xs] (.seq xs)))))
-               ;; `(t/or (t/isa? LazySeq) (t/isa? Seqable))` : `(t/isa? Seqable)`
-               (def ^Object>Object seq|__3__1
+                     (let* [^LazySeq xs xs] (.seq xs)))))
+
+               (def seq|__32|input-types (*<> (t/isa? Seqable)))
+               (def ^Object>Object seq|__32
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
-                     (let [^Seqable xs xs] (.seq xs)))))
-               ;; `t/iterable?`
-               (def ^Object>Object seq|__4__0
+                     (let* [^Seqable xs xs] (.seq xs)))))
+
+               ;; [t/iterable?]
+
+               (def seq|__33|input-types (*<> t/iterable?))
+               (def ^Object>Object seq|__33
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
-                     (let [^Iterable xs xs] (clojure.lang.RT/chunkIteratorSeq (.iterator xs))))))
-               ;; `t/char-seq?`
-               (def ^Object>Object seq|__5__0
+                     (let* [^Iterable xs xs] (clojure.lang.RT/chunkIteratorSeq (.iterator xs))))))
+
+               ;; [t/char-seq?]
+
+               (def seq|__34|input-types (*<> t/iterable?))
+               (def ^Object>Object seq|__34
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
-                     (let [^CharSequence xs xs] (StringSeq/create xs)))))
-               ;; `t/java-map?`
-               (def ^Object>Object seq|__6
+                     (let* [^CharSequence xs xs] (StringSeq/create xs)))))
+
+               ;; [(t/isa? Map)]
+
+               (def seq|__35|input-types (*<> (t/isa? Map)))
+               (def ^Object>Object seq|__35
                  (reify Object>Object
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      ;; This is after expansion; it's the first one that matches the overload
@@ -741,23 +976,29 @@
                      ;; equivalent) and potentially a configurable warning can be emitted
                      (let [^Map xs xs] (.invoke seq|__4__0 (.entrySet xs))))))
 
-               (defprotocol seq__Protocol
-                 (seq [a0]))
-               (extend-protocol seq__Protocol
-                 ;; `array?`
-                 ...
-                 ASeq    (seq [^ASeq    a0] (.invoke seq|__2 a0))
-                 LazySeq (seq [^LazySeq a0] (.invoke seq|__3__0 a0))
-                 Object  (seq [a0]
-                           ;; these are sequential dispatch because none of these are concrete or abstract classes
-                           ;; (most are interfaces etc.)
-                           (ifs (nil? a0)                   (.invoke seq|__0 a0)
-                                (instance? ASeq         a0) (.invoke seq|__2 a0)
-                                (instance? Seqable      a0) (.invoke seq|__3__1 a0)
-                                (instance? Iterable     a0) (.invoke seq|__4 a0)
-                                (instance? CharSequence a0) (.invoke seq|__5 a0)
-                                (instance? Map          a0) (.invoke seq|__6 a0)
-                                (unsupported! `seq a0)))))
+               (defn seq
+                 "Taken from `clojure.lang.RT/seq`"
+                 {::t/type
+                   (t/fn > (t/? (t/isa? ISeq))
+                     [t/nil?]
+                     [t/array?]
+                     [(t/isa? ASeq)]
+                     [(t/or (t/isa? LazySeq) (t/isa? Seqable))]
+                     [t/iterable?]
+                     [t/char-seq?]
+                     [(t/isa? Map)])}
+                 [a0]
+                 (ifs ((Array/get seq|__0|input-types  0) a0) (.invoke seq|__0  a0)
+                      ((Array/get seq|__1|input-types  0) a0) (.invoke seq|__1  a0)
+                      ...
+                      ((Array/get seq|__30|input-types 0) a0) (.invoke seq|__30 a0)
+                      ((Array/get seq|__31|input-types 0) a0) (.invoke seq|__31 a0)
+                      ((Array/get seq|__32|input-types 0) a0) (.invoke seq|__32 a0)
+                      ((Array/get seq|__33|input-types 0) a0) (.invoke seq|__33 a0)
+                      ((Array/get seq|__34|input-types 0) a0) (.invoke seq|__34 a0)
+                      ((Array/get seq|__35|input-types 0) a0) (.invoke seq|__35 a0)
+                      (unsupported! `seq [a0] 0)))
+               ))
         :cljs
           `(do ...))))
 
@@ -995,10 +1236,10 @@
 ; (optional) function — only when the `defnt` has an arity with 0 arguments
 
 ; (optional) inline macros — invoked only if in a typed context and not used as a function
-(do #?(:clj (defmacro clj:name:java:lang:String   [a0] `(let [~'x ~a0] ~'x)))
-    #?(:clj (defmacro cljs:name:string            [a0] `(let [~'x ~a0] ~'x)))
-    #?(:clj (defmacro clj:name:clojure:lang:Named [a0] `(let [~'x ~a0] ~'(-name x))))
-    #?(:clj (defmacro cljs:name:cljs:core:INamed  [a0] `(let [~'x ~a0] ~'(.getName x)))))
+(do #?(:clj (defmacro clj:name:java:lang:String   [a0] `(let* [~'x ~a0] ~'x)))
+    #?(:clj (defmacro cljs:name:string            [a0] `(let* [~'x ~a0] ~'x)))
+    #?(:clj (defmacro clj:name:clojure:lang:Named [a0] `(let* [~'x ~a0] ~'(-name x))))
+    #?(:clj (defmacro cljs:name:cljs:core:INamed  [a0] `(let* [~'x ~a0] ~'(.getName x)))))
 )
 
 ; ================================================ ;
