@@ -1,23 +1,51 @@
 (ns quantum.test.untyped.core.type
-  (:require
-    [clojure.core                               :as core]
-    [quantum.untyped.core.test
-      :refer [deftest testing is is= throws]]
-    [quantum.untyped.core.type                  :as t
-      :refer [& | !]]
-    [quantum.untyped.core.type.reifications     :as utr]
-    [quantum.test.untyped.core.type.compare
-      :refer [i|>a+b i|>a0 i|>a1 i|>b0 i|>b1
-              i|a i|b
-              i|<a+b i|<a0 i|<a1 i|<b0 i|<b1
-              i|><0 i|><1 i|><2
+        (:require
+          [clojure.core                               :as core]
+          [quantum.untyped.core.test
+            :refer [deftest testing is is= throws]]
+          [quantum.untyped.core.type                  :as t
+            :refer [& | !]]
+          [quantum.untyped.core.type.reifications     :as utr
+ #?@(:cljs [:refer [UniversalSetType EmptySetType
+                    NotType OrType AndType
+                    ProtocolType ClassType
+                    ValueType]])]
+          [quantum.test.untyped.core.type.compare
+            :refer [i|>a+b i|>a0 i|>a1 i|>b0 i|>b1
+                    i|a i|b
+                    i|<a+b i|<a0 i|<a1 i|<b0 i|<b1
+                    i|><0 i|><1 i|><2
 
-              >a+b >a >b
-              a b
-              <a0 <a1 <b0 <b1
-              ><0 ><1 ><2]]))
+                    >a+b >a >b
+                    a b
+                    <a0 <a1 <b0 <b1
+                    ><0 ><1 ><2]])
+#?(:clj (:import
+          [quantum.untyped.core.type.reifications
+             UniversalSetType EmptySetType
+             NotType OrType AndType
+             ProtocolType ClassType
+             ValueType])))
+
+(defn test-equality [genf]
+  (let [a (genf) b (genf)]
+          (testing "structural equality (`c/=`)"
+            (is= a b))
+          (testing "hash(eq) equality"
+            (is= (hash a) (hash b)))
+  #?(:clj (testing "hash(code) equality"
+            (is= (.hashCode a) (.hashCode b))))
+          (testing "collection equality"
+            (is= 1 (count (hash-set a b)))))))
+
+(deftest test|universal-set
+  (test-equality #(UniversalSetType.)))
+
+(deftest test|empty-set
+  (test-equality #(EmptySetType.)))
 
 (deftest test|not
+  (test-equality #(! (t/value 1)))
   (testing "simplification"
     (testing "universal/null set"
       (is= (! t/universal-set)
@@ -58,8 +86,8 @@
     ))
 
 (deftest test|or
-  (testing "equality"
-    (is= (| a b) (| a b)))
+  (test-equality #(| a b))
+  (test-equality #(| (t/value 1) (t/value 2)))
   (testing "simplification"
     (testing "via single-arg"
       (is= (| a)
@@ -219,3 +247,11 @@
     (testing "#{<+ =+ >+ ∅+} -> #{>+ ∅+}"
       (is= (utr/and-type>args (& i|>a+b i|>a0 i|a i|<a+b i|<a0 i|><0 i|><1))
            [i|<a+b i|<a0 i|><0 i|><1]))))
+
+(deftest test|value
+  (testing "equality"
+    (is= (t/value 1) (t/value 1)))
+  (testing "hash equality"
+    (is= (hash (t/value 1)) (hash (t/value 1)))
+    (is= 1 (count (hash-set (t/value 1)
+                            (t/value 1))))))

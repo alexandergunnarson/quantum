@@ -8,6 +8,7 @@
             [quantum.untyped.core.compare
               :refer [== not==]]
             [quantum.untyped.core.core                  :as ucore]
+            [quantum.untyped.core.data.hash             :as uhash]
             [quantum.untyped.core.defnt
               :refer [defns]]
             [quantum.untyped.core.form.generate.deftype :as udt])
@@ -20,6 +21,8 @@
 
 (defns type? [x _ > boolean?] (satisfies? PType x))
 
+;; Here `c/=` tests for structural equivalence
+
 ;; ----- UniversalSetType (`t/U`) ----- ;;
 
 (udt/deftype
@@ -27,8 +30,11 @@
           Equivalent to `(constantly true)`."}
   UniversalSetType []
   {PType          nil
+   ?Hash          {hash      ([this] (hash UniversalSetType))}
+   ?Object        {equals    ([this that] (or (== this that) (instance? UniversalSetType that)))
+                   hash-code ([this] (uhash/code UniversalSetType))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn ([this] 'quantum.untyped.core.type/U)}})
+   fedn/IEdn      {-edn      ([this] 'quantum.untyped.core.type/U)}})
 
 (def universal-set (UniversalSetType.))
 
@@ -38,24 +44,30 @@
   ^{:doc "Represents the empty set.
           Equivalent to `(constantly false)`."}
   EmptySetType []
-  {PType         nil
-   fednIOverride nil
-   fednIEdn      {-edn ([this] 'quantum.untyped.core.type/∅)}})
+  {PType          nil
+   ?Hash          {hash      ([this] (hash UniversalSetType))}
+   ?Object        {equals    ([this that] (or (== this that) (instance? EmptySetType that)))
+                   hash-code ([this] (uhash/code EmptySetType))}
+   fedn/IOverride nil
+   fedn/IEdn      {-edn ([this] 'quantum.untyped.core.type/∅)}})
 
 (def empty-set (EmptySetType.))
 
 ;; ----- NotType (`t/not` / `t/!`) ----- ;;
 
-(udt/deftype NotType [t #_t/type?]
+(udt/deftype NotType [^int ^:unsynchronized-mutable hash
+                      ^int ^:unsynchronized-mutable hash-code
+                      t #_t/type?]
   {PType          nil
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash NotType t))}
+   ?Fn            {invoke    ([_ x] (t x))}
+   ?Object        {equals    ([this that]
+                               (or (== this that)
+                                   (and (instance? NotType that)
+                                        (= t (.-t ^NotType that)))))
+                   hash-code ([this] (uhash/caching-set-code! hash-code NotType t))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn   ([this] (list 'quantum.untyped.core.type/not t))}
-   ?Fn            {invoke ([_ x] (t x))}
-   ?Object        ;; Tests for structural equivalence
-                  {equals ([this that]
-                            (or (== this that)
-                                (and (instance? NotType that)
-                                     (= t (.-t ^NotType that)))))}})
+   fedn/IEdn      {-edn      ([this] (list 'quantum.untyped.core.type/not t))}})
 
 (defns not-type? [x _ > boolean?] (instance? NotType x))
 
@@ -73,8 +85,7 @@
                                        (and satisfies-type? (reduced satisfies-type?))))
                                    true ; vacuously
                                    args))}
-   ?Object        ;; Tests for structural equivalence
-                  {equals ([this that]
+   ?Object        {equals ([this that]
                             (or (== this that)
                                 (and (instance? OrType that)
                                      (= args (.-args ^OrType that)))))}})

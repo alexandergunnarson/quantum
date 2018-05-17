@@ -86,8 +86,6 @@
   and or val|by-class?)
 
 (defonce *type-registry (atom {}))
-;; TODO remove this
-(swap! *type-registry empty)
 
 ;; ===== Comparison ===== ;;
 
@@ -114,7 +112,7 @@
        (utr/or-type?  t)   (->> t utr/or-type>args  (uc/lmap not) (apply and))
        ;; DeMorgan's Law
        (utr/and-type? t)   (->> t utr/and-type>args (uc/lmap not) (apply or ))
-       (NotType. t)))
+       (NotType. -1 -1 t)))
 
 (uvar/defalias ! not)
 
@@ -166,26 +164,27 @@
    If `t0` <       `t1`, `∅`
    If `t0` <>      `t1`, `t0`
    If `t0` > | ><  `t1`, `t0` with all elements of `t1` removed"
-  [t0 utr/type?, t1 utr/type? > utr/type?]
-  (let [c (compare t0 t1)]
-    (case c
-      (0 -1) empty-set
-       3     t0
-      (1 2)
-        (let [c0 (c/class t0) c1 (c/class t1)]
-          ;; TODO add dispatch?
-          (condp == c0
-            NotType (condp == (-> t0 utr/not-type>inner-type c/class)
-                      ClassType (condp == c1
-                                  ClassType (AndType. [t0 (not t1)] (atom nil)))
-                      ValueType (condp == c1
-                                  ValueType (AndType. [t0 (not t1)] (atom nil))))
-            OrType  (condp == c1
-                      ClassType (let [args (->> t0 utr/or-type>args (uc/remove (fn1 = t1)))]
-                                  (case (count args)
-                                    0 empty-set
-                                    1 (first args)
-                                    (OrType. args (atom nil))))))))))
+  ([t0 utr/type?, t1 utr/type? > utr/type?]
+    (let [c (compare t0 t1)]
+      (case c
+        (0 -1) empty-set
+         3     t0
+        (1 2)
+          (let [c0 (c/class t0) c1 (c/class t1)]
+            ;; TODO add dispatch?
+            (condp == c0
+              NotType (condp == (-> t0 utr/not-type>inner-type c/class)
+                        ClassType (condp == c1
+                                    ClassType (AndType. [t0 (not t1)] (atom nil)))
+                        ValueType (condp == c1
+                                    ValueType (AndType. [t0 (not t1)] (atom nil))))
+              OrType  (condp == c1
+                        ClassType (let [args (->> t0 utr/or-type>args (uc/remove (fn1 = t1)))]
+                                    (case (count args)
+                                      0 empty-set
+                                      1 (first args)
+                                      (OrType. args (atom nil))))))))))
+  ([t0 utr/type?, t1 utr/type? & ts (s/seq-of utr/type?) > utr/type?] (reduce - (- t0 t1) ts)))
 
 (defn isa? [x]
   (ifs (utpred/protocol? x)
@@ -425,7 +424,7 @@
   [pred (<= iterable?), t utr/type?] (TODO))
 
 ;; TODO do this
-(do
+#_(do
 
 (udt/deftype FnSpec
   [name   #_(t/? t/symbol?)
@@ -540,6 +539,13 @@
   {:examples `{(type>?class-value (value String)) {:class String :nilable? false}
                (type>?class-value (isa? String))  nil}}
   [t utr/type?] (-type>?class-value t false)))
+
+;; ===== Validation and Conformance ===== ;;
+
+(defns validate [x _ t utr/type?]
+  (if-let [valid? (t x)]
+    x
+    (err! "Type-validation failed" {:type t :to-validate x})))
 
 ;; ---------------------- ;;
 ;; ===== Predicates ===== ;;
