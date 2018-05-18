@@ -163,7 +163,7 @@ Appendix
 It's *much* easier and has few (if any) real disadvantages.
 
 *Appeal to authority:*
-[Google (the whole company)](https://cacm.acm.org/magazines/2016/7/204032-why-google-stores-billions-of-lines-of-code-in-a-single-repository/fulltext), React, [Babel](https://github.com/babel/babel/blob/master/doc/design/monorepo.md), Meteor, and Ember follow this pattern.
+[Google (the whole company)](https://cacm.acm.org/magazines/2016/7/204032-why-google-stores-billions-of-lines-of-code-in-a-single-repository/fulltext), React, [OpenJDK >= version 10](http://openjdk.java.net/jeps/296), [Babel](https://github.com/babel/babel/blob/master/doc/design/monorepo.md), Meteor, and Ember follow this pattern.
 
 *Pithy quote:*
 ["Juggling a multimodule project over multiple repos is like trying to teach a newborn baby how to ride a bike."](https://github.com/babel/babel/blob/master/doc/design/monorepo.md)
