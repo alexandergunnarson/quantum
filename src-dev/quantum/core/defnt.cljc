@@ -113,11 +113,11 @@
             nothing else than to ensure that our implementation (as characterized by its 'actual'
             output type) matches what we expect (as characterized by its 'expected'/'declared'
             output type).
-          - One option (Option A) is to turn off compile-time overload resolution during development.
-            This would mean it might get very slow during that time. But if it's in the same `defnt`
-            (ignoring `extend-defnt!` for a minute) — like a recursive call — you could always leave
-            on compile-time resolution for that.
-          - Option B — probably better  (though we'd still like to have all this configurable) —
+          - One option (Option A) is to turn off compile-time overload resolution during
+            development. This would mean it might get very slow during that time. But if it's in
+            the same `defnt` (ignoring `extend-defnt!` for a minute) — like a recursive call — you
+            could always leave on compile-time resolution for that.
+          - Option B — probably better (though we'd still like to have all this configurable) —
             is to have each function know its dependencies (this would actually have the bonus
             property of enabling `clojure.tools.namespace.repl/refresh`-style function-level
             smart auto-recompilation which is nice). So let's go back to the previous example.
@@ -1054,7 +1054,6 @@
         fn-codelist
           (case lang
             :clj  (->> `[~@direct-dispatch-codelist
-                         ~@dynamic-dispatch-codelist
                          ~@base-fn-codelist]
                         (remove nil?))
             :cljs (TODO))

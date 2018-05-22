@@ -407,7 +407,7 @@
                    '[quantum.untyped.core.log :refer [prl!]])
                  (quantum.untyped.core.print.prettier/extend-pretty-printing!)
                  (reset! quantum.untyped.core.error/*pr-data-to-str? true)
-                 (clojure.main/repl
+                 #_(clojure.main/repl
                    :print  #(binding [*print-meta* true
                                       quantum.untyped.core.print/*collapse-symbols?* true
                                       quantum.untyped.core.print/*print-as-code?* true]

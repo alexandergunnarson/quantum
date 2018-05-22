@@ -5,7 +5,7 @@
   (:require
     [clojure.core              :as c]
     [quantum.core.defnt
-      :refer [analyze defnt fnt|code *fn->spec]]
+      :refer [analyze defnt fnt|code *fn->type]]
     [quantum.untyped.core.analyze.expr :as xp]
     [quantum.untyped.core.collections.diff :as diff
       :refer [diff]]
@@ -53,8 +53,8 @@
 ($ (do (def ~'pid|__0
          (reify >Object
            (~(tag "java.lang.Object" 'invoke) [~'_]
-             (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
-                  (.getName)))))
+             ~'(->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
+                    (.getName)))))
 
        #_(defn ~'pid
          {::t/spec (t/fn [:> (? t/string?)])})))

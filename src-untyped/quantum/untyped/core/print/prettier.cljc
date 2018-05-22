@@ -49,8 +49,9 @@
 
 (defn visit-symbol* [x]
   [:text (cond-> x
-           quantum.core.print/*collapse-symbols?*
-             (quantum.untyped.core.qualify/collapse-symbol (not quantum.core.print/*print-as-code?*)))])
+           quantum.untyped.core.print/*collapse-symbols?*
+             (quantum.untyped.core.qualify/collapse-symbol
+               (not quantum.untyped.core.print/*print-as-code?*)))])
 
 (defn visit-fn [visitor x]
   [:group "#" "fn" " " (-> x quantum.untyped.core.convert/>symbol visit-symbol*)])
@@ -60,7 +61,7 @@
   [visitor x]
   (cond
     (nil? x) (visit-nil visitor)
-    (quantum.core.print/group? x)
+    (quantum.untyped.core.print/group? x)
       (fipp.edn/pretty-coll visitor "" (.-xs ^quantum.untyped.core.print.Group x) :line "" visit)
     (fipp.ednize/override? x) (visit-unknown visitor x)
     (boolean? x) (visit-boolean visitor x)
