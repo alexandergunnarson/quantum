@@ -137,7 +137,7 @@
 
 (defalias s/conform)
 (defalias s/nonconforming)
-(defalias • nonconforming)
+#?(:clj (defalias • nonconforming))
 (defalias s/explain)
 (defalias s/explain-data)
 (defalias s/describe)
