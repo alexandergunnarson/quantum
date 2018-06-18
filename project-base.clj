@@ -427,10 +427,7 @@
                   ;; relative to `server-root-path`
                   asset-path (str "generated"
                                   "/" (name kind)
-                                  "/" (if (and (#{:ios :android} id-base)
-                                               (= id-suffix :quantum-dynamic-source-untyped))
-                                          (name id-base)
-                                          id)
+                                  "/" id
                                   "/" "js")
                   output-dir (str server-root-path "/" asset-path)]
               (cond->
