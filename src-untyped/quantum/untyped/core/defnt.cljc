@@ -1,20 +1,23 @@
 (ns quantum.untyped.core.defnt
-  "Primarily for `(de)fns`."
-  (:refer-clojure :exclude [any? ident? qualified-keyword? seqable? simple-symbol?])
-  (:require
-    [clojure.spec.alpha                 :as s]
-    [clojure.spec.gen.alpha             :as gen]
-    [quantum.untyped.core.convert       :as uconv]
-    [quantum.untyped.core.data.map
-      :refer [om]]
-    [quantum.untyped.core.form.evaluate :as ufeval]
-    [quantum.untyped.core.loops
-      :refer [reduce-2]]
-    [quantum.untyped.core.reducers      :as ur]
-    [quantum.untyped.core.spec          :as us]
-    [quantum.untyped.core.specs]
-    [quantum.untyped.core.type.predicates
-      :refer [any? ident? qualified-keyword? seqable? simple-symbol?]]))
+    "Primarily for `(de)fns`."
+    (:refer-clojure :exclude [any? ident? qualified-keyword? seqable? simple-symbol?])
+    (:require
+      [clojure.spec.alpha                 :as s]
+      [clojure.spec.gen.alpha             :as gen]
+      [quantum.untyped.core.convert       :as uconv]
+      [quantum.untyped.core.data.map
+        :refer [om]]
+      [quantum.untyped.core.form.evaluate :as ufeval]
+      [quantum.untyped.core.loops
+        :refer [reduce-2]]
+      [quantum.untyped.core.reducers      :as ur]
+      [quantum.untyped.core.spec          :as us]
+      [quantum.untyped.core.specs]
+      [quantum.untyped.core.type.predicates
+        :refer [any? ident? qualified-keyword? seqable? simple-symbol?]])
+#?(:cljs
+    (:require-macros
+      [quantum.untyped.core.defnt :as this])))
 
 ;; ===== Specs ===== ;;
 
@@ -157,6 +160,10 @@
 
 ;; ===== Implementation ===== ;;
 
+(defn- qualify-spec [lang sym]
+  (symbol (name (case :clj 'clojure.spec.alpha :cljs 'cljs.spec.alpha))
+          (name sym)))
+
 (defn >seq-destructuring-spec
   "Creates a spec that performs seq destructuring, and provides a default generator for such based
    on the generators of the destructured args."
@@ -190,34 +197,39 @@
 (defmacro seq-destructure
   "If `generate-from-seq-spec?` is true, generates from `seq-spec`'s generator instead of the
    default generation strategy based on the generators of the destructured args."
-  [seq-spec #_any? args #_(s/* (s/cat :k keyword? :spec any?))
+  [lang seq-spec #_any? args #_(s/* (s/cat :k keyword? :spec any?))
    & [varargs #_(s/nilable (s/cat :k keyword? :spec any?))]]
   (let [opts    (meta seq-spec)
         args    (us/assert-conform (s/* (s/cat :k keyword? :spec any?)) args)
         varargs (us/assert-conform (s/nilable (s/cat :k keyword? :spec any?)) varargs)
         args-ct>args-kw #(keyword (str "args-" %))
         arity>cat (fn [arg-i]
-                   `(s/cat ~@(->> args (take arg-i)
-                                       (map (fn [{:keys [k spec]}] [k `any?]))
-                                       (apply concat))))
+                   `(~(qualify-spec lang 'cat)
+                      ~@(->> args (take arg-i)
+                             (map (fn [{:keys [k spec]}] [k `any?]))
+                             (apply concat))))
         most-complex-positional-destructurer-sym (gensym "most-complex-positional-destructurer")]
    `(let [~most-complex-positional-destructurer-sym
-            (s/cat ~@(->> args
-                          (map (fn [{:keys [k]}] [k `any?]))
-                          (apply concat))
-                   ~@(when varargs [(:k varargs) `(s/& (s/+ any?) (s/conformer seq identity))]))
+            (~(qualify-spec lang 'cat)
+               ~@(->> args
+                      (map (fn [{:keys [k]}] [k `any?]))
+                      (apply concat))
+               ~@(when varargs [(:k varargs)
+                                `(~(qualify-spec lang '&)
+                                   (~(qualify-spec lang '+) any?)
+                                   (~(qualify-spec lang 'conformer) seq identity))]))
           positional-destructurer#
-            (s/or :args-0 (s/cat)
-                  ~@(->> (range (count args))
-                         (map (fn [i] [(args-ct>args-kw (inc i)) (arity>cat (inc i))]))
-                         (apply concat))
-                  ~@(when varargs [:varargs most-complex-positional-destructurer-sym]))
+            (~(qualify-spec lang 'or) :args-0 (~(qualify-spec lang 'cat))
+              ~@(->> (range (count args))
+                     (map (fn [i] [(args-ct>args-kw (inc i)) (arity>cat (inc i))]))
+                     (apply concat))
+              ~@(when varargs [:varargs most-complex-positional-destructurer-sym]))
           kv-spec#
             (us/kv (om ~@(apply concat
                            (cond-> (->> args (map (fn [{:keys [k spec]}] [k spec])))
                              varargs (concat [[(:k varargs) (:spec varargs)]])))))
           or|conformer#
-            (s/conformer
+            (~(qualify-spec lang 'conformer)
               (fn or|conformer# [m#]
                 [(case (count m#)
                     ~@(->> (range (inc (count args)))
@@ -229,13 +241,14 @@
         kv-spec# or|conformer# ~seq-spec ~opts)))))
 
 #?(:clj
-(defmacro map-destructure [map-spec #_any? kv-specs #_(s/map-of any? any?)]
+(defmacro map-destructure [lang map-spec #_any? kv-specs #_(s/map-of any? any?)]
   (let [kv-spec-sym (gensym "kv-spec")
         {:as opts generate-from-map-spec? :gen?} (meta map-spec)]
     `(let [~kv-spec-sym (us/kv ~kv-specs)]
        ~(if generate-from-map-spec?
-            `(s/and ~map-spec ~kv-spec-sym)
-            `(s/with-gen (s/and ~map-spec ~kv-spec-sym) (fn [] (s/gen ~kv-spec-sym))))))))
+            `(~(qualify-spec lang 'and) ~map-spec ~kv-spec-sym)
+            `(~(qualify-spec lang 'with-gen) (~(qualify-spec lang 'and) ~map-spec ~kv-spec-sym)
+               (fn [] (~(qualify-spec lang 'gen) ~kv-spec-sym))))))))
 
 (defn speced-binding>binding [{[kind binding-] :binding-form} #_:quantum.core.defnt/speced-binding]
   (case kind
@@ -267,18 +280,18 @@
 (declare speced-binding>spec)
 
 (defn- speced-binding|seq>spec
-  [{:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec}]
-  `(seq-destructure ~(if (= spec-kind :spec) spec `seqable?)
+  [lang {:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec}]
+  `(seq-destructure ~lang ~(if (= spec-kind :spec) spec `seqable?)
     ~(->> binding- :elems
           (map-indexed
             (fn [i|arg arg|speced-binding]
               [(speced-binding>arg-ident arg|speced-binding i|arg)
-               (speced-binding>spec arg|speced-binding)]))
+               (speced-binding>spec lang arg|speced-binding)]))
           (apply concat)
           vec)
     ~@(when-let [varargs|speced-binding (get-in binding- [:rest :form])]
         [[(speced-binding>arg-ident varargs|speced-binding)
-          (speced-binding>spec varargs|speced-binding)]])))
+          (speced-binding>spec lang varargs|speced-binding)]])))
 
 (defn- keys||strs||syms>key-specs [kind #_#{:keys :strs :syms} speced-bindings]
   (let [binding-form>key
@@ -289,33 +302,34 @@
                 [(binding-form>key binding-form) spec])))))
 
 (defn- speced-binding|map>spec
-  [{:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec}]
-  `(map-destructure ~(if (= spec-kind :spec) spec `map?)
+  [lang {:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec}]
+  `(map-destructure ~lang ~(if (= spec-kind :spec) spec `map?)
     ~(->> (dissoc binding- :as :or)
           (map (fn [[k v]]
                  (case k
                    (:keys :strs :syms)
                      (keys||strs||syms>key-specs k (second v))
                    [[(get-in v [:key+spec :key])
-                     (speced-binding>spec
+                     (speced-binding>spec lang
                        (assoc v :spec (get-in v [:key+spec :spec])))]])))
           (apply concat)
           (into {}))))
 
 (defn speced-binding>spec
-  [{:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec}]
+  [lang {:as speced-binding [kind binding-] :binding-form [spec-kind spec] :spec}]
   (case kind
     :sym (if (= spec-kind :spec) spec `any?)
-    :seq (speced-binding|seq>spec speced-binding)
-    :map (speced-binding|map>spec speced-binding)))
+    :seq (speced-binding|seq>spec lang speced-binding)
+    :map (speced-binding|map>spec lang speced-binding)))
 
 (defn arglist>spec-form|arglist
-  [args+varargs kw-args #_:quantum.core.specs/map-binding-form]
-  `(s/cat ~@(reduce-2
-              (fn [ret speced-binding [_ kw-arg]]
-                (conj ret kw-arg (speced-binding>spec speced-binding)))
-              []
-              args+varargs kw-args)))
+  [lang args+varargs kw-args #_:quantum.core.specs/map-binding-form]
+  `(~(qualify-spec lang 'cat)
+     ~@(reduce-2
+         (fn [ret speced-binding [_ kw-arg]]
+           (conj ret kw-arg (speced-binding>spec lang speced-binding)))
+         []
+         args+varargs kw-args)))
 
 ;; TODO handle duplicate bindings (e.g. `_`) by `s/cat` using unique keys — e.g. :b|arg-2
 (defn fns|code [kind lang args]
@@ -340,15 +354,17 @@
                         (cond-> args varargs (conj (assoc varargs :varargs? true))))
                     overload-form     (list* fn-arglist body)
                     arity-ident       (keyword (str "arity-" (if varargs "varargs" (count args))))
-                    spec-form|arglist (arglist>spec-form|arglist (cond-> args varargs (conj varargs)) kw-args)
+                    spec-form|arglist (arglist>spec-form|arglist lang
+                                        (cond-> args varargs (conj varargs)) kw-args)
                     spec-form|pre     (when (and (contains? arglist :pre) (= pre-kind :spec))
                                         `(fn [~kw-args] ~pre))
                     spec-form|args*   (if spec-form|pre
-                                          `(s/and ~spec-form|arglist ~spec-form|pre)
+                                          `(~(qualify-spec lang 'and) ~spec-form|arglist ~spec-form|pre)
                                           spec-form|arglist)
                     spec-form|fn*     (if (contains? arglist :post)
-                                          `(let [~kw-args ~args-sym] (s/spec ~post))
-                                          `(s/spec any?))]
+                                          `(let [~kw-args ~args-sym]
+                                             (~(qualify-spec lang 'spec) ~post))
+                                          `(~(qualify-spec lang 'spec) any?))]
                 (-> ret
                     (update :overload-forms conj overload-form)
                     (update :spec-form|args conj arity-ident spec-form|args*)
@@ -358,10 +374,11 @@
              :spec-form|fn   []}
             overloads)
         spec-form (when (#{:defn :defn-} kind)
-                    `(s/fdef ~fn|name :args (s/or ~@spec-form|args)
-                                      :fn   (us/with-gen-spec (fn [{~ret-sym :ret}] ~ret-sym)
-                                              (fn [{[~arity-kind-sym ~args-sym] :args}]
-                                                (case ~arity-kind-sym ~@spec-form|fn)))))
+                    `(~(qualify-spec lang 'fdef) ~fn|name :args
+                       (~(qualify-spec lang 'or) ~@spec-form|args)
+                       :fn (us/with-gen-spec (fn [{~ret-sym :ret}] ~ret-sym)
+                             (fn [{[~arity-kind-sym ~args-sym] :args}]
+                               (case ~arity-kind-sym ~@spec-form|fn)))))
         fn-form (case kind
                   :fn    (list* 'fn (concat (when (contains? args' :quantum.core.specs/fn|name)
                                               [fn|name])
