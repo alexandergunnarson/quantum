@@ -1,12 +1,14 @@
 (ns quantum.untyped.core.vars
-  (:refer-clojure :exclude [defonce])
-  (:require
-    [clojure.core                       :as core]
-    [quantum.untyped.core.core          :as ucore]
-    [quantum.untyped.core.form          :as uform]
-    [quantum.untyped.core.form.evaluate
-      :refer [case-env case-env*]]
-    [quantum.untyped.core.form.generate :as ufgen]))
+         (:refer-clojure :exclude [defonce])
+         (:require
+           [clojure.core                       :as core]
+           [quantum.untyped.core.core          :as ucore]
+           [quantum.untyped.core.form          :as uform]
+           [quantum.untyped.core.form.evaluate
+             :refer [case-env case-env*]]
+           [quantum.untyped.core.form.generate :as ufgen])
+#?(:cljs (:require-macros
+           [quantum.untyped.core.vars :as this])))
 
 (ucore/log-this-ns)
 

@@ -1,8 +1,9 @@
 (ns quantum.untyped.core.core
-  (:require
-#?@(:clj
-   [[environ.core :as env]])
-    [cuerdas.core :as str+]))
+         (:require
+ #?@(:clj [[environ.core :as env]])
+           [cuerdas.core :as str+])
+#?(:cljs (:require-macros
+           [quantum.untyped.core.core :as this])))
 
 ;; ===== Environment ===== ;;
 

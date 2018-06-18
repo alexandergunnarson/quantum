@@ -7,7 +7,7 @@
     [quantum.untyped.core.core :as ucore]
     [quantum.untyped.core.ns   :as uns]
     [quantum.untyped.core.type.predicates
-      :refer [namespace?]]))
+      #?@(:clj [:refer [namespace?]])]))
 
 (ucore/log-this-ns)
 

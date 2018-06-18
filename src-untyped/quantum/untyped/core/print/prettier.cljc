@@ -21,11 +21,12 @@
 #?(:clj (prefer-method print-method fipp.ednize.IEdn clojure.lang.ISeq))
 #?(:clj (prefer-method print-method clojure.lang.IRecord Throwable))
 
-(in-ns 'fipp.visit)
+#?(:clj (in-ns 'fipp.visit))
 
+#?(:clj
 (defn- transient-vector? [x]
   (instance? #?(:clj  clojure.lang.ITransientVector
-                :cljs cljs.core/TransientVector) x))
+                :cljs cljs.core/TransientVector) x)))
 
 ;; TODO more efficient
 ;; TODO move?
@@ -47,15 +48,18 @@
   Iterable
     (iterator [this] (IntIndexedIterator. 0 (count xs) xs))))
 
+#?(:clj
 (defn visit-symbol* [x]
   [:text (cond-> x
            quantum.untyped.core.print/*collapse-symbols?*
              (quantum.untyped.core.qualify/collapse-symbol
-               (not quantum.untyped.core.print/*print-as-code?*)))])
+               (not quantum.untyped.core.print/*print-as-code?*)))]))
 
+#?(:clj
 (defn visit-fn [visitor x]
-  [:group "#" "fn" " " (-> x quantum.untyped.core.convert/>symbol visit-symbol*)])
+  [:group "#" "fn" " " (-> x quantum.untyped.core.convert/>symbol visit-symbol*)]))
 
+#?(:clj
 (defn visit*
   "Visits objects, ignoring metadata."
   [visitor x]
@@ -83,93 +87,94 @@
       [:group "#" (pr-str '!+)
         (when (and (:print-meta visitor) (meta (:form visitor))) " ")
         (visit-vector visitor (IntIndexedIterable. x))]
-    :else (visit-unknown visitor x)))
+    :else (visit-unknown visitor x))))
 
+#?(:clj
 (defn visit [visitor x]
   (let [m (meta x)]
     (if (and m (not (var? x)))
         (visit-meta visitor m x)
-        (visit* visitor x))))
+        (visit* visitor x)))))
 
-(in-ns 'quantum.untyped.core.print.prettier)
+#?(:clj (in-ns 'quantum.untyped.core.print.prettier))
 
 (defn extend-pretty-printing! []
-  (extend-type java.util.ArrayList
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal '! (vec this)))) ; TODO faster
-  (extend-type it.unimi.dsi.fastutil.longs.LongArrayList
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal '!l (vec this)))) ; TODO faster
+  #?(:clj
+  (do (extend-type java.util.ArrayList
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal '! (vec this)))) ; TODO faster
+      (extend-type it.unimi.dsi.fastutil.longs.LongArrayList
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal '!l (vec this)))) ; TODO faster
 
-  (extend-type (Class/forName "[Z")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal '?<> (vec this)))) ; TODO faster
-  (extend-type (Class/forName "[B")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal 'b<> (vec this)))) ; TODO faster
-  (extend-type (Class/forName "[C")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal 'c<> (vec this)))) ; TODO faster
-  (extend-type (Class/forName "[[C")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal 'c<><> (into [] this)))) ; TODO faster
-  (extend-type (Class/forName "[S")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal 's<> (vec this)))) ; TODO faster
-  (extend-type (Class/forName "[I")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal 'i<> (vec this)))) ; TODO faster
-  (extend-type (Class/forName "[J")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal 'l<> (vec this)))) ; TODO ->vec for this
-  (extend-type (Class/forName "[F")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal 'f<> (vec this)))) ; TODO faster
-  (extend-type (Class/forName "[D")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal 'd<> (vec this)))) ; TODO ->vec for this
-  (extend-type (Class/forName "[[D")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal 'd<><> (into [] this)))) ; TODO faster
-  (extend-type (Class/forName "[Ljava.lang.Object;")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal '*<> (vec this))))  ; TODO faster
-  (extend-type (Class/forName "[[Ljava.lang.Object;")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal '*<><> (into [] this))))  ; TODO faster
-  (extend-type (Class/forName "[Ljava.lang.Class;")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal 'class<> (vec this))))  ; TODO faster
+      (extend-type (Class/forName "[Z")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal '?<> (vec this)))) ; TODO faster
+      (extend-type (Class/forName "[B")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal 'b<> (vec this)))) ; TODO faster
+      (extend-type (Class/forName "[C")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal 'c<> (vec this)))) ; TODO faster
+      (extend-type (Class/forName "[[C")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal 'c<><> (into [] this)))) ; TODO faster
+      (extend-type (Class/forName "[S")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal 's<> (vec this)))) ; TODO faster
+      (extend-type (Class/forName "[I")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal 'i<> (vec this)))) ; TODO faster
+      (extend-type (Class/forName "[J")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal 'l<> (vec this)))) ; TODO ->vec for this
+      (extend-type (Class/forName "[F")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal 'f<> (vec this)))) ; TODO faster
+      (extend-type (Class/forName "[D")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal 'd<> (vec this)))) ; TODO ->vec for this
+      (extend-type (Class/forName "[[D")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal 'd<><> (into [] this)))) ; TODO faster
+      (extend-type (Class/forName "[Ljava.lang.Object;")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal '*<> (vec this))))  ; TODO faster
+      (extend-type (Class/forName "[[Ljava.lang.Object;")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal '*<><> (into [] this))))  ; TODO faster
+      (extend-type (Class/forName "[Ljava.lang.Class;")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal 'class<> (vec this))))  ; TODO faster
 
-  (extend-type java.util.HashMap
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal '! (into {} this))))
-  (extend-type java.util.concurrent.ConcurrentHashMap
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal '!! (into {} this)))) ; TODO ->map
-  (extend-type quantum.core.error.Error
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (tagged-literal 'err (into {} this))))
-  (extend-type (Class/forName "[Ljava.lang.StackTraceElement;")
-    fipp.ednize/IOverride
-    fipp.ednize/IEdn
-      (-edn [this] (mapv (rcomp StackTraceElement->vec str symbol) this)))
-  )
+      (extend-type java.util.HashMap
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal '! (into {} this))))
+      (extend-type java.util.concurrent.ConcurrentHashMap
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal '!! (into {} this)))) ; TODO ->map
+      (extend-type quantum.core.error.Error
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (tagged-literal 'err (into {} this))))
+      (extend-type (Class/forName "[Ljava.lang.StackTraceElement;")
+        fipp.ednize/IOverride
+        fipp.ednize/IEdn
+          (-edn [this] (mapv (rcomp StackTraceElement->vec str symbol) this))))))

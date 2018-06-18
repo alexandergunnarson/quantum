@@ -10,7 +10,7 @@
             nil? any? class? tagged-literal? #?(:cljs object?)
             number? decimal? bigdec? integer? ratio?
             true? false? keyword? string? symbol?
-            associative? coll? counted? indexed? list? map? map-entry? record?
+            array? associative? coll? counted? indexed? list? map? map-entry? record?
             seq? seqable? sequential? set? sorted? vector?
             fn? ifn?
             meta
@@ -59,7 +59,7 @@
              :refer [def- defmacro- update-meta]])
 #?(:cljs (:require-macros
            [quantum.untyped.core.type :as self
-           :refer [-def]]))
+             :refer [-def def-preds|map|any def-preds|map|same-types]]))
 #?(:clj  (:import
            [quantum.untyped.core.analyze.expr Expression]
            [quantum.untyped.core.type.reifications
@@ -730,7 +730,7 @@
                                                    (isa? quantum.core.data.finger_tree.CountedDoubleList))
                                          :cljs (isa? quantum.core.data.finger-tree/CountedDoubleList)))
          (-def +list?           (isa? #?(:clj clojure.lang.IPersistentList :cljs cljs.core/IList)))
-         (-def !list?           #?(:clj (isa? java.util.LinkedList)))
+         (-def !list?           #?(:clj (isa? java.util.LinkedList) :cljs none?))
          (-def  list?           #?(:clj  (isa? java.util.List)
                                    :cljs +list?))
 
@@ -1541,13 +1541,15 @@
          (-def  !+sorted-set?            none?)
          (-def ?!+sorted-set?            (or +sorted-set? !+sorted-set?))
 
-#?(:clj  (-def   !sorted-set|byte?       (isa? it.unimi.dsi.fastutil.bytes.ByteSortedSet)))
-#?(:clj  (-def   !sorted-set|short?      (isa? it.unimi.dsi.fastutil.shorts.ShortSortedSet)))
-#?(:clj  (-def   !sorted-set|char?       (isa? it.unimi.dsi.fastutil.chars.CharSortedSet)))
-#?(:clj  (-def   !sorted-set|int?        (isa? it.unimi.dsi.fastutil.ints.IntSortedSet)))
-#?(:clj  (-def   !sorted-set|long?       (isa? it.unimi.dsi.fastutil.longs.LongSortedSet)))
-#?(:clj  (-def   !sorted-set|float?      (isa? it.unimi.dsi.fastutil.floats.FloatSortedSet)))
-#?(:clj  (-def   !sorted-set|double?     (isa? it.unimi.dsi.fastutil.doubles.DoubleSortedSet)))
+         (-def   !sorted-set|byte?       #?(:clj  (isa? it.unimi.dsi.fastutil.bytes.ByteSortedSet)
+                                            :cljs none?))
+         (-def   !sorted-set|short?      #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortSortedSet)                                 :cljs none?))
+         (-def   !sorted-set|char?       #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharSortedSet)                                 :cljs none?))
+         (-def   !sorted-set|int?        #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntSortedSet)                                 :cljs none?))
+         (-def   !sorted-set|long?       #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongSortedSet)                                 :cljs none?))
+         (-def   !sorted-set|float?      #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatSortedSet)                                 :cljs none?))
+         (-def   !sorted-set|double?     #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleSortedSet)
+                                            :cljs none?))
          ;; CLJS technically can have via goog.structs.AVLTree with same KVs but this hasn't been implemented yet
          (-def   !sorted-set|ref?        #?(:clj (isa? java.util.TreeSet) :cljs none?))
 
@@ -1580,7 +1582,7 @@
 ;; ----- General Sets ----- ;;
 
          (-def  !+set?                   (isa? #?(:clj  clojure.lang.ITransientSet
-                                                 :cljs cljs.core/ITransientSet)))
+                                                  :cljs cljs.core/ITransientSet)))
 
          (-def   +set|built-in?          (or (isa? #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet))
                                              (isa? #?(:clj clojure.lang.PersistentTreeSet :cljs cljs.core/PersistentTreeSet))))
@@ -1603,7 +1605,6 @@
                                              !set|int? !set|long?
                                              !set|float? !set|double?))
 
-         (-def   !set?                   (or !unsorted-set? !sorted-set?))
 #?(:clj  (-def  !!set?                   (or !!unsorted-set? !!sorted-set?)))
          (-def    set?                   (or ?!+set? !set? #?@(:clj [!!set? (isa? java.util.Set)])))
 
@@ -1680,12 +1681,12 @@
 
 ;; ----- Collections ----- ;;
 
-         (-def sorted?         #?(:clj  (or (isa? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
-                                            #?@(:clj  [(isa? java.util.SortedMap)
-                                                       (isa? java.util.SortedSet)]
-                                                :cljs [(isa? goog.structs.AvlTree)])
-                                            ;; TODO implement — monotonically <, <=, =, >=, >
-                                            #_(>expr monotonic?))))
+         (-def sorted?         (or (isa? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
+                                   #?@(:clj  [(isa? java.util.SortedMap)
+                                              (isa? java.util.SortedSet)]
+                                       :cljs [(isa? goog.structs.AvlTree)])
+                                   ;; TODO implement — monotonically <, <=, =, >=, >
+                                   #_(>expr monotonic?)))
 
          (-def transient?      (isa? #?(:clj  clojure.lang.ITransientCollection
                                         :cljs cljs.core/ITransientCollection)))

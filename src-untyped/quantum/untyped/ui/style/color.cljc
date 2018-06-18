@@ -1,9 +1,9 @@
 (ns quantum.untyped.ui.style.color
   (:require
-    [clojure.string    :as str]
-    [garden.color      :as color
+    [clojure.string            :as str]
+    [garden.color              :as color
       #?@(:cljs [:refer [CSSColor]])]
-    [quantum.core.vars :as var
+    [quantum.untyped.core.vars :as uvar
       :refer [defalias]])
 #?(:clj
   (:import

@@ -29,8 +29,8 @@
      #"\b")
 
 ; TODO: not using ccoll because this namespace is required for `defnt`
-(defn conjr!* [#?(:clj ^StringBuilder !s :cljs StringBuffer !s) x] (.append !s x))
-(defn conjl!* [#?(:clj ^StringBuilder !s :cljs StringBuffer !s) x]
+(defn conjr!* [#?(:clj ^StringBuilder !s :cljs ^StringBuffer !s) x] (.append !s x))
+(defn conjl!* [#?(:clj ^StringBuilder !s :cljs ^StringBuffer !s) x]
   #?(:clj  (.insert !s 0 x)
      :cljs (-> (!str) (.append x) (.append !s))))
 

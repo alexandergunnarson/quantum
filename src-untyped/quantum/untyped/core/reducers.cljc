@@ -1,22 +1,24 @@
 (ns quantum.untyped.core.reducers
-  (:refer-clojure :exclude [apply every? vec == for seqable?])
-  (:require
-    [clojure.core                 :as core]
-    [clojure.core.reducers        :as r]
-    [fast-zip.core                :as zip]
-    [quantum.untyped.core.compare :as comp
-      :refer [== not==]]
-    [quantum.untyped.core.core    :as ucore
-      :refer [>sentinel]]
-    [quantum.untyped.core.error
-      :refer [err!]]
-    [quantum.untyped.core.form.evaluate
-      :refer [case-env]]
-    [quantum.untyped.core.qualify :as qual]
-    [quantum.untyped.core.type.predicates
-      :refer [seqable?]]
-    [quantum.untyped.core.vars    :as uvar
-      :refer [defalias]]))
+         (:refer-clojure :exclude [apply every? vec == for seqable?])
+         (:require
+           [clojure.core                 :as core]
+           [clojure.core.reducers        :as r]
+           [fast-zip.core                :as zip]
+           [quantum.untyped.core.compare :as comp
+             :refer [== not==]]
+           [quantum.untyped.core.core    :as ucore
+             :refer [>sentinel]]
+           [quantum.untyped.core.error
+             :refer [err!]]
+           [quantum.untyped.core.form.evaluate
+             :refer [case-env]]
+           [quantum.untyped.core.qualify :as qual]
+           [quantum.untyped.core.type.predicates
+             :refer [seqable?]]
+           [quantum.untyped.core.vars    :as uvar
+             :refer [defalias]])
+#?(:cljs (:require-macros
+           [quantum.untyped.core.reducers :as this])))
 
 (ucore/log-this-ns)
 

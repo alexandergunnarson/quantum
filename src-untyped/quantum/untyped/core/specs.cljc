@@ -9,7 +9,11 @@
       :refer [fn1 fnl]]
     [quantum.untyped.core.spec :as s]
     [quantum.untyped.core.type.predicates
-      :refer [val?]]))
+      :refer [val?]])
+#?(:cljs
+  (:require-macros
+    [quantum.untyped.core.specs :as this
+      :refer [quotable]])))
 
 ;;;; GENERAL
 
@@ -88,9 +92,9 @@
            :varargs (s/? (s/cat :amp #{'&} :form :quantum.core.specs/binding-form)))))
 
 (s/def :quantum.core.specs/fn|prepost
-  (s/and (s/keys :req-un [(or :quantum.core.specs/core/pre :quantum.core.specs/core/post)]) ; TODO we actually really only want to accept un-namespaced keys...
-         (s/conformer #(set/rename-keys % {:quantum.core.specs/core/pre  :pre
-                                           :quantum.core.specs/core/post :post}))))
+  (s/and (s/keys :req-un [(or :quantum.core.specs.core/pre :quantum.core.specs.core/post)]) ; TODO we actually really only want to accept un-namespaced keys...
+         (s/conformer #(set/rename-keys % {:quantum.core.specs.core/pre  :pre
+                                           :quantum.core.specs.core/post :post}))))
 
 (s/def :quantum.core.specs/fn|body
   (s/alt :prepost+body (s/cat :prepost :quantum.core.specs/fn|prepost

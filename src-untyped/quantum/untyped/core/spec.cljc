@@ -133,14 +133,14 @@
 
 #?(:clj (quantum.untyped.core.vars/defmalias conformer     clojure.spec.alpha/conformer     cljs.spec.alpha/conformer))
 
+#?(:clj (quantum.untyped.core.vars/defmalias nilable       clojure.spec.alpha/nilable     cljs.spec.alpha/nilable))
+
 (defalias s/conform)
 (defalias s/nonconforming)
 (defalias • nonconforming)
 (defalias s/explain)
 (defalias s/explain-data)
 (defalias s/describe)
-
-(defalias s/nilable)
 
 #?(:clj (quantum.untyped.core.vars/defmalias cat clojure.spec.alpha/cat cljs.spec.alpha/cat))
 #?(:clj (defmacro cat* "`or` :`or*` :: `cat` : `cat*`" [& args] `(cat ~@(udata/quote-map-base uconv/>keyword args true))))
@@ -289,7 +289,7 @@
   "Based on `s/map-spec-impl`"
   ([k->s #_(s/map-of any? specable?)] (kv k->s nil))
   ([k->s #_(s/map-of any? specable?) gen-fn #_(? fn?)]
-    (let [id (java.util.UUID/randomUUID)
+    (let [id (#?(:clj java.util.UUID/randomUUID :cljs random-uuid))
           k->s|desc (->> k->s
                          (map (fn [[k specable]]
                                 [k (if (ident? specable) specable (s/describe specable))]))
