@@ -8,7 +8,7 @@
     [clojure.core                  :as core]
     [clojure.data.avl              :as avl ]
 #?(:clj  [flatland.ordered.map     :as ordered-map]
-   :cljs [linked.core              :as ordered-map])
+   :cljs [linked.core              :as linked])
 #?@(:clj
    [[clojure.data.int-map          :as imap]
     [seqspert.hash-map]])
@@ -39,7 +39,7 @@
         (defalias array-map          core/array-map)
         (defalias hash-map           core/hash-map)
 
-        (defalias ordered-map        ordered-map/map)
+        (defalias ordered-map        #?(:clj ordered-map/ordered-map :cljs linked/map))
         (defalias om                 ordered-map)
 
 #?(:clj (defn ^java.util.LinkedHashMap !ordered-map [] (java.util.LinkedHashMap.)))
