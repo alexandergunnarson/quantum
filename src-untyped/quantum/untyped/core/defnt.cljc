@@ -2,8 +2,8 @@
     "Primarily for `(de)fns`."
     (:refer-clojure :exclude [any? ident? qualified-keyword? seqable? simple-symbol?])
     (:require
-      [clojure.spec.alpha                 :as s]
-      [clojure.spec.gen.alpha             :as gen]
+      [#?(:clj clojure.spec.alpha     :cljs cljs.spec.alpha)     :as s]
+      [#?(:clj clojure.spec.gen.alpha :cljs cljs.spec.gen.alpha) :as gen]
       [quantum.untyped.core.convert       :as uconv]
       [quantum.untyped.core.data.map
         :refer [om]]

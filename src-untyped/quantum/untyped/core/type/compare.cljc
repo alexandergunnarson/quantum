@@ -4,6 +4,8 @@
             [compare < <= = not= >= >, ==])
           (:require
             [clojure.core                           :as c]
+            [quantum.untyped.core.analyze.expr
+              #?@(:cljs [:refer [Expression]])]
             [quantum.untyped.core.collections.logic
               :refer [seq-and seq-or]]
             ;; TODO remove this dependency
@@ -27,7 +29,11 @@
                       universal-set empty-set
                       not-type? or-type? and-type?
                       protocol-type? class-type?
-                      value-type?]]
+                      value-type?
+                      #?@(:cljs [UniversalSetType EmptySetType
+                                 NotType OrType AndType
+                                 ProtocolType ClassType
+                                 ValueType])]]
             [quantum.untyped.core.vars
               :refer [def-]])
   #?(:clj (:import
