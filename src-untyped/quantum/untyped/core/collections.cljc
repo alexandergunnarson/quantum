@@ -31,7 +31,7 @@
 
 (defn first [xs]
   (if (ur/transformer? xs)
-      (educe first|rf)
+      (educe first|rf xs)
       (core/first xs)))
 
 ;; ===== SOCIATIVE ===== ;;
