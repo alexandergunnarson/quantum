@@ -26,7 +26,7 @@
       (reduce merge2 maps))))
 
 (def clj-dependency  '[org.clojure/clojure       "1.9.0"])
-(def cljs-dependency '[org.clojure/clojurescript "1.9.946"])
+(def cljs-dependency '[org.clojure/clojurescript "1.10.312"])
 
 (def latest-stable-quantum-version
   "fc7a78bc" ; stable for backend use; mainly stable for frontend
@@ -97,8 +97,9 @@
          [quantum/org.clojure.core.rrb-vector   "0.0.12"]
          [org.clojure/data.finger-tree          "0.0.2"]
          ; MAP / SET
-         ;; Superseded by `frankiesardo/linked`
-       #_[org.flatland/ordered                  "1.5.3"]
+         ;; Superseded by `frankiesardo/linked` but for now frankiesardo/linked doesn't have e.g.
+         ;; `.keySet` support so we keep `org.flatland/ordered` for Clojure
+         [org.flatland/ordered                  "1.5.3"]
          [frankiesardo/linked                   "1.2.9"]
          [org.clojure/data.avl                  "0.0.13"]
          [org.clojure/data.int-map              "0.2.4"]
