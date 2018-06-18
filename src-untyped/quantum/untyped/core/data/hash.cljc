@@ -1,8 +1,10 @@
 (ns quantum.untyped.core.data.hash
-  (:refer-clojure :exclude
-    [hash])
-  (:require
-    [clojure.core :as core]))
+         (:refer-clojure :exclude
+           [hash])
+         (:require
+           [clojure.core :as core])
+#?(:cljs (:require-macros
+           [quantum.untyped.core.data.hash :as this])))
 
 (def ^:const default -1)
 
