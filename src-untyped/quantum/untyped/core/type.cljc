@@ -10,7 +10,7 @@
             nil? any? class? tagged-literal? #?(:cljs object?)
             number? decimal? bigdec? integer? ratio?
             true? false? keyword? string? symbol?
-            array? associative? coll? counted? indexed? list? map? map-entry? record?
+            array? associative? coll? counted? indexed? iterable? list? map? map-entry? record?
             seq? seqable? sequential? set? sorted? vector?
             fn? ifn?
             meta
@@ -54,7 +54,11 @@
            [quantum.untyped.core.type.defs             :as utdef]
            [quantum.untyped.core.type.predicates       :as utpred]
            [quantum.untyped.core.type.reifications     :as utr
-             :refer [->AndType ->OrType PType]]
+             :refer [->AndType ->OrType PType
+                     #?@(:cljs [UniversalSetType EmptySetType
+                                NotType OrType AndType
+                                ProtocolType ClassType
+                                ValueType])]]
            [quantum.untyped.core.vars                  :as uvar
              :refer [def- defmacro- update-meta]])
 #?(:cljs (:require-macros
@@ -173,10 +177,10 @@
         (0 -1) empty-set
          3     t0
         (1 2)
-          (let [c0 (c/class t0) c1 (c/class t1)]
+          (let [c0 (c/type t0) c1 (c/type t1)]
             ;; TODO add dispatch?
             (condp == c0
-              NotType (condp == (-> t0 utr/not-type>inner-type c/class)
+              NotType (condp == (-> t0 utr/not-type>inner-type c/type)
                         ClassType (condp == c1
                                     ClassType (AndType. uhash/default uhash/default [t0 (not t1)] (atom nil)))
                         ValueType (condp == c1
@@ -501,7 +505,8 @@
 
 #?(:clj (def primitive-classes (->> unboxed-symbol->type-meta vals (uc/map+ :unboxed) (join #{}))))
 
-(defns- -type>classes [t utr/type?, classes c/set? > (s/set-of (s/nilable c/class?))]
+(defns- -type>classes
+  [t utr/type?, classes c/set? > (s/set-of (s/nilable #?(:clj c/class? :cljs c/fn?)))]
   (cond (utr/class-type? t)
           (conj classes (utr/class-type>class t))
         (utr/value-type? t)
@@ -523,7 +528,7 @@
 (defns type>classes
   "Outputs the set of all the classes ->`t` can embody according to its various conditional
    branches, if any. Ignores nils, treating in Clojure simply as a `java.lang.Object`."
-  [t utr/type? > (s/set-of (s/nilable c/class?))] (-type>classes t #{}))
+  [t utr/type? > (s/set-of (s/nilable #?(:clj c/class? :cljs c/fn?)))] (-type>classes t #{}))
 
 #?(:clj
 (defns- -type>?class-value [t utr/type?, type-nilable? c/boolean?]

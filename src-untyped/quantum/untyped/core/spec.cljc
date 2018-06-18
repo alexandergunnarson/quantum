@@ -141,6 +141,8 @@
 (defalias s/explain)
 (defalias s/explain-data)
 (defalias s/describe)
+(defalias s/gen)
+(defalias s/with-gen)
 
 #?(:clj (quantum.untyped.core.vars/defmalias cat clojure.spec.alpha/cat cljs.spec.alpha/cat))
 #?(:clj (defmacro cat* "`or` :`or*` :: `cat` : `cat*`" [& args] `(cat ~@(udata/quote-map-base uconv/>keyword args true))))
