@@ -47,7 +47,7 @@
   EmptySetType []
   {PType          nil
    ?Fn            {invoke    ([_ x] false)}
-   ?Hash          {hash      ([this] (hash       UniversalSetType))}
+   ?Hash          {hash      ([this] (hash       EmptySetType))}
    ?Object        {hash-code ([this] (uhash/code EmptySetType))
                    equals    ([this that] (or (== this that) (instance? EmptySetType that)))}
    fedn/IOverride nil
