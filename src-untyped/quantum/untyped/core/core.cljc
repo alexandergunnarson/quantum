@@ -60,11 +60,12 @@
 (defn code=
   "Ensures that two pieces of code are equivalent.
    This means ensuring that seqs, vectors, and maps are only allowed to be compared with
-   each other, and that metadata is equivalent."
+   each other, and that metadata (minus line and column metadata) is equivalent."
   ([code0 code1]
     (if (metable? code0)
         (and (metable? code1)
-             (= (meta code0) (meta code1))
+             (= (-> code0 meta (dissoc :line :column))
+                (-> code1 meta (dissoc :line :column)))
              (cond (seq?    code0) (and (seq?    code1) (seq=      code0       code1  code=))
                    (vector? code0) (and (vector? code1) (seq= (seq code0) (seq code1) code=))
                    (map?    code0) (and (map?    code1) (seq= (seq code0) (seq code1) code=))
