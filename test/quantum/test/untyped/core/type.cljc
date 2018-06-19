@@ -36,7 +36,7 @@
   #?(:clj (testing "hash(code) equality"
             (is= (.hashCode a) (.hashCode b))))
           (testing "collection equality"
-            (is= 1 (count (hash-set a b)))))))
+            (is= 1 (count (hash-set a b))))))
 
 (deftest test|universal-set
   (test-equality #(UniversalSetType.)))

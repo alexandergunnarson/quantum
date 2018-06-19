@@ -3,6 +3,7 @@
     [clojure.core                               :as core]
     [quantum.untyped.core.analyze.expr          :as xp
       :refer [>expr]]
+    [quantum.untyped.core.data.hash             :as uhash]
     [quantum.untyped.core.fn
       :refer [fn1]]
     [quantum.untyped.core.logic
@@ -141,9 +142,9 @@
   "To generate all commutative possibilities for a given type."
   [t t/type? > (s/seq-of t/type?)]
   (ifs (t/and-type? t) (->> t utr/and-type>args ucombo/permutations
-                              (map #(utr/->AndType (vec %) (atom nil))))
+                              (map #(utr/->AndType uhash/default uhash/default (vec %) (atom nil))))
        (t/or-type?  t) (->> t utr/or-type>args  ucombo/permutations
-                              (map #(utr/->OrType  (vec %) (atom nil))))
+                              (map #(utr/->OrType  uhash/default uhash/default (vec %) (atom nil))))
        [t]))
 
 #?(:clj

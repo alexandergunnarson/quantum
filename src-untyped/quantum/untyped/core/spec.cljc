@@ -125,6 +125,7 @@
 #?(:clj (quantum.untyped.core.vars/defmalias +             clojure.spec.alpha/+             cljs.spec.alpha/+        ))
 #?(:clj (quantum.untyped.core.vars/defmalias *             clojure.spec.alpha/*             cljs.spec.alpha/*        ))
 #?(:clj (quantum.untyped.core.vars/defmalias ?             clojure.spec.alpha/?             cljs.spec.alpha/?        ))
+#?(:clj (quantum.untyped.core.vars/defmalias &             clojure.spec.alpha/&             cljs.spec.alpha/&        ))
 
 ;; Note that `and` results in a spec, and as such creates a new regex context :/
 #?(:clj (quantum.untyped.core.vars/defmalias and           clojure.spec.alpha/and           cljs.spec.alpha/and      ))
