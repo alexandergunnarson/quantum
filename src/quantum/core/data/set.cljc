@@ -20,14 +20,11 @@
    [[clojure.data.finger-tree :as ftree]
     [seqspert.hash-set]
     [clojure.data.int-map     :as imap]]))
-  (:import
-#?@(:clj
-    [java.util.HashSet
-    [it.unimi.dsi.fastutil.ints    IntOpenHashSet]
-    [it.unimi.dsi.fastutil.longs   LongOpenHashSet]
-    [it.unimi.dsi.fastutil.doubles DoubleOpenHashSet]]
-    :cljs
-    [goog.structs.Set])))
+#?(:clj (:import
+          java.util.HashSet
+          [it.unimi.dsi.fastutil.ints    IntOpenHashSet]
+          [it.unimi.dsi.fastutil.longs   LongOpenHashSet]
+          [it.unimi.dsi.fastutil.doubles DoubleOpenHashSet])))
 
 ; ============ STRUCTURES ============
 
@@ -158,36 +155,35 @@
   "Creates a single-threaded, mutable hash set.
    On the JVM, this is a java.util.HashSet.
 
-   On JS, this is a goog.structs.Set."
-  {:todo #{"Compare performance on CLJS with ECMAScript 6 Set"}}
-  ([] #?(:clj (HashSet.) :cljs (Set.)))
+   On JS, this is a ECMAScript 6 Set (`js/Set`)."
+  ([] #?(:clj (HashSet.) :cljs (js/Set.)))
   ([v0]
-    (doto #?(:clj (HashSet.) :cljs (Set.))
+    (doto #?(:clj (HashSet.) :cljs (js/Set.))
           (.add v0)))
   ([v0 v1]
-    (doto #?(:clj (HashSet.) :cljs (Set.))
+    (doto #?(:clj (HashSet.) :cljs (js/Set.))
           (.add v0)
           (.add v1)))
   ([v0 v1 v2]
-    (doto #?(:clj (HashSet.) :cljs (Set.))
+    (doto #?(:clj (HashSet.) :cljs (js/Set.))
           (.add v0)
           (.add v1)
           (.add v2)))
   ([v0 v1 v2 v3]
-    (doto #?(:clj (HashSet.) :cljs (Set.))
+    (doto #?(:clj (HashSet.) :cljs (js/Set.))
           (.add v0)
           (.add v1)
           (.add v2)
           (.add v3)))
   ([v0 v1 v2 v3 v4]
-    (doto #?(:clj (HashSet.) :cljs (Set.))
+    (doto #?(:clj (HashSet.) :cljs (js/Set.))
           (.add v0)
           (.add v1)
           (.add v2)
           (.add v3)
           (.add v4)))
   ([v0 v1 v2 v3 v4 v5]
-    (doto #?(:clj (HashSet.) :cljs (Set.))
+    (doto #?(:clj (HashSet.) :cljs (js/Set.))
           (.add v0)
           (.add v1)
           (.add v2)
@@ -197,7 +193,7 @@
   ([v0 v1 v2 v3 v4 v5 v6 & vs]
     (reduce
       (fn [#?(:clj ^HashSet xs :cljs xs) v] (doto xs (.add v)))
-      (doto #?(:clj (HashSet.) :cljs (Set.))
+      (doto #?(:clj (HashSet.) :cljs (js/Set.))
             (.add v0)
             (.add v1)
             (.add v2)

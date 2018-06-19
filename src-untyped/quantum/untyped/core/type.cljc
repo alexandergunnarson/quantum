@@ -1486,7 +1486,14 @@
 
 #?(:clj  (-def    java-set?              (isa? java.util.Set)))
 
-;; ----- Hash Sets ----- ;;
+;; ----- Identity Sets (identity-based equality) ----- ;;
+
+         (-def   !identity-set? #?(:clj  none? #_(isa? java.util.IdentityHashSet)
+                                   :cljs (or (isa? js/Set) (isa? goog.structs.Set))))
+
+         (-def   identity-set? !identity-set?)
+
+;; ----- Hash Sets (value-based equality) ----- ;;
 
          (-def   +hash-set?              (isa? #?(:clj  clojure.lang.PersistentHashSet
                                                   :cljs cljs.core/PersistentHashSet)))
@@ -1502,10 +1509,8 @@
          (-def   !hash-set|float?        #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatOpenHashSet)   :cljs none?))
          (-def   !hash-set|double?       #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet) :cljs none?))
          (-def   !hash-set|ref?          #?(:clj  (or (isa? java.util.HashSet)
-                                                      ;; Because this has different semantics
-                                                      #_(isa? java.util.IdentityHashSet)
                                                       (isa? it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet))
-                                            :cljs (isa? goog.structs.Set)))
+                                            :cljs none?))
 
          (-def   !hash-set?              (or !hash-set|ref?
                                              !hash-set|byte? !hash-set|short? !hash-set|char?
