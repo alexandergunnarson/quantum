@@ -140,9 +140,9 @@
   [meta ^:mutable ct ^js/Map m #_"Keys are int hashes; vals are map entries from k to v"
    ^:mutable ^boolean has-nil? ^:mutable nil-val ^:mutable __hash]
   Object
-    (toString [this] (str (into {} (vals m))))
+    (toString [this] (str (into {} (es6-iterator-seq (.values m)))))
     (equiv    [this other] (-equiv this other))
-    (keys     [this] (es6-iterator (keys this)))
+    (keys     [this] (es6-iterator (cljs.core/keys this)))
     (entries  [this] (es6-entries-iterator (seq this)))
     (values   [this] (es6-iterator (vals this)))
     (has      [this k] (contains? this k))
@@ -165,7 +165,7 @@
   ISeqable
     (-seq [this]
       (when (pos? ct)
-        (let [s (seq (.values m))]
+        (let [s (es6-iterator-seq (.values m))]
           (if has-nil?
               (cons (map-entry nil nil-val) s)
               s))))
