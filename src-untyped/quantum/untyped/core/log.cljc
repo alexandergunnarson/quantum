@@ -10,7 +10,6 @@
     [quantum.untyped.core.form.evaluate
       :refer [compile-if]]
     [quantum.untyped.core.form.generate :as ufgen]
-    [quantum.untyped.core.meta.debug    :as udebug]
     [quantum.untyped.core.print         :as upr]
     [quantum.untyped.core.qualify       :as uqual]
     [quantum.untyped.core.type.predicates
@@ -55,6 +54,29 @@
 
 ;; ===== Actual printing and logging ===== ;;
 
+(def stack-depth
+  #?(:clj (if (>= (:minor *clojure-version*) 8)
+              5
+              2)
+     :cljs 4)) ; TODO browser-dependent
+
+(defn this-fn-name
+  "Returns the current function name."
+  ([] (this-fn-name 0))
+  ([i]
+    (let [st (identity
+               #?(:clj  (-> (Thread/currentThread) .getStackTrace)
+                  :cljs (-> (js/Error) .-stack
+                            ; TODO Different browsers have different
+                            ; implementations of stack traces
+                            (str/split "\n    at "))))
+          #?(:clj ^StackTraceElement elem
+             :cljs elem)
+             (nth st (min (- stack-depth i)
+                          (-> st count dec)))]
+      #?(:clj  (-> elem .getClassName clojure.repl/demunge)
+         :cljs (-> elem str/trim (str/split " ") first cljs.core/demunge-str)))))
+
 (defn pr*
   "Prints to |System/out| if the print alert type @pr-type
    is in the set of enabled print alert types, `*levels`.
@@ -66,7 +88,7 @@
           pretty? (or (:pretty? opts) pretty?)
           stack   (or (:stack   opts) -1     )
           timestamp? (:timestamp? opts)
-          curr-fn (when trace? (udebug/this-fn-name stack))
+          curr-fn (when trace? (this-fn-name stack))
           env-type-str
             (when (get @*levels :env)
               (str (name ucore/lang) " »"))

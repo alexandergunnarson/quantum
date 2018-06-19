@@ -35,25 +35,5 @@
   ([] (Thread/setDefaultUncaughtExceptionHandler default-exception-handler))
   ([^Thread t] (.setUncaughtExceptionHandler t default-exception-handler))))
 
-(def stack-depth
-  #?(:clj (if (>= (:minor *clojure-version*) 8)
-              5
-              2)
-     :cljs 4)) ; TODO browser-dependent
-
-(defn this-fn-name
-  "Returns the current function name."
-  ([] (this-fn-name 0))
-  ([i]
-    (let [st (identity
-               #?(:clj  (-> (Thread/currentThread) .getStackTrace)
-                  :cljs (-> (js/Error) .-stack
-                            ; TODO Different browsers have different
-                            ; implementations of stack traces
-                            (str/split "\n    at "))))
-          #?(:clj ^StackTraceElement elem
-             :cljs elem)
-             (nth st (min (- stack-depth i)
-                          (-> st count dec)))]
-      #?(:clj  (-> elem .getClassName clojure.repl/demunge)
-         :cljs (-> elem str/trim (str/split " ") first cljs.core/demunge-str)))))
+(def stack-depth ulog/stack-depth)
+(def this-fn-name ulog/this-fn-name)
