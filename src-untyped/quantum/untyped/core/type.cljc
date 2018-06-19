@@ -30,6 +30,8 @@
            [quantum.untyped.core.core                  :as ucore]
            [quantum.untyped.core.data.bits             :as ubit]
            [quantum.untyped.core.data.hash             :as uhash]
+           [quantum.untyped.core.data.map
+             #?@(:cljs [:refer [MutableHashMap]])]
            [quantum.untyped.core.data.tuple]
            [quantum.untyped.core.defnt
              :refer [defns defns-]]
@@ -906,7 +908,18 @@
 
 ;; ===== Maps ===== ;; Associative
 
-;; ----- Hash Maps ----- ;;
+;; ----- Identity Maps (identity-based equality) ----- ;;
+
+         (-def   !identity-map|ref->ref? #?(:clj  (isa? java.util.IdentityHashMap)
+                                            :cljs (isa? js/Map)))
+
+         (-def   !identity-map?          !identity-map|ref->ref?)
+
+#?(:clj  (-def  !!identity-map?          none?))
+
+         (-def    identity-map?          (or !identity-map? #?(:clj !!identity-map?)))
+
+;; ----- Hash Maps (value-based equality) ----- ;;
 
          (-def   +hash-map?                  (isa? #?(:clj  clojure.lang.PersistentHashMap
                                                       :cljs cljs.core/PersistentHashMap)))
@@ -1010,7 +1023,7 @@
                                                             #_(isa? java.util.IdentityHashMap)
                                                             (isa? it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap)
                                                             (isa? it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenCustomHashMap)]
-                                                     :cljs [(isa? goog.structs.Map)])))
+                                                     :cljs [MutableHashMap])))
 
          (def-preds|map|any                  !hash-map)
 
@@ -1207,25 +1220,43 @@
          (-def   !unsorted-map|float->double?    (or !hash-map|float->double?     !array-map|float->double?))
          (-def   !unsorted-map|float->ref?       (or !hash-map|float->ref?        !array-map|float->ref?))
 
-         (-def   !unsorted-map|double->boolean?  (or !hash-map|double->boolean?   !array-map|double->boolean?))
-         (-def   !unsorted-map|double->byte?     (or !hash-map|double->byte?      !array-map|double->byte?))
-         (-def   !unsorted-map|double->char?     (or !hash-map|double->char?      !array-map|double->char?))
-         (-def   !unsorted-map|double->short?    (or !hash-map|double->short?     !array-map|double->short?))
-         (-def   !unsorted-map|double->int?      (or !hash-map|double->int?       !array-map|double->int?))
-         (-def   !unsorted-map|double->long?     (or !hash-map|double->long?      !array-map|double->long?))
-         (-def   !unsorted-map|double->float?    (or !hash-map|double->float?     !array-map|double->float?))
-         (-def   !unsorted-map|double->double?   (or !hash-map|double->double?    !array-map|double->double?))
-         (-def   !unsorted-map|double->ref?      (or !hash-map|double->ref?       !array-map|double->ref?))
+         (-def   !unsorted-map|double->boolean?
+           (or !hash-map|double->boolean?   !array-map|double->boolean?))
+         (-def   !unsorted-map|double->byte?
+           (or !hash-map|double->byte?      !array-map|double->byte?))
+         (-def   !unsorted-map|double->char?
+           (or !hash-map|double->char?      !array-map|double->char?))
+         (-def   !unsorted-map|double->short?
+           (or !hash-map|double->short?     !array-map|double->short?))
+         (-def   !unsorted-map|double->int?
+           (or !hash-map|double->int?       !array-map|double->int?))
+         (-def   !unsorted-map|double->long?
+           (or !hash-map|double->long?      !array-map|double->long?))
+         (-def   !unsorted-map|double->float?
+           (or !hash-map|double->float?     !array-map|double->float?))
+         (-def   !unsorted-map|double->double?
+           (or !hash-map|double->double?    !array-map|double->double?))
+         (-def   !unsorted-map|double->ref?
+           (or !hash-map|double->ref?       !array-map|double->ref?))
 
-         (-def   !unsorted-map|ref->boolean?     (or !hash-map|ref->boolean?      !array-map|ref->boolean?))
-         (-def   !unsorted-map|ref->byte?        (or !hash-map|ref->byte?         !array-map|ref->byte?))
-         (-def   !unsorted-map|ref->char?        (or !hash-map|ref->char?         !array-map|ref->char?))
-         (-def   !unsorted-map|ref->short?       (or !hash-map|ref->short?        !array-map|ref->short?))
-         (-def   !unsorted-map|ref->int?         (or !hash-map|ref->int?          !array-map|ref->int?))
-         (-def   !unsorted-map|ref->long?        (or !hash-map|ref->long?         !array-map|ref->long?))
-         (-def   !unsorted-map|ref->float?       (or !hash-map|ref->float?        !array-map|ref->float?))
-         (-def   !unsorted-map|ref->double?      (or !hash-map|ref->double?       !array-map|ref->double?))
-         (-def   !unsorted-map|ref->ref?         (or !hash-map|ref->ref?          !array-map|ref->ref?))
+         (-def   !unsorted-map|ref->boolean?
+           (or !hash-map|ref->boolean?      !array-map|ref->boolean?))
+         (-def   !unsorted-map|ref->byte?
+           (or !hash-map|ref->byte?         !array-map|ref->byte?))
+         (-def   !unsorted-map|ref->char?
+           (or !hash-map|ref->char?         !array-map|ref->char?))
+         (-def   !unsorted-map|ref->short?
+           (or !hash-map|ref->short?        !array-map|ref->short?))
+         (-def   !unsorted-map|ref->int?
+           (or !hash-map|ref->int?          !array-map|ref->int?))
+         (-def   !unsorted-map|ref->long?
+           (or !hash-map|ref->long?         !array-map|ref->long?))
+         (-def   !unsorted-map|ref->float?
+           (or !hash-map|ref->float?        !array-map|ref->float?))
+         (-def   !unsorted-map|ref->double?
+           (or !hash-map|ref->double?       !array-map|ref->double?))
+         (-def   !unsorted-map|ref->ref?
+           (or !identity-map|ref->ref? !hash-map|ref->ref? !array-map|ref->ref?))
 
          (def-preds|map|any                      !unsorted-map)
 
@@ -1488,8 +1519,8 @@
 
 ;; ----- Identity Sets (identity-based equality) ----- ;;
 
-         (-def   !identity-set? #?(:clj  none? #_(isa? java.util.IdentityHashSet)
-                                   :cljs (or (isa? js/Set) (isa? goog.structs.Set))))
+         (-def   !identity-set? #?(:clj  none? #_(isa? java.util.IdentityHashSet) ; TODO implement
+                                   :cljs (isa? js/Set)))
 
          (-def   identity-set? !identity-set?)
 
