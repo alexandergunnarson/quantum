@@ -85,8 +85,9 @@
   types will very often have to be validated at runtime.
 
 [ ] Compile-Time (Direct) Dispatch
-    - Any argument, if it requires a non-nilable primitive-like value, will be marked as a primitive.
-    - If nilable, will it be boxed or will there be one overload for nil and one for primitive?
+    - Any argument, if it requires a non-nilable primitive-like value, will be marked as a
+      primitive.
+    - If nilable, there will be one overload for nil and one for primitive.
     - When a `fnt` with type overloads is referenced outside of a typed context, then the overload
       resolution will be done via Runtime Dispatch.
     - TODO Should we take into account 'actual' types (not just 'declared' types) when performing
@@ -153,14 +154,14 @@
         implementations at will as long as the specs don't change
       - To make this process faster we maintain a set of typedefs so at least cheap c/= checks can
         be performed
-        - If c/= succeeds, great; the `reify` corresponding the label (and reify-type) will be
+        - If c/= succeeds, great; the `reify` corresponding to the label (and reify-type) will be
           replaced; the typedef-set will remain unchanged
         - Else it must find a corresponding typedef by t/=
           - Then if it is found by t/= it will replace the `reify` and the typedef corresponding
             with that label and replace the typedef in the typedef-set
           - Else a new label will be given to the `reify`; the typedef will be added to the
             typedef-set
-    - [ ] One reify per type that cannot be split
+    - [ ] One reify per type-that-cannot-be-split
           - Only `t/or`s can be split for now
     - [ ] `(= (hash (t/or t/long? t/float?)) (hash (t/or t/long? t/float?)))`
           - Currently this isn't the case; we'd like to have it so, so we can more efficiently look
@@ -206,7 +207,8 @@
 (defns out-type>class [t t/type? > (? t/class?)]
   (let [cs (t/type>classes t) cs' (disj cs nil)]
     (if (-> cs' count (not= 1))
-        ;; NOTE: we don't need to vary the output class if there are multiple output possibilities or just nil
+        ;; NOTE: we don't need to vary the output class if there are multiple output possibilities
+        ;; or just nil
         java.lang.Object
         (-> (class>most-primitive-class (first cs') (contains? cs nil))
             class>simplest-class)))))
@@ -805,20 +807,16 @@
 
 #?(:clj
 (defns- >fnt|overload
-  [{:keys [arg-bindings _, arg-classes|pre-analyze _, arg-types|pre-analyze|base _, args _
-           body-codelist|pre-analyze _, lang ::lang, post-form _, varargs _, varargs-binding _]} _
+  "Is given `arg-classes` and `arg-types`. In order to determine the out-type, performs an analysis
+   using (in part) these pieces of data, but does not use the possibly-updated `arg-types` as
+   computed in the analysis. As a result, does not yet support type inference."
+  [{:keys [arg-bindings _, arg-classes _, arg-types _, args _, body-codelist|pre-analyze _,
+           lang ::lang, post-form _, varargs _, varargs-binding _]} _
    > ::fnt|overload]
-  (let [arg-types|pre-analyze
-          (c/mergev-with
-            (fn [_ s #_t/type? c #_t/class?]
-              (cond-> s (t/primitive-class? c) (t/and c)))
-            arg-types|pre-analyze|base arg-classes|pre-analyze)
-        env         (->> (zipmap arg-bindings arg-types|pre-analyze)
+  (let [env         (->> (zipmap arg-bindings arg-types)
                          (c/map' (fn [[arg-binding arg-type]]
                                    [arg-binding (ast/unbound nil arg-binding arg-type)])))
         analyzed    (analyze env (ufgen/?wrap-do body-codelist|pre-analyze))
-        arg-types   (->> arg-bindings (mapv #(:type (c/get (:env analyzed) %))))
-        arg-classes (->> arg-types (c/map type>most-primitive-class))
         arg-classes|simplest (->> arg-classes (c/map class>simplest-class))
         hint-arg|fn (fn [i arg-binding]
                       (ufth/with-type-hint arg-binding
@@ -842,6 +840,7 @@
                              (:type analyzed)
                              (err! "Body does not match output type" {:body analyzed :output-type post-type})))
                      (:type analyzed))
+        _ (prl! arg-bindings args arg-classes arg-types out-type)
         body-form
           (-> (:form analyzed)
               (cond-> post-type|runtime? (>with-post-type post-type))
@@ -862,41 +861,52 @@
 #?(:clj ; really, reserve for metalanguage
 (defn fnt|overload-data>overload-group
   "Rather than rigging together something in which either:
-   1) the Clojure compiler will try to cross its fingers and evaluate code meant to be evaluated in ClojureScript
-   2) we use a CLJS-in-CLJS compiler and alienate the mainstream CLJS-in-CLJ (cljsbuild) workflow, which includes
-      our own workflow
-   3) we wait for CLJS-in-CLJS to become mainstream, which could take years if it really ever happens
+   1) the Clojure compiler will try to cross its fingers and evaluate code meant to be evaluated in
+      ClojureScript
+   2) we use a CLJS-in-CLJS compiler and alienate the mainstream CLJS-in-CLJ (cljsbuild) workflow,
+      which includes our own workflow
+   3) we wait for CLJS-in-CLJS to become mainstream, which could take years if it really ever
+      happens
 
-   we decide instead to evaluate types in languages in which the metalanguage (compiler language) is the same as
-   the object language (e.g. Clojure), and symbolically analyze types in the rest (e.g. vanilla ClojureScript),
-   deferring code analyzed as functions to be enforced at runtime."
-  [{:as in {:keys [args varargs] pre-form :pre [post-type post-form] :post} :arglist body-codelist|pre-analyze :body}
+   we decide instead to evaluate types in languages in which the metalanguage (compiler language)
+   is the same as the object language (e.g. Clojure), and symbolically analyze types in the rest
+   (e.g. vanilla ClojureScript), deferring code analyzed as functions to be enforced at runtime."
+  [{:as in {:keys [args varargs] pre-form :pre [post-type post-form] :post} :arglist
+    body-codelist|pre-analyze :body}
    {:as opts :keys [lang #_::lang symbolic-analysis? #_t/boolean?]}]
   (if symbolic-analysis?
       (err! "Symbolic analysis not supported yet")
       (let [_ (when pre-form (TODO "Need to handle pre"))
             varargs-binding (when varargs
-                              ;; TODO this assertion is purely temporary until destructuring is supported
+                              ;; TODO this assertion is purely temporary until destructuring is
+                              ;; supported
                               (assert (-> varargs :binding-form first (= :sym))))
             arg-bindings
               (->> args
                    (mapv (fn [{[kind binding-] :binding-form}]
-                           ;; TODO this assertion is purely temporary until destructuring is supported
+                           ;; TODO this assertion is purely temporary until destructuring is
+                           ;; supported
                            (assert kind :sym)
                            binding-)))
-            arg-types|pre-analyze|base
+            arg-types|unprimitivized
               (->> args
                    (mapv (fn [{[kind #_#{:any :spec}, t #_t/form?] :spec}]
                            (case kind :any   t/any?
                                       :spec  (-> t eval t/>type)))))
-            arg-classes-seq|pre-analyze (arg-types>arg-classes-seq|primitivized arg-types|pre-analyze|base)
+            arg-classes-seq (arg-types>arg-classes-seq|primitivized arg-types|unprimitivized)
             ;; `unprimitivized` is first because of class sorting
             [unprimitivized & primitivized]
-              (->> arg-classes-seq|pre-analyze
-                   (mapv (fn [arg-classes|pre-analyze]
-                           (>fnt|overload
-                             (kw-map arg-bindings arg-classes|pre-analyze arg-types|pre-analyze|base args
-                                     body-codelist|pre-analyze lang post-form varargs varargs-binding)))))]
+              (->> arg-classes-seq
+                   (mapv (fn [arg-classes]
+                           (let [arg-types
+                                   (c/mergev-with
+                                     (fn [_ s #_t/type? c #_t/class?]
+                                       (cond-> s (t/primitive-class? c) (t/and c)))
+                                     arg-types|unprimitivized arg-classes)]
+                             (>fnt|overload
+                               (kw-map arg-bindings arg-classes arg-types args
+                                       body-codelist|pre-analyze lang post-form varargs
+                                       varargs-binding))))))]
         {:unprimitivized unprimitivized
          :primitivized   primitivized}))))
 
