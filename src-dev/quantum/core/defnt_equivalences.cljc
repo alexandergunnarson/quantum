@@ -39,7 +39,7 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
-(is (code=
+(is-code=
 
 ;; ----- implementation ----- ;;
 
@@ -52,18 +52,18 @@
 
 ($ (do (def ~'pid|__0
          (reify >Object
-           (~(tag "java.lang.Object" 'invoke) [~'_]
+           (~(tag "java.lang.Object" 'invoke) [~'_0__]
              ~'(->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
                     (.getName)))))
 
        #_(defn ~'pid
          {::t/spec (t/fn [:> (? t/string?)])})))
 
-))
+)
 
 ;; =====|=====|=====|=====|===== ;;
 
-(is (code=
+(is-code=
 
 (macroexpand '
 (defnt identity|uninlined ([x _] x))
@@ -79,7 +79,7 @@
 
 (case (env-lang)
   :clj  ($ (do ;; [t/any?]
-               (def ~(tag "[Ljava.lang.Object;" 'identity|uninlined|__0|input-types)
+               #_(def ~(tag "[Ljava.lang.Object;" 'identity|uninlined|__0|input-types)
                  (*<> t/any?))
                (def ~'identity|uninlined|__0
                  (reify
@@ -126,7 +126,7 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
-(is (code=
+(is-code=
 
 ;; TODO don't ignore `:inline`
 (macroexpand '
@@ -179,7 +179,7 @@
                       (satisfies? INamed x) (-name x)
                       (err! "Not supported for type" {:fn `name :type (type x)}))))))
 
-))
+)
 
 ;; =====|=====|=====|=====|===== ;;
 
@@ -257,23 +257,22 @@
 
                (def ~'reduced?|__0
                  (reify
-                   Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)]
-                                     (let* [~(tag "clojure.lang.Reduced" 'x) ~'x]
-                                       true))))
+                   Object>boolean  (~(tag "boolean" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)]
+                                     (let* [~(tag "clojure.lang.Reduced" 'x) ~'x] true))))
 
                ;; [t/any?]
 
                (def ~'reduced?|__1
                  (reify
-                   Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)
-                   boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] false)
-                   byte>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "byte"             'x)] false)
-                   short>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "short"            'x)] false)
-                   char>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "char"             'x)] false)
-                   int>boolean     (~(tag "boolean" 'invoke) [~'_ ~(tag "int"              'x)] false)
-                   long>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "long"             'x)] false)
-                   float>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "float"            'x)] false)
-                   double>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "double"           'x)] false)))
+                   Object>boolean  (~(tag "boolean" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)] false)
+                   boolean>boolean (~(tag "boolean" 'invoke) [~'_2__ ~(tag "boolean"          'x)] false)
+                   byte>boolean    (~(tag "boolean" 'invoke) [~'_3__ ~(tag "byte"             'x)] false)
+                   short>boolean   (~(tag "boolean" 'invoke) [~'_4__ ~(tag "short"            'x)] false)
+                   char>boolean    (~(tag "boolean" 'invoke) [~'_5__ ~(tag "char"             'x)] false)
+                   int>boolean     (~(tag "boolean" 'invoke) [~'_6__ ~(tag "int"              'x)] false)
+                   long>boolean    (~(tag "boolean" 'invoke) [~'_7__ ~(tag "long"             'x)] false)
+                   float>boolean   (~(tag "boolean" 'invoke) [~'_8__ ~(tag "float"            'x)] false)
+                   double>boolean  (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] false)))
 
              #_(defn ~'reduced?
                  {::t/type (t/fn [(t/isa? Reduced)]

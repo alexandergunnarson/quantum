@@ -840,10 +840,12 @@
                            -1     post-type
                             1     (:type analyzed)
                             0     post-type
-                            (2 3) (err! "Body and output type comparison not handled" {:body analyzed :output-type post-type}))
+                            (2 3) (err! "Body and output type comparison not handled"
+                                        {:body analyzed :output-type post-type}))
                          (if (t/<= (:type analyzed) post-type)
                              (:type analyzed)
-                             (err! "Body does not match output type" {:body analyzed :output-type post-type})))
+                             (err! "Body does not match output type"
+                                   {:body analyzed :output-type post-type})))
                      (:type analyzed))
         body-form
           (-> (:form analyzed)
