@@ -66,6 +66,17 @@
         (and (metable? code1)
              (= (-> code0 meta (dissoc :line :column))
                 (-> code1 meta (dissoc :line :column)))
+             (let [similar-class?
+                     (cond (seq?    code0) (seq?    code1)
+                           (seq?    code1) (seq?    code0)
+                           (vector? code0) (vector? code1)
+                           (vector? code1) (vector? code0)
+                           (map?    code0) (map?    code1)
+                           (map?    code1) (map?    code0)
+                           :else           ::not-applicable)]
+               (if (= similar-class? ::not-applicable)
+                   (= code0 code1)
+                   (and similar-class? (ucore/seq= (seq code0) (seq code1) code=))))
              (cond (seq?    code0) (and (seq?    code1) (seq=      code0       code1  code=))
                    (vector? code0) (and (vector? code1) (seq= (seq code0) (seq code1) code=))
                    (map?    code0) (and (map?    code1) (seq= (seq code0) (seq code1) code=))

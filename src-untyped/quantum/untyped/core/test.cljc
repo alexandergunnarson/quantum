@@ -30,19 +30,28 @@
              (let [meta0 (-> code0 meta (dissoc :line :column))
                    meta1 (-> code1 meta (dissoc :line :column))]
                (or (= meta0 meta1)
-                   (println "FAIL: meta not match for" meta0 meta1)))
-             (cond
-               (seq?    code0) (and (seq?    code1) (ucore/seq=      code0       code1  code=))
-               (vector? code0) (and (vector? code1) (ucore/seq= (seq code0) (seq code1) code=))
-               (map?    code0) (and (map?    code1) (ucore/seq= (seq code0) (seq code1) code=))
-               :else           (or (= code0 code1)
-                                   (println "FAIL in `:else` `(= code0 code1)`" code0 code1))))
+                   (println "FAIL: meta should be match for" meta0 meta1)))
+             (let [similar-class?
+                     (cond (seq?    code0) (seq?    code1)
+                           (seq?    code1) (seq?    code0)
+                           (vector? code0) (vector? code1)
+                           (vector? code1) (vector? code0)
+                           (map?    code0) (map?    code1)
+                           (map?    code1) (map?    code0)
+                           :else           ::not-applicable)]
+               (if (= similar-class? ::not-applicable)
+                   (or (= code0 code1)
+                       (println "FAIL: should be `(= code0 code1)`" code0 code1))
+                   (and (or similar-class?
+                            (println "FAIL: should be similar class" code0 code1))
+                        (or (ucore/seq= (seq code0) (seq code1) code=)
+                            (println "FAIL: `(ucore/seq= code0 code1 code=)`" code0 code1))))))
         (and (not (ucore/metable? code1))
              (or (= code0 code1)
-                 (println "FAIL in non-metable `(= code0 code1)`" code0 code1)))))
+                 (println "FAIL: should be `(= code0 code1)`" code0 code1)))))
   ([code0 code1 & codes] (and (code= code0 code1) (every? #(code= code0 %) codes))))
 
-#?(:clj (defmacro is-code= [& args] `(is (code= ~@args))))
+(defn is-code= [& args] (is (apply code= args))))
 
 #?(:clj (defmacro is= [& args] `(is (= ~@args))))
 
