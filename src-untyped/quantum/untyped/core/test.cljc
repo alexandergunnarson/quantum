@@ -4,6 +4,7 @@
     [clojure.spec.test.alpha    :as stest]
     [clojure.string             :as str]
     [clojure.test               :as test]
+    [quantum.untyped.core.core  :as ucore]
     [quantum.untyped.core.error :as err]
     [quantum.untyped.core.print
       :refer [ppr-meta]]
@@ -21,7 +22,30 @@
 (defn test-nss-where [pred]
   (->> (all-ns) (filter #(-> % ns-name name pred)) (map test-ns) doall)))
 
+(defn code=
+  "`code=` but with helpful test-related logging"
+  ([code0 code1]
+    (if (ucore/metable? code0)
+        (and (ucore/metable? code1)
+             (let [meta0 (-> code0 meta (dissoc :line :column))
+                   meta1 (-> code1 meta (dissoc :line :column))]
+               (or (= meta0 meta1)
+                   (println "FAIL: meta not match for" meta0 meta1)))
+             (cond
+               (seq?    code0) (and (seq?    code1) (ucore/seq=      code0       code1  code=))
+               (vector? code0) (and (vector? code1) (ucore/seq= (seq code0) (seq code1) code=))
+               (map?    code0) (and (map?    code1) (ucore/seq= (seq code0) (seq code1) code=))
+               :else           (or (= code0 code1)
+                                   (println "FAIL in `:else` `(= code0 code1)`" code0 code1))))
+        (and (not (ucore/metable? code1))
+             (or (= code0 code1)
+                 (println "FAIL in non-metable `(= code0 code1)`" code0 code1)))))
+  ([code0 code1 & codes] (and (code= code0 code1) (every? #(code= code0 %) codes))))
+
+#?(:clj (defmacro is-code= [& args] `(is (code= ~@args))))
+
 #?(:clj (defmacro is= [& args] `(is (= ~@args))))
+
 #?(:clj (defmacro throws
           ([x] `(do (is (~'thrown? ~(err/env>generic-error &env) ~x)) true))
           ([expr err-pred]

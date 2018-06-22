@@ -23,7 +23,7 @@
       :refer [ifs]]
     [quantum.untyped.core.spec         :as s]
     [quantum.untyped.core.test         :as test
-      :refer [deftest testing is is= throws]]
+      :refer [deftest testing is is= is-code= throws]]
     [quantum.untyped.core.type :as t
       :refer [? *]]
     [quantum.untyped.core.type.reifications :as utr])
@@ -183,7 +183,7 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
-(is (code=
+(is-code=
 
 ;; Perhaps silly in ClojureScript, but avoids boxing in Clojure
 (macroexpand '
@@ -195,26 +195,37 @@
 
 ;; ----- expanded code ----- ;;
 
+;; TODO for some reason it doesn't recognize that it's a boolean return value
 (case (env-lang)
   :clj  ($ (do ;; [x t/nil?]
 
                (def ~'some?|__0
                  (reify
-                   Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)))
+                   Object>boolean
+                     (~(tag "boolean" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)] false)))
 
                ;; [x t/any?]
 
                (def ~'some?|__1
                  (reify
-                   Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] true)
-                   boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] true)
-                   byte>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "byte"             'x)] true)
-                   short>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "short"            'x)] true)
-                   char>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "char"             'x)] true)
-                   int>boolean     (~(tag "boolean" 'invoke) [~'_ ~(tag "int"              'x)] true)
-                   long>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "long"             'x)] true)
-                   float>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "float"            'x)] true)
-                   double>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "double"           'x)] true)))
+                   Object>boolean
+                     (~(tag "boolean" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)] true)
+                   boolean>boolean
+                     (~(tag "boolean" 'invoke) [~'_2__ ~(tag "boolean"          'x)] true)
+                   byte>boolean
+                     (~(tag "boolean" 'invoke) [~'_3__ ~(tag "byte"             'x)] true)
+                   short>boolean
+                     (~(tag "boolean" 'invoke) [~'_4__ ~(tag "short"            'x)] true)
+                   char>boolean
+                     (~(tag "boolean" 'invoke) [~'_5__ ~(tag "char"             'x)] true)
+                   int>boolean
+                     (~(tag "boolean" 'invoke) [~'_6__ ~(tag "int"              'x)] true)
+                   long>boolean
+                     (~(tag "boolean" 'invoke) [~'_7__ ~(tag "long"             'x)] true)
+                   float>boolean
+                     (~(tag "boolean" 'invoke) [~'_8__ ~(tag "float"            'x)] true)
+                   double>boolean
+                     (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] true)))
 
              #_(defn ~'some?
                  {::t/type (t/fn [t/nil?]
@@ -225,7 +236,7 @@
                  (ifs (nil? x) false
                       true)))))
 
-))
+)
 
 ;; =====|=====|=====|=====|===== ;;
 
