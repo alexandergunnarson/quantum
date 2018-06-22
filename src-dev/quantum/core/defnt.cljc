@@ -926,7 +926,8 @@
 
 (defns fnt-overload>interface [args-classes _, out-class t/class?]
   (let [interface-sym     (fnt-overload>interface-sym args-classes out-class)
-        hinted-method-sym (ufth/with-type-hint fnt-method-sym (ufth/>interface-method-tag out-class))
+        hinted-method-sym (ufth/with-type-hint fnt-method-sym
+                            (ufth/>interface-method-tag out-class))
         hinted-args       (ufth/hint-arglist-with
                             (ufgen/gen-args (count args-classes))
                             (map ufth/>interface-method-tag args-classes))]
@@ -1051,7 +1052,8 @@
                     (do (log/pr :warn "requested `:inline`; ignoring until feature is implemented")
                         (update-meta fn|name dissoc :inline))
                     fn|name)
-        fnt|overload-groups (->> overloads (mapv #(fnt|overload-data>overload-group % {:lang lang})))
+        fnt|overload-groups
+          (->> overloads (mapv #(fnt|overload-data>overload-group % {:lang lang})))
         ;; only one variadic arg allowed
         _ (s/validate fnt|overload-groups
                       (fn->> (c/lmap :unprimitivized) (c/lfilter :variadic?) count (<- (<= 1))))
@@ -1061,7 +1063,10 @@
                           (c/group-by :positional-args-ct)
                           (map-vals+  :out-type)
                           join (apply concat))
-        variadic-overload (->> fnt|overload-groups (c/lmap :unprimitivized) (c/lfilter :variadic?) first)
+        variadic-overload (->> fnt|overload-groups
+                               (c/lmap :unprimitivized)
+                               (c/lfilter :variadic?)
+                               first)
         register-type (gen-register-type (kw-map fn|name arg-ct->type variadic-overload))
         direct-dispatch-codelist
           (case lang

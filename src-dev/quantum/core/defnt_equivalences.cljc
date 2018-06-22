@@ -149,9 +149,9 @@
 
                #_(def ~(tag "[Ljava.lang.Object;" 'name|__0|input-types)
                  (*<> t/string?))
-               (def ~(tag `Object>Object 'name|__0)
+               (def ~'name|__0
                  (reify Object>Object
-                   (~(tag "java.lang.Object" 'invoke) [_0__ ~(tag "java.lang.Object" 'x)]
+                   (~(tag "java.lang.Object" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)]
                      (let* [~(tag "java.lang.String" 'x) ~'x]
                        ~'x))))
 
@@ -159,9 +159,9 @@
 
                #_(def ~(tag "[Ljava.lang.Object;" 'name|__1|input-types)
                  (*<> (t/isa? Named)))
-               (def ~(tag `Object>Object 'name|__1)
+               (def ~'name|__1
                  (reify Object>Object
-                   (~(tag "java.lang.Object" 'invoke) [_1__ ~(tag "java.lang.Object" 'x)]
+                   (~(tag "java.lang.Object" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)]
                      (let* [~(tag "clojure.lang.Named" 'x) ~'x]
                        (let* [~'out (.getName ~'x)]
                          (t/validate ~'out t/string?))))))
