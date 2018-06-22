@@ -512,7 +512,7 @@
   (cond (utr/class-type? t)
           (conj classes (utr/class-type>class t))
         (utr/value-type? t)
-          (conj classes (utr/value-type>value t))
+          (conj classes (-> t utr/value-type>value c/type))
         (c/= t universal-set)
           #?(:clj  #{nil java.lang.Object}
              :cljs (TODO "Not sure what to do in the case of universal CLJS set"))
