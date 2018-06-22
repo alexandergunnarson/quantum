@@ -936,6 +936,7 @@
 (defns fnt|overload>reify-overload
   [{:as overload
     :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, out-class t/class?]} :fnt/overload
+   gen-gensym fn?
    > (s/seq-of ::reify|overload)]
   (let [interface-k {:out out-class :in arg-classes}
         interface
@@ -943,11 +944,13 @@
               (swap! update interface-k #(or % (eval (fnt-overload>interface arg-classes out-class))))
               (c/get interface-k))
         arglist-code
-          (>vec (concat ['_]
+          (>vec (concat [(gen-gensym '_)]
                   (doto (->> arglist-code|reify|unhinted
-                       (map-indexed
-                         (fn [i arg] (ufth/with-type-hint arg (-> arg-classes (doto pr/ppr-meta) (c/get i) (doto pr/ppr-meta) ufth/>arglist-embeddable-tag)))))
-                  pr/ppr-meta)))]
+                             (map-indexed
+                               (fn [i arg]
+                                 (ufth/with-type-hint arg (-> arg-classes (doto pr/ppr-meta)
+                                   (c/get i) (doto pr/ppr-meta) ufth/>arglist-embeddable-tag)))))
+                        pr/ppr-meta)))]
     {:arglist-code  arglist-code
      :body-form     body-form
      :interface     interface
@@ -956,10 +959,13 @@
 
 #?(:clj
 (defns fnt|overload-group>reify
-  [{:keys [overload-group :fnt/overload-group, i t/integer?, fn|name :quantum.core.specs/fn|name]} _]
+  [{:keys [overload-group :fnt/overload-group
+           i t/integer?
+           fn|name :quantum.core.specs/fn|name]} _
+   gen-gensym fn?]
   (let [reify-overloads (->> (concat [(:unprimitivized overload-group)]
                                       (:primitivized   overload-group))
-                             (c/map fnt|overload>reify-overload))]
+                             (c/map #(fnt|overload>reify-overload % gen-gensym)))]
     `(~'def ~(>symbol (str fn|name "|__" i))
        (reify ~@(->> reify-overloads
                      (c/lmap (fn [{:keys [interface out-class method-sym arglist-code body-form]} #_::reify|overload]
@@ -1035,6 +1041,8 @@
   (prl! kind lang args)
   (let [{:keys [:quantum.core.specs/fn|name overloads :quantum.core.specs/meta] :as args'}
           (s/validate args (case kind :defn ::defnt :fn ::fnt))
+        gen-gensym-base (ufgen/>reproducible-gensym|generator)
+        gen-gensym (fn [x] (symbol (str (gen-gensym-base x) "__")))
         _ (prl! args')
         inline?
           (s/validate (-> fn|name core/meta :inline) (t/? t/boolean?))
@@ -1058,7 +1066,8 @@
         direct-dispatch-codelist
           (case lang
             :clj  (for [[i fnt|overload-group] (c/lindexed fnt|overload-groups)]
-                    (fnt|overload-group>reify (assoc (kw-map i fn|name) :overload-group fnt|overload-group)))
+                    (fnt|overload-group>reify
+                      (assoc (kw-map i fn|name) :overload-group fnt|overload-group) gen-gensym))
             :cljs (TODO))
         base-fn-codelist [] ; TODO
         fn-codelist

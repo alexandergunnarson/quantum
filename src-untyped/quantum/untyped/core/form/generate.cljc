@@ -83,9 +83,10 @@
 
 (def ^:dynamic *reproducible-gensym* nil)
 
-(defn >reproducible-gensym|generator []
+(defn >reproducible-gensym|generator [& memoize?]
   (let [*counter (atom -1)]
-    (memoize #(symbol (str % (swap! *counter inc))))))
+    (cond-> #(symbol (str % (swap! *counter inc)))
+      memoize? memoize)))
 
 (defn unify-gensyms
   "All gensyms defined using two hash symbols are unified to the same
@@ -96,10 +97,11 @@
   ([body reproducible-gensyms?]
     (let [gensym* (or *reproducible-gensym*
                       (memoize (if reproducible-gensyms?
-                                   (>reproducible-gensym|generator)
+                                   (>reproducible-gensym|generator true)
                                    gensym)))]
       (ucore/postwalk
         #(if (unified-gensym? %)
-             (symbol (str (gensym* (str (un-gensym %) "__")) (when-not reproducible-gensyms? "__auto__")))
+             (symbol (str (gensym* (str (un-gensym %) "__"))
+                          (when-not reproducible-gensyms? "__auto__")))
              %)
         body))))

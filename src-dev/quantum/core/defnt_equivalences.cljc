@@ -83,15 +83,24 @@
                  (*<> t/any?))
                (def ~'identity|uninlined|__0
                  (reify
-                   Object>Object   (~(tag "java.lang.Object" 'invoke) [_## ~(tag "java.lang.Object" 'x)] ~'x)
-                   boolean>boolean (~(tag "boolean"          'invoke) [_## ~(tag "boolean"          'x)] ~'x)
-                   byte>byte       (~(tag "byte"             'invoke) [_## ~(tag "byte"             'x)] ~'x)
-                   short>short     (~(tag "short"            'invoke) [_## ~(tag "short"            'x)] ~'x)
-                   char>char       (~(tag "char"             'invoke) [_## ~(tag "char"             'x)] ~'x)
-                   int>int         (~(tag "int"              'invoke) [_## ~(tag "int"              'x)] ~'x)
-                   long>long       (~(tag "long"             'invoke) [_## ~(tag "long"             'x)] ~'x)
-                   float>float     (~(tag "float"            'invoke) [_## ~(tag "float"            'x)] ~'x)
-                   double>double   (~(tag "double"           'invoke) [_## ~(tag "double"           'x)] ~'x)))
+                   Object>Object
+                     (~(tag "java.lang.Object" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)] ~'x)
+                   boolean>boolean
+                     (~(tag "boolean"          'invoke) [~'_1__ ~(tag "boolean"          'x)] ~'x)
+                   byte>byte
+                     (~(tag "byte"             'invoke) [~'_2__ ~(tag "byte"             'x)] ~'x)
+                   short>short
+                     (~(tag "short"            'invoke) [~'_3__ ~(tag "short"            'x)] ~'x)
+                   char>char
+                     (~(tag "char"             'invoke) [~'_4__ ~(tag "char"             'x)] ~'x)
+                   int>int
+                     (~(tag "int"              'invoke) [~'_5__ ~(tag "int"              'x)] ~'x)
+                   long>long
+                     (~(tag "long"             'invoke) [~'_6__ ~(tag "long"             'x)] ~'x)
+                   float>float
+                     (~(tag "float"            'invoke) [~'_7__ ~(tag "float"            'x)] ~'x)
+                   double>double
+                     (~(tag "double"           'invoke) [~'_8__ ~(tag "double"           'x)] ~'x)))
 
                #_(defn ~'identity|uninlined
                  {::t/type (t/fn [t/any?])}
@@ -138,21 +147,21 @@
 
                ;; [t/string?]
 
-               (def ~(tag "[Ljava.lang.Object;" 'name|__0|input-types)
+               #_(def ~(tag "[Ljava.lang.Object;" 'name|__0|input-types)
                  (*<> t/string?))
                (def ~(tag `Object>Object 'name|__0)
                  (reify Object>Object
-                   (~(tag "java.lang.Object" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
+                   (~(tag "java.lang.Object" 'invoke) [_0__ ~(tag "java.lang.Object" 'x)]
                      (let* [~(tag "java.lang.String" 'x) ~'x]
                        ~'x))))
 
                ;; [(t/isa? Named)]
 
-               (def ~(tag "[Ljava.lang.Object;" 'name|__1|input-types)
+               #_(def ~(tag "[Ljava.lang.Object;" 'name|__1|input-types)
                  (*<> (t/isa? Named)))
                (def ~(tag `Object>Object 'name|__1)
                  (reify Object>Object
-                   (~(tag "java.lang.Object" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
+                   (~(tag "java.lang.Object" 'invoke) [_1__ ~(tag "java.lang.Object" 'x)]
                      (let* [~(tag "clojure.lang.Named" 'x) ~'x]
                        (let* [~'out (.getName ~'x)]
                          (t/validate ~'out t/string?))))))
