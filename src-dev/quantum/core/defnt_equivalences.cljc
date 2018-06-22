@@ -152,8 +152,7 @@
                (def ~'name|__0
                  (reify Object>Object
                    (~(tag "java.lang.Object" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)]
-                     (let* [~(tag "java.lang.String" 'x) ~'x]
-                       ~'x))))
+                     (let* [~(tag "java.lang.String" 'x) ~'x] ~'x))))
 
                ;; [(t/isa? Named)]
 
@@ -164,7 +163,7 @@
                    (~(tag "java.lang.Object" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)]
                      (let* [~(tag "clojure.lang.Named" 'x) ~'x]
                        (let* [~'out (.getName ~'x)]
-                         (t/validate ~'out t/string?))))))
+                         (t/validate ~'out ~'(* t/string?)))))))
 
              #_(defn ~'name
                  {::t/type

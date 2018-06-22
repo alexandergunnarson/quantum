@@ -758,10 +758,9 @@
   (cond (not= k :spec) java.lang.Object; default class
         (symbol? spec) (pred->class lang spec))))
 
-(defn >with-post-type
-  [body post-type]
-  `(let [~'out ~body]
-     (s/validate ~'out ~(update-meta post-type dissoc* :runtime?))))
+;; TODO optimize such that `post-form` doesn't create a new type-validator wholesale every time the
+;; function gets run; e.g. extern it
+(defn >with-post-form [body post-form] `(let* [~'out ~body] (t/validate ~'out ~post-form)))
 
 #?(:clj
 (var/def sort-guide "for use in arity sorting, in increasing conceptual size"
@@ -793,13 +792,15 @@
        (c/lmap (fn [t #_t/type?]
                  (if (-> t meta :ref?)
                      (-> t t/type>classes (disj nil) seq)
-                     (let [cs (type>most-primitive-classes t)]
-                       (let [base-classes (->> cs (c/map+ class>simplest-class) >set)
-                             base-classes (cond-> base-classes (contains? cs nil) (conj java.lang.Object))]
-                         (->> cs (c/map+ tcore/class>prim-subclasses)
-                                 (educe (aritoid nil identity set/union) base-classes)
-                                 ;; for purposes of cleanliness and reproducibility in tests
-                                 (sort-by sort-guide)))))))
+                     (let [cs (type>most-primitive-classes t)
+                           base-classes
+                             (cond-> (>set cs)
+                               (contains? cs nil) (-> (disj nil) (conj java.lang.Object)))]
+                       (->> cs
+                            (c/map+ tcore/class>prim-subclasses)
+                            (educe (aritoid nil identity set/union) base-classes)
+                            ;; for purposes of cleanliness and reproducibility in tests
+                            (sort-by sort-guide))))))
        (apply combo/cartesian-product)
        (c/lmap >vec))))
 
@@ -825,8 +826,12 @@
                           lang
                           (c/count args)
                           varargs)))
+        post-form|embeddable (if (or (nil? post-form) (= post-form '_))
+                                 `t/any?
+                                 post-form)
         post-type   (cond (nil? post-form) nil
                           (= post-form '_) t/any?
+                          ;; TODO this becomes an issue when `post-form` references local bindings
                           :else            (eval post-form))
         post-type|runtime? (-> post-type meta :runtime?)
         out-type (if post-type
@@ -840,10 +845,9 @@
                              (:type analyzed)
                              (err! "Body does not match output type" {:body analyzed :output-type post-type})))
                      (:type analyzed))
-        _ (prl! arg-bindings args arg-classes arg-types out-type)
         body-form
           (-> (:form analyzed)
-              (cond-> post-type|runtime? (>with-post-type post-type))
+              (cond-> post-type|runtime? (>with-post-form post-form|embeddable))
               (ufth/cast-bindings|code
                 (->> (c/zipmap-into (map/om) arg-bindings arg-classes)
                      (c/remove-vals' (fn-or nil? (fn= java.lang.Object) t/primitive-class?)))))]
