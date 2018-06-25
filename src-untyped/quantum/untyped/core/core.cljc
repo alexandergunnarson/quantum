@@ -76,7 +76,7 @@
                            :else           ::not-applicable)]
                (if (= similar-class? ::not-applicable)
                    (= code0 code1)
-                   (and similar-class? (ucore/seq= (seq code0) (seq code1) code=))))
+                   (and similar-class? (seq= (seq code0) (seq code1) code=))))
              (cond (seq?    code0) (and (seq?    code1) (seq=      code0       code1  code=))
                    (vector? code0) (and (vector? code1) (seq= (seq code0) (seq code1) code=))
                    (map?    code0) (and (map?    code1) (seq= (seq code0) (seq code1) code=))
@@ -207,15 +207,17 @@
           (zipmap #{:always :error :warn :ns} (repeat true)))))
 
 (defonce *outs
-  (atom #?(:clj  (let [out-path (System/getProperty "quantum.core.log|out-file")
-                       print-to-stderr? (System/getProperty "quantum.core.log|pr-to-stderr")]
-                   (let [_   (binding [*out* *err*] (println "Logging to" out-path))
-                         fos (-> out-path
-                                 (java.io.FileOutputStream.  )
-                                 (java.io.OutputStreamWriter.)
-                                 (java.io.BufferedWriter.    ))]
-                     (fn [] [*err* fos]))
-                   (fn [] [*err*]))
+  (atom #?(:clj  (let [file-stream (when-let [path (System/getProperty "quantum.core.log|out-file")]
+                                     (binding [*out* *err*] (println "Logging to" path))
+                                     (-> path
+                                         (java.io.FileOutputStream.)
+                                         (java.io.OutputStreamWriter.)
+                                         (java.io.BufferedWriter.)))
+                       print-to-stderror (System/getProperty "quantum.core.log|print-to-stderror")
+                       out-stream
+                         (when (not= "false" print-to-stderror) *err*)
+                       outs (->> [out-stream file-stream] (filterv some?))]
+                   (fn [] outs))
            :cljs (fn [] [*out*]))))
 
 (defn print-ns-name-to-outs! [ns-name-]

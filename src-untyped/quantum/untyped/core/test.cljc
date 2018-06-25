@@ -51,7 +51,7 @@
                  (println "FAIL: should be `(= code0 code1)`" code0 code1)))))
   ([code0 code1 & codes] (and (code= code0 code1) (every? #(code= code0 %) codes))))
 
-(defn is-code= [& args] (is (apply code= args))))
+(defn is-code= [& args] (is (apply code= args)))
 
 #?(:clj (defmacro is= [& args] `(is (= ~@args))))
 
