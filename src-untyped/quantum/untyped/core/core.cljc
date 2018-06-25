@@ -207,15 +207,15 @@
           (zipmap #{:always :error :warn :ns} (repeat true)))))
 
 (defonce *outs
-  (atom #?(:clj  (if-let [out-path (or (System/getProperty "quantum.core.log:out-file")
-                                       (System/getProperty "quantum.core.log|out-file"))]
-                     (let [_   (binding [*out* *err*] (println "Logging to" out-path))
-                           fos (-> out-path
-                                   (java.io.FileOutputStream.  )
-                                   (java.io.OutputStreamWriter.)
-                                   (java.io.BufferedWriter.    ))]
-                       (fn [] [*err* fos]))
-                     (fn [] [*err*])) ; in order to not print to file
+  (atom #?(:clj  (let [out-path (System/getProperty "quantum.core.log|out-file")
+                       print-to-stderr? (System/getProperty "quantum.core.log|pr-to-stderr")]
+                   (let [_   (binding [*out* *err*] (println "Logging to" out-path))
+                         fos (-> out-path
+                                 (java.io.FileOutputStream.  )
+                                 (java.io.OutputStreamWriter.)
+                                 (java.io.BufferedWriter.    ))]
+                     (fn [] [*err* fos]))
+                   (fn [] [*err*]))
            :cljs (fn [] [*out*]))))
 
 (defn print-ns-name-to-outs! [ns-name-]
