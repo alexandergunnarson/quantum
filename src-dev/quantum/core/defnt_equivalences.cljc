@@ -543,11 +543,11 @@
                    double+byte>boolean
                      (~(tag "boolean" 'invoke) [~'_42__ ~(tag "double" 'a) ~(tag "byte"   'b)]
                        ~'(Numeric/gt a b))
-                   double+char>boolean
-                     (~(tag "boolean" 'invoke) [~'_43__ ~(tag "double" 'a) ~(tag "char"   'b)]
-                       ~'(Numeric/gt a b))
                    double+short>boolean
-                     (~(tag "boolean" 'invoke) [~'_44__ ~(tag "double" 'a) ~(tag "short"  'b)]
+                     (~(tag "boolean" 'invoke) [~'_43__ ~(tag "double" 'a) ~(tag "short"  'b)]
+                       ~'(Numeric/gt a b))
+                   double+char>boolean
+                     (~(tag "boolean" 'invoke) [~'_44__ ~(tag "double" 'a) ~(tag "char"   'b)]
                        ~'(Numeric/gt a b))
                    double+int>boolean
                      (~(tag "boolean" 'invoke) [~'_45__ ~(tag "double" 'a) ~(tag "int"    'b)]
@@ -562,7 +562,7 @@
                      (~(tag "boolean" 'invoke) [~'_48__ ~(tag "double" 'a) ~(tag "double" 'b)]
                        ~'(Numeric/gt a b))))
 
-                   (defn >
+                   #_(defn >
                      {::t/type
                        (t/fn #?(:clj  [t/comparable-primitive? t/comparable-primitive?
                                        :> t/boolean?]
