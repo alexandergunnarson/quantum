@@ -5,7 +5,7 @@
   (:require
     [clojure.core              :as c]
     [quantum.core.defnt
-      :refer [analyze defnt fnt|code *fn->type]]
+      :refer [analyze defnt fnt|code *fn->type unsupported!]]
     [quantum.untyped.core.analyze.expr :as xp]
     [quantum.untyped.core.collections.diff :as diff
       :refer [diff]]
@@ -57,17 +57,14 @@
                     (.getName)))))
 
        #_(defn ~'pid
-         {::t/spec (t/fn [:> (? t/string?)])})))
+         {::t/type (t/fn [:> (? t/string?)])}
+         )))
 
 )
 
 ;; =====|=====|=====|=====|===== ;;
 
 (is-code=
-
-(macroexpand '
-(defnt identity|uninlined ([x _] x))
-)
 
 ;; ----- implementation ----- ;;
 
@@ -78,9 +75,12 @@
 ;; ----- expanded code ----- ;;
 
 (case (env-lang)
-  :clj  ($ (do ;; [t/any?]
-               #_(def ~(tag "[Ljava.lang.Object;" 'identity|uninlined|__0|input-types)
-                 (*<> t/any?))
+  :clj  ($ (do ;; [x t/any?]
+
+               (def ~(tag "[Ljava.lang.Object;" 'identity|uninlined|__0|input-types)
+                 (*<> ~'t/any?))
+
+               ;; One `reify` because `t/any?` in CLJ does not have any `t/or`-separability
                (def ~'identity|uninlined|__0
                  (reify
                    Object>Object
@@ -104,10 +104,12 @@
 
                #_(defn ~'identity|uninlined
                  {::t/type (t/fn [t/any?])}
-                 [a0##]
-                 (ifs ((Array/get identity|uninlined|__0|input-types 0) a0##)
-                        (.invoke identity|uninlined|__0 a0##)
-                      (unsupported! `identity|uninlined [a0##] 0)))))
+                 [~'a00__]
+                 (ifs ((Array/get ~'identity|uninlined|__0|input-types 0) ~'a00__)
+                        (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
+                                       'identity|uninlined|__0) ~'a00__)
+                      (unsupported! (quote quantum.core.test.defnt-equivalences/identity|uninlined)
+                        [~'a00__] 0)))))
   :cljs ;; Direct dispatch will be simple functions, not `reify`s
         ($ (do (defn ~'identity|uninlined [~'x] ~'x)))))
 
@@ -406,7 +408,7 @@
   #?(:clj  ([a t/comparable-primitive? b t/comparable-primitive? > t/boolean?]
              (Numeric/gt a b))
      :cljs ([a t/double?               b t/double?               > (t/assume t/boolean?)]
-             (cljs.core/>             a b))))
+             (cljs.core/> a b))))
 )
 
 ;; ----- expanded code ----- ;;
@@ -588,7 +590,8 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
-;; TODO fix
+;; TODO fix: current implementation prefers to consolidate into one `reify` rather than splitting it
+;; up as below
 (is-code=
 
 (macroexpand '
@@ -684,8 +687,7 @@
 ;; ----- expanded code ----- ;;
 
 (case (env-lang)
-  :clj ($ (do
-              #_[(t/- t/primitive? t/boolean? t/float? t/double?)]
+  :clj ($ (do #_[x (t/- t/primitive? t/boolean? t/float? t/double?)]
 
               #_(def ~'>long|__0|input-types (*<> t/byte?))
               (def ~'>long|__0
@@ -722,9 +724,9 @@
                     ;; Resolved from `(>long* x)`
                     (.invoke >long*|__4 ~'x))))
 
-              #_[(t/and (t/or t/double? t/float?)
-                        (fnt [x (t/or double? float?)]
-                          (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
+              #_[x (t/and (t/or t/double? t/float?)
+                          (fnt [x (t/or double? float?)]
+                            (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
 
               #_(def ~'>long|__5|input-types
                 (*<> (t/and t/double?
@@ -757,8 +759,8 @@
                   (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
                     (let* [~(tag "clojure.lang.BigInt" 'x) ~'x] ~'(.lpart x)))))
 
-              #_[(t/and (t/isa? java.math.BigInteger)
-                        (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
+              #_[x (t/and (t/isa? java.math.BigInteger)
+                          (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
 
               #_(def ~'>long|__8|input-types
                 (*<> (t/and (t/isa? java.math.BigInteger)
@@ -768,7 +770,7 @@
                   (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
                     (let* [~(tag "java.math.BigInteger" 'x) ~'x] ~'(.longValue x)))))
 
-              #_[t/ratio?]
+              #_[x t/ratio?]
 
               #_(def ~'>long|__9|input-types
                 (*<> t/ratio?))
@@ -799,7 +801,7 @@
                             (.invoke >long|__8 x##)
                             (unsupported! `>long x##)))))))
 
-              #_[(t/value true)]
+              #_[x (t/value true)]
 
               #_(def ~'>long|__10|input-types
                 (*<> (t/value true)))
@@ -807,7 +809,7 @@
                 (reify boolean>long
                   (~(tag "long" 'invoke) [_## ~(tag "boolean" 'x)] 1)))
 
-              #_[(t/value false)]
+              #_[x (t/value false)]
 
               #_(def ~'>long|__11|input-types
                 (*<> (t/value false)))
@@ -815,7 +817,7 @@
                 (reify boolean>long
                   (~(tag "long" 'invoke) [_## ~(tag "boolean" 'x)] 0)))
 
-              #_[t/string?]
+              #_[x t/string?]
 
               #_(def ~'>long|__12|input-types
                 (*<> t/string?))
@@ -824,7 +826,7 @@
                   (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
                     ~'(Long/parseLong x))))
 
-              #_[t/string?]
+              #_[x t/string?]
 
               #_(def ~'>long|__13|input-types
                 (*<> t/string? t/int?))

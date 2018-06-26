@@ -26,6 +26,7 @@
       :refer [istr]]
     [quantum.untyped.core.data
       :refer [kw-map]]
+    [quantum.untyped.core.data.array        :as arr]
     [quantum.untyped.core.data.map          :as map]
     [quantum.untyped.core.data.set          :as set]
     [quantum.untyped.core.defnt
@@ -894,11 +895,11 @@
                            ;; supported
                            (assert kind :sym)
                            binding-)))
-            arg-types|unprimitivized
+            arg-types|form
               (->> args
                    (mapv (fn [{[kind #_#{:any :spec}, t #_t/form?] :spec}]
-                           (case kind :any   t/any?
-                                      :spec  (-> t eval t/>type)))))
+                           (case kind :any `t/any? :spec t))))
+            arg-types|unprimitivized (->> arg-types|form (mapv (fn-> eval t/>type)))
             arg-classes-seq (arg-types>arg-classes-seq|primitivized arg-types|unprimitivized)
             ;; `unprimitivized` is first because of class sorting
             [unprimitivized & primitivized]
@@ -913,7 +914,8 @@
                                (kw-map arg-bindings arg-classes arg-types args
                                        body-codelist|pre-analyze lang post-form varargs
                                        varargs-binding))))))]
-        {:unprimitivized unprimitivized
+        {:arg-types|form arg-types|form
+         :unprimitivized unprimitivized
          :primitivized   primitivized}))))
 
 (def fnt-method-sym 'invoke)
@@ -942,7 +944,8 @@
 #?(:clj
 (defns fnt|overload>reify-overload
   [{:as overload
-    :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, out-class t/class?]} :fnt/overload
+    :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, out-class t/class?]}
+   :fnt/overload
    gen-gensym fn?
    > (s/seq-of ::reify|overload)]
   (let [interface-k {:out out-class :in arg-classes}
@@ -966,9 +969,7 @@
 
 #?(:clj
 (defns fnt|overload-group>reify
-  [{:keys [overload-group :fnt/overload-group
-           i t/integer?
-           fn|name :quantum.core.specs/fn|name]} _
+  [{:keys [fn|name :quantum.core.specs/fn|name, i t/integer?, overload-group :fnt/overload-group]} _
    gen-gensym fn?]
   (let [reify-overloads (->> (concat [(:unprimitivized overload-group)]
                                       (:primitivized   overload-group))
@@ -980,6 +981,14 @@
                                 `(~(ufth/with-type-hint method-sym (ufth/>arglist-embeddable-tag out-class))
                                   ~arglist-code ~body-form)]))
                      lcat))))))
+
+#?(:clj
+(defns fnt|overload-group>input-types-decl
+  [{:keys [fn|name :quantum.core.specs/fn|name
+           i t/integer?
+           overload-group :fnt/overload-group]} _]
+ `(def ~(ufth/with-type-hint (>symbol (str fn|name "|__" i "|input-types")) "[Ljava.lang.Object;")
+    (arr/*<> ~(get-in overload-group [:arg-types|form i])))))
 
 (def allowed-shorthand-tag-chars "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
@@ -1027,6 +1036,9 @@
       nil
       overloads)))
 
+(defns unsupported! [name- _ #_t/qualified-symbol?, args t/indexed?, i _ #_index?]
+  (TODO))
+
 (defns gen-register-type
   "Registers in the map of qualified symbol to input type, to output type
 
@@ -1043,6 +1055,17 @@
                                 (:out-type variadic-overload)
                                 (err! "Arg count not enough for variadic overload"))])))))
     true))
+
+#_(defns >base-fn [...]
+  #_(defn ~'identity|uninlined
+    {::t/type (t/fn [t/any?])}
+    [~'a00__]
+    (ifs ((Array/get ~'identity|uninlined|__0|input-types 0) ~'a00__)
+           (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
+                          'identity|uninlined|__0) ~'a00__)
+         (unsupported! (quote quantum.core.test.defnt-equivalences/identity|uninlined)
+           [~'a00__] 0)))
+           )
 
 (defns fnt|code [kind #{:fn :defn}, lang ::lang, args _]
   (prl! kind lang args)
@@ -1076,11 +1099,18 @@
         register-type (gen-register-type (kw-map fn|name arg-ct->type variadic-overload))
         direct-dispatch-codelist
           (case lang
-            :clj  (for [[i fnt|overload-group] (c/lindexed fnt|overload-groups)]
-                    (fnt|overload-group>reify
-                      (assoc (kw-map i fn|name) :overload-group fnt|overload-group) gen-gensym))
+            :clj  (->> fnt|overload-groups
+                       (map-indexed
+                         (fn [i {:as fnt|overload-group :keys [arg-types|form]}]
+                           (let [in {:i i :fn|name fn|name :overload-group fnt|overload-group}]
+                             (cond-> []
+                               (c/contains? arg-types|form)
+                                 (conj (fnt|overload-group>input-types-decl in))
+                               true
+                                 (conj (fnt|overload-group>reify in gen-gensym))))))
+                       (apply concat))
             :cljs (TODO))
-        base-fn-codelist [] ; TODO
+        base-fn (>base-fn ...)
         fn-codelist
           (case lang
             :clj  (->> `[~@direct-dispatch-codelist
