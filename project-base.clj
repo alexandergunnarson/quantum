@@ -631,7 +631,7 @@
                   ;; ----- Telemetry ----- ;;
                   "-XX:-OmitStackTraceInFastThrow"
                   "-XX:ErrorFile=./JVMErrorDump.log"
-                  "-Dquantum.core.log:out-file=./out.log"
+                  "-Dquantum.core.log|out-file=./out.log"
                   ;; ----- Compilation ----- ;;
                    #_(case system-type
                        "t2.micro"
