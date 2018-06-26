@@ -35,9 +35,9 @@
 (defn gen-args
   ([max-n] (gen-args 0 max-n))
   ([min-n max-n] (gen-args min-n max-n "x"))
-  ([min-n max-n s] (gen-args min-n max-n s false))
-  ([min-n max-n s gensym?]
-    (->> (range min-n max-n) (mapv (fn [i] (symbol (str (if gensym? (gensym s) s) i)))))))
+  ([min-n max-n s] (gen-args min-n max-n s identity))
+  ([min-n max-n s gen-gensym]
+    (->> (range min-n max-n) (mapv (fn [i] (gen-gensym (str s i)))))))
 
 (defn arity-builder [positionalf variadicf & [min-positional-arity max-positional-arity sym-genf no-gensym?]]
   (let [mina (or min-positional-arity 0)

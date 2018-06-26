@@ -1812,3 +1812,8 @@
 
          ;; Standard "uncuttable" types
          (-def integral?  (or primitive? number?))
+
+         ;; TODO make into a type
+         (def  nneg-int?  #(and (integer? %) (c/>= % 0)))
+         ;; TODO make into a type
+         (def  index?     nneg-int?)

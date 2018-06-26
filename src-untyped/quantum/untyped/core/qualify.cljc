@@ -25,7 +25,7 @@
 
 (defn qualify
   #?(:clj ([sym] (qualify *ns* sym)))
-  ([?ns sym] (symbol (?ns->name ?ns) (name sym))))
+          ([?ns sym] (symbol (?ns->name ?ns) (name sym))))
 
 (defn qualify|dot [sym ns-]
   (symbol (str (?ns->name ns-) "." (name sym))))

@@ -50,8 +50,7 @@
     [quantum.untyped.core.qualify  :as qual]
     [quantum.untyped.core.reducers :as ur]
     [quantum.untyped.core.form.generate
-      :refer [gen-args arity-builder max-positional-arity
-              unify-gensyms]])
+      :refer [arity-builder max-positional-arity unify-gensyms]])
 #?(:cljs
   (:require-macros
     [quantum.core.reducers
