@@ -56,9 +56,9 @@
              ~'(->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
                     (.getName)))))
 
-       #_(defn ~'pid
+       (defn ~'pid
          {::t/type (t/fn [:> (? t/string?)])}
-         )))
+         [] (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object" 'pid|__0)))))
 
 )
 
@@ -79,7 +79,6 @@
 
                (def ~(tag "[Ljava.lang.Object;" 'identity|uninlined|__0|input-types)
                  (*<> ~'t/any?))
-
                ;; One `reify` because `t/any?` in CLJ does not have any `t/or`-separability
                (def ~'identity|uninlined|__0
                  (reify
@@ -141,15 +140,13 @@
 ;; ----- expanded code ----- ;;
 
 (case (env-lang)
-  :clj  ($ (do ;; Only direct dispatch for primitives or for Object, not for subclasses of
-               ;; Object
+  :clj  ($ (do ;; Only direct dispatch for primitives or for Object, not for subclasses of Object
                ;; Return value can be primitive; in this case it's not
-               ;; The macro in a typed context will find the appropriate dispatch at compile
-               ;; time
+               ;; The macro in a typed context will find the appropriate dispatch at compile time
 
                ;; [t/string?]
 
-               #_(def ~(tag "[Ljava.lang.Object;" 'name|__0|input-types)
+               (def ~(tag "[Ljava.lang.Object;" 'name|__0|input-types)
                  (*<> t/string?))
                (def ~'name|__0
                  (reify Object>Object
@@ -564,7 +561,7 @@
                      (~(tag "boolean" 'invoke) [~'_48__ ~(tag "double" 'a) ~(tag "double" 'b)]
                        ~'(Numeric/gt a b))))
 
-                   #_(defn >
+                 #_(defn >
                      {::t/type
                        (t/fn #?(:clj  [t/comparable-primitive? t/comparable-primitive?
                                        :> t/boolean?]

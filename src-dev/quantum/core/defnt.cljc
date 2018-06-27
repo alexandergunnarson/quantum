@@ -1096,9 +1096,9 @@
 
 ;; TODO extend to more than just assuming always one arity
 ;; TODO check whether it even needs to get created based on arglist length etc.
-;; TODO `get-relevant-reify`, `get-relevant-reify-overload`
+;; TODO `get-relevant-reify-overload`
 (defns >dynamic-dispatch-fn|form
-  [{:keys [fn|name _, fnt|overload-groups _, lang _, reify-groups _]} _]
+  [{:keys [fn|name _, fnt|overload-groups _, gen-gensym fn?, lang _, reify-groups _]} _]
   (let [fnt|overload-group (first fnt|overload-groups)
         arglist            (ufgen/gen-args 0 (count fnt|overload-group) "x" gen-gensym)
         i|arg              0
@@ -1158,7 +1158,7 @@
           (case lang
             :clj  (->> `[~@(:form direct-dispatch)
                          ~(>dynamic-dispatch-fn|form
-                            (kw-map fnt|overload-groups lang reify-groups))]
+                            (kw-map fn|name fnt|overload-groups gen-gensym lang reify-groups))]
                         (remove nil?))
             :cljs (TODO))
         overloads|code (->> fnt|overload-groups (c/map+ :unprimitivized) (c/map :code))
