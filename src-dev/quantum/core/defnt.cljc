@@ -761,7 +761,7 @@
 
 ;; TODO optimize such that `post-form` doesn't create a new type-validator wholesale every time the
 ;; function gets run; e.g. extern it
-(defn >with-post-form [body post-form] `(let* [~'out ~body] (t/validate ~'out ~post-form)))
+(defn >with-post-form [body post-form] `(t/validate ~body ~post-form))
 
 #?(:clj
 (var/def sort-guide "for use in arity sorting, in increasing conceptual size"

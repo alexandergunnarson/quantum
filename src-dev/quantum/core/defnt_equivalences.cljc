@@ -58,7 +58,7 @@
 
        (defn ~'pid
          {::t/type (t/fn [:> (? t/string?)])}
-         [] (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object" 'pid|__0)))))
+         ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object" 'pid|__0))))))
 
 )
 
@@ -101,14 +101,12 @@
                    double>double
                      (~(tag "double"           'invoke) [~'_8__ ~(tag "double"           'x)] ~'x)))
 
-               #_(defn ~'identity|uninlined
+               (defn ~'identity|uninlined
                  {::t/type (t/fn [t/any?])}
-                 [~'a00__]
-                 (ifs ((Array/get ~'identity|uninlined|__0|input-types 0) ~'a00__)
-                        (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
-                                       'identity|uninlined|__0) ~'a00__)
-                      (unsupported! (quote quantum.core.test.defnt-equivalences/identity|uninlined)
-                        [~'a00__] 0)))))
+                 ([~'x00__]
+                   ;; Checks elided because `t/any?` doesn't require a check
+                   (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
+                                  'identity|uninlined|__0) ~'a00__)))))
   :cljs ;; Direct dispatch will be simple functions, not `reify`s
         ($ (do (defn ~'identity|uninlined [~'x] ~'x)))))
 
@@ -155,28 +153,30 @@
 
                ;; [(t/isa? Named)]
 
-               #_(def ~(tag "[Ljava.lang.Object;" 'name|__1|input-types)
+               (def ~(tag "[Ljava.lang.Object;" 'name|__1|input-types)
                  (*<> (t/isa? Named)))
                (def ~'name|__1
                  (reify Object>Object
                    (~(tag "java.lang.Object" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)]
                      (let* [~(tag "clojure.lang.Named" 'x) ~'x]
-                       (let* [~'out (.getName ~'x)]
-                         (t/validate ~'out ~'(* t/string?)))))))
+                       (t/validate ~'(.getName x) ~'(* t/string?))))))
 
-             #_(defn ~'name
+               (defn ~'name
                  {::t/type
-                   (t/fn  [t/string?       :> t/string?]
-                 #?(:clj  [(t/isa? Named)  :> (* t/string?)]
-                    :cljs [(t/isa? INamed) :> (* t/string?)]))}
-                 [a0##]
-                 (ifs ((Array/get name|__0|input-types 0) a0##)
-                        (.invoke name|__0 a0##)
-                      (unsupported! `>name [a0##] 0)))))
-  :cljs ($ (do (defn ~'name [~'x]
-                 (ifs (string? x)           x
+                   (t/fn [t/string?      :> t/string?]
+                         [(t/isa? Named) :> (* t/string?)])}
+                 ([~'x00__]
+                   (ifs ((Array/get ~'name|__0|input-types 0) ~'x00__)
+                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
+                                         'name|__0) ~'x00__)
+                        ((Array/get ~'name|__1|input-types 0) ~'x00__)
+                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
+                                         'name|__1) ~'x00__)
+                        (unsupported! `name [~'x00__] 0))))))
+  :cljs ($ (do (defn ~'name [~'x00__]
+                 (ifs (t/string? x)         x
                       (satisfies? INamed x) (-name x)
-                      (err! "Not supported for type" {:fn `name :type (type x)}))))))
+                      (unsupported! `name [~'x00__] 0))))))
 
 )
 
@@ -197,6 +197,8 @@
 (case (env-lang)
   :clj  ($ (do ;; [x t/nil?]
 
+               (def ~(tag "[Ljava.lang.Object;" 'some?|__0|input-types)
+                 (*<> t/nil?))
                (def ~'some?|__0
                  (reify
                    Object>boolean
@@ -204,6 +206,8 @@
 
                ;; [x t/any?]
 
+               (def ~(tag "[Ljava.lang.Object;" 'some?|__1|input-types)
+                 (*<> t/any?))
                (def ~'some?|__1
                  (reify
                    Object>boolean
@@ -225,11 +229,18 @@
                    double>boolean
                      (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] true)))
 
-             #_(defn ~'some?
+               (defn ~'some?
                  {::t/type (t/fn [t/nil?]
                                  [t/any?])}
-                 ...
-                 )))
+                 ([~'x00__]
+                   (ifs ((Array/get ~'some?|__0|input-types 0) ~'x00__)
+                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
+                                         'some?|__0) ~'x00__)
+                        ;; TODO eliminate this check because it's not needed (`t/any?`)
+                        ((Array/get ~'some?|__1|input-types 0) ~'x00__)
+                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
+                                         'some?|__1) ~'x00__)
+                        (unsupported! `some? [~'x00__] 0))))))
   :cljs ($ (do (defn ~'some? [~'x]
                  (ifs (nil? x) false
                       true)))))
@@ -251,32 +262,52 @@
 ;; ----- expanded code ----- ;;
 
 (case (env-lang)
-  :clj  ($ (do ;;[(t/isa? Reduced)]
+  :clj  ($ (do ;; [x (t/isa? Reduced)]
 
+               (def ~(tag "[Ljava.lang.Object;" 'reduced?|__0|input-types)
+                 (*<> (t/isa? Reduced)))
                (def ~'reduced?|__0
                  (reify
                    Object>boolean  (~(tag "boolean" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)]
                                      (let* [~(tag "clojure.lang.Reduced" 'x) ~'x] true))))
 
-               ;; [t/any?]
+               ;; [x t/any?]
 
+               (def ~(tag "[Ljava.lang.Object;" 'reduced?|__1|input-types)
+                 (*<> t/any?))
                (def ~'reduced?|__1
                  (reify
-                   Object>boolean  (~(tag "boolean" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)] false)
-                   boolean>boolean (~(tag "boolean" 'invoke) [~'_2__ ~(tag "boolean"          'x)] false)
-                   byte>boolean    (~(tag "boolean" 'invoke) [~'_3__ ~(tag "byte"             'x)] false)
-                   short>boolean   (~(tag "boolean" 'invoke) [~'_4__ ~(tag "short"            'x)] false)
-                   char>boolean    (~(tag "boolean" 'invoke) [~'_5__ ~(tag "char"             'x)] false)
-                   int>boolean     (~(tag "boolean" 'invoke) [~'_6__ ~(tag "int"              'x)] false)
-                   long>boolean    (~(tag "boolean" 'invoke) [~'_7__ ~(tag "long"             'x)] false)
-                   float>boolean   (~(tag "boolean" 'invoke) [~'_8__ ~(tag "float"            'x)] false)
-                   double>boolean  (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] false)))
+                   Object>boolean
+                     (~(tag "boolean" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)] false)
+                   boolean>boolean
+                     (~(tag "boolean" 'invoke) [~'_2__ ~(tag "boolean"          'x)] false)
+                   byte>boolean
+                     (~(tag "boolean" 'invoke) [~'_3__ ~(tag "byte"             'x)] false)
+                   short>boolean
+                     (~(tag "boolean" 'invoke) [~'_4__ ~(tag "short"            'x)] false)
+                   char>boolean
+                     (~(tag "boolean" 'invoke) [~'_5__ ~(tag "char"             'x)] false)
+                   int>boolean
+                     (~(tag "boolean" 'invoke) [~'_6__ ~(tag "int"              'x)] false)
+                   long>boolean
+                     (~(tag "boolean" 'invoke) [~'_7__ ~(tag "long"             'x)] false)
+                   float>boolean
+                     (~(tag "boolean" 'invoke) [~'_8__ ~(tag "float"            'x)] false)
+                   double>boolean
+                     (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] false)))
 
-             #_(defn ~'reduced?
+               (defn ~'reduced?
                  {::t/type (t/fn [(t/isa? Reduced)]
                                  [t/any?])}
-                 ...
-                 )))
+                 ([~'x00__]
+                   (ifs ((Array/get ~'reduced?|__0|input-types 0) ~'x00__)
+                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
+                                         'reduced?|__0) ~'x00__)
+                        ;; TODO eliminate this check because it's not needed (`t/any?`)
+                        ((Array/get ~'reduced?|__1|input-types 0) ~'x00__)
+                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
+                                         'reduced?|__1) ~'x00__)
+                        (unsupported! `reduced? [~'x00__] 0))))))
   :cljs ($ (do (defn ~'reduced? [~'x]
                  (ifs (instance? Reduced x) true false)))))
 
@@ -298,20 +329,26 @@
 (case (env-lang)
   :clj  ($ (do ;; [x t/boolean?]
 
+               (def ~(tag "[Ljava.lang.Object;" '>boolean|__0|input-types)
+                 (*<> t/boolean?))
                (def ~'>boolean|__0
                  (reify
                    boolean>boolean
-                     (~(tag "boolean" 'invoke) [~'_0__ ~(tag "boolean"          'x)] ~'x)))
+                     (~(tag "boolean" 'invoke) [~'_0__  ~(tag "boolean"          'x)] ~'x)))
 
                ;; [x t/nil? -> (- t/nil? t/boolean?)]
 
+               (def ~(tag "[Ljava.lang.Object;" '>boolean|__1|input-types)
+                 (*<> t/nil?))
                (def ~'>boolean|__1
                  (reify
                    Object>boolean
-                     (~(tag "boolean" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)] false)))
+                     (~(tag "boolean" 'invoke) [~'_1__  ~(tag "java.lang.Object" 'x)] false)))
 
                ;; [x t/any? -> (- t/any? t/nil? t/boolean?)]
 
+               (def ~(tag "[Ljava.lang.Object;" '>boolean|__1|input-types)
+                 (*<> t/any?))
                (def ~'>boolean|__2
                  (reify
                    Object>boolean
@@ -333,12 +370,22 @@
                    double>boolean
                      (~(tag "boolean" 'invoke) [~'_10__ ~(tag "double"           'x)] true)))
 
-             #_(defn ~'>boolean
+               (defn ~'>boolean
                  {::t/type (t/fn [t/boolean?]
                                  [t/nil?]
                                  [t/any?])}
-                 ...
-                 )))
+                 ([~'x00__]
+                   (ifs ((Array/get ~'>boolean|__0|input-types 0) ~'x00__)
+                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.boolean>boolean"
+                                         '>boolean|__0) ~'x00__)
+                        ((Array/get ~'>boolean|__1|input-types 0) ~'x00__)
+                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
+                                         '>boolean|__1) ~'x00__)
+                        ;; TODO eliminate this check because it's not needed (`t/any?`)
+                        ((Array/get ~'>boolean|__2|input-types 0) ~'x00__)
+                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
+                                         '>boolean|__2) ~'x00__)
+                        (unsupported! `>boolean [~'x00__] 0))))))
   :cljs ($ (do (defn ~'>boolean [~'x]
                  (ifs (boolean? x) x
                       (nil?     x) false
@@ -365,7 +412,7 @@
                   (t/fn [(t/- t/primitive? t/boolean?)]
                         [(t/ref (t/isa? Number))]))
 
-              ;; [(t/- t/primitive? t/boolean?)]
+              ;; [x (t/- t/primitive? t/boolean?)]
 
               (def ~'>int*|__0
                 (reify
@@ -384,7 +431,7 @@
                   double>int (~(tag "int" 'invoke) [~'_6__ ~(tag "double"           'x)]
                                ~'(Primitive/uncheckedIntCast x))))
 
-              ;; [(t/ref (t/isa? Number))
+              ;; [x (t/ref (t/isa? Number))
               ;;  -> (t/- (t/ref (t/isa? Number)) (t/- t/primitive? t/boolean?))]
 
               (def ~'>int*|__1
