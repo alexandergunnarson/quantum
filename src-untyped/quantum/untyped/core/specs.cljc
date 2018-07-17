@@ -85,9 +85,6 @@
 
 ;; defn, defn-, fn
 
-(s/def :quantum.core.specs/pre-meta  (s/? :quantum.core.specs/meta))
-(s/def :quantum.core.specs/post-meta (s/? :quantum.core.specs/meta))
-
 (s/def :quantum.core.specs/fn|arglist
   (s/and
     vector?
@@ -112,6 +109,9 @@
 (s/def ::fn|name :quantum.core.specs/fn|name)
 
 (s/def :quantum.core.specs/docstring string?)
+
+(s/def :quantum.core.specs/pre-meta  (s/? :quantum.core.specs/meta))
+(s/def :quantum.core.specs/post-meta (s/? :quantum.core.specs/meta))
 
 (s/def :quantum.core.specs/fn|unique-doc
   #(->> [(:quantum.core.specs/docstring %)

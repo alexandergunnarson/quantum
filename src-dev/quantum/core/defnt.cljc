@@ -78,6 +78,13 @@
 #_(:clj (ns-unmap (find-ns 'quantum.core.defnt) 'reformat-string))
 
 #_"
+
+LEFT OFF LAST TIME (7/17/2018):
+- Add specs to as many fns as we can in order to get it back to working state and move forward more
+  quickly
+
+
+
 - With `defnt`, protocols and interfaces aren't needed. You can just create `t/fn`s that you can
   then conform your fns to.
 - `dotyped`, `defnt`, and `fnt` create typed contexts in which their internal forms are analyzed
@@ -729,10 +736,14 @@
 
 #_(s/def :fnt|overload/body-codelist (t/seq-of :quantum.core.specs/code))
 
-;; Internal
+;; Internal specs
+
+(s/def ::fnt|overload|arg-classes (s/vec-of t/class?))
+(s/def ::fnt|overload|arg-types   t/any?)
+
 (s/def ::fnt|overload
-  (s/kv {:arg-classes                 (s/vec-of t/class?)
-         :arg-types                   t/any?
+  (s/kv {:arg-classes                 ::fnt|overload|arg-classes
+         :arg-types                   ::fnt|overload|arg-types
          :arglist-code|fn|hinted      t/any?
          :arglist-code|reify|unhinted t/any?
          :body-form                   t/any?
@@ -748,6 +759,11 @@
                    :reify/method-sym
                    :reify/arglist-code
                    :reify|overload/body-form]))
+
+(s/def ::reify
+  (s/kv {:form      t/any?
+         :name      simple-symbol?
+         :overloads (s/vec-of ::reify|overload)}))
 
 (s/def ::lang #{:clj :cljs})
 
@@ -785,7 +801,7 @@
     [float]
     [double]]
    which includes all primitive subclasses of the type."
-  [arg-types (s/seq-of t/type?) > (s/seq-of (s/vec-of t/class?))]
+  [arg-types (s/seq-of t/type?) > (s/seq-of ::fnt|overload|arg-classes)]
   (->> arg-types
        (c/lmap (fn [t #_t/type?]
                  (if (-> t meta :ref?)
@@ -808,8 +824,9 @@
   "Is given `arg-classes` and `arg-types`. In order to determine the out-type, performs an analysis
    using (in part) these pieces of data, but does not use the possibly-updated `arg-types` as
    computed in the analysis. As a result, does not yet support type inference."
-  [{:keys [arg-bindings _, arg-classes _, arg-types _, args _, body-codelist|pre-analyze _,
-           lang ::lang, post-form _, varargs _, varargs-binding _]} _
+  [{:keys [arg-bindings _, arg-classes ::fnt|overload|arg-classes
+           arg-types ::fnt|overload|arg-types, args _, body-codelist|pre-analyze _, lang ::lang
+           post-form _, varargs _, varargs-binding _]} _
    > ::fnt|overload]
   (let [env         (->> (zipmap arg-bindings arg-types)
                          (c/map' (fn [[arg-binding arg-type]]
@@ -887,7 +904,7 @@
             pre-form [:pre _]
             [post-type _, post-form _] [:post _]} [:arglist _]
             body-codelist|pre-analyze [:body _]} _
-   {:as opts :keys [lang ::lang, symbolic-analysis? t/boolean?]} _
+   {:as opts :keys [::lang ::lang, symbolic-analysis? t/boolean?]} _
    > t/any?]
   (if symbolic-analysis?
       (err! "Symbolic analysis not supported yet")
@@ -986,7 +1003,7 @@
 #?(:clj
 (defns fnt|overload-group>reify
   [{:keys [::uss/fn|name ::uss/fn|name, i t/index?, overload-group :fnt/overload-group]} _
-   gen-gensym fn?]
+   gen-gensym fn? > ::reify]
   (let [reify-overloads (->> (concat [(:unprimitivized overload-group)]
                                       (:primitivized   overload-group))
                              (c/map #(fnt|overload>reify-overload % gen-gensym)))
@@ -1156,7 +1173,7 @@
                         (update-meta fn|name dissoc :inline))
                     fn|name)
         fnt|overload-groups
-          (->> overloads (mapv #(fnt|overload-data>overload-group % {:lang lang})))
+          (->> overloads (mapv #(fnt|overload-data>overload-group % {::lang lang})))
         ;; only one variadic arg allowed
         _ (s/validate fnt|overload-groups
                       (fn->> (c/lmap :unprimitivized) (c/lfilter :variadic?) count (<- (<= 1))))
