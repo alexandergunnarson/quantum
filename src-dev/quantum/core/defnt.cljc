@@ -82,6 +82,7 @@
 LEFT OFF LAST TIME (7/17/2018):
 - Add specs to as many fns as we can in order to get it back to working state and move forward more
   quickly
+- Then get dynamic dispatch working (see the TODOs around that)
 
 
 
