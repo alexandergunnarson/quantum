@@ -414,6 +414,8 @@
 
               ;; [x (t/- t/primitive? t/boolean?)]
 
+              (def ~(tag "[Ljava.lang.Object;" '>int*|__0|input-types)
+                (*<> (t/- t/primitive? t/boolean?)))
               (def ~'>int*|__0
                 (reify
                   byte>int   (~(tag "int" 'invoke) [~'_0__ ~(tag "byte"             'x)]

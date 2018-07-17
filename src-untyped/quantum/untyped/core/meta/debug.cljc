@@ -34,12 +34,13 @@
   (reify
     java.lang.Thread$UncaughtExceptionHandler
     (^void uncaughtException [_ ^Thread t ^Throwable e]
+      ;; TODO (@clojure.core/atom|proto-repl|print-err-fn e) ?
       (println "Exception in thread" (str t ":"))
       (trace e)))))
 
 #?(:clj
 (defn print-pretty-exceptions!
-  ([] (Thread/setDefaultUncaughtExceptionHandler default-exception-handler))
+  ([] (->> (Thread/getAllStackTraces) keys (map print-pretty-exceptions!) dorun))
   ([^Thread t] (.setUncaughtExceptionHandler t default-exception-handler))))
 
 (def stack-depth
@@ -55,8 +56,8 @@
     (let [st (identity
                #?(:clj  (-> (Thread/currentThread) .getStackTrace)
                   :cljs (-> (js/Error) .-stack
-                            ; TODO Different browsers have different
-                            ; implementations of stack traces
+                            ;; TODO Different browsers have different
+                            ;; implementations of stack traces
                             (str/split "\n    at "))))
           #?(:clj ^StackTraceElement elem
              :cljs elem)

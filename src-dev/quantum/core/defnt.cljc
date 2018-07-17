@@ -1102,7 +1102,8 @@
   (let [fnt|overload-group (first fnt|overload-groups)
         arglist            (ufgen/gen-args 0 (count fnt|overload-group) "x" gen-gensym)
         i|arg              0
-        arg-sym            (get arglist i|arg)]
+        arg-sym            (get arglist i|arg)
+        get-relevant-reify-overload (constantly nil)]
    `(defn ~fn|name
       {::t/type (t/fn ~@(->> fnt|overload-groups (map :arg-types|form)))}
       ~arglist
@@ -1120,7 +1121,7 @@
                             ~arg-sym)
                          `(~dotted-reify-method-sym ~hinted-reify-sym ~arg-sym)])))
                   lcat)
-           (unsupported! (quote ~(qualify fn|name)) [~@arglist] ~i)))))
+           (unsupported! (quote ~(qualify fn|name)) [~@arglist] ~i|arg)))))
 
 (defns fnt|code [kind #{:fn :defn}, lang ::lang, args _]
   (prl! kind lang args)
