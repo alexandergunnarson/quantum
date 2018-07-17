@@ -404,6 +404,7 @@
        '(do (require
               '[no.disassemble :refer [disassemble]]
               'quantum.untyped.core.error
+              'quantum.untyped.core.meta.debug
               'quantum.untyped.core.print
               'quantum.untyped.core.print.prettier
               '[quantum.untyped.core.log :refer [prl!]])
@@ -418,6 +419,7 @@
                              (quantum.untyped.core.print/ppr %))))
             (intern 'clojure.core 'atom|proto-repl|print-err-fn
                     (atom #(quantum.untyped.core.print/ppr-error %)))
+            (quantum.untyped.core.meta.debug/print-pretty-exceptions!)
           #_(clojure.main/repl :print ... :caught ...))}})
 
 (defn >cljsbuild-builds
