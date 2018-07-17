@@ -400,20 +400,25 @@
    :aot '[sparkling.serialization sparkling.destructuring]
    ;; ===== REPL ===== ;;
    :repl-options
-     {:init '(do (require
-                   '[no.disassemble :refer [disassemble]]
-                   'quantum.untyped.core.error
-                   'quantum.untyped.core.print
-                   'quantum.untyped.core.print.prettier
-                   '[quantum.untyped.core.log :refer [prl!]])
-                 (quantum.untyped.core.print.prettier/extend-pretty-printing!)
-                 (reset! quantum.untyped.core.error/*pr-data-to-str? true)
-                 #_(clojure.main/repl
-                   :print  #(binding [*print-meta* true
-                                      quantum.untyped.core.print/*collapse-symbols?* true
-                                      quantum.untyped.core.print/*print-as-code?* true]
-                              (quantum.untyped.core.print/ppr %))
-                   :caught #'quantum.untyped.core.print/ppr-error))}})
+     {:init
+       '(do (require
+              '[no.disassemble :refer [disassemble]]
+              'quantum.untyped.core.error
+              'quantum.untyped.core.print
+              'quantum.untyped.core.print.prettier
+              '[quantum.untyped.core.log :refer [prl!]])
+            (quantum.untyped.core.print.prettier/extend-pretty-printing!)
+            (reset! quantum.untyped.core.error/*pr-data-to-str? true)
+            ;; For use with Atom's Proto-REPL
+            ;; Interned in `clojure.core` in order to not be clobbered by `refresh`
+            (intern 'clojure.core 'atom|proto-repl|print-fn
+                    (atom #(binding [*print-meta* true
+                                     quantum.untyped.core.print/*collapse-symbols?* true
+                                     quantum.untyped.core.print/*print-as-code?* true]
+                             (quantum.untyped.core.print/ppr %))))
+            (intern 'clojure.core 'atom|proto-repl|print-err-fn
+                    (atom #(quantum.untyped.core.print/ppr-error %)))
+          #_(clojure.main/repl :print ... :caught ...))}})
 
 (defn >cljsbuild-builds
   "Note that for Figwheel to work, no character in the build IDs can necessitate an
@@ -439,13 +444,13 @@
                         :quantum-dynamic-source
                           [(:typed   quantum-source-paths)
                            (:untyped quantum-source-paths)
-                           (:posh    quantum-source-paths)]
+                           #_(:posh    quantum-source-paths)]
                         :quantum-dynamic-source-untyped
                           [(:untyped quantum-source-paths)
-                           (:posh    quantum-source-paths)]
+                           #_(:posh    quantum-source-paths)]
                         :re-frame-trace
                           (cond->
-                            [(:posh  quantum-source-paths)
+                            [#_(:posh  quantum-source-paths)
                              (if quantum?
                                  "./src-re-frame-trace"
                                  (:re-frame-trace quantum-source-paths))]
@@ -632,6 +637,7 @@
                   "-XX:-OmitStackTraceInFastThrow"
                   "-XX:ErrorFile=./JVMErrorDump.log"
                   "-Dquantum.core.log|out-file=./out.log"
+                  "-Dquantum.core.log|print-to-stderror=false"
                   ;; ----- Compilation ----- ;;
                    #_(case system-type
                        "t2.micro"
@@ -878,7 +884,7 @@
               {:source-paths (vals quantum-source-paths)})
           :quantum|dynamic-source|untyped
             (when-not quantum?
-              {:source-paths [(:untyped quantum-source-paths) (:posh quantum-source-paths)]})
+              {:source-paths [(:untyped quantum-source-paths) #_(:posh quantum-source-paths)]})
           ;; ----- Special profiles ----- ;;
           :auto-instrument
             {:jvm-opts    ["-Dco.paralleluniverse.pulsar.instrument.auto=all"]
