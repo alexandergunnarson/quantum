@@ -236,11 +236,13 @@
 #?(:clj
 (defns class->methods [^Class c t/class? > t/map?]
   (->> (.getMethods c)
-       (remove+   (fn [^java.lang.reflect.Method x] (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
-       (map+      (fn [^java.lang.reflect.Method x] (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
-                                                             (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
-                                                                 :static
-                                                                 :instance))))
+       (remove+    (fn [^java.lang.reflect.Method x]
+                     (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
+       (map+       (fn [^java.lang.reflect.Method x]
+                     (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
+                       (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
+                           :static
+                           :instance))))
        (c/group-by (fn [^Method x] (.-name x))) ; TODO all of these need to be into !vector and !hash-map
        (map-vals+  (fn->> (c/group-by (fn [^Method x] (count (.-argtypes x))))
                           (map-vals+  (fn->> (c/group-by (fn [^Method x] (.-kind x)))))
@@ -256,7 +258,8 @@
 
 (defns class->fields [^Class c t/class? > t/map?]
   (->> (.getFields c)
-       (remove+   (fn [^java.lang.reflect.Field x] (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
+       (remove+   (fn [^java.lang.reflect.Field x]
+                    (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
        (map+      (fn [^java.lang.reflect.Field x]
                     [(.getName x)
                      (Field. (.getName x) (.getType x)
@@ -346,9 +349,10 @@
                :type t/nil?})
       (let [expr (analyze-non-map-seqable env body []
                    (fn [accum expr _]
-                     ;; for types, only the last subexpression ever matters, as each is independent from the others
+                     ;; for types, only the last subexpression ever matters, as each is independent :; from the others
                      (assoc expr :form (conj! (:form accum) (:form expr))
-                                 ;; but the env should be the same as whatever it was originally because no new scopes are created
+                                 ;; but the env should be the same as whatever it was originally
+                                 ;; because no new scopes are created
                                  :env  (:env accum))))]
         (ast/do {:env  env
                  :form form
@@ -379,8 +383,7 @@
                   :form      (list 'let* bindings' body')
                   :type-info type-info'})))
 
-(defns ?resolve-with-env
-  [sym t/symbol?, env ::env]
+(defns ?resolve-with-env [sym t/symbol?, env ::env]
   (let [local (c/get env sym)]
     (if (some? local)
         (if (ast/unbound? local)
@@ -442,22 +445,14 @@
   [c t/class?, method t/symbol? > (? t/type?)]
   (when (identical? c clojure.lang.RT)
     (case method
-      (uncheckedBooleanCast booleanCast)
-        t/boolean?
-      (uncheckedByteCast    byteCast)
-        t/byte?
-      (uncheckedCharCast    charCast)
-        t/char?
-      (uncheckedShortCast   shortCast)
-        t/char?
-      (uncheckedIntCast     intCast)
-        t/int?
-      (uncheckedLongCast    longCast)
-        t/long?
-      (uncheckedFloatCast   floatCast)
-        t/float?
-      (uncheckedDoubleCast  doubleCast)
-        t/double?
+      (uncheckedBooleanCast booleanCast) t/boolean?
+      (uncheckedByteCast    byteCast)    t/byte?
+      (uncheckedCharCast    charCast)    t/char?
+      (uncheckedShortCast   shortCast)   t/char?
+      (uncheckedIntCast     intCast)     t/int?
+      (uncheckedLongCast    longCast)    t/long?
+      (uncheckedFloatCast   floatCast)   t/float?
+      (uncheckedDoubleCast  doubleCast)  t/double?
       nil))))
 
 (defns- analyze-seq|dot|method-call
@@ -685,7 +680,7 @@
         (analyze-seq* env expanded-form)
         (ast/macro-call {:env env :form form :expanded (analyze-seq* env expanded-form)}))))
 
-(defns- analyze-symbol [env _, form t/symbol?]
+(defns- analyze-symbol [env ::env, form t/symbol?]
   {:post [(prl! %)]}
   (let [resolved (?resolve-with-env form env)]
     (if-not resolved
@@ -730,7 +725,7 @@
 #_(s/def :fnt|overload/arglist-code (t/vec-of arg?))
 
  #_"Must evaluate to an `s/fspec`"
-(s/def :fnt|overload/type               :quantum.core.specs/code)
+(s/def :fnt|overload/type :quantum.core.specs/code)
 
 #_(s/def :fnt|overload/body-codelist (t/seq-of :quantum.core.specs/code))
 
@@ -753,6 +748,8 @@
                    :reify/method-sym
                    :reify/arglist-code
                    :reify|overload/body-form]))
+
+(s/def ::lang #{:clj :cljs})
 
 #_(:clj
 (defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
@@ -805,8 +802,7 @@
        (apply combo/cartesian-product)
        (c/lmap >vec))))
 
-(s/def ::lang #{:clj :cljs})
-
+;; TODO spec args
 #?(:clj
 (defns- >fnt|overload
   "Is given `arg-classes` and `arg-types`. In order to determine the out-type, performs an analysis
@@ -865,8 +861,14 @@
        :out-class                   (out-type>class out-type)
        :variadic?                   (boolean varargs)})))
 
+#_(s/def ::fnt|overload-group
+  (s/kv {:arg-types|form ...
+         :unprimitivized ...
+         :primitivized   ...}))
+
+;; TODO spec
 #?(:clj ; really, reserve for metalanguage
-(defn fnt|overload-data>overload-group
+(defns fnt|overload-data>overload-group
   "Given an `fnt` overload, computes an 'overload group', which is the foundation for potentially
    multiple direct-dispatch `reify`s.
 
@@ -881,9 +883,12 @@
    we decide instead to evaluate types in languages in which the metalanguage (compiler language)
    is the same as the object language (e.g. Clojure), and symbolically analyze types in the rest
    (e.g. vanilla ClojureScript), deferring code analyzed as functions to be enforced at runtime."
-  [{:as in {:keys [args varargs] pre-form :pre [post-type post-form] :post} :arglist
-    body-codelist|pre-analyze :body}
-   {:as opts :keys [lang #_::lang symbolic-analysis? #_t/boolean?]}]
+  [{:as in {:keys [args _, varargs _]
+            pre-form [:pre _]
+            [post-type _, post-form _] [:post _]} [:arglist _]
+            body-codelist|pre-analyze [:body _]} _
+   {:as opts :keys [lang ::lang, symbolic-analysis? t/boolean?]} _
+   > t/any?]
   (if symbolic-analysis?
       (err! "Symbolic analysis not supported yet")
       (let [_ (when pre-form (TODO "Need to handle pre"))
@@ -937,6 +942,7 @@
   (>symbol (str (->> args-classes (lmap class>interface-part-name) (str/join "+"))
                 ">" (class>interface-part-name out-class))))
 
+;; TODO finish specing args
 (defns fnt-overload>interface [args-classes _, out-class t/class?, gen-gensym fn?]
   (let [interface-sym     (fnt-overload>interface-sym args-classes out-class)
         hinted-method-sym (ufth/with-type-hint fnt-method-sym
@@ -946,6 +952,7 @@
                             (map ufth/>interface-method-tag args-classes))]
     `(~'definterface ~interface-sym (~hinted-method-sym ~hinted-args))))
 
+;; TODO spec args
 #?(:clj
 (defns fnt|overload>reify-overload
   [{:as overload
@@ -973,12 +980,12 @@
      :method-sym   fnt-method-sym
      :out-class    out-class})))
 
-(defns >fnt|reify|name [fn|name :quantum.core.specs/fn|name, i t/index? > simple-symbol?]
+(defns >fnt|reify|name [fn|name ::uss/fn|name, i t/index? > simple-symbol?]
   (>symbol (str fn|name "|__" i)))
 
 #?(:clj
 (defns fnt|overload-group>reify
-  [{:keys [fn|name :quantum.core.specs/fn|name, i t/index?, overload-group :fnt/overload-group]} _
+  [{:keys [::uss/fn|name ::uss/fn|name, i t/index?, overload-group :fnt/overload-group]} _
    gen-gensym fn?]
   (let [reify-overloads (->> (concat [(:unprimitivized overload-group)]
                                       (:primitivized   overload-group))
@@ -998,12 +1005,12 @@
      :name      reify-name
      :overloads reify-overloads})))
 
-(defns >input-types-decl|name [fn|name :quantum.core.specs/fn|name, i t/index? > simple-symbol?]
+(defns >input-types-decl|name [fn|name ::uss/fn|name, i t/index? > simple-symbol?]
   (>symbol (str fn|name "|__" i "|input-types")))
 
 #?(:clj
 (defns fnt|overload-group>input-types-decl
-  [{:keys [fn|name :quantum.core.specs/fn|name, i t/index?, overload-group :fnt/overload-group]} _]
+  [{:keys [::uss/fn|name ::uss/fn|name, i t/index?, overload-group :fnt/overload-group]} _]
  (when (c/contains? (:arg-types|form overload-group))
    (let [decl-name (ufth/with-type-hint (>input-types-decl|name fn|name i) "[Ljava.lang.Object;")]
      {:form `(def ~decl-name (arr/*<> ~(get-in overload-group [:arg-types|form i])))
@@ -1032,6 +1039,7 @@
                        :remaining (next  remaining))))
           (get c))))
 
+;; TODO spec
 (defn assert-monotonically-increasing-types!
   "Asserts that each type in an overload of the same arity and arg-position
    are in monotonically increasing order in terms of `t/compare`."
@@ -1055,16 +1063,18 @@
       nil
       overloads)))
 
-(defns unsupported! [name- _ #_t/qualified-symbol?, args t/indexed?, i _ #_index?]
+;; TODO spec
+(defns unsupported! [name- _ #_t/qualified-symbol?, args t/indexed?, i t/index?]
   (TODO))
 
+;; TODO spec
 (defns gen-register-type
   "Registers in the map of qualified symbol to input type, to output type
 
    Example output:
    (swap! ... assoc `abcde
      (fn [args] (case (count args) 1 <out-type>)))"
-  [{:keys [fn|name :quantum.core.specs/fn|name, arg-ct->type _, variadic-overload _]} _]
+  [{:keys [::uss/fn|name ::uss/fn|name, arg-ct->type _, variadic-overload _]} _]
   (unify-gensyms
    `(swap! *fn->type assoc '~(qualify fn|name)
       (xp/>expr
@@ -1075,14 +1085,16 @@
                                 (err! "Arg count not enough for variadic overload"))])))))
     true))
 
+;; TODO spec
 (defns >direct-dispatch
-  [{:keys [fn|name _, fnt|overload-groups _, gen-gensym fn?, lang _]} _]
+  [{:keys [::uss/fn|name ::uss/fn|name
+           fnt|overload-groups _, gen-gensym fn?, lang ::lang]} _]
   (case lang
     :clj  (let [reify-groups
                   (->> fnt|overload-groups
                        (map-indexed
                          (fn [i {:as fnt|overload-group :keys [arg-types|form]}]
-                           (let [in {:i i :fn|name fn|name :overload-group fnt|overload-group}]
+                           (let [in {:i i ::uss/fn|name fn|name :overload-group fnt|overload-group}]
                              {:fnt|reify        (fnt|overload-group>reify in gen-gensym)
                               :input-types-decl (fnt|overload-group>input-types-decl in)}))))
                 form (->> reify-groups
@@ -1094,24 +1106,28 @@
             {:form form :reify-groups reify-groups})
     :cljs (TODO)))
 
+;; TODO spec
 ;; TODO extend to more than just assuming always one arity
 ;; TODO check whether it even needs to get created based on arglist length etc.
 ;; TODO `get-relevant-reify-overload`
 (defns >dynamic-dispatch-fn|form
-  [{:keys [fn|name _, fnt|overload-groups _, gen-gensym fn?, lang _, reify-groups _]} _]
+  [{:keys [::uss/fn|name ::uss/fn|name, fnt|overload-groups _
+           gen-gensym fn?, lang ::lang, reify-groups _]} _]
   (let [fnt|overload-group (first fnt|overload-groups)
         arglist            (ufgen/gen-args 0 (count fnt|overload-group) "x" gen-gensym)
         i|arg              0
-        arg-sym            (get arglist i|arg)
-        get-relevant-reify-overload (constantly nil)]
+        arg-sym            (get arglist i|arg)]
    `(defn ~fn|name
       {::t/type (t/fn ~@(->> fnt|overload-groups (map :arg-types|form)))}
       ~arglist
       (ifs ~@(->> reify-groups
                   (map-indexed
                     (fn [i|reify {:keys [fnt|reify input-types-decl]}]
+                      (prl! input-types-decl)
                       ;; TODO this part is very rough so far
-                      (let [relevant-reify-overload (get-relevant-reify-overload fnt|reify)
+                      (let [relevant-reify-overload
+                              ;; TODO this is not general enough
+                              (get-in fnt|reify [:overloads 0])
                             hinted-reify-sym
                               (ufth/with-type-hint (:name fnt|reify)
                                 (-> relevant-reify-overload :interface >name >symbol))
@@ -1125,7 +1141,9 @@
 
 (defns fnt|code [kind #{:fn :defn}, lang ::lang, args _]
   (prl! kind lang args)
-  (let [{:keys [:quantum.core.specs/fn|name overloads :quantum.core.specs/meta] :as args'}
+  (let [{:keys [:quantum.core.specs/fn|name
+                :quantum.core.defnt/overloads
+                :quantum.core.specs/meta] :as args'}
           (s/validate args (case kind :defn ::defnt :fn ::fnt))
         gen-gensym-base (ufgen/>reproducible-gensym|generator)
         gen-gensym (fn [x] (symbol (str (gen-gensym-base x) "__")))
@@ -1152,21 +1170,24 @@
                                (c/lmap :unprimitivized)
                                (c/lfilter :variadic?)
                                first)
-        register-type (gen-register-type (kw-map fn|name arg-ct->type variadic-overload))
-        {:as direct-dispatch :keys [reify-groups]}
-          (>direct-dispatch (kw-map fn|name fnt|overload-groups gen-gensym lang))
+        register-type (gen-register-type
+                        (assoc (kw-map arg-ct->type variadic-overload)
+                               ::uss/fn|name fn|name))
+        args (assoc (kw-map fnt|overload-groups gen-gensym lang)
+                    ::uss/fn|name fn|name)
+        {:as direct-dispatch :keys [reify-groups]} (>direct-dispatch args)
+          _ (prl! direct-dispatch)
         fn-codelist
           (case lang
             :clj  (->> `[~@(:form direct-dispatch)
-                         ~(>dynamic-dispatch-fn|form
-                            (kw-map fn|name fnt|overload-groups gen-gensym lang reify-groups))]
+                         ~(>dynamic-dispatch-fn|form (merge args (kw-map reify-groups)))]
                         (remove nil?))
             :cljs (TODO))
         overloads|code (->> fnt|overload-groups (c/map+ :unprimitivized) (c/map :code))
         _ (prl! overloads)
         code (case kind
                :fn   (list* 'fn (concat
-                                  (if (contains? args' :quantum.core.specs/fn|name)
+                                  (if (contains? args' ::uss/fn|name)
                                       [fn|name]
                                       [])
                                   [overloads|code]))

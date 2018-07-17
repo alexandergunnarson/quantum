@@ -12,7 +12,7 @@
         :refer [reduce-2]]
       [quantum.untyped.core.reducers      :as ur]
       [quantum.untyped.core.spec          :as us]
-      [quantum.untyped.core.specs]
+      [quantum.untyped.core.specs         :as uss]
       [quantum.untyped.core.type.predicates
         :refer [any? ident? qualified-keyword? seqable? simple-symbol?]])
 #?(:cljs
@@ -117,25 +117,26 @@
 
 (s/def :quantum.core.defnt/postchecks
   (s/conformer
-    (fn [f]
-      (-> f (update :overloads
-              #(mapv (fn [overload]
-                          (let [overload' (update overload :body :body)]
-                            (if-let [output-spec (-> f :output-spec :spec)]
-                              (do (us/assert-conform nil? (-> overload' :arglist :post))
-                                  (assoc-in overload' [:arglist :post] output-spec))
-                              overload'))) %))
-            (dissoc :output-spec)))))
+    (fn [fn-form]
+      (-> fn-form
+          (update :quantum.core.defnt/overloads
+            #(mapv (fn [overload]
+                     (let [overload' (update overload :body :body)]
+                       (if-let [output-spec (-> fn-form :quantum.core.defnt/output-spec :spec)]
+                         (do (us/assert-conform nil? (-> overload' :arglist :post))
+                             (assoc-in overload' [:arglist :post] output-spec))
+                         overload'))) %))
+          (dissoc :quantum.core.defnt/output-spec)))))
 
 (s/def :quantum.core.defnt/fnt
   (s/and (s/spec
            (s/cat
-             :quantum.core.specs/fn|name   (s/? :quantum.core.specs/fn|name)
-             :quantum.core.specs/docstring (s/? :quantum.core.specs/docstring)
-             :pre-meta                     (s/? :quantum.core.specs/meta)
-             :output-spec                  :quantum.core.defnt/output-spec
-             :overloads                    :quantum.core.defnt/overloads))
-         :quantum.core.specs/fn|postchecks
+             :quantum.core.specs/fn|name     (s/? :quantum.core.specs/fn|name)
+             :quantum.core.specs/docstring   (s/? :quantum.core.specs/docstring)
+             :quantum.core.specs/pre-meta    :quantum.core.specs/pre-meta
+             :quantum.core.defnt/output-spec :quantum.core.defnt/output-spec
+             :quantum.core.defnt/overloads   :quantum.core.defnt/overloads))
+         (uss/fn-like|postchecks|gen :quantum.core.defnt/overloads)
          :quantum.core.defnt/postchecks))
 
 (s/def :quantum.core.defnt/fns|code :quantum.core.defnt/fnt)
@@ -143,12 +144,12 @@
 (s/def :quantum.core.defnt/defnt
   (s/and (s/spec
            (s/cat
-             :quantum.core.specs/fn|name   :quantum.core.specs/fn|name
-             :quantum.core.specs/docstring (s/? :quantum.core.specs/docstring)
-             :pre-meta                     (s/? :quantum.core.specs/meta)
-             :output-spec                  :quantum.core.defnt/output-spec
-             :overloads                    :quantum.core.defnt/overloads))
-         :quantum.core.specs/fn|postchecks
+             :quantum.core.specs/fn|name     :quantum.core.specs/fn|name
+             :quantum.core.specs/docstring   (s/? :quantum.core.specs/docstring)
+             :quantum.core.specs/pre-meta    :quantum.core.specs/pre-meta
+             :quantum.core.defnt/output-spec :quantum.core.defnt/output-spec
+             :quantum.core.defnt/overloads   :quantum.core.defnt/overloads))
+         (uss/fn-like|postchecks|gen :quantum.core.defnt/overloads)
          :quantum.core.defnt/postchecks))
 
 (s/def :quantum.core.defnt/defns|code :quantum.core.defnt/defnt)
@@ -329,7 +330,9 @@
 (defn fns|code [kind lang args]
   (assert (= lang #?(:clj :clj :cljs :cljs)) lang)
   (when (= kind :fn) (println "WARNING: `fn` will ignore spec validation"))
-  (let [{:keys [:quantum.core.specs/fn|name overloads :quantum.core.specs/meta] :as args'}
+  (let [{:keys [:quantum.core.specs/fn|name
+                :quantum.core.defnt/overloads
+                :quantum.core.specs/meta] :as args'}
           (us/assert-conform (case kind (:defn :defn-) :quantum.core.defnt/defns|code
                                         :fn            :quantum.core.defnt/fns|code) args)
         ret-sym (gensym "ret") arity-kind-sym (gensym "arity-kind") args-sym (gensym "args")

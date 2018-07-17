@@ -85,6 +85,9 @@
 
 ;; defn, defn-, fn
 
+(s/def :quantum.core.specs/pre-meta  (s/? :quantum.core.specs/meta))
+(s/def :quantum.core.specs/post-meta (s/? :quantum.core.specs/meta))
+
 (s/def :quantum.core.specs/fn|arglist
   (s/and
     vector?
@@ -106,14 +109,15 @@
          :body                          :quantum.core.specs/fn|body))
 
 (s/def :quantum.core.specs/fn|name simple-symbol?)
+(s/def ::fn|name :quantum.core.specs/fn|name)
 
 (s/def :quantum.core.specs/docstring string?)
 
 (s/def :quantum.core.specs/fn|unique-doc
   #(->> [(:quantum.core.specs/docstring %)
          (-> % :quantum.core.specs/fn|name meta :doc)
-         (-> % :pre-meta                        :doc)
-         (-> % :post-meta                       :doc)]
+         (-> % :quantum.core.specs/pre-meta     :doc)
+         (-> % :quantum.core.specs/post-meta    :doc)]
         (filter val?)
         count
         ((fn [x] (<= x 1)))))
@@ -121,23 +125,26 @@
 (s/def :quantum.core.specs/fn|unique-meta
   #(empty? (set/intersection
              (-> % :quantum.core.specs/fn|name meta keys set)
-             (-> % :pre-meta                        keys set)
-             (-> % :post-meta                       keys set))))
+             (-> % :quantum.core.specs/pre-meta     keys set)
+             (-> % :quantum.core.specs/post-meta    keys set))))
 
 (s/def :quantum.core.specs/fn|aggregate-meta
   (s/conformer
-    (fn [{:keys [:quantum.core.specs/fn|name :quantum.core.specs/docstring pre-meta post-meta] :as m}]
+    (fn [{:keys [:quantum.core.specs/fn|name :quantum.core.specs/docstring
+                 :quantum.core.specs/pre-meta :quantum.core.specs/post-meta] :as m}]
       (-> m
-          (dissoc :quantum.core.specs/docstring :pre-meta :post-meta)
+          (dissoc :quantum.core.specs/docstring
+                  :quantum.core.specs/pre-meta
+                  :quantum.core.specs/post-meta)
           (cond-> fn|name
             (update :quantum.core.specs/fn|name with-meta
               (-> (merge (meta fn|name) pre-meta post-meta) ; TODO use `merge-unique` instead of `:quantum.core.specs/defn|unique-meta`
                   (cond-> docstring (assoc :doc docstring)))))))))
 
-(s/def :quantum.core.specs/fn|postchecks
+(defn fn-like|postchecks|gen [overloads-ident]
   (s/and (s/conformer
            (fn [v]
-             (let [[overloads-k overloads-v] (get v :overloads)
+             (let [[overloads-k overloads-v] (get v overloads-ident)
                    overloads
                     (-> (case overloads-k
                           :overload-1 {:overloads [overloads-v]}
@@ -149,29 +156,40 @@
                                 (case k
                                   :body         {:body v}
                                   :prepost+body v))))))]
-               (assoc v :post-meta (:post-meta overloads)
-                        :overloads (:overloads overloads)))))
+               (assoc v :quantum.core.specs/post-meta (:quantum.core.specs/post-meta overloads)
+                        overloads-ident               (get overloads :overloads)))))
          :quantum.core.specs/fn|unique-doc
          :quantum.core.specs/fn|unique-meta
          ;; TODO validate metadata like return value etc.
          :quantum.core.specs/fn|aggregate-meta))
 
+(s/def :quantum.core.specs/fn|postchecks (fn-like|postchecks|gen :quantum.core.specs/fn|overloads))
+
 (s/def :quantum.core.specs/fn
-  (s/and (s/spec
-           (s/cat :quantum.core.specs/fn|name (s/? :quantum.core.specs/fn|name)
-                  :overloads (s/alt :overload-1 :quantum.core.specs/fn|arglist+body
-                                    :overload-n (s/cat :overloads (s/+ (s/spec :quantum.core.specs/fn|arglist+body))))))
-         :quantum.core.specs/fn|postchecks))
+  (s/and
+    (s/spec
+      (s/cat
+        :quantum.core.specs/fn|name (s/? :quantum.core.specs/fn|name)
+        :quantum.core.specs/fn|overloads
+          (s/alt
+            :overload-1 :quantum.core.specs/fn|arglist+body
+            :overload-n (s/cat :overloads (s/+ (s/spec :quantum.core.specs/fn|arglist+body))))))
+    :quantum.core.specs/fn|postchecks))
 
 (s/def :quantum.core.specs/defn
   (s/and
     (s/spec
-      (s/cat :quantum.core.specs/fn|name   :quantum.core.specs/fn|name
-             :quantum.core.specs/docstring (s/? :quantum.core.specs/docstring)
-             :pre-meta  (s/? :quantum.core.specs/meta)
-             :overloads (s/alt :overload-1 :quantum.core.specs/fn|arglist+body
-                               :overload-n (s/cat :overloads   (s/+ (s/spec :quantum.core.specs/fn|arglist+body))
-                                                  :post-meta (s/? :quantum.core.specs/meta)))))
+      (s/cat
+        :quantum.core.specs/fn|name   :quantum.core.specs/fn|name
+        :quantum.core.specs/docstring (s/? :quantum.core.specs/docstring)
+        :quantum.core.specs/pre-meta  :quantum.core.specs/pre-meta
+        :quantum.core.specs/fn|overloads
+          (s/alt
+            :overload-1 :quantum.core.specs/fn|arglist+body
+            :overload-n
+              (s/cat
+                :overloads                    (s/+ (s/spec :quantum.core.specs/fn|arglist+body))
+                :quantum.core.specs/post-meta :quantum.core.specs/post-meta))))
     :quantum.core.specs/fn|postchecks))
 
 (s/fdef core/defn  :args :quantum.core.specs/defn :ret any?)
