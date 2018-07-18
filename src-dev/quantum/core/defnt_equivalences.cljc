@@ -57,7 +57,7 @@
                     (.getName)))))
 
        (defn ~'pid
-         {::t/type (t/fn [:> (? t/string?)])}
+         {::t/type (t/fn [#_:> #_(? t/string?)])}
          ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object" 'pid|__0))))))
 
 )

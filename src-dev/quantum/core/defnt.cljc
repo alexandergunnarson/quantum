@@ -79,10 +79,8 @@
 
 #_"
 
-LEFT OFF LAST TIME (7/17/2018):
-- Add specs to as many fns as we can in order to get it back to working state and move forward more
-  quickly
-- Then get dynamic dispatch working (see the TODOs around that)
+LEFT OFF LAST TIME (7/18/2018):
+- >dynamic-dispatch-fn|form
 
 
 
@@ -770,10 +768,18 @@ LEFT OFF LAST TIME (7/17/2018):
 
 (s/def ::input-types-decl (s/kv {:form t/any? :name simple-symbol?}))
 
+(s/def ::direct-dispatch|reify-groups
+  (s/kv {:fnt|reify        ::reify
+         :input-types-decl ::input-types-decl}))
+
 (s/def ::direct-dispatch
-  (s/kv {:form         t/any?
-         :reify-groups (s/kv {:fnt|reify        ::reify
-                              :input-types-decl ::input-types-decl})}))
+  (s/kv {:form                          t/any?
+         ::direct-dispatch|reify-groups ::direct-dispatch|reify-groups}))
+
+(s/def ::fnt|overload-group
+  (s/kv {:arg-types|form (s/vec-of t/any?)
+         :unprimitivized (s/seq-of ::fnt|overload)
+         :primitivized   (s/seq-of ::fnt|overload)}))
 
 #_(:clj
 (defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
@@ -886,11 +892,6 @@ LEFT OFF LAST TIME (7/17/2018):
        :out-class                   (out-type>class out-type)
        :variadic?                   (boolean varargs)})))
 
-#_(s/def ::fnt|overload-group
-  (s/kv {:arg-types|form ...
-         :unprimitivized ...
-         :primitivized   ...}))
-
 ;; TODO spec
 #?(:clj ; really, reserve for metalanguage
 (defns fnt|overload-data>overload-group
@@ -913,7 +914,7 @@ LEFT OFF LAST TIME (7/17/2018):
             [post-type _, post-form _] [:post _]} [:arglist _]
             body-codelist|pre-analyze [:body _]} _
    {:as opts :keys [::lang ::lang, symbolic-analysis? t/boolean?]} _
-   > t/any?]
+   > ::fnt|overload-group]
   (if symbolic-analysis?
       (err! "Symbolic analysis not supported yet")
       (let [_ (when pre-form (TODO "Need to handle pre"))
@@ -1010,7 +1011,7 @@ LEFT OFF LAST TIME (7/17/2018):
 
 #?(:clj
 (defns fnt|overload-group>reify
-  [{:keys [::uss/fn|name ::uss/fn|name, i t/index?, overload-group :fnt/overload-group]} _
+  [{:keys [::uss/fn|name ::uss/fn|name, i t/index?, overload-group ::fnt|overload-group]} _
    gen-gensym fn? > ::reify]
   (let [reify-overloads (->> (concat [(:unprimitivized overload-group)]
                                       (:primitivized   overload-group))
@@ -1035,7 +1036,7 @@ LEFT OFF LAST TIME (7/17/2018):
 
 #?(:clj
 (defns fnt|overload-group>input-types-decl
-  [{:keys [::uss/fn|name ::uss/fn|name, i t/index?, overload-group :fnt/overload-group]} _
+  [{:keys [::uss/fn|name ::uss/fn|name, i t/index?, overload-group ::fnt|overload-group]} _
    > ::input-types-decl]
  (when (c/contains? (:arg-types|form overload-group))
    (let [decl-name (ufth/with-type-hint (>input-types-decl|name fn|name i) "[Ljava.lang.Object;")]
@@ -1100,7 +1101,7 @@ LEFT OFF LAST TIME (7/17/2018):
    Example output:
    (swap! ... assoc `abcde
      (fn [args] (case (count args) 1 <out-type>)))"
-  [{:keys [::uss/fn|name ::uss/fn|name, arg-ct->type _, variadic-overload _]} _]
+  [{:keys [::uss/fn|name ::uss/fn|name, arg-ct->type _, variadic-overload ::fnt|overload-group]} _]
   (unify-gensyms
    `(swap! *fn->type assoc '~(qualify fn|name)
       (xp/>expr
@@ -1113,8 +1114,9 @@ LEFT OFF LAST TIME (7/17/2018):
 
 ;; TODO spec
 (defns >direct-dispatch
-  [{:keys [::uss/fn|name ::uss/fn|name
-           fnt|overload-groups _, gen-gensym fn?, lang ::lang]} _ > ::direct-dispatch]
+  [{:keys [::uss/fn|name ::uss/fn|name, ::fnt|overload-groups (s/vec-of ::fnt|overload-group)
+           gen-gensym fn?, lang ::lang]} _
+   > ::direct-dispatch]
   (case lang
     :clj  (let [reify-groups
                   (->> fnt|overload-groups
@@ -1129,7 +1131,7 @@ LEFT OFF LAST TIME (7/17/2018):
                                    input-types-decl (conj (:form input-types-decl))
                                    true             (conj (:form fnt|reify)))))
                           lcat)]
-            {:form form :reify-groups reify-groups})
+            {:form form ::direct-dispatch|reify-groups reify-groups})
     :cljs (TODO)))
 
 ;; TODO spec
@@ -1137,33 +1139,39 @@ LEFT OFF LAST TIME (7/17/2018):
 ;; TODO check whether it even needs to get created based on arglist length etc.
 ;; TODO `get-relevant-reify-overload`
 (defns >dynamic-dispatch-fn|form
-  [{:keys [::uss/fn|name ::uss/fn|name, fnt|overload-groups _
-           gen-gensym fn?, lang ::lang, reify-groups _]} _]
+  [{:keys [::uss/fn|name                  ::uss/fn|name
+           ::fnt|overload-groups          (s/vec-of ::fnt|overload-group)
+           gen-gensym                     fn?
+           lang                           ::lang
+           ::direct-dispatch|reify-groups ::direct-dispatch|reify-groups]} _]
   (let [fnt|overload-group (first fnt|overload-groups)
-        arglist            (ufgen/gen-args 0 (count fnt|overload-group) "x" gen-gensym)
+        arglist            (ufgen/gen-args
+                             0 (-> fnt|overload-group :arg-types|form count) "x" gen-gensym)
         i|arg              0
         arg-sym            (get arglist i|arg)]
    `(defn ~fn|name
-      {::t/type (t/fn ~@(->> fnt|overload-groups (map :arg-types|form)))}
-      ~arglist
-      (ifs ~@(->> reify-groups
-                  (map-indexed
-                    (fn [i|reify {:keys [fnt|reify input-types-decl]}]
-                      (prl! input-types-decl)
-                      ;; TODO this part is very rough so far
-                      (let [relevant-reify-overload
-                              ;; TODO this is not general enough
-                              (get-in fnt|reify [:overloads 0])
-                            hinted-reify-sym
-                              (ufth/with-type-hint (:name fnt|reify)
-                                (-> relevant-reify-overload :interface >name >symbol))
-                            dotted-reify-method-sym
-                              (symbol (str "." (:method-sym relevant-reify-overload)))]
-                        [`((quantum.core.Array/get ~(:name input-types-decl) ~i|arg)
-                            ~arg-sym)
-                         `(~dotted-reify-method-sym ~hinted-reify-sym ~arg-sym)])))
-                  lcat)
-           (unsupported! (quote ~(qualify fn|name)) [~@arglist] ~i|arg)))))
+      {::t/type (t/fn ~@(->> fnt|overload-groups
+                             (map (fn [x] (cond-> (:arg-types|form x)
+                                            false #_out-spec? identity #_(conj :> out-spec))))))}
+      (~arglist
+        (ifs ~@(->> direct-dispatch|reify-groups
+                    (map-indexed
+                      (fn [i|reify {:keys [fnt|reify input-types-decl]}]
+                        (prl! input-types-decl)
+                        ;; TODO this part is very rough so far
+                        (let [relevant-reify-overload
+                                ;; TODO this is not general enough
+                                (get-in fnt|reify [:overloads 0])
+                              hinted-reify-sym
+                                (ufth/with-type-hint (:name fnt|reify)
+                                  (-> relevant-reify-overload :interface >name >symbol))
+                              dotted-reify-method-sym
+                                (symbol (str "." (:method-sym relevant-reify-overload)))]
+                          [`((quantum.core.Array/get ~(:name input-types-decl) ~i|arg)
+                              ~arg-sym)
+                           `(~dotted-reify-method-sym ~hinted-reify-sym ~arg-sym)])))
+                    lcat)
+             (unsupported! (quote ~(qualify fn|name)) [~@arglist] ~i|arg))))))
 
 (defns fnt|code [kind #{:fn :defn}, lang ::lang, args _]
   (prl! kind lang args)
@@ -1199,14 +1207,16 @@ LEFT OFF LAST TIME (7/17/2018):
         register-type (gen-register-type
                         (assoc (kw-map arg-ct->type variadic-overload)
                                ::uss/fn|name fn|name))
-        args (assoc (kw-map fnt|overload-groups gen-gensym lang)
-                    ::uss/fn|name fn|name)
-        {:as direct-dispatch :keys [reify-groups]} (>direct-dispatch args)
+        args (assoc (kw-map gen-gensym lang)
+                    ::fnt|overload-groups fnt|overload-groups ::uss/fn|name fn|name)
+        {:as direct-dispatch :keys [::direct-dispatch|reify-groups]} (>direct-dispatch args)
         _ (prl! direct-dispatch)
         fn-codelist
           (case lang
             :clj  (->> `[~@(:form direct-dispatch)
-                         ~(>dynamic-dispatch-fn|form (merge args (kw-map reify-groups)))]
+                         ~(>dynamic-dispatch-fn|form
+                             (assoc args
+                               ::direct-dispatch|reify-groups direct-dispatch|reify-groups))]
                         (remove nil?))
             :cljs (TODO))
         overloads|code (->> fnt|overload-groups (c/map+ :unprimitivized) (c/map :code))
