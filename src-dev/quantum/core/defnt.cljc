@@ -768,6 +768,13 @@ LEFT OFF LAST TIME (7/17/2018):
 
 (s/def ::lang #{:clj :cljs})
 
+(s/def ::input-types-decl (s/kv {:form t/any? :name simple-symbol?}))
+
+(s/def ::direct-dispatch
+  (s/kv {:form         t/any?
+         :reify-groups (s/kv {:fnt|reify        ::reify
+                              :input-types-decl ::input-types-decl})}))
+
 #_(:clj
 (defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
   (cond (not= k :spec) java.lang.Object; default class
@@ -1028,7 +1035,8 @@ LEFT OFF LAST TIME (7/17/2018):
 
 #?(:clj
 (defns fnt|overload-group>input-types-decl
-  [{:keys [::uss/fn|name ::uss/fn|name, i t/index?, overload-group :fnt/overload-group]} _]
+  [{:keys [::uss/fn|name ::uss/fn|name, i t/index?, overload-group :fnt/overload-group]} _
+   > ::input-types-decl]
  (when (c/contains? (:arg-types|form overload-group))
    (let [decl-name (ufth/with-type-hint (>input-types-decl|name fn|name i) "[Ljava.lang.Object;")]
      {:form `(def ~decl-name (arr/*<> ~(get-in overload-group [:arg-types|form i])))
@@ -1106,7 +1114,7 @@ LEFT OFF LAST TIME (7/17/2018):
 ;; TODO spec
 (defns >direct-dispatch
   [{:keys [::uss/fn|name ::uss/fn|name
-           fnt|overload-groups _, gen-gensym fn?, lang ::lang]} _]
+           fnt|overload-groups _, gen-gensym fn?, lang ::lang]} _ > ::direct-dispatch]
   (case lang
     :clj  (let [reify-groups
                   (->> fnt|overload-groups
@@ -1118,8 +1126,8 @@ LEFT OFF LAST TIME (7/17/2018):
                 form (->> reify-groups
                           (map (fn [{:keys [fnt|reify input-types-decl]}]
                                  (cond-> []
-                                   input-types-decl (:form input-types-decl)
-                                   true             (:form fnt|reify))))
+                                   input-types-decl (conj (:form input-types-decl))
+                                   true             (conj (:form fnt|reify)))))
                           lcat)]
             {:form form :reify-groups reify-groups})
     :cljs (TODO)))
@@ -1194,7 +1202,7 @@ LEFT OFF LAST TIME (7/17/2018):
         args (assoc (kw-map fnt|overload-groups gen-gensym lang)
                     ::uss/fn|name fn|name)
         {:as direct-dispatch :keys [reify-groups]} (>direct-dispatch args)
-          _ (prl! direct-dispatch)
+        _ (prl! direct-dispatch)
         fn-codelist
           (case lang
             :clj  (->> `[~@(:form direct-dispatch)
