@@ -237,79 +237,85 @@
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
-      (eval '(do (throws (some?))
-                 (is= (some? 123) true)
-                 (is= (some? true) true)
-                 (is= (some? false) true)
-                 (is= (some? nil) false))))))
+      (eval '(do (throws (some?|test))
+                 (is= (some?|test 123) true)
+                 (is= (some?|test true) true)
+                 (is= (some?|test false) true)
+                 (is= (some?|test nil) false))))))
 
-;; =====|=====|=====|=====|===== ;;
+(deftest test|reduced?
+  (let [actual
+          ;; Perhaps silly in ClojureScript, but avoids boxing in Clojure
+          (macroexpand '
+            (defnt #_:inline reduced?|test
+              ([x (t/isa? Reduced)] true)
+              ;; Implicitly, `(- t/any? (t/isa? Reduced))`
+              ([x t/any?          ] false)))
+        expected
+          (case (env-lang)
+            :clj
+              ($ (do ;; [x (t/isa? Reduced)]
 
-(is-code=
+                     (def ~(tag "[Ljava.lang.Object;" 'reduced?|test|__0|input-types)
+                       (*<> ~'(t/isa? Reduced)))
+                     (def ~'reduced?|test|__0
+                       (reify
+                         Object>boolean
+                           (~(tag "boolean" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)]
+                             (let* [~(tag "clojure.lang.Reduced" 'x) ~'x] true))))
 
-;; Perhaps silly in ClojureScript, but avoids boxing in Clojure
-(macroexpand '
-(defnt #_:inline reduced?
-  ([x (t/isa? Reduced)] true)
-  ;; Implicitly, `(- t/any? (t/isa? Reduced))`
-  ([x t/any?          ] false))
-)
+                     ;; [x t/any?]
 
-;; ----- expanded code ----- ;;
+                     (def ~(tag "[Ljava.lang.Object;" 'reduced?|test|__1|input-types)
+                       (*<> ~'t/any?))
+                     (def ~'reduced?|test|__1
+                       (reify
+                         Object>boolean
+                           (~(tag "boolean" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)] false)
+                         boolean>boolean
+                           (~(tag "boolean" 'invoke) [~'_2__ ~(tag "boolean"          'x)] false)
+                         byte>boolean
+                           (~(tag "boolean" 'invoke) [~'_3__ ~(tag "byte"             'x)] false)
+                         short>boolean
+                           (~(tag "boolean" 'invoke) [~'_4__ ~(tag "short"            'x)] false)
+                         char>boolean
+                           (~(tag "boolean" 'invoke) [~'_5__ ~(tag "char"             'x)] false)
+                         int>boolean
+                           (~(tag "boolean" 'invoke) [~'_6__ ~(tag "int"              'x)] false)
+                         long>boolean
+                           (~(tag "boolean" 'invoke) [~'_7__ ~(tag "long"             'x)] false)
+                         float>boolean
+                           (~(tag "boolean" 'invoke) [~'_8__ ~(tag "float"            'x)] false)
+                         double>boolean
+                           (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] false)))
 
-(case (env-lang)
-  :clj  ($ (do ;; [x (t/isa? Reduced)]
-
-               (def ~(tag "[Ljava.lang.Object;" 'reduced?|__0|input-types)
-                 (*<> (t/isa? Reduced)))
-               (def ~'reduced?|__0
-                 (reify
-                   Object>boolean  (~(tag "boolean" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)]
-                                     (let* [~(tag "clojure.lang.Reduced" 'x) ~'x] true))))
-
-               ;; [x t/any?]
-
-               (def ~(tag "[Ljava.lang.Object;" 'reduced?|__1|input-types)
-                 (*<> t/any?))
-               (def ~'reduced?|__1
-                 (reify
-                   Object>boolean
-                     (~(tag "boolean" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)] false)
-                   boolean>boolean
-                     (~(tag "boolean" 'invoke) [~'_2__ ~(tag "boolean"          'x)] false)
-                   byte>boolean
-                     (~(tag "boolean" 'invoke) [~'_3__ ~(tag "byte"             'x)] false)
-                   short>boolean
-                     (~(tag "boolean" 'invoke) [~'_4__ ~(tag "short"            'x)] false)
-                   char>boolean
-                     (~(tag "boolean" 'invoke) [~'_5__ ~(tag "char"             'x)] false)
-                   int>boolean
-                     (~(tag "boolean" 'invoke) [~'_6__ ~(tag "int"              'x)] false)
-                   long>boolean
-                     (~(tag "boolean" 'invoke) [~'_7__ ~(tag "long"             'x)] false)
-                   float>boolean
-                     (~(tag "boolean" 'invoke) [~'_8__ ~(tag "float"            'x)] false)
-                   double>boolean
-                     (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] false)))
-
-               (defn ~'reduced?
-                 {::t/type (t/fn [(t/isa? Reduced)]
-                                 [t/any?])}
-                 ([~'x00__]
-                   (ifs ((Array/get ~'reduced?|__0|input-types 0) ~'x00__)
-                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
-                                         'reduced?|__0) ~'x00__)
-                        ;; TODO eliminate this check because it's not needed (`t/any?`)
-                        ((Array/get ~'reduced?|__1|input-types 0) ~'x00__)
-                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
-                                         'reduced?|__1) ~'x00__)
-                        (unsupported! `reduced? [~'x00__] 0))))))
-  :cljs ($ (do (defn ~'reduced? [~'x]
-                 (ifs (instance? Reduced x) true false)))))
-
-)
-
-;; =====|=====|=====|=====|===== ;;
+                     (defn ~'reduced?|test
+                       {::t/type (t/fn ~'[(t/isa? Reduced)]
+                                       ~'[t/any?])}
+                       ([~'x00__]
+                         (ifs ((Array/get ~'reduced?|test|__0|input-types 0) ~'x00__)
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
+                                               'reduced?|test|__0) ~'x00__)
+                              ;; TODO eliminate this check because it's not needed (`t/any?`)
+                              ((Array/get ~'reduced?|test|__1|input-types 0) ~'x00__)
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
+                                               'reduced?|test|__1) ~'x00__)
+                              (unsupported! `reduced?|test [~'x00__] 0))))))
+            :cljs
+              ($ (do (defn ~'reduced?|test [~'x]
+                       (ifs (instance? Reduced x) true false)))))]
+    (testing "code equivalence" (is-code= actual expected))
+    (testing "functionality"
+      (eval actual)
+      (eval '(do (throws (reduced?|test))
+                 (is= (reduced?|test 123) false)
+                 (is= (reduced?|test true) false)
+                 (is= (reduced?|test false) false)
+                 (is= (reduced?|test nil) false)
+                 (is= (reduced?|test (reduced 123)) true)
+                 (is= (reduced?|test (reduced true)) true)
+                 (is= (reduced?|test (reduced false)) true)
+                 (is= (reduced?|test (reduced nil)) true)))))))
 
 (is-code=
 
