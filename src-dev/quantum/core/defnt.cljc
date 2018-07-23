@@ -1148,15 +1148,15 @@ LEFT OFF LAST TIME (7/18/2018):
                              0 (-> fnt|overload-group :arg-types|form count) "x" gen-gensym)
         i|arg              0
         arg-sym            (get arglist i|arg)
-        >reify-call (fn [{:keys [fnt|reify input-types-decl]}]
-                      (let [;; TODO this is not general enough
-                            relevant-reify-overload (get-in fnt|reify [:overloads 0])
-                            dotted-reify-method-sym
-                              (symbol (str "." (:method-sym relevant-reify-overload)))
-                            hinted-reify-sym
-                              (ufth/with-type-hint (:name fnt|reify)
-                                (-> relevant-reify-overload :interface >name))]
-                        `(~dotted-reify-method-sym ~hinted-reify-sym ~@arglist)))]
+        >reify-call
+          (fn [{:keys [fnt|reify input-types-decl]}]
+            (let [;; TODO this is not general enough
+                  relevant-reify-overload (get-in fnt|reify [:overloads 0])
+                  dotted-reify-method-sym (symbol (str "." (:method-sym relevant-reify-overload)))
+                  hinted-reify-sym
+                    (ufth/with-type-hint (:name fnt|reify)
+                      (-> relevant-reify-overload :interface >name))]
+              `(~dotted-reify-method-sym ~hinted-reify-sym ~@arglist)))]
    `(defn ~fn|name
       {::t/type (t/fn ~@(->> fnt|overload-groups
                              (map (fn [{:keys [arg-types|form pre-type|form post-type|form]}]
@@ -1164,7 +1164,9 @@ LEFT OFF LAST TIME (7/18/2018):
                                       pre-type|form  (conj :| pre-type|form)
                                       post-type|form (conj :> post-type|form))))))}
       (~arglist
-        ~(if (empty? arglist)
+        ~(if ;; TODO incrementally check this
+             (or (empty? arglist)
+                 (->> fnt|overload-group :unprimitivized :arg-types (every? #(t/= % t/any?))))
              (-> direct-dispatch|reify-groups first >reify-call)
              `(ifs
                 ~@(->> direct-dispatch|reify-groups

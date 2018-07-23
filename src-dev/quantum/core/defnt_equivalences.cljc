@@ -99,6 +99,7 @@
                        {::t/type (t/fn ~'[t/any?])}
                        ([~'x00__]
                          ;; Checks elided because `t/any?` doesn't require a check
+                         ;; and all args are `t/=` `t/any?`
                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
                                         'identity|uninlined|__0) ~'x00__)))))
             :cljs
