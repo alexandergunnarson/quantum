@@ -48,14 +48,13 @@
 (defn seq=
   ([a b] (seq= a b =))
   ([a b eq-f]
-  (boolean
-    (when (or (sequential? b) #?(:clj  (instance? java.util.List b)
-                                 :cljs (list? b)))
+    (boolean
       (loop [a (seq a) b (seq b)]
-        (when (identical? (nil? a) (nil? b))
-          (or (nil? a)
-              (when (eq-f (first a) (first b))
-                (recur (next a) (next b))))))))))
+        (let [a-nil? (nil? a)]
+          (and (identical? a-nil? (nil? b))
+               (or a-nil?
+                   (and (eq-f (first a) (first b))
+                        (recur (next a) (next b))))))))))
 
 (defn code=
   "Ensures that two pieces of code are equivalent.
