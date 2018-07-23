@@ -317,83 +317,88 @@
                  (is= (reduced?|test (reduced false)) true)
                  (is= (reduced?|test (reduced nil)) true)))))))
 
-(is-code=
+(deftest test|>boolean
+  (let [actual
+          (macroexpand '
+            (defnt #_:inline >boolean
+               ([x t/boolean?] x)
+               ([x t/nil?]     false)
+               ([x t/any?]     true)))
+        expected
+          (case (env-lang)
+            :clj
+              ($ (do ;; [x t/boolean?]
 
-(macroexpand '
-(defnt #_:inline >boolean
-   ([x t/boolean?] x)
-   ([x t/nil?]     false)
-   ([x t/any?]     true))
-)
+                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__0|input-types)
+                       (*<> ~'t/boolean?))
+                     (def ~'>boolean|__0
+                       (reify
+                         boolean>boolean
+                           (~(tag "boolean" 'invoke) [~'_0__  ~(tag "boolean"          'x)] ~'x)))
 
-;; ----- expanded code ----- ;;
+                     ;; [x t/nil? -> (- t/nil? t/boolean?)]
 
-(case (env-lang)
-  :clj  ($ (do ;; [x t/boolean?]
+                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__1|input-types)
+                       (*<> ~'t/nil?))
+                     (def ~'>boolean|__1
+                       (reify
+                         Object>boolean
+                           (~(tag "boolean" 'invoke) [~'_1__  ~(tag "java.lang.Object" 'x)] false)))
 
-               (def ~(tag "[Ljava.lang.Object;" '>boolean|__0|input-types)
-                 (*<> t/boolean?))
-               (def ~'>boolean|__0
-                 (reify
-                   boolean>boolean
-                     (~(tag "boolean" 'invoke) [~'_0__  ~(tag "boolean"          'x)] ~'x)))
+                     ;; [x t/any? -> (- t/any? t/nil? t/boolean?)]
 
-               ;; [x t/nil? -> (- t/nil? t/boolean?)]
+                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__2|input-types)
+                       (*<> ~'t/any?))
+                     (def ~'>boolean|__2
+                       (reify
+                         Object>boolean
+                           (~(tag "boolean" 'invoke) [~'_2__  ~(tag "java.lang.Object" 'x)] true)
+                         boolean>boolean
+                           (~(tag "boolean" 'invoke) [~'_3__  ~(tag "boolean"          'x)] true)
+                         byte>boolean
+                           (~(tag "boolean" 'invoke) [~'_4__  ~(tag "byte"             'x)] true)
+                         short>boolean
+                           (~(tag "boolean" 'invoke) [~'_5__  ~(tag "short"            'x)] true)
+                         char>boolean
+                           (~(tag "boolean" 'invoke) [~'_6__  ~(tag "char"             'x)] true)
+                         int>boolean
+                           (~(tag "boolean" 'invoke) [~'_7__  ~(tag "int"              'x)] true)
+                         long>boolean
+                           (~(tag "boolean" 'invoke) [~'_8__  ~(tag "long"             'x)] true)
+                         float>boolean
+                           (~(tag "boolean" 'invoke) [~'_9__  ~(tag "float"            'x)] true)
+                         double>boolean
+                           (~(tag "boolean" 'invoke) [~'_10__ ~(tag "double"           'x)] true)))
 
-               (def ~(tag "[Ljava.lang.Object;" '>boolean|__1|input-types)
-                 (*<> t/nil?))
-               (def ~'>boolean|__1
-                 (reify
-                   Object>boolean
-                     (~(tag "boolean" 'invoke) [~'_1__  ~(tag "java.lang.Object" 'x)] false)))
-
-               ;; [x t/any? -> (- t/any? t/nil? t/boolean?)]
-
-               (def ~(tag "[Ljava.lang.Object;" '>boolean|__1|input-types)
-                 (*<> t/any?))
-               (def ~'>boolean|__2
-                 (reify
-                   Object>boolean
-                     (~(tag "boolean" 'invoke) [~'_2__  ~(tag "java.lang.Object" 'x)] true)
-                   boolean>boolean
-                     (~(tag "boolean" 'invoke) [~'_3__  ~(tag "boolean"          'x)] true)
-                   byte>boolean
-                     (~(tag "boolean" 'invoke) [~'_4__  ~(tag "byte"             'x)] true)
-                   short>boolean
-                     (~(tag "boolean" 'invoke) [~'_5__  ~(tag "short"            'x)] true)
-                   char>boolean
-                     (~(tag "boolean" 'invoke) [~'_6__  ~(tag "char"             'x)] true)
-                   int>boolean
-                     (~(tag "boolean" 'invoke) [~'_7__  ~(tag "int"              'x)] true)
-                   long>boolean
-                     (~(tag "boolean" 'invoke) [~'_8__  ~(tag "long"             'x)] true)
-                   float>boolean
-                     (~(tag "boolean" 'invoke) [~'_9__  ~(tag "float"            'x)] true)
-                   double>boolean
-                     (~(tag "boolean" 'invoke) [~'_10__ ~(tag "double"           'x)] true)))
-
-               (defn ~'>boolean
-                 {::t/type (t/fn [t/boolean?]
-                                 [t/nil?]
-                                 [t/any?])}
-                 ([~'x00__]
-                   (ifs ((Array/get ~'>boolean|__0|input-types 0) ~'x00__)
-                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.boolean>boolean"
-                                         '>boolean|__0) ~'x00__)
-                        ((Array/get ~'>boolean|__1|input-types 0) ~'x00__)
-                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
-                                         '>boolean|__1) ~'x00__)
-                        ;; TODO eliminate this check because it's not needed (`t/any?`)
-                        ((Array/get ~'>boolean|__2|input-types 0) ~'x00__)
-                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
-                                         '>boolean|__2) ~'x00__)
-                        (unsupported! `>boolean [~'x00__] 0))))))
-  :cljs ($ (do (defn ~'>boolean [~'x]
-                 (ifs (boolean? x) x
-                      (nil?     x) false
-                      true)))))
-
-)
+                     (defn ~'>boolean
+                       {::t/type (t/fn ~'[t/boolean?]
+                                       ~'[t/nil?]
+                                       ~'[t/any?])}
+                       ([~'x00__]
+                         (ifs ((Array/get ~'>boolean|__0|input-types 0) ~'x00__)
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.boolean>boolean"
+                                               '>boolean|__0) ~'x00__)
+                              ((Array/get ~'>boolean|__1|input-types 0) ~'x00__)
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
+                                               '>boolean|__1) ~'x00__)
+                              ;; TODO eliminate this check because it's not needed (`t/any?`)
+                              ((Array/get ~'>boolean|__2|input-types 0) ~'x00__)
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
+                                               '>boolean|__2) ~'x00__)
+                              (unsupported! `>boolean [~'x00__] 0))))))
+            :cljs
+              ($ (do (defn ~'>boolean [~'x]
+                       (ifs (boolean? x) x
+                            (nil?     x) false
+                            true)))))]
+    (testing "code equivalence" (is-code= actual expected))
+    (testing "functionality"
+      (eval actual)
+      (eval '(do (throws (>boolean))
+                 (is= (>boolean true) true)
+                 (is= (>boolean false) false)
+                 (is= (>boolean nil) false)
+                 (is= (>boolean 123) true))))))
 
 ;; =====|=====|=====|=====|===== ;;
 
