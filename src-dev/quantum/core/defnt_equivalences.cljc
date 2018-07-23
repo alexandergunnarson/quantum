@@ -44,9 +44,10 @@
 ;; ----- implementation ----- ;;
 
 (macroexpand '
-  (defnt pid [> (? t/string?)]
-    (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
-         (.getName))))
+(defnt pid [> (? t/string?)]
+  (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
+       (.getName)))
+)
 
 ;; ----- expanded code ----- ;;
 
@@ -57,10 +58,14 @@
                     (.getName)))))
 
        (defn ~'pid
-         {::t/type (t/fn [#_:> #_(? t/string?)])}
-         ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object" 'pid|__0))))))
+         {::t/type (t/fn [:> ~'(? t/string?)])}
+         ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.>Object" 'pid|__0))))))
 
 )
+
+(testing "`pid`"
+  (is (string? (pid)))
+  (throws (pid 1)))
 
 ;; =====|=====|=====|=====|===== ;;
 

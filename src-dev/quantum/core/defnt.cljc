@@ -778,7 +778,9 @@ LEFT OFF LAST TIME (7/18/2018):
 
 (s/def ::fnt|overload-group
   (s/kv {:arg-types|form (s/vec-of t/any?)
-         :unprimitivized (s/seq-of ::fnt|overload)
+         :pre-type|form  (s/vec-of t/any?)
+         :post-type|form (s/vec-of t/any?)
+         :unprimitivized ::fnt|overload
          :primitivized   (s/seq-of ::fnt|overload)}))
 
 #_(:clj
@@ -786,9 +788,9 @@ LEFT OFF LAST TIME (7/18/2018):
   (cond (not= k :spec) java.lang.Object; default class
         (symbol? spec) (pred->class lang spec))))
 
-;; TODO optimize such that `post-form` doesn't create a new type-validator wholesale every time the
-;; function gets run; e.g. extern it
-(defn >with-post-form [body post-form] `(t/validate ~body ~post-form))
+;; TODO optimize such that `post-type|form` doesn't create a new type-validator wholesale every
+;; time the function gets run; e.g. extern it
+(defn >with-post-type|form [body post-type|form] `(t/validate ~body ~post-type|form))
 
 #?(:clj
 (var/def sort-guide "for use in arity sorting, in increasing conceptual size"
@@ -840,7 +842,7 @@ LEFT OFF LAST TIME (7/18/2018):
    computed in the analysis. As a result, does not yet support type inference."
   [{:keys [arg-bindings _, arg-classes ::fnt|overload|arg-classes
            arg-types ::fnt|overload|arg-types, args _, body-codelist|pre-analyze _, lang ::lang
-           post-form _, varargs _, varargs-binding _]} _
+           post-type|form _, pre-type|form _, varargs _, varargs-binding _]} _
    > ::fnt|overload]
   (let [env         (->> (zipmap arg-bindings arg-types)
                          (c/map' (fn [[arg-binding arg-type]]
@@ -854,13 +856,8 @@ LEFT OFF LAST TIME (7/18/2018):
                           lang
                           (c/count args)
                           varargs)))
-        post-form|embeddable (if (or (nil? post-form) (= post-form '_))
-                                 `t/any?
-                                 post-form)
-        post-type   (cond (nil? post-form) nil
-                          (= post-form '_) t/any?
-                          ;; TODO this becomes an issue when `post-form` references local bindings
-                          :else            (eval post-form))
+        ;; TODO this becomes an issue when `post-type|form` references local bindings
+        post-type (eval post-type|form)
         post-type|runtime? (-> post-type meta :runtime?)
         out-type (if post-type
                      (if post-type|runtime?
@@ -877,7 +874,7 @@ LEFT OFF LAST TIME (7/18/2018):
                      (:type analyzed))
         body-form
           (-> (:form analyzed)
-              (cond-> post-type|runtime? (>with-post-form post-form|embeddable))
+              (cond-> post-type|runtime? (>with-post-type|form post-type|form))
               (ufth/cast-bindings|code
                 (->> (c/zipmap-into (map/om) arg-bindings arg-classes)
                      (c/remove-vals' (fn-or nil? (fn= java.lang.Object) t/primitive-class?)))))]
@@ -888,7 +885,7 @@ LEFT OFF LAST TIME (7/18/2018):
        :arglist-code|reify|unhinted (cond-> arg-bindings varargs-binding (conj varargs-binding))
        :body-form                   body-form
        :positional-args-ct          (count args)
-       :out-types                   out-type
+       :out-type                    out-type
        :out-class                   (out-type>class out-type)
        :variadic?                   (boolean varargs)})))
 
@@ -910,14 +907,15 @@ LEFT OFF LAST TIME (7/18/2018):
    is the same as the object language (e.g. Clojure), and symbolically analyze types in the rest
    (e.g. vanilla ClojureScript), deferring code analyzed as functions to be enforced at runtime."
   [{:as in {:keys [args _, varargs _]
-            pre-form [:pre _]
-            [post-type _, post-form _] [:post _]} [:arglist _]
+            pre-type|form [:pre _]
+            [_ _, post-type|form _] [:post _]} [:arglist _]
             body-codelist|pre-analyze [:body _]} _
    {:as opts :keys [::lang ::lang, symbolic-analysis? t/boolean?]} _
    > ::fnt|overload-group]
   (if symbolic-analysis?
       (err! "Symbolic analysis not supported yet")
-      (let [_ (when pre-form (TODO "Need to handle pre"))
+      (let [_ (when pre-type|form (TODO "Need to handle pre"))
+            post-type|form (if (= post-type|form '_) `t/any? post-type|form)
             varargs-binding (when varargs
                               ;; TODO this assertion is purely temporary until destructuring is
                               ;; supported
@@ -948,9 +946,11 @@ LEFT OFF LAST TIME (7/18/2018):
                                      arg-types|unprimitivized arg-classes)]
                              (>fnt|overload
                                (kw-map arg-bindings arg-classes arg-types args
-                                       body-codelist|pre-analyze lang post-form varargs
-                                       varargs-binding))))))]
+                                       body-codelist|pre-analyze lang post-type|form pre-type|form
+                                       varargs varargs-binding))))))]
         {:arg-types|form arg-types|form
+         :pre-type|form  pre-type|form
+         :post-type|form post-type|form
          :unprimitivized unprimitivized
          :primitivized   primitivized}))))
 
@@ -1148,30 +1148,35 @@ LEFT OFF LAST TIME (7/18/2018):
         arglist            (ufgen/gen-args
                              0 (-> fnt|overload-group :arg-types|form count) "x" gen-gensym)
         i|arg              0
-        arg-sym            (get arglist i|arg)]
+        arg-sym            (get arglist i|arg)
+        >reify-call (fn [{:keys [fnt|reify input-types-decl]}]
+                      (let [;; TODO this is not general enough
+                            relevant-reify-overload (get-in fnt|reify [:overloads 0])
+                            dotted-reify-method-sym
+                              (symbol (str "." (:method-sym relevant-reify-overload)))
+                            hinted-reify-sym
+                              (ufth/with-type-hint (:name fnt|reify)
+                                (-> relevant-reify-overload :interface >name))]
+                        `(~dotted-reify-method-sym ~hinted-reify-sym ~@arglist)))]
    `(defn ~fn|name
       {::t/type (t/fn ~@(->> fnt|overload-groups
-                             (map (fn [x] (cond-> (:arg-types|form x)
-                                            false #_out-spec? identity #_(conj :> out-spec))))))}
+                             (map (fn [{:keys [arg-types|form pre-type|form post-type|form]}]
+                                    (cond-> (or arg-types|form [])
+                                      pre-type|form  (conj :| pre-type|form)
+                                      post-type|form (conj :> post-type|form))))))}
       (~arglist
-        (ifs ~@(->> direct-dispatch|reify-groups
-                    (map-indexed
-                      (fn [i|reify {:keys [fnt|reify input-types-decl]}]
-                        (prl! input-types-decl)
-                        ;; TODO this part is very rough so far
-                        (let [relevant-reify-overload
-                                ;; TODO this is not general enough
-                                (get-in fnt|reify [:overloads 0])
-                              hinted-reify-sym
-                                (ufth/with-type-hint (:name fnt|reify)
-                                  (-> relevant-reify-overload :interface >name >symbol))
-                              dotted-reify-method-sym
-                                (symbol (str "." (:method-sym relevant-reify-overload)))]
-                          [`((quantum.core.Array/get ~(:name input-types-decl) ~i|arg)
-                              ~arg-sym)
-                           `(~dotted-reify-method-sym ~hinted-reify-sym ~arg-sym)])))
-                    lcat)
-             (unsupported! (quote ~(qualify fn|name)) [~@arglist] ~i|arg))))))
+        ~(if (empty? arglist)
+             (-> direct-dispatch|reify-groups first >reify-call)
+             `(ifs
+                ~@(->> direct-dispatch|reify-groups
+                       (map-indexed
+                         (fn [i|reify {:as direct-dispatch|reify-group :keys [input-types-decl]}]
+                           (prl! input-types-decl)
+                           ;; TODO this part is very rough so far
+                           [`((quantum.core.Array/get ~(:name input-types-decl) ~i|arg) ~arg-sym)
+                            (>reify-call direct-dispatch|reify-group)]))
+                       lcat)
+                (unsupported! (quote ~(qualify fn|name)) [~@arglist] ~i|arg)))))))
 
 (defns fnt|code [kind #{:fn :defn}, lang ::lang, args _]
   (prl! kind lang args)
