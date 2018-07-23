@@ -974,7 +974,7 @@ LEFT OFF LAST TIME (7/18/2018):
         hinted-method-sym (ufth/with-type-hint fnt-method-sym
                             (ufth/>interface-method-tag out-class))
         hinted-args       (ufth/hint-arglist-with
-                            (ufgen/gen-args 0 (count args-classes) "x" gen-gensym)
+                            (ufgen/gen-args 0 (count args-classes) "xint" gen-gensym)
                             (map ufth/>interface-method-tag args-classes))]
     `(~'definterface ~interface-sym (~hinted-method-sym ~hinted-args))))
 
@@ -994,12 +994,11 @@ LEFT OFF LAST TIME (7/18/2018):
               (c/get interface-k))
         arglist-code
           (>vec (concat [(gen-gensym '_)]
-                  (doto (->> arglist-code|reify|unhinted
-                             (map-indexed
-                               (fn [i arg]
-                                 (ufth/with-type-hint arg (-> arg-classes (doto pr/ppr-meta)
-                                   (c/get i) (doto pr/ppr-meta) ufth/>arglist-embeddable-tag)))))
-                        pr/ppr-meta)))]
+                  (->> arglist-code|reify|unhinted
+                       (map-indexed
+                         (fn [i arg]
+                           (ufth/with-type-hint arg
+                             (-> arg-classes (c/get i) ufth/>arglist-embeddable-tag)))))))]
     {:arglist-code arglist-code
      :body-form    body-form
      :interface    interface

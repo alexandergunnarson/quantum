@@ -39,7 +39,8 @@
   ([min-n max-n s gen-gensym]
     (->> (range min-n max-n) (mapv (fn [i] (gen-gensym (str s i)))))))
 
-(defn arity-builder [positionalf variadicf & [min-positional-arity max-positional-arity sym-genf no-gensym?]]
+(defn arity-builder
+  [positionalf variadicf & [min-positional-arity max-positional-arity sym-genf no-gensym?]]
   (let [mina (or min-positional-arity 0)
         maxa (or max-positional-arity 18)
         args (->> (range mina (+ mina maxa))
@@ -81,12 +82,10 @@
   [s]
   (second (re-find gensym-regex (str s))))
 
-(def ^:dynamic *reproducible-gensym* nil)
-
-(defn >reproducible-gensym|generator [& memoize?]
-  (let [*counter (atom -1)]
-    (cond-> #(symbol (str % (swap! *counter inc)))
-      memoize? memoize)))
+(defn >reproducible-gensym|generator []
+  (let [inc-or-0 #(if (nil? %) 0 (inc %))
+        str->counter (atom {})]
+    (fn [s] (symbol (str s (get (swap! str->counter update s inc-or-0) s))))))
 
 (defn unify-gensyms
   "All gensyms defined using two hash symbols are unified to the same
@@ -95,10 +94,7 @@
    :contributors ["Alex Gunnarson"]}
   ([body] (unify-gensyms body false))
   ([body reproducible-gensyms?]
-    (let [gensym* (or *reproducible-gensym*
-                      (memoize (if reproducible-gensyms?
-                                   (>reproducible-gensym|generator true)
-                                   gensym)))]
+    (let [gensym* (if reproducible-gensyms? symbol (memoize gensym))]
       (ucore/postwalk
         #(if (unified-gensym? %)
              (symbol (str (gensym* (str (un-gensym %) "__"))

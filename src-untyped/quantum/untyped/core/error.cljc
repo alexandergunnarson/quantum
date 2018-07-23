@@ -37,21 +37,15 @@
             (error? x)
               (fipp/pprint (>err x))
             (and (string? x) (> (count x) *print-length*))
-              (println
-                (str "String is too long to print ("
-                     (str (count x) " elements")
-                     ").")
-                "`*print-length*` is set at" (str *print-length* ".")) ; TODO fix so ellipsize
+              (println (str "String is too long to print (" (str (count x) " elements") ").")
+                       ;; TODO fix so ellipsize
+                       "`*print-length*` is set at" (str *print-length* "."))
             (contains? @*print-blacklist (type x))
-              (println
-                "Object's class"
-                (str (type x) "(" ")")
-                "is blacklisted for printing.")
+              (println "Object's class" (str "(" (type x) ")") "is blacklisted for printing.")
             :else
               (fipp/pprint x))
           nil)))
-  ([x & xs]
-    (doseq [x' (cons x xs)] (ppr x'))))
+  ([x & xs] (doseq [x' (cons x xs)] (ppr x'))))
 
 (defn ppr-str
   "Like `pr-str`, but pretty-prints."

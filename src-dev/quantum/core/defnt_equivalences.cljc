@@ -23,7 +23,7 @@
       :refer [ifs]]
     [quantum.untyped.core.spec         :as s]
     [quantum.untyped.core.test         :as test
-      :refer [deftest testing is is= is-code= throws]]
+      :refer [deftest is is= is-code= testing throws]]
     [quantum.untyped.core.type :as t
       :refer [? *]]
     [quantum.untyped.core.type.reifications :as utr])
@@ -37,153 +37,132 @@
     quantum.core.data.Array
     [quantum.core Numeric Primitive]))
 
-;; =====|=====|=====|=====|===== ;;
+#?(:clj
+(deftest test|pid
+  (let [actual
+          (macroexpand '
+            (defnt pid|test [> (? t/string?)]
+              (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
+                   (.getName))))
+        expected
+          ($ (do (def ~'pid|test|__0
+                   (reify >Object
+                     (~(tag "java.lang.Object" 'invoke) [~'_0__]
+                       ~'(->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
+                              (.getName)))))
+                 (defn ~'pid|test
+                   {::t/type (t/fn [:> ~'(? t/string?)])}
+                   ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.>Object"
+                                'pid|test|__0))))))]
+    (testing "code equivalence" (is-code= actual expected))
+    (testing "functionality"
+      (eval actual)
+      (eval '(do (is (string? (pid|test)))
+                 (throws (pid|test 1))))))))
 
-(is-code=
+;; TODO test `:inline`
 
-;; ----- implementation ----- ;;
+(deftest test|identity|uninlined
+  (let [actual
+          (macroexpand '
+            (defnt identity|uninlined ([x t/any?] x)))
+        expected
+          (case (env-lang)
+            :clj
+              ($ (do ;; [x t/any?]
 
-(macroexpand '
-(defnt pid [> (? t/string?)]
-  (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
-       (.getName)))
-)
+                     (def ~(tag "[Ljava.lang.Object;" 'identity|uninlined|__0|input-types)
+                       (*<> ~'t/any?))
+                     ;; One `reify` because `t/any?` in CLJ does not have any `t/or`-separability
+                     (def ~'identity|uninlined|__0
+                       (reify
+                         Object>Object   (~(tag "java.lang.Object" 'invoke)
+                                           [~'_0__ ~(tag "java.lang.Object" 'x)] ~'x)
+                         boolean>boolean (~(tag "boolean"          'invoke)
+                                           [~'_1__ ~(tag "boolean"          'x)] ~'x)
+                         byte>byte       (~(tag "byte"             'invoke)
+                                           [~'_2__ ~(tag "byte"             'x)] ~'x)
+                         short>short     (~(tag "short"            'invoke)
+                                           [~'_3__ ~(tag "short"            'x)] ~'x)
+                         char>char       (~(tag "char"             'invoke)
+                                           [~'_4__ ~(tag "char"             'x)] ~'x)
+                         int>int         (~(tag "int"              'invoke)
+                                           [~'_5__ ~(tag "int"              'x)] ~'x)
+                         long>long       (~(tag "long"             'invoke)
+                                           [~'_6__ ~(tag "long"             'x)] ~'x)
+                         float>float     (~(tag "float"            'invoke)
+                                           [~'_7__ ~(tag "float"            'x)] ~'x)
+                         double>double   (~(tag "double"           'invoke)
+                                           [~'_8__ ~(tag "double"           'x)] ~'x)))
 
-;; ----- expanded code ----- ;;
+                     (defn ~'identity|uninlined
+                       {::t/type (t/fn ~'[t/any?])}
+                       ([~'x00__]
+                         ;; Checks elided because `t/any?` doesn't require a check
+                         (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
+                                        'identity|uninlined|__0) ~'x00__)))))
+            :cljs
+              ;; Direct dispatch will be simple functions, not `reify`s
+              ($ (do (defn ~'identity|uninlined [~'x] ~'x))))]
+    (testing "code equivalence" (is-code= actual expected))
+    #_(testing "functionality"
+      (eval actual)
+      (eval '(do (is= (identity|uninlined 1 ) 1 )
+                 (is= (identity|uninlined "") ""))))))
 
-($ (do (def ~'pid|__0
-         (reify >Object
-           (~(tag "java.lang.Object" 'invoke) [~'_0__]
-             ~'(->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
-                    (.getName)))))
+(deftest test|name
+  (let [actual
+          (macroexpand '
+            (defnt #_:inline name|test
+                       ([x t/string?       > t/string?]     x)
+              #?(:clj  ([x (t/isa? Named)  > (* t/string?)] (.getName x))
+                 :cljs ([x (t/isa? INamed) > (* t/string?)] (-name x)))))
+        expected
+         (case (env-lang)
+           :clj
+             ($ (do ;; Only direct dispatch for primitives or for Object, not for subclasses of
+                    ;; Object
+                    ;; Return value can be primitive; in this case it's not
+                    ;; The macro in a typed context will find the appropriate dispatch at compile
+                    ;; time
 
-       (defn ~'pid
-         {::t/type (t/fn [:> ~'(? t/string?)])}
-         ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.>Object" 'pid|__0))))))
+                    ;; [t/string?]
 
-)
+                    (def ~(tag "[Ljava.lang.Object;" 'name|__0|input-types)
+                      (*<> t/string?))
+                    (def ~'name|__0
+                      (reify Object>Object
+                        (~(tag "java.lang.Object" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)]
+                          (let* [~(tag "java.lang.String" 'x) ~'x] ~'x))))
 
-(testing "`pid`"
-  (is (string? (pid)))
-  (throws (pid 1)))
+                    ;; [(t/isa? Named)]
 
-;; =====|=====|=====|=====|===== ;;
+                    (def ~(tag "[Ljava.lang.Object;" 'name|__1|input-types)
+                      (*<> (t/isa? Named)))
+                    (def ~'name|__1
+                      (reify Object>Object
+                        (~(tag "java.lang.Object" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)]
+                          (let* [~(tag "clojure.lang.Named" 'x) ~'x]
+                            (t/validate ~'(.getName x) ~'(* t/string?))))))
 
-(is-code=
-
-;; ----- implementation ----- ;;
-
-(macroexpand '
-(defnt identity|uninlined ([x t/any?] x))
-)
-
-;; ----- expanded code ----- ;;
-
-(case (env-lang)
-  :clj  ($ (do ;; [x t/any?]
-
-               (def ~(tag "[Ljava.lang.Object;" 'identity|uninlined|__0|input-types)
-                 (*<> ~'t/any?))
-               ;; One `reify` because `t/any?` in CLJ does not have any `t/or`-separability
-               (def ~'identity|uninlined|__0
-                 (reify
-                   Object>Object
-                     (~(tag "java.lang.Object" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)] ~'x)
-                   boolean>boolean
-                     (~(tag "boolean"          'invoke) [~'_1__ ~(tag "boolean"          'x)] ~'x)
-                   byte>byte
-                     (~(tag "byte"             'invoke) [~'_2__ ~(tag "byte"             'x)] ~'x)
-                   short>short
-                     (~(tag "short"            'invoke) [~'_3__ ~(tag "short"            'x)] ~'x)
-                   char>char
-                     (~(tag "char"             'invoke) [~'_4__ ~(tag "char"             'x)] ~'x)
-                   int>int
-                     (~(tag "int"              'invoke) [~'_5__ ~(tag "int"              'x)] ~'x)
-                   long>long
-                     (~(tag "long"             'invoke) [~'_6__ ~(tag "long"             'x)] ~'x)
-                   float>float
-                     (~(tag "float"            'invoke) [~'_7__ ~(tag "float"            'x)] ~'x)
-                   double>double
-                     (~(tag "double"           'invoke) [~'_8__ ~(tag "double"           'x)] ~'x)))
-
-               (defn ~'identity|uninlined
-                 {::t/type (t/fn [t/any?])}
-                 ([~'x00__]
-                   ;; Checks elided because `t/any?` doesn't require a check
-                   (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
-                                  'identity|uninlined|__0) ~'a00__)))))
-  :cljs ;; Direct dispatch will be simple functions, not `reify`s
-        ($ (do (defn ~'identity|uninlined [~'x] ~'x)))))
-
-)
-
-;; =====|=====|=====|=====|===== ;;
-
-;; TODO will deal with `inline` later
-(defnt ^:inline identity ([x t/any?] x))
-
-;; ----- test ----- ;;
-
-(deftest test|identity
-  (is= (identity 1 ) 1 )
-  (is= (identity "") ""))
-
-;; =====|=====|=====|=====|===== ;;
-
-(is-code=
-
-;; TODO don't ignore `:inline`
-(macroexpand '
-(defnt #_:inline name
-           ([x t/string?       > t/string?]     x)
-  #?(:clj  ([x (t/isa? Named)  > (* t/string?)] (.getName x))
-     :cljs ([x (t/isa? INamed) > (* t/string?)] (-name x))))
-)
-
-;; ----- expanded code ----- ;;
-
-(case (env-lang)
-  :clj  ($ (do ;; Only direct dispatch for primitives or for Object, not for subclasses of Object
-               ;; Return value can be primitive; in this case it's not
-               ;; The macro in a typed context will find the appropriate dispatch at compile time
-
-               ;; [t/string?]
-
-               (def ~(tag "[Ljava.lang.Object;" 'name|__0|input-types)
-                 (*<> t/string?))
-               (def ~'name|__0
-                 (reify Object>Object
-                   (~(tag "java.lang.Object" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)]
-                     (let* [~(tag "java.lang.String" 'x) ~'x] ~'x))))
-
-               ;; [(t/isa? Named)]
-
-               (def ~(tag "[Ljava.lang.Object;" 'name|__1|input-types)
-                 (*<> (t/isa? Named)))
-               (def ~'name|__1
-                 (reify Object>Object
-                   (~(tag "java.lang.Object" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)]
-                     (let* [~(tag "clojure.lang.Named" 'x) ~'x]
-                       (t/validate ~'(.getName x) ~'(* t/string?))))))
-
-               (defn ~'name
-                 {::t/type
-                   (t/fn [t/string?      :> t/string?]
-                         [(t/isa? Named) :> (* t/string?)])}
-                 ([~'x00__]
-                   (ifs ((Array/get ~'name|__0|input-types 0) ~'x00__)
-                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
-                                         'name|__0) ~'x00__)
-                        ((Array/get ~'name|__1|input-types 0) ~'x00__)
-                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
-                                         'name|__1) ~'x00__)
-                        (unsupported! `name [~'x00__] 0))))))
-  :cljs ($ (do (defn ~'name [~'x00__]
-                 (ifs (t/string? x)         x
-                      (satisfies? INamed x) (-name x)
-                      (unsupported! `name [~'x00__] 0))))))
-
-)
+                    (defn ~'name
+                      {::t/type
+                        (t/fn [t/string?      :> t/string?]
+                              [(t/isa? Named) :> (* t/string?)])}
+                      ([~'x00__]
+                        (ifs ((Array/get ~'name|__0|input-types 0) ~'x00__)
+                               (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
+                                              'name|__0) ~'x00__)
+                             ((Array/get ~'name|__1|input-types 0) ~'x00__)
+                               (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
+                                              'name|__1) ~'x00__)
+                             (unsupported! `name [~'x00__] 0))))))
+           :cljs
+             ($ (do (defn ~'name [~'x00__]
+                    (ifs (t/string? x)         x
+                         (satisfies? INamed x) (-name x)
+                         (unsupported! `name [~'x00__] 0))))))]
+    (testing "code equivalence" (is-code= actual expected))))
 
 ;; =====|=====|=====|=====|===== ;;
 

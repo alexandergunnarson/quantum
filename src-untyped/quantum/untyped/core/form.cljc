@@ -42,13 +42,10 @@
   {:examples '{(let [a 1]
                  (quote+ (for [b 2] (inc ~a))))
                '(for [a 1] (inc 1))}}
-  [form]
-  `(unquote-replacement (locals) '~form)))
+  [form] `(unquote-replacement (locals) '~form)))
 
 #?(:clj
 (defmacro $
   "Reproducibly, unifiedly syntax quote without messing up the format as a literal
    syntax quote might do."
-  [body]
-  `(binding [ufgen/*reproducible-gensym* (ufgen/>reproducible-gensym|generator true)]
-     (ufgen/unify-gensyms (syntax-quote ~body) true))))
+  [body] `(ufgen/unify-gensyms (syntax-quote ~body) true)))
