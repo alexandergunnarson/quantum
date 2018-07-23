@@ -400,248 +400,267 @@
                  (is= (>boolean nil) false)
                  (is= (>boolean 123) true))))))
 
-;; =====|=====|=====|=====|===== ;;
+(deftest test|>int*
+  (let [actual
+          (macroexpand '
+            ;; Auto-upcasts to long or double (because 64-bit) unless you tell it otherwise
+            ;; Will error if not all return values can be safely converted to the return spec
+            (defnt #_:inline >int* > t/int?
+              ([x (t/- t/primitive? t/boolean?)] (Primitive/uncheckedIntCast x))
+              ([x (t/ref (t/isa? Number))] (.intValue x))))
+        expected
+          (case (env-lang)
+            :clj
+              ($ (do #_(swap! fn->spec assoc #'>int*
+                         (t/fn [(t/- t/primitive? t/boolean?)]
+                               [(t/ref (t/isa? Number))]))
 
-(is-code=
+                     ;; [x (t/- t/primitive? t/boolean?)]
 
-;; auto-upcasts to long or double (because 64-bit) unless you tell it otherwise
-;; will error if not all return values can be safely converted to the return spec
-(macroexpand '
-(defnt #_:inline >int* > t/int?
-  ([x (t/- t/primitive? t/boolean?)] (Primitive/uncheckedIntCast x))
-  ([x (t/ref (t/isa? Number))] (.intValue x)))
-)
+                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|input-types)
+                       (*<> ~'(t/- t/primitive? t/boolean?)))
+                     (def ~'>int*|__0
+                       (reify
+                         byte>int   (~(tag "int" 'invoke) [~'_0__ ~(tag "byte"             'x)]
+                                      ~'(Primitive/uncheckedIntCast x))
+                         short>int  (~(tag "int" 'invoke) [~'_1__ ~(tag "short"            'x)]
+                                      ~'(Primitive/uncheckedIntCast x))
+                         char>int   (~(tag "int" 'invoke) [~'_2__ ~(tag "char"             'x)]
+                                      ~'(Primitive/uncheckedIntCast x))
+                         int>int    (~(tag "int" 'invoke) [~'_3__ ~(tag "int"              'x)]
+                                      ~'(Primitive/uncheckedIntCast x))
+                         long>int   (~(tag "int" 'invoke) [~'_4__ ~(tag "long"             'x)]
+                                      ~'(Primitive/uncheckedIntCast x))
+                         float>int  (~(tag "int" 'invoke) [~'_5__ ~(tag "float"            'x)]
+                                      ~'(Primitive/uncheckedIntCast x))
+                         double>int (~(tag "int" 'invoke) [~'_6__ ~(tag "double"           'x)]
+                                      ~'(Primitive/uncheckedIntCast x))))
 
-;; ----- expanded code ----- ;;
+                     ;; [x (t/ref (t/isa? Number))
+                     ;;  -> (t/- (t/ref (t/isa? Number)) (t/- t/primitive? t/boolean?))]
 
-(case (env-lang)
-  :clj ($ (do #_(swap! fn->spec assoc #'>int*
-                  (t/fn [(t/- t/primitive? t/boolean?)]
-                        [(t/ref (t/isa? Number))]))
+                     (def ~(tag "[Ljava.lang.Object;" '>int*|__1|input-types)
+                       (*<> ~'(t/ref (t/isa? Number))))
+                     (def ~'>int*|__1
+                       (reify
+                         Object>int (~(tag "int" 'invoke) [~'_7__ ~(tag "java.lang.Object" 'x)]
+                                      (let* [~(tag "java.lang.Number" 'x) ~'x]
+                                        ~'(.intValue x)))))
 
-              ;; [x (t/- t/primitive? t/boolean?)]
+                     ;; TODO the dispatch here should realize that `>int*|__0` has multiple
+                     ;; non-primitivized overloads and must dispatch not merely on the whole typedef
+                     ;; but rather on each 'branch' of `(t/- t/primitive? t/boolean?)`
+                     (defn ~'>int*
+                       {::t/type (t/fn ~'[(t/- t/primitive? t/boolean?)]
+                                       ~'[(t/ref (t/isa? Number))])}
+                       ([~'x00__]
+                         (ifs ((Array/get ~'>int*|__0|input-types 0) ~'x00__)
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.boolean>boolean"
+                                               '>int*|__0) ~'x00__)
+                              ((Array/get ~'>int*|__1|input-types 0) ~'x00__)
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
+                                               '>int*|__1) ~'x00__)
+                              (unsupported! `>boolean [~'x00__] 0)))))))]]
+    (testing "code equivalence" (is-code= actual expected))
+    #_(testing "functionality"
+      (eval actual)
+      (eval '(do ...)))))
 
-              (def ~(tag "[Ljava.lang.Object;" '>int*|__0|input-types)
-                (*<> (t/- t/primitive? t/boolean?)))
-              (def ~'>int*|__0
-                (reify
-                  byte>int   (~(tag "int" 'invoke) [~'_0__ ~(tag "byte"             'x)]
-                               ~'(Primitive/uncheckedIntCast x))
-                  short>int  (~(tag "int" 'invoke) [~'_1__ ~(tag "short"            'x)]
-                               ~'(Primitive/uncheckedIntCast x))
-                  char>int   (~(tag "int" 'invoke) [~'_2__ ~(tag "char"             'x)]
-                               ~'(Primitive/uncheckedIntCast x))
-                  int>int    (~(tag "int" 'invoke) [~'_3__ ~(tag "int"              'x)]
-                               ~'(Primitive/uncheckedIntCast x))
-                  long>int   (~(tag "int" 'invoke) [~'_4__ ~(tag "long"             'x)]
-                               ~'(Primitive/uncheckedIntCast x))
-                  float>int  (~(tag "int" 'invoke) [~'_5__ ~(tag "float"            'x)]
-                               ~'(Primitive/uncheckedIntCast x))
-                  double>int (~(tag "int" 'invoke) [~'_6__ ~(tag "double"           'x)]
-                               ~'(Primitive/uncheckedIntCast x))))
+(deftest test|>
+  (let [actual
+          (macroexpand '
+            (defnt #_:inline >|test
+                       ;; This is admittedly a place where inference might be nice, but luckily
+                       ;; there are no "sparse" combinations
+              #?(:clj  ([a t/comparable-primitive? b t/comparable-primitive? > t/boolean?]
+                         (Numeric/gt a b))
+                 :cljs ([a t/double?               b t/double?              > (t/assume t/boolean?)]
+                         (cljs.core/> a b)))))
+        expected
+          (case (env-lang)
+            :clj
+              ($ (do (def ~'>|test|__0
+                       (reify
+                         byte+byte>boolean
+                           (~(tag "boolean" 'invoke) [~'_0__  ~(tag "byte"   'a) ~(tag "byte"   'b)]
+                             ~'(Numeric/gt a b))
+                         byte+short>boolean
+                           (~(tag "boolean" 'invoke) [~'_1__  ~(tag "byte"   'a) ~(tag "short"  'b)]
+                             ~'(Numeric/gt a b))
+                         byte+char>boolean
+                           (~(tag "boolean" 'invoke) [~'_2__  ~(tag "byte"   'a) ~(tag "char"   'b)]
+                             ~'(Numeric/gt a b))
+                         byte+int>boolean
+                           (~(tag "boolean" 'invoke) [~'_3__  ~(tag "byte"   'a) ~(tag "int"    'b)]
+                             ~'(Numeric/gt a b))
+                         byte+long>boolean
+                           (~(tag "boolean" 'invoke) [~'_4__  ~(tag "byte"   'a) ~(tag "long"   'b)]
+                             ~'(Numeric/gt a b))
+                         byte+float>boolean
+                           (~(tag "boolean" 'invoke) [~'_5__  ~(tag "byte"   'a) ~(tag "float"  'b)]
+                             ~'(Numeric/gt a b))
+                         byte+double>boolean
+                           (~(tag "boolean" 'invoke) [~'_6__  ~(tag "byte"   'a) ~(tag "double" 'b)]
+                             ~'(Numeric/gt a b))
+                         short+byte>boolean
+                           (~(tag "boolean" 'invoke) [~'_7__  ~(tag "short"  'a) ~(tag "byte"   'b)]
+                             ~'(Numeric/gt a b))
+                         short+short>boolean
+                           (~(tag "boolean" 'invoke) [~'_8__  ~(tag "short"  'a) ~(tag "short"  'b)]
+                             ~'(Numeric/gt a b))
+                         short+char>boolean
+                           (~(tag "boolean" 'invoke) [~'_9__  ~(tag "short"  'a) ~(tag "char"   'b)]
+                             ~'(Numeric/gt a b))
+                         short+int>boolean
+                           (~(tag "boolean" 'invoke) [~'_10__ ~(tag "short"  'a) ~(tag "int"    'b)]
+                             ~'(Numeric/gt a b))
+                         short+long>boolean
+                           (~(tag "boolean" 'invoke) [~'_11__ ~(tag "short"  'a) ~(tag "long"   'b)]
+                             ~'(Numeric/gt a b))
+                         short+float>boolean
+                           (~(tag "boolean" 'invoke) [~'_12__ ~(tag "short"  'a) ~(tag "float"  'b)]
+                             ~'(Numeric/gt a b))
+                         short+double>boolean
+                           (~(tag "boolean" 'invoke) [~'_13__ ~(tag "short"  'a) ~(tag "double" 'b)]
+                             ~'(Numeric/gt a b))
+                         char+byte>boolean
+                           (~(tag "boolean" 'invoke) [~'_14__ ~(tag "char"   'a) ~(tag "byte"   'b)]
+                             ~'(Numeric/gt a b))
+                         char+short>boolean
+                           (~(tag "boolean" 'invoke) [~'_15__ ~(tag "char"   'a) ~(tag "short"  'b)]
+                             ~'(Numeric/gt a b))
+                         char+char>boolean
+                           (~(tag "boolean" 'invoke) [~'_16__ ~(tag "char"   'a) ~(tag "char"   'b)]
+                             ~'(Numeric/gt a b))
+                         char+int>boolean
+                           (~(tag "boolean" 'invoke) [~'_17__ ~(tag "char"   'a) ~(tag "int"    'b)]
+                             ~'(Numeric/gt a b))
+                         char+long>boolean
+                           (~(tag "boolean" 'invoke) [~'_18__ ~(tag "char"   'a) ~(tag "long"   'b)]
+                             ~'(Numeric/gt a b))
+                         char+float>boolean
+                           (~(tag "boolean" 'invoke) [~'_19__ ~(tag "char"   'a) ~(tag "float"  'b)]
+                             ~'(Numeric/gt a b))
+                         char+double>boolean
+                           (~(tag "boolean" 'invoke) [~'_20__ ~(tag "char"   'a) ~(tag "double" 'b)]
+                             ~'(Numeric/gt a b))
+                         int+byte>boolean
+                           (~(tag "boolean" 'invoke) [~'_21__ ~(tag "int"    'a) ~(tag "byte"   'b)]
+                             ~'(Numeric/gt a b))
+                         int+short>boolean
+                           (~(tag "boolean" 'invoke) [~'_22__ ~(tag "int"    'a) ~(tag "short"  'b)]
+                             ~'(Numeric/gt a b))
+                         int+char>boolean
+                           (~(tag "boolean" 'invoke) [~'_23__ ~(tag "int"    'a) ~(tag "char"   'b)]
+                             ~'(Numeric/gt a b))
+                         int+int>boolean
+                           (~(tag "boolean" 'invoke) [~'_24__ ~(tag "int"    'a) ~(tag "int"    'b)]
+                             ~'(Numeric/gt a b))
+                         int+long>boolean
+                           (~(tag "boolean" 'invoke) [~'_25__ ~(tag "int"    'a) ~(tag "long"   'b)]
+                             ~'(Numeric/gt a b))
+                         int+float>boolean
+                           (~(tag "boolean" 'invoke) [~'_26__ ~(tag "int"    'a) ~(tag "float"  'b)]
+                             ~'(Numeric/gt a b))
+                         int+double>boolean
+                           (~(tag "boolean" 'invoke) [~'_27__ ~(tag "int"    'a) ~(tag "double" 'b)]
+                             ~'(Numeric/gt a b))
+                         long+byte>boolean
+                           (~(tag "boolean" 'invoke) [~'_28__ ~(tag "long"   'a) ~(tag "byte"   'b)]
+                             ~'(Numeric/gt a b))
+                         long+short>boolean
+                           (~(tag "boolean" 'invoke) [~'_29__ ~(tag "long"   'a) ~(tag "short"  'b)]
+                             ~'(Numeric/gt a b))
+                         long+char>boolean
+                           (~(tag "boolean" 'invoke) [~'_30__ ~(tag "long"   'a) ~(tag "char"   'b)]
+                             ~'(Numeric/gt a b))
+                         long+int>boolean
+                           (~(tag "boolean" 'invoke) [~'_31__ ~(tag "long"   'a) ~(tag "int"    'b)]
+                             ~'(Numeric/gt a b))
+                         long+long>boolean
+                           (~(tag "boolean" 'invoke) [~'_32__ ~(tag "long"   'a) ~(tag "long"   'b)]
+                             ~'(Numeric/gt a b))
+                         long+float>boolean
+                           (~(tag "boolean" 'invoke) [~'_33__ ~(tag "long"   'a) ~(tag "float"  'b)]
+                             ~'(Numeric/gt a b))
+                         long+double>boolean
+                           (~(tag "boolean" 'invoke) [~'_34__ ~(tag "long"   'a) ~(tag "double" 'b)]
+                             ~'(Numeric/gt a b))
+                         float+byte>boolean
+                           (~(tag "boolean" 'invoke) [~'_35__ ~(tag "float"  'a) ~(tag "byte"   'b)]
+                             ~'(Numeric/gt a b))
+                         float+short>boolean
+                           (~(tag "boolean" 'invoke) [~'_36__ ~(tag "float"  'a) ~(tag "short"  'b)]
+                             ~'(Numeric/gt a b))
+                         float+char>boolean
+                           (~(tag "boolean" 'invoke) [~'_37__ ~(tag "float"  'a) ~(tag "char"   'b)]
+                             ~'(Numeric/gt a b))
+                         float+int>boolean
+                           (~(tag "boolean" 'invoke) [~'_38__ ~(tag "float"  'a) ~(tag "int"    'b)]
+                             ~'(Numeric/gt a b))
+                         float+long>boolean
+                           (~(tag "boolean" 'invoke) [~'_39__ ~(tag "float"  'a) ~(tag "long"   'b)]
+                             ~'(Numeric/gt a b))
+                         float+float>boolean
+                           (~(tag "boolean" 'invoke) [~'_40__ ~(tag "float"  'a) ~(tag "float"  'b)]
+                             ~'(Numeric/gt a b))
+                         float+double>boolean
+                           (~(tag "boolean" 'invoke) [~'_41__ ~(tag "float"  'a) ~(tag "double" 'b)]
+                             ~'(Numeric/gt a b))
+                         double+byte>boolean
+                           (~(tag "boolean" 'invoke) [~'_42__ ~(tag "double" 'a) ~(tag "byte"   'b)]
+                             ~'(Numeric/gt a b))
+                         double+short>boolean
+                           (~(tag "boolean" 'invoke) [~'_43__ ~(tag "double" 'a) ~(tag "short"  'b)]
+                             ~'(Numeric/gt a b))
+                         double+char>boolean
+                           (~(tag "boolean" 'invoke) [~'_44__ ~(tag "double" 'a) ~(tag "char"   'b)]
+                             ~'(Numeric/gt a b))
+                         double+int>boolean
+                           (~(tag "boolean" 'invoke) [~'_45__ ~(tag "double" 'a) ~(tag "int"    'b)]
+                             ~'(Numeric/gt a b))
+                         double+long>boolean
+                           (~(tag "boolean" 'invoke) [~'_46__ ~(tag "double" 'a) ~(tag "long"   'b)]
+                             ~'(Numeric/gt a b))
+                         double+float>boolean
+                           (~(tag "boolean" 'invoke) [~'_47__ ~(tag "double" 'a) ~(tag "float"  'b)]
+                             ~'(Numeric/gt a b))
+                         double+double>boolean
+                           (~(tag "boolean" 'invoke) [~'_48__ ~(tag "double" 'a) ~(tag "double" 'b)]
+                             ~'(Numeric/gt a b))))
 
-              ;; [x (t/ref (t/isa? Number))
-              ;;  -> (t/- (t/ref (t/isa? Number)) (t/- t/primitive? t/boolean?))]
-
-              (def ~'>int*|__1
-                (reify
-                  Object>int (~(tag "int" 'invoke) [~'_7__ ~(tag "java.lang.Object" 'x)]
-                               (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(.intValue x))))))))
-
-)
-
-;; =====|=====|=====|=====|===== ;;
-
-(is-code=
-
-(macroexpand '
-(defnt #_:inline >
-           ;; This is admittedly a place where inference might be nice, but luckily there are no
-           ;; "sparse" combinations
-  #?(:clj  ([a t/comparable-primitive? b t/comparable-primitive? > t/boolean?]
-             (Numeric/gt a b))
-     :cljs ([a t/double?               b t/double?               > (t/assume t/boolean?)]
-             (cljs.core/> a b))))
-)
-
-;; ----- expanded code ----- ;;
-
-(case (env-lang)
-  :clj  ($ (do (def ~'>|__0
-                 (reify
-                   byte+byte>boolean
-                     (~(tag "boolean" 'invoke) [~'_0__  ~(tag "byte"   'a) ~(tag "byte"   'b)]
-                       ~'(Numeric/gt a b))
-                   byte+short>boolean
-                     (~(tag "boolean" 'invoke) [~'_1__  ~(tag "byte"   'a) ~(tag "short"  'b)]
-                       ~'(Numeric/gt a b))
-                   byte+char>boolean
-                     (~(tag "boolean" 'invoke) [~'_2__  ~(tag "byte"   'a) ~(tag "char"   'b)]
-                       ~'(Numeric/gt a b))
-                   byte+int>boolean
-                     (~(tag "boolean" 'invoke) [~'_3__  ~(tag "byte"   'a) ~(tag "int"    'b)]
-                       ~'(Numeric/gt a b))
-                   byte+long>boolean
-                     (~(tag "boolean" 'invoke) [~'_4__  ~(tag "byte"   'a) ~(tag "long"   'b)]
-                       ~'(Numeric/gt a b))
-                   byte+float>boolean
-                     (~(tag "boolean" 'invoke) [~'_5__  ~(tag "byte"   'a) ~(tag "float"  'b)]
-                       ~'(Numeric/gt a b))
-                   byte+double>boolean
-                     (~(tag "boolean" 'invoke) [~'_6__  ~(tag "byte"   'a) ~(tag "double" 'b)]
-                       ~'(Numeric/gt a b))
-                   short+byte>boolean
-                     (~(tag "boolean" 'invoke) [~'_7__  ~(tag "short"  'a) ~(tag "byte"   'b)]
-                       ~'(Numeric/gt a b))
-                   short+short>boolean
-                     (~(tag "boolean" 'invoke) [~'_8__  ~(tag "short"  'a) ~(tag "short"  'b)]
-                       ~'(Numeric/gt a b))
-                   short+char>boolean
-                     (~(tag "boolean" 'invoke) [~'_9__  ~(tag "short"  'a) ~(tag "char"   'b)]
-                       ~'(Numeric/gt a b))
-                   short+int>boolean
-                     (~(tag "boolean" 'invoke) [~'_10__ ~(tag "short"  'a) ~(tag "int"    'b)]
-                       ~'(Numeric/gt a b))
-                   short+long>boolean
-                     (~(tag "boolean" 'invoke) [~'_11__ ~(tag "short"  'a) ~(tag "long"   'b)]
-                       ~'(Numeric/gt a b))
-                   short+float>boolean
-                     (~(tag "boolean" 'invoke) [~'_12__ ~(tag "short"  'a) ~(tag "float"  'b)]
-                       ~'(Numeric/gt a b))
-                   short+double>boolean
-                     (~(tag "boolean" 'invoke) [~'_13__ ~(tag "short"  'a) ~(tag "double" 'b)]
-                       ~'(Numeric/gt a b))
-                   char+byte>boolean
-                     (~(tag "boolean" 'invoke) [~'_14__ ~(tag "char"   'a) ~(tag "byte"   'b)]
-                       ~'(Numeric/gt a b))
-                   char+short>boolean
-                     (~(tag "boolean" 'invoke) [~'_15__ ~(tag "char"   'a) ~(tag "short"  'b)]
-                       ~'(Numeric/gt a b))
-                   char+char>boolean
-                     (~(tag "boolean" 'invoke) [~'_16__ ~(tag "char"   'a) ~(tag "char"   'b)]
-                       ~'(Numeric/gt a b))
-                   char+int>boolean
-                     (~(tag "boolean" 'invoke) [~'_17__ ~(tag "char"   'a) ~(tag "int"    'b)]
-                       ~'(Numeric/gt a b))
-                   char+long>boolean
-                     (~(tag "boolean" 'invoke) [~'_18__ ~(tag "char"   'a) ~(tag "long"   'b)]
-                       ~'(Numeric/gt a b))
-                   char+float>boolean
-                     (~(tag "boolean" 'invoke) [~'_19__ ~(tag "char"   'a) ~(tag "float"  'b)]
-                       ~'(Numeric/gt a b))
-                   char+double>boolean
-                     (~(tag "boolean" 'invoke) [~'_20__ ~(tag "char"   'a) ~(tag "double" 'b)]
-                       ~'(Numeric/gt a b))
-                   int+byte>boolean
-                     (~(tag "boolean" 'invoke) [~'_21__ ~(tag "int"    'a) ~(tag "byte"   'b)]
-                       ~'(Numeric/gt a b))
-                   int+short>boolean
-                     (~(tag "boolean" 'invoke) [~'_22__ ~(tag "int"    'a) ~(tag "short"  'b)]
-                       ~'(Numeric/gt a b))
-                   int+char>boolean
-                     (~(tag "boolean" 'invoke) [~'_23__ ~(tag "int"    'a) ~(tag "char"   'b)]
-                       ~'(Numeric/gt a b))
-                   int+int>boolean
-                     (~(tag "boolean" 'invoke) [~'_24__ ~(tag "int"    'a) ~(tag "int"    'b)]
-                       ~'(Numeric/gt a b))
-                   int+long>boolean
-                     (~(tag "boolean" 'invoke) [~'_25__ ~(tag "int"    'a) ~(tag "long"   'b)]
-                       ~'(Numeric/gt a b))
-                   int+float>boolean
-                     (~(tag "boolean" 'invoke) [~'_26__ ~(tag "int"    'a) ~(tag "float"  'b)]
-                       ~'(Numeric/gt a b))
-                   int+double>boolean
-                     (~(tag "boolean" 'invoke) [~'_27__ ~(tag "int"    'a) ~(tag "double" 'b)]
-                       ~'(Numeric/gt a b))
-                   long+byte>boolean
-                     (~(tag "boolean" 'invoke) [~'_28__ ~(tag "long"   'a) ~(tag "byte"   'b)]
-                       ~'(Numeric/gt a b))
-                   long+short>boolean
-                     (~(tag "boolean" 'invoke) [~'_29__ ~(tag "long"   'a) ~(tag "short"  'b)]
-                       ~'(Numeric/gt a b))
-                   long+char>boolean
-                     (~(tag "boolean" 'invoke) [~'_30__ ~(tag "long"   'a) ~(tag "char"   'b)]
-                       ~'(Numeric/gt a b))
-                   long+int>boolean
-                     (~(tag "boolean" 'invoke) [~'_31__ ~(tag "long"   'a) ~(tag "int"    'b)]
-                       ~'(Numeric/gt a b))
-                   long+long>boolean
-                     (~(tag "boolean" 'invoke) [~'_32__ ~(tag "long"   'a) ~(tag "long"   'b)]
-                       ~'(Numeric/gt a b))
-                   long+float>boolean
-                     (~(tag "boolean" 'invoke) [~'_33__ ~(tag "long"   'a) ~(tag "float"  'b)]
-                       ~'(Numeric/gt a b))
-                   long+double>boolean
-                     (~(tag "boolean" 'invoke) [~'_34__ ~(tag "long"   'a) ~(tag "double" 'b)]
-                       ~'(Numeric/gt a b))
-                   float+byte>boolean
-                     (~(tag "boolean" 'invoke) [~'_35__ ~(tag "float"  'a) ~(tag "byte"   'b)]
-                       ~'(Numeric/gt a b))
-                   float+short>boolean
-                     (~(tag "boolean" 'invoke) [~'_36__ ~(tag "float"  'a) ~(tag "short"  'b)]
-                       ~'(Numeric/gt a b))
-                   float+char>boolean
-                     (~(tag "boolean" 'invoke) [~'_37__ ~(tag "float"  'a) ~(tag "char"   'b)]
-                       ~'(Numeric/gt a b))
-                   float+int>boolean
-                     (~(tag "boolean" 'invoke) [~'_38__ ~(tag "float"  'a) ~(tag "int"    'b)]
-                       ~'(Numeric/gt a b))
-                   float+long>boolean
-                     (~(tag "boolean" 'invoke) [~'_39__ ~(tag "float"  'a) ~(tag "long"   'b)]
-                       ~'(Numeric/gt a b))
-                   float+float>boolean
-                     (~(tag "boolean" 'invoke) [~'_40__ ~(tag "float"  'a) ~(tag "float"  'b)]
-                       ~'(Numeric/gt a b))
-                   float+double>boolean
-                     (~(tag "boolean" 'invoke) [~'_41__ ~(tag "float"  'a) ~(tag "double" 'b)]
-                       ~'(Numeric/gt a b))
-                   double+byte>boolean
-                     (~(tag "boolean" 'invoke) [~'_42__ ~(tag "double" 'a) ~(tag "byte"   'b)]
-                       ~'(Numeric/gt a b))
-                   double+short>boolean
-                     (~(tag "boolean" 'invoke) [~'_43__ ~(tag "double" 'a) ~(tag "short"  'b)]
-                       ~'(Numeric/gt a b))
-                   double+char>boolean
-                     (~(tag "boolean" 'invoke) [~'_44__ ~(tag "double" 'a) ~(tag "char"   'b)]
-                       ~'(Numeric/gt a b))
-                   double+int>boolean
-                     (~(tag "boolean" 'invoke) [~'_45__ ~(tag "double" 'a) ~(tag "int"    'b)]
-                       ~'(Numeric/gt a b))
-                   double+long>boolean
-                     (~(tag "boolean" 'invoke) [~'_46__ ~(tag "double" 'a) ~(tag "long"   'b)]
-                       ~'(Numeric/gt a b))
-                   double+float>boolean
-                     (~(tag "boolean" 'invoke) [~'_47__ ~(tag "double" 'a) ~(tag "float"  'b)]
-                       ~'(Numeric/gt a b))
-                   double+double>boolean
-                     (~(tag "boolean" 'invoke) [~'_48__ ~(tag "double" 'a) ~(tag "double" 'b)]
-                       ~'(Numeric/gt a b))))
-
-                 #_(defn >
-                     {::t/type
-                       (t/fn #?(:clj  [t/comparable-primitive? t/comparable-primitive?
-                                       :> t/boolean?]
-                                :cljs [t/double?               t/double?
-                                       :> (t/assume t/boolean?)]))}
-                     ([a0 a1]
-                             (ifs (t/byte? a0)
-                                    (ifs (t/byte? a1) (.invoke ^byte+byte>boolean >|__0 a0 a1)
-                                         (t/char? a1) (.invoke ...)
-                                         ...)
-                                  (t/char? a0)
-                                    (ifs (t/byte? a1) (.invoke ^char+byte>boolean >|__0 a0 a1)
-                                         ...)
-                                  ...
-                                  (unsupported! `> [a0 a1] 0))))))
-        :cljs `(do (defn >
-                     ([a0 a1]
-                       (ifs (double? a0)
-                              (ifs (double? a1)
-                                     (let* [a a0 b a1] (cljs.core/> a b))
-                                   (unsupported! `> [a0 a1] 1))
-                            (unsupported! `> [a0 a1] 0)))))))
-
-;; =====|=====|=====|=====|===== ;;
+                     ;; TODO the dispatch here should realize that `>|test|__0` has multiple
+                     ;; non-primitivized overloads and must dispatch not merely on the whole typedef
+                     ;; but rather on each 'branch' of `[t/comparable-primitive? t/comparable-primitive?]`
+                     (defn >|test
+                       {::t/type
+                         (t/fn #?(:clj  [t/comparable-primitive? t/comparable-primitive?
+                                         :> t/boolean?]
+                                  :cljs [t/double?               t/double?
+                                         :> (t/assume t/boolean?)]))}
+                       ([a0 a1]
+                         (ifs (t/byte? a0)
+                                (ifs (t/byte? a1) (.invoke ^byte+byte>boolean >|test|__0 a0 a1)
+                                     (t/char? a1) (.invoke ...)
+                                     ...)
+                              (t/char? a0)
+                                (ifs (t/byte? a1)
+                                       (.invoke ^char+byte>boolean >|test|__0 a0 a1)
+                                     ...)
+                              ...
+                              (unsupported! `>|tets [a0 a1] 0))))))
+            :cljs
+              ($ (do (defn >|test
+                       ([a0 a1]
+                         (ifs (double? a0)
+                                (ifs (double? a1)
+                                       (let* [a a0 b a1] (cljs.core/> a b))
+                                     (unsupported! `>|test [a0 a1] 1))
+                              (unsupported! `>|test [a0 a1] 0)))))))]
+    (testing "code equivalence" (is-code= actual expected))
+    #_(testing "functionality"
+      (eval actual)
+      (eval '(do ...))))
 
 ;; TODO fix: current implementation prefers to consolidate into one `reify` rather than splitting it
 ;; up as below

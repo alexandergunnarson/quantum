@@ -79,8 +79,11 @@
 
 #_"
 
-LEFT OFF LAST TIME (7/18/2018):
-- >dynamic-dispatch-fn|form
+LEFT OFF LAST TIME (7/23/2018):
+- In defnt_equivalences:
+  ;; TODO the dispatch here should realize that `>int*|__0` has multiple
+  ;; non-primitivized overloads and must dispatch not merely on the whole typedef
+  ;; but rather on each 'branch' of `(t/- t/primitive? t/boolean?)`
 
 
 
@@ -1044,10 +1047,13 @@ LEFT OFF LAST TIME (7/18/2018):
       :name decl-name}))))
 
 (def allowed-shorthand-tag-chars "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+(def min-shorthand-tag-length 1)
+(def max-shorthand-tag-length 64) ; for now
 
 (defn >all-shorthand-tags []
-  (->> (for [n (c/unchunk (range 1 (inc 64)))] ; just up to length 64 for now
-         (apply combo/cartesian-product (repeat n allowed-shorthand-tag-chars)))
+  (->> (range min-shorthand-tag-length (inc max-shorthand-tag-length))
+       c/unchunk
+       (c/lmap (fn [n] (apply combo/cartesian-product (repeat n allowed-shorthand-tag-chars))))
        lcat
        (c/lmap #(apply str %))
        c/unchunk))
