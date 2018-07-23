@@ -121,11 +121,9 @@
         expected
           (case (env-lang)
             :clj
-              ($ (do ;; Only direct dispatch for primitives or for Object, not for subclasses of
-                     ;; Object
+              ($ (do ;; Only direct dispatch for prims or for Object, not for subclasses of Object
                      ;; Return value can be primitive; in this case it's not
-                     ;; The macro in a typed context will find the appropriate dispatch at compile
-                     ;; time
+                     ;; The macro in a typed context will find the right dispatch at compile time
 
                      ;; [t/string?]
 
@@ -175,72 +173,75 @@
                  (throws (name|test nil))
                  (throws (name|test 1)))))))
 
-;; =====|=====|=====|=====|===== ;;
+(deftest test|some?
+  (let [actual
+          ;; Perhaps silly in ClojureScript, but avoids boxing in Clojure
+          (macroexpand '
+            (defnt #_:inline some?|test
+              ([x t/nil?] false)
+              ;; Implicitly, `(- t/any? t/nil?)`, so `t/val?`
+              ([x t/any?] true)))
+        expected
+          (case (env-lang)
+            :clj
+              ($ (do ;; [x t/nil?]
 
-(is-code=
+                     (def ~(tag "[Ljava.lang.Object;" 'some?|test|__0|input-types)
+                       (*<> ~'t/nil?))
+                     (def ~'some?|test|__0
+                       (reify
+                         Object>boolean
+                           (~(tag "boolean" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)] false)))
 
-;; Perhaps silly in ClojureScript, but avoids boxing in Clojure
-(macroexpand '
-(defnt #_:inline some?
-  ([x t/nil?] false)
-  ;; Implicitly, `(- t/any? t/nil?)`, so `t/val?`
-  ([x t/any?] true))
-)
+                     ;; [x t/any?]
 
-;; ----- expanded code ----- ;;
+                     (def ~(tag "[Ljava.lang.Object;" 'some?|test|__1|input-types)
+                       (*<> ~'t/any?))
+                     (def ~'some?|test|__1
+                       (reify
+                         Object>boolean
+                           (~(tag "boolean" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)] true)
+                         boolean>boolean
+                           (~(tag "boolean" 'invoke) [~'_2__ ~(tag "boolean"          'x)] true)
+                         byte>boolean
+                           (~(tag "boolean" 'invoke) [~'_3__ ~(tag "byte"             'x)] true)
+                         short>boolean
+                           (~(tag "boolean" 'invoke) [~'_4__ ~(tag "short"            'x)] true)
+                         char>boolean
+                           (~(tag "boolean" 'invoke) [~'_5__ ~(tag "char"             'x)] true)
+                         int>boolean
+                           (~(tag "boolean" 'invoke) [~'_6__ ~(tag "int"              'x)] true)
+                         long>boolean
+                           (~(tag "boolean" 'invoke) [~'_7__ ~(tag "long"             'x)] true)
+                         float>boolean
+                           (~(tag "boolean" 'invoke) [~'_8__ ~(tag "float"            'x)] true)
+                         double>boolean
+                           (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] true)))
 
-(case (env-lang)
-  :clj  ($ (do ;; [x t/nil?]
-
-               (def ~(tag "[Ljava.lang.Object;" 'some?|__0|input-types)
-                 (*<> t/nil?))
-               (def ~'some?|__0
-                 (reify
-                   Object>boolean
-                     (~(tag "boolean" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)] false)))
-
-               ;; [x t/any?]
-
-               (def ~(tag "[Ljava.lang.Object;" 'some?|__1|input-types)
-                 (*<> t/any?))
-               (def ~'some?|__1
-                 (reify
-                   Object>boolean
-                     (~(tag "boolean" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)] true)
-                   boolean>boolean
-                     (~(tag "boolean" 'invoke) [~'_2__ ~(tag "boolean"          'x)] true)
-                   byte>boolean
-                     (~(tag "boolean" 'invoke) [~'_3__ ~(tag "byte"             'x)] true)
-                   short>boolean
-                     (~(tag "boolean" 'invoke) [~'_4__ ~(tag "short"            'x)] true)
-                   char>boolean
-                     (~(tag "boolean" 'invoke) [~'_5__ ~(tag "char"             'x)] true)
-                   int>boolean
-                     (~(tag "boolean" 'invoke) [~'_6__ ~(tag "int"              'x)] true)
-                   long>boolean
-                     (~(tag "boolean" 'invoke) [~'_7__ ~(tag "long"             'x)] true)
-                   float>boolean
-                     (~(tag "boolean" 'invoke) [~'_8__ ~(tag "float"            'x)] true)
-                   double>boolean
-                     (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] true)))
-
-               (defn ~'some?
-                 {::t/type (t/fn [t/nil?]
-                                 [t/any?])}
-                 ([~'x00__]
-                   (ifs ((Array/get ~'some?|__0|input-types 0) ~'x00__)
-                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
-                                         'some?|__0) ~'x00__)
-                        ;; TODO eliminate this check because it's not needed (`t/any?`)
-                        ((Array/get ~'some?|__1|input-types 0) ~'x00__)
-                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
-                                         'some?|__1) ~'x00__)
-                        (unsupported! `some? [~'x00__] 0))))))
-  :cljs ($ (do (defn ~'some? [~'x]
-                 (ifs (nil? x) false
-                      true)))))
-
-)
+                     (defn ~'some?|test
+                       {::t/type (t/fn ~'[t/nil?]
+                                       ~'[t/any?])}
+                       ([~'x00__]
+                         (ifs ((Array/get ~'some?|test|__0|input-types 0) ~'x00__)
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
+                                               'some?|test|__0) ~'x00__)
+                              ;; TODO eliminate this check because it's not needed (`t/any?`)
+                              ((Array/get ~'some?|test|__1|input-types 0) ~'x00__)
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
+                                               'some?|test|__1) ~'x00__)
+                              (unsupported! `some?|test [~'x00__] 0))))))
+            :cljs
+              ($ (do (defn ~'some?|test [~'x]
+                       (ifs (nil? x) false
+                            true)))))]
+    (testing "code equivalence" (is-code= actual expected))
+    (testing "functionality"
+      (eval actual)
+      (eval '(do (throws (some?))
+                 (is= (some? 123) true)
+                 (is= (some? true) true)
+                 (is= (some? false) true)
+                 (is= (some? nil) false))))))
 
 ;; =====|=====|=====|=====|===== ;;
 
