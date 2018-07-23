@@ -30,7 +30,8 @@
              (let [meta0 (-> code0 meta (dissoc :line :column))
                    meta1 (-> code1 meta (dissoc :line :column))]
                (or (= meta0 meta1)
-                   (println "FAIL: meta should be match for" (pr-str meta0) (pr-str meta1))))
+                   (println "FAIL: meta should be match for" (pr-str meta0) (pr-str meta1)
+                                                   "on code" (pr-str code0) (pr-str code1))))
              (let [similar-class?
                      (cond (seq?    code0) (seq?    code1)
                            (seq?    code1) (seq?    code0)

@@ -1038,8 +1038,9 @@ LEFT OFF LAST TIME (7/18/2018):
   [{:keys [::uss/fn|name ::uss/fn|name, i t/index?, overload-group ::fnt|overload-group]} _
    > ::input-types-decl]
  (when (c/contains? (:arg-types|form overload-group))
-   (let [decl-name (ufth/with-type-hint (>input-types-decl|name fn|name i) "[Ljava.lang.Object;")]
-     {:form `(def ~decl-name (arr/*<> ~(get-in overload-group [:arg-types|form i])))
+   (let [decl-name (>input-types-decl|name fn|name i)]
+     {:form `(def ~(ufth/with-type-hint decl-name "[Ljava.lang.Object;")
+                  (arr/*<> ~@(:arg-types|form overload-group)))
       :name decl-name}))))
 
 (def allowed-shorthand-tag-chars "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -1174,7 +1175,7 @@ LEFT OFF LAST TIME (7/18/2018):
                          (fn [i|reify {:as direct-dispatch|reify-group :keys [input-types-decl]}]
                            (prl! input-types-decl)
                            ;; TODO this part is very rough so far
-                           [`((quantum.core.Array/get ~(:name input-types-decl) ~i|arg) ~arg-sym)
+                           [`((quantum.core.data.Array/get ~(:name input-types-decl) ~i|arg) ~arg-sym)
                             (>reify-call direct-dispatch|reify-group)]))
                        lcat)
                 (unsupported! (quote ~(qualify fn|name)) [~@arglist] ~i|arg)))))))
