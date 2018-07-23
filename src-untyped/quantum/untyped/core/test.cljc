@@ -30,7 +30,7 @@
              (let [meta0 (-> code0 meta (dissoc :line :column))
                    meta1 (-> code1 meta (dissoc :line :column))]
                (or (= meta0 meta1)
-                   (println "FAIL: meta should be match for" meta0 meta1)))
+                   (println "FAIL: meta should be match for" (pr-str meta0) (pr-str meta1))))
              (let [similar-class?
                      (cond (seq?    code0) (seq?    code1)
                            (seq?    code1) (seq?    code0)
@@ -41,14 +41,15 @@
                            :else           ::not-applicable)]
                (if (= similar-class? ::not-applicable)
                    (or (= code0 code1)
-                       (println "FAIL: should be `(= code0 code1)`" code0 code1))
+                       (println "FAIL: should be `(= code0 code1)`" (pr-str code0) (pr-str code1)))
                    (and (or similar-class?
-                            (println "FAIL: should be similar class" code0 code1))
+                            (println "FAIL: should be similar class" (pr-str code0) (pr-str code1)))
                         (or (ucore/seq= (seq code0) (seq code1) code=)
-                            (println "FAIL: `(ucore/seq= code0 code1 code=)`" code0 code1))))))
+                            (println "FAIL: `(ucore/seq= code0 code1 code=)`"
+                                     (pr-str code0) (pr-str code1)))))))
         (and (not (ucore/metable? code1))
              (or (= code0 code1)
-                 (println "FAIL: should be `(= code0 code1)`" code0 code1)))))
+                 (println "FAIL: should be `(= code0 code1)`" (pr-str code0) (pr-str code1))))))
   ([code0 code1 & codes] (and (code= code0 code1) (every? #(code= code0 %) codes))))
 
 (defn is-code= [& args] (is (apply code= args)))
