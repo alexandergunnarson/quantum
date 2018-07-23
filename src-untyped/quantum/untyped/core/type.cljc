@@ -14,7 +14,8 @@
             seq? seqable? sequential? set? sorted? vector?
             fn? ifn?
             meta
-            ref volatile?])
+            ref volatile?
+            fn])
          (:require
            [clojure.core                               :as c]
            [clojure.string                             :as str]
@@ -556,6 +557,10 @@
   (if-let [valid? (t x)]
     x
     (err! "Type-validation failed" {:type t :to-validate x})))
+
+;; ===== `t/fn` ===== ;;
+
+(defn fn [& args] (println "TODO `t/fnn`") nil)
 
 ;; ---------------------- ;;
 ;; ===== Predicates ===== ;;
