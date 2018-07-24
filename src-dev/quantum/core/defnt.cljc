@@ -36,7 +36,8 @@
     [quantum.untyped.core.fn
       :refer [aritoid fn1 fnl fn', fn-> fn->> <-, rcomp
               firsta seconda]]
-    [quantum.untyped.core.form                  :as uform]
+    [quantum.untyped.core.form                  :as uform
+      :refer [>form]]
     [quantum.untyped.core.form.evaluate         :as ufeval]
     [quantum.untyped.core.form.generate         :as ufgen
       :refer [unify-gensyms]]
@@ -80,7 +81,12 @@
 
 #_"
 
-LEFT OFF LAST TIME (7/23/2018):
+LEFT OFF LAST TIME (7/24/2018):
+- ;; TODO probably failing because class vs. symbol
+- This is because of the `>form` not quite returning the right thing for `t/isa?` stuff in reifications
+- After that, keep going making sure the test cases pass, especially the >int* cases
+
+
 
 - With `defnt`, protocols and interfaces aren't needed. You can just create `t/fn`s that you can
   then conform your fns to.
@@ -895,7 +901,7 @@ LEFT OFF LAST TIME (7/23/2018):
            pre-type|form            ::expanded-overload-group|pre-type|form
            post-type|form           ::expanded-overload-group|post-type|form]} _
    > ::expanded-overload-group]
-  (let [arg-types|form (->> arg-types (mapv fipp.ednize/edn))
+  (let [arg-types|form (mapv >form arg-types)
         ;; `unprimitivized` is first because of class sorting
         [unprimitivized & primitivized :as overloads]
           (->> arg-types
@@ -1027,7 +1033,7 @@ LEFT OFF LAST TIME (7/23/2018):
 (defns >reify|name
   [{:keys [::uss/fn|name ::uss/fn|name, i|fnt-overload t/index?
            i|expanded-overload-group t/index?]} _ > simple-symbol?]
-  (>symbol (str fn|name "|__" i|fnt-overload "|__" i|expanded-overload-group)))
+  (>symbol (str fn|name "|__" i|fnt-overload "|" i|expanded-overload-group)))
 
 #?(:clj
 (defns expanded-overload-group>reify
@@ -1053,17 +1059,18 @@ LEFT OFF LAST TIME (7/23/2018):
      :overloads reify-overloads})))
 
 (defns >input-types-decl|name
-  [fn|name ::uss/fn|name, i|fnt-overload t/index?, i|expanded-overload-group t/index?
-   > simple-symbol?]
-  (>symbol (str fn|name "|__" i|fnt-overload "|__" i|expanded-overload-group "|input-types")))
+  [{:keys [::uss/fn|name ::uss/fn|name, i|fnt-overload t/index?
+           i|expanded-overload-group t/index?]} _ > simple-symbol?]
+  (>symbol (str fn|name "|__" i|fnt-overload "|" i|expanded-overload-group "|input-types")))
 
 #?(:clj
 (defns expanded-overload-group>input-types-decl
-  [{:keys [::uss/fn|name ::uss/fn|name, i t/index?
+  [{:as   in
+    :keys [::uss/fn|name ::uss/fn|name, i|fnt-overload t/index?, i|expanded-overload-group t/index?
            expanded-overload-group ::expanded-overload-group]} _
    > ::input-types-decl]
   (when (c/contains? (:arg-types|form expanded-overload-group))
-    (let [decl-name (>input-types-decl|name fn|name i)]
+    (let [decl-name (>input-types-decl|name in)]
       {:form `(def ~(ufth/with-type-hint decl-name "[Ljava.lang.Object;")
                    (arr/*<> ~@(:arg-types|form expanded-overload-group)))
        :name decl-name}))))

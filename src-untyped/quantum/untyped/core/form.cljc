@@ -8,6 +8,13 @@
 
 (ucore/log-this-ns)
 
+(defprotocol PGenForm
+  (>form [this] "Returns the form associated with the object.
+                 If evaluated, the form should evaluate to something exactly equivalent to the
+                 value of the object (even stronger than a `=` guarantee — all properties up to
+                 but not including identity).
+                 Effectively the inverse of `eval`."))
+
 (defn core-symbol [env sym] (symbol (str (case-env* env :cljs "cljs" "clojure") ".core") (name sym)))
 
 ;; TODO move this code generation code to a different namespace

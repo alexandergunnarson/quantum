@@ -45,7 +45,7 @@
               (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
                    (.getName))))
         expected
-          ($ (do (def ~'pid|test|__0|__0
+          ($ (do (def ~'pid|test|__0|0
                    (reify* [>Object]
                      (~(tag "java.lang.Object" 'invoke) [~'_0__]
                        ~'(->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
@@ -53,7 +53,7 @@
                  (defn ~'pid|test
                    {::t/type (t/fn [:> ~'(? t/string?)])}
                    ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.>Object"
-                                'pid|test|__0|__0))))))]
+                                'pid|test|__0|0))))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
@@ -71,10 +71,10 @@
             :clj
               ($ (do ;; [x t/any?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'identity|uninlined|__0|input-types)
-                       (*<> ~'t/any?))
+                     (def ~(tag "[Ljava.lang.Object;" 'identity|uninlined|__0|0|input-types)
+                       (*<> t/any?))
                      ;; One `reify` because `t/any?` in CLJ does not have any `t/or`-separability
-                     (def ~'identity|uninlined|__0
+                     (def ~'identity|uninlined|__0|0
                        (reify* [Object>Object boolean>boolean byte>byte short>short char>char
                                 int>int long>long float>float double>double]
                          (~(tag "java.lang.Object" 'invoke)
@@ -102,7 +102,7 @@
                          ;; Checks elided because `t/any?` doesn't require a check
                          ;; and all args are `t/=` `t/any?`
                          (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
-                                        'identity|uninlined|__0) ~'x00__)))))
+                                        'identity|uninlined|__0|0) ~'x00__)))))
             :cljs
               ;; Direct dispatch will be simple functions, not `reify`s
               ($ (do (defn ~'identity|uninlined [~'x] ~'x))))]
@@ -128,8 +128,8 @@
 
                      ;; [t/string?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'name|test|__0|input-types)
-                       (*<> ~'t/string?))
+                     (def ~(tag "[Ljava.lang.Object;" 'name|test|__0|0|input-types)
+                       (*<> (t/isa? java.lang.String))) ;; TODO probably failing because class vs. symbol
                      (def ~'name|test|__0
                        (reify* [Object>Object]
                          (~(tag "java.lang.Object" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)]
@@ -137,7 +137,7 @@
 
                      ;; [(t/isa? Named)]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'name|test|__1|input-types)
+                     (def ~(tag "[Ljava.lang.Object;" 'name|test|__1|0|input-types)
                        (*<> ~'(t/isa? Named)))
                      (def ~'name|test|__1
                        (reify* [Object>Object]
@@ -150,10 +150,10 @@
                          (t/fn ~'[t/string?      :> t/string?]
                                ~'[(t/isa? Named) :> (* t/string?)])}
                        ([~'x00__]
-                         (ifs ((Array/get ~'name|test|__0|input-types 0) ~'x00__)
+                         (ifs ((Array/get ~'name|test|__0|0|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
                                                'name|test|__0) ~'x00__)
-                              ((Array/get ~'name|test|__1|input-types 0) ~'x00__)
+                              ((Array/get ~'name|test|__1|0|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
                                                'name|test|__1) ~'x00__)
                               (unsupported! `name|test [~'x00__] 0))))))
