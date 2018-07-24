@@ -1014,14 +1014,14 @@ LEFT OFF LAST TIME (7/23/2018):
                              (c/map #(fnt|overload>reify-overload % gen-gensym)))
         reify-name (>fnt|reify|name fn|name i)
         form `(~'def ~reify-name
-                (reify*
-                  ~(->> reify-overloads (mapv #(-> % :interface >name >symbol)))
-                  ~@(->> reify-overloads
-                         (c/lmap (fn [{:keys [out-class method-sym arglist-code
-                                              body-form]} #_::reify|overload]
-                                   `(~(ufth/with-type-hint method-sym
-                                        (ufth/>arglist-embeddable-tag out-class))
-                                     ~arglist-code ~body-form))))))]
+                ~(list* `reify*
+                   (->> reify-overloads (mapv #(-> % :interface >name >symbol)))
+                   (->> reify-overloads
+                        (c/lmap (fn [{:keys [out-class method-sym arglist-code
+                                             body-form]} #_::reify|overload]
+                                  `(~(ufth/with-type-hint method-sym
+                                       (ufth/>arglist-embeddable-tag out-class))
+                                    ~arglist-code ~body-form))))))]
     {:form      form
      :name      reify-name
      :overloads reify-overloads})))

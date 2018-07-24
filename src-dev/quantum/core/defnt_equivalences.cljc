@@ -478,7 +478,7 @@
                               ((Array/get ~'>int*|__1|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>int"
                                                '>int*|__1) ~'x00__)
-                              (unsupported! `>int* [~'x00__] 0)))))))]]
+                              (unsupported! `>int* [~'x00__] 0)))))))]
     (testing "code equivalence" (is-code= actual expected))
     #_(testing "functionality"
       (eval actual)
