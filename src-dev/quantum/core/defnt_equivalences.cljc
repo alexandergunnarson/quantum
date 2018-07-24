@@ -881,7 +881,7 @@
                                ((Array/get ~'>|test|__0|input1|types 6) ~'x00__)
                                  (.invoke ~(tag (str `byte+double>boolean)  '>|test|__0|6)  ~'x00__)
                                (unsupported! `>|test [~'x00__ ~'x10__] 1))
-                           ((Array/get ~'>|test|__0|input0|types 0) ~'x00__)
+                           ((Array/get ~'>|test|__0|input0|types 1) ~'x00__)
                              (ifs
                                ((Array/get ~'>|test|__0|input1|types 0) ~'x00__)
                                  (.invoke ~(tag (str `short+byte>boolean)   '>|test|__0|7)  ~'x00__)
