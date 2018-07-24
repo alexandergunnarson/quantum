@@ -579,41 +579,85 @@
                          (~(tag "boolean" 'invoke) [~'_9__  ~(tag "short"  'a) ~(tag "char"   'b)]
                            ~'(Numeric/gt a b))))
 
+                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|10|input-types)
+                       (*<> (t/isa? java.lang.Short) (t/isa? java.lang.Integer)))
+                     (def ~'>|test|__0|10
+                       (reify* [short+int>boolean]
+                         (~(tag "boolean" 'invoke) [~'_10__ ~(tag "short"  'a) ~(tag "int"    'b)]
+                           ~'(Numeric/gt a b))))
+
+                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|11|input-types)
+                       (*<> (t/isa? java.lang.Short) (t/isa? java.lang.Long)))
+                     (def ~'>|test|__0|11
+                       (reify* [short+long>boolean]
+                         (~(tag "boolean" 'invoke) [~'_11__ ~(tag "short"  'a) ~(tag "long"   'b)]
+                           ~'(Numeric/gt a b))))
+
+                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|12|input-types)
+                       (*<> (t/isa? java.lang.Short) (t/isa? java.lang.Float)))
+                     (def ~'>|test|__0|12
+                       (reify* [short+float>boolean]
+                         (~(tag "boolean" 'invoke) [~'_12__ ~(tag "short"  'a) ~(tag "float"  'b)]
+                           ~'(Numeric/gt a b))))
+
+                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|13|input-types)
+                       (*<> (t/isa? java.lang.Short) (t/isa? java.lang.Double)))
+                     (def ~'>|test|__0|13
+                       (reify* [short+double>boolean]
+                         (~(tag "boolean" 'invoke) [~'_13__ ~(tag "short"  'a) ~(tag "double" 'b)]
+                           ~'(Numeric/gt a b))))
+
+                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|14|input-types)
+                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Byte)))
+                     (def ~'>|test|__0|14
+                       (reify* [char+byte>boolean]
+                         (~(tag "boolean" 'invoke) [~'_14__ ~(tag "char"   'a) ~(tag "byte"   'b)]
+                           ~'(Numeric/gt a b))))
+
+                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|15|input-types)
+                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Short)))
+                     (def ~'>|test|__0|15
+                       (reify* [char+short>boolean]
+                         (~(tag "boolean" 'invoke) [~'_15__ ~(tag "char"   'a) ~(tag "short"  'b)]
+                           ~'(Numeric/gt a b))))
+
+                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|16|input-types)
+                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Character)))
+                     (def ~'>|test|__0|16
+                       (reify* [char+char>boolean]
+                         (~(tag "boolean" 'invoke) [~'_16__ ~(tag "char"   'a) ~(tag "char"   'b)]
+                           ~'(Numeric/gt a b))))
+
+                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|17|input-types)
+                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Integer)))
+                     (def ~'>|test|__0|17
+                       (reify* [char+int>boolean]
+                         (~(tag "boolean" 'invoke) [~'_17__ ~(tag "char"   'a) ~(tag "int"    'b)]
+                           ~'(Numeric/gt a b))))
+
+                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|18|input-types)
+                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Long)))
+                     (def ~'>|test|__0|18
+                       (reify* [char+long>boolean]
+                         (~(tag "boolean" 'invoke) [~'_18__ ~(tag "char"   'a) ~(tag "long"   'b)]
+                           ~'(Numeric/gt a b))))
+
+                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|19|input-types)
+                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Float)))
+                     (def ~'>|test|__0|19
+                       (reify* [char+float>boolean]
+                         (~(tag "boolean" 'invoke) [~'_19__ ~(tag "char"   'a) ~(tag "float"  'b)]
+                           ~'(Numeric/gt a b))))
+
+                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|20|input-types)
+                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Double)))
+                     (def ~'>|test|__0|20
+                       (reify* [char+double>boolean]
+                         (~(tag "boolean" 'invoke) [~'_20__ ~(tag "char"   'a) ~(tag "double" 'b)]
+                           ~'(Numeric/gt a b))))
+
                      (def ~'>|test|__0|0
                        (reify
-                         short+int>boolean
-                           (~(tag "boolean" 'invoke) [~'_10__ ~(tag "short"  'a) ~(tag "int"    'b)]
-                             ~'(Numeric/gt a b))
-                         short+long>boolean
-                           (~(tag "boolean" 'invoke) [~'_11__ ~(tag "short"  'a) ~(tag "long"   'b)]
-                             ~'(Numeric/gt a b))
-                         short+float>boolean
-                           (~(tag "boolean" 'invoke) [~'_12__ ~(tag "short"  'a) ~(tag "float"  'b)]
-                             ~'(Numeric/gt a b))
-                         short+double>boolean
-                           (~(tag "boolean" 'invoke) [~'_13__ ~(tag "short"  'a) ~(tag "double" 'b)]
-                             ~'(Numeric/gt a b))
-                         char+byte>boolean
-                           (~(tag "boolean" 'invoke) [~'_14__ ~(tag "char"   'a) ~(tag "byte"   'b)]
-                             ~'(Numeric/gt a b))
-                         char+short>boolean
-                           (~(tag "boolean" 'invoke) [~'_15__ ~(tag "char"   'a) ~(tag "short"  'b)]
-                             ~'(Numeric/gt a b))
-                         char+char>boolean
-                           (~(tag "boolean" 'invoke) [~'_16__ ~(tag "char"   'a) ~(tag "char"   'b)]
-                             ~'(Numeric/gt a b))
-                         char+int>boolean
-                           (~(tag "boolean" 'invoke) [~'_17__ ~(tag "char"   'a) ~(tag "int"    'b)]
-                             ~'(Numeric/gt a b))
-                         char+long>boolean
-                           (~(tag "boolean" 'invoke) [~'_18__ ~(tag "char"   'a) ~(tag "long"   'b)]
-                             ~'(Numeric/gt a b))
-                         char+float>boolean
-                           (~(tag "boolean" 'invoke) [~'_19__ ~(tag "char"   'a) ~(tag "float"  'b)]
-                             ~'(Numeric/gt a b))
-                         char+double>boolean
-                           (~(tag "boolean" 'invoke) [~'_20__ ~(tag "char"   'a) ~(tag "double" 'b)]
-                             ~'(Numeric/gt a b))
                          int+byte>boolean
                            (~(tag "boolean" 'invoke) [~'_21__ ~(tag "int"    'a) ~(tag "byte"   'b)]
                              ~'(Numeric/gt a b))
