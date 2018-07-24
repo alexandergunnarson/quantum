@@ -19,6 +19,31 @@
 
 (ucore/log-this-ns)
 
+;; ===== Types ===== ;;
+
+;; TODO move this?
+;; TODO add to these types based on HTTP response types?
+(def ^{:doc "Adapted from `com.cognitect/anomalies`"} types
+  {:quantum.core.error/unavailable
+     {:caller-can-retry? true  :resolution-strategy "make sure callee healthy"}
+   :quantum.core.error/interrupted
+     {:caller-can-retry? true  :resolution-strategy "stop interrupting"}
+   :quantum.core.error/incorrect
+     {:caller-can-retry? false :resolution-strategy "fix inputs from caller"}
+   :quantum.core.error/forbidden
+     {:caller-can-retry? false :resolution-strategy "fix authentication-inputs from caller"}
+   :quantum.core.error/unsupported
+     {:caller-can-retry?   false
+      :resolution-strategy "function found, but it does not support what the input requests"}
+   :quantum.core.error/not-found
+     {:caller-can-retry? false :resolution-strategy "function not found"}
+   :quantum.core.error/conflict
+     {:caller-can-retry? false :resolution-strategy "coordinate with callee"}
+   :quantum.core.error/fault
+     {:caller-can-retry? false :resolution-strategy "fix callee bug"}
+   :quantum.core.error/busy
+     {:caller-can-retry? true  :resolution-strategy "back off and retry"}})
+
 ;; ===== Config ===== ;;
 
 (uvar/defonce *print-blacklist "A set of classes not to print" (atom #{}))
