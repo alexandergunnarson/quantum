@@ -187,17 +187,17 @@
             :clj
               ($ (do ;; [x t/nil?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'some?|test|__0|input-types)
-                       (*<> ~'t/nil?))
-                     (def ~'some?|test|__0
+                     (def ~(tag "[Ljava.lang.Object;" 'some?|test|__0|0|input-types)
+                       (*<> t/nil?))
+                     (def ~'some?|test|__0|0
                        (reify* [Object>boolean]
                          (~(tag "boolean" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)] false)))
 
                      ;; [x t/any?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'some?|test|__1|input-types)
-                       (*<> ~'t/any?))
-                     (def ~'some?|test|__1
+                     (def ~(tag "[Ljava.lang.Object;" 'some?|test|__1|0|input-types)
+                       (*<> t/any?))
+                     (def ~'some?|test|__1|0
                        (reify* [Object>boolean boolean>boolean byte>boolean short>boolean
                                 char>boolean int>boolean long>boolean float>boolean double>boolean]
                          (~(tag "boolean" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)] true)
@@ -214,13 +214,13 @@
                        {::t/type (t/fn ~'[t/nil?]
                                        ~'[t/any?])}
                        ([~'x00__]
-                         (ifs ((Array/get ~'some?|test|__0|input-types 0) ~'x00__)
+                         (ifs ((Array/get ~'some?|test|__0|0|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
-                                               'some?|test|__0) ~'x00__)
+                                               'some?|test|__0|0) ~'x00__)
                               ;; TODO eliminate this check because it's not needed (`t/any?`)
-                              ((Array/get ~'some?|test|__1|input-types 0) ~'x00__)
+                              ((Array/get ~'some?|test|__1|0|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
-                                               'some?|test|__1) ~'x00__)
+                                               'some?|test|__1|0) ~'x00__)
                               (unsupported! `some?|test [~'x00__] 0))))))
             :cljs
               ($ (do (defn ~'some?|test [~'x]
