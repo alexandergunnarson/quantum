@@ -1,7 +1,7 @@
 (ns quantum.untyped.core.collections
   (:refer-clojure :exclude
     [#?(:cljs array?) assoc-in cat contains? count distinct distinct? first get group-by filter
-     flatten last map map-indexed mapcat partition-all pmap remove zipmap])
+     flatten last map map-indexed mapcat partition-all pmap remove reverse zipmap])
   (:require
     [clojure.core                  :as core]
     [fast-zip.core                 :as zip]
@@ -33,6 +33,8 @@
   (if (ur/transformer? xs)
       (educe first|rf xs)
       (core/first xs)))
+
+(defn reverse [xs] (if (reversible? xs) (rseq xs) (core/reverse xs)))
 
 ;; ===== SOCIATIVE ===== ;;
 
