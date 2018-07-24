@@ -1,6 +1,7 @@
 ;; See https://jsperf.com/js-property-access-comparison — all property accesses (at least of length 1) seem to be equal
 
 (ns quantum.core.test.defnt-equivalences
+  (:refer-clojure :exclude [*])
   (:require
     [clojure.core              :as c]
     [quantum.core.defnt
@@ -44,7 +45,7 @@
               (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
                    (.getName))))
         expected
-          ($ (do (def ~'pid|test|__0
+          ($ (do (def ~'pid|test|__0|__0
                    (reify* [>Object]
                      (~(tag "java.lang.Object" 'invoke) [~'_0__]
                        ~'(->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
@@ -52,7 +53,7 @@
                  (defn ~'pid|test
                    {::t/type (t/fn [:> ~'(? t/string?)])}
                    ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.>Object"
-                                'pid|test|__0))))))]
+                                'pid|test|__0|__0))))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)

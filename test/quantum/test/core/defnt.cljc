@@ -29,6 +29,25 @@
     [clojure.lang Keyword Symbol]
     [quantum.core Numeric])))
 
+(deftest test|arg-types>split
+  (is= (this/arg-types>split
+         [(t/or t/byte? t/double? t/string?)
+          (t/or t/map? t/byte?)])
+       [[(t/isa? Byte)   (t/isa? clojure.lang.ITransientMap)]
+        [(t/isa? Byte)   (t/isa? clojure.lang.IPersistentMap)]
+        [(t/isa? Byte)   (t/isa? java.util.Map)]
+        [(t/isa? Byte)   (t/isa? Byte)]
+        [(t/isa? Double) (t/isa? clojure.lang.ITransientMap)]
+        [(t/isa? Double) (t/isa? clojure.lang.IPersistentMap)]
+        [(t/isa? Double) (t/isa? java.util.Map)]
+        [(t/isa? Double) (t/isa? Byte)]
+        [(t/isa? String) (t/isa? clojure.lang.ITransientMap)]
+        [(t/isa? String) (t/isa? clojure.lang.IPersistentMap)]
+        [(t/isa? String) (t/isa? java.util.Map)]
+        [(t/isa? String) (t/isa? Byte)]]))
+
+;; ============== OLD TESTS ============== ;;
+
 ;; # args | ret | ? arg specs (delimited by `,`)
 ;; abstract > concrete > concrete
 #?(:clj (def t0>  java.io.OutputStream))
@@ -721,7 +740,3 @@
   [[a number? b number? :as b] ^:gen? (s/nonconforming (s/cat :a double? :b double?))])
 
 (defspec-test test|gen|seq|1 `gen|seq|1)
-
-
-
-
