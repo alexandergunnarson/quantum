@@ -73,7 +73,7 @@
                                (or (== this that)
                                    (and (instance? NotType that)
                                         (= t (.-t ^NotType that)))))}
-   uform/PGenForm {>form     ([this] (list 'quantum.untyped.core.type/not t))}
+   uform/PGenForm {>form     ([this] (list 'quantum.untyped.core.type/not (>form t)))}
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] (>form this))}})
 
@@ -101,7 +101,7 @@
                                (or (== this that)
                                    (and (instance? OrType that)
                                         (= args (.-args ^OrType that)))))}
-   uform/PGenForm {>form     ([this] (list* 'quantum.untyped.core.type/or args))}
+   uform/PGenForm {>form     ([this] (list* 'quantum.untyped.core.type/or (map >form args)))}
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] (>form this))}})
 
@@ -126,7 +126,7 @@
                                (or (== this that)
                                    (and (instance? AndType that)
                                         (= args (.-args ^AndType that)))))}
-   uform/PGenForm {>form     ([this] (list* 'quantum.untyped.core.type/and args))}
+   uform/PGenForm {>form     ([this] (list* 'quantum.untyped.core.type/and (map >form args)))}
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] (>form this))}})
 
@@ -156,7 +156,8 @@
                                (or (== this that)
                                    (and (instance? ProtocolType that)
                                         (= p (.-p ^ProtocolType that)))))}
-   uform/PGenForm {>form     ([this] (list 'quantum.untyped.core.type/isa?|protocol (:on p)))}
+   uform/PGenForm {>form     ([this] (list 'quantum.untyped.core.type/isa?|protocol
+                                       (-> p :on >form)))}
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] (or name (>form this)))}})
 
@@ -182,7 +183,7 @@
                                (or (== this that)
                                    (and (instance? ClassType that)
                                         (= c (.-c ^ClassType that)))))}
-   uform/PGenForm {>form     ([this] (list 'quantum.untyped.core.type/isa? c))}
+   uform/PGenForm {>form     ([this] (list 'quantum.untyped.core.type/isa? (>form c)))}
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] (or name (>form this)))}})
 
@@ -204,7 +205,7 @@
                                (or (== this that)
                                    (and (instance? ValueType that)
                                         (= v (.-v ^ValueType that)))))}
-   uform/PGenForm {>form     ([this] (list 'quantum.untyped.core.type/value v))}
+   uform/PGenForm {>form     ([this] (list 'quantum.untyped.core.type/value (>form v)))}
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] (>form this))}})
 

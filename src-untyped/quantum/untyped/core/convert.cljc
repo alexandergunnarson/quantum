@@ -80,7 +80,8 @@
           (string?    x) (symbol x)
           (or (keyword? x) #?(:clj (var? x)))
             (symbol (>?namespace x) (>name x))
-#?@(:clj [(namespace? x) (ns-name x)])
+#?@(:clj [(class?     x) (-> x >name symbol)
+          (namespace? x) (ns-name x)])
           (fn? x)        #?(:clj  (or (when-let [ns- (-> x meta :ns)]
                                         (symbol (>name ns-) (-> x meta :name >name)))
                                       (-> x class .getName clojure.lang.Compiler/demunge recur))

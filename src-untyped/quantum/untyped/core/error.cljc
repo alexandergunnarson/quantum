@@ -22,7 +22,7 @@
 ;; ===== Types ===== ;;
 
 ;; TODO move this?
-;; TODO add to these types based on HTTP response types?
+;; TODO add to these types based on HTTP response types, Java(Script) built-in errors, etc.?
 (def ^{:doc "Adapted from `com.cognitect/anomalies`"} types
   {:quantum.core.error/unavailable
      {:caller-can-retry? true  :resolution-strategy "make sure callee healthy"}

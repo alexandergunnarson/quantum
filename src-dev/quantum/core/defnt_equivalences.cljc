@@ -130,7 +130,7 @@
 
                      (def ~(tag "[Ljava.lang.Object;" 'name|test|__0|0|input-types)
                        (*<> (t/isa? java.lang.String))) ;; TODO probably failing because class vs. symbol
-                     (def ~'name|test|__0
+                     (def ~'name|test|__0|0
                        (reify* [Object>Object]
                          (~(tag "java.lang.Object" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)]
                            (let* [~(tag "java.lang.String" 'x) ~'x] ~'x))))
@@ -138,8 +138,8 @@
                      ;; [(t/isa? Named)]
 
                      (def ~(tag "[Ljava.lang.Object;" 'name|test|__1|0|input-types)
-                       (*<> ~'(t/isa? Named)))
-                     (def ~'name|test|__1
+                       (*<> (t/isa? Named)))
+                     (def ~'name|test|__1|0
                        (reify* [Object>Object]
                          (~(tag "java.lang.Object" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)]
                            (let* [~(tag "clojure.lang.Named" 'x) ~'x]
@@ -152,10 +152,10 @@
                        ([~'x00__]
                          (ifs ((Array/get ~'name|test|__0|0|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
-                                               'name|test|__0) ~'x00__)
+                                               'name|test|__0|0) ~'x00__)
                               ((Array/get ~'name|test|__1|0|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
-                                               'name|test|__1) ~'x00__)
+                                               'name|test|__1|0) ~'x00__)
                               (unsupported! `name|test [~'x00__] 0))))))
             :cljs
               ($ (do (defn ~'name|test [~'x00__]
