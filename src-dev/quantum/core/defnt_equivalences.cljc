@@ -37,6 +37,9 @@
     quantum.core.data.Array
     [quantum.core Numeric Primitive]))
 
+;; Just in case
+(clojure.spec.test.alpha/instrument)
+
 #?(:clj
 (deftest test|pid
   (let [actual
