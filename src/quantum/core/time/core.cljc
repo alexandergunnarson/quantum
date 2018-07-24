@@ -92,7 +92,8 @@
 
 #?(:clj
 (def formats ; TODO map->record?
-  {:rfc                  DateTimeFormatter/RFC_1123_DATE_TIME ; "EEE, dd MMM yyyy HH:mm:ss zzz"
+  {:rfc                  DateTimeFormatter/RFC_1123_DATE_TIME ; e.g. 'Tue, 3 Jun 2008 11:05:30 GMT'
+   ; e.g. '2011-12-03T10:15:30+01:00' or '2018-07-23T16:58:17.000Z'
    :iso-offset-date-time DateTimeFormatter/ISO_OFFSET_DATE_TIME
    :windows              "E, dd MMM yyyy HH:mm:ss O"
    :calendar             "EEE MMM dd HH:mm:ss.SSS z yyyy"
@@ -415,14 +416,11 @@
 ;   (between date (now))))
 
 #?(:clj
-(defn parse [text formatter]
-  (LocalDate/parse text (DateTimeFormatter/ofPattern formatter))))
+(defn parse [text formatter] (LocalDate/parse text (DateTimeFormatter/ofPattern formatter))))
 
-#?(:clj (defn system-timezone []
-  (.getID (java.util.TimeZone/getDefault))))
+#?(:clj (defn system-timezone [] (.getID (java.util.TimeZone/getDefault))))
 
-#?(:clj (def date-format-json
-  (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss'Z'")))
+#?(:clj (def date-format-json (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss'Z'")))
 
 #?(:clj
 (defnt ^java.util.Calendar ->calendar
@@ -709,4 +707,3 @@
 
 
 ; ===== DAYS OF WEEK ===== ;
-
