@@ -16,8 +16,9 @@
                  Effectively the inverse of `eval`."))
 
 (extend-protocol PGenForm
-            nil   (>form [this] nil)
-  #?@(:clj [Class (>form [this] (-> this #_uconv/>symbol .getName symbol))]))
+            nil                 (>form [x] nil)
+            clojure.lang.Symbol (>form [x] (list 'quote x))
+  #?@(:clj [Class               (>form [x] (-> x #_uconv/>symbol .getName symbol))]))
 
 (defn core-symbol [env sym] (symbol (str (case-env* env :cljs "cljs" "clojure") ".core") (name sym)))
 

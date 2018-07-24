@@ -157,8 +157,7 @@
                                    (and (instance? ProtocolType that)
                                         (= p (.-p ^ProtocolType that)))))}
    uform/PGenForm {>form     ([this] (with-meta
-                                       (list 'quantum.untyped.core.type/isa?|protocol
-                                         (-> p :on >form))
+                                       (list 'quantum.untyped.core.type/isa?|protocol (:on p))
                                        meta))}
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] (or name (>form this)))}})
