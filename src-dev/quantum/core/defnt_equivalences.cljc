@@ -312,25 +312,25 @@
             :clj
               ($ (do ;; [x t/boolean?]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__0|input-types)
-                       (*<> ~'t/boolean?))
-                     (def ~'>boolean|__0
+                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__0|0|input-types)
+                       (*<> (t/isa? Boolean)))
+                     (def ~'>boolean|__0|0
                        (reify* [boolean>boolean]
                          (~(tag "boolean" 'invoke) [~'_0__  ~(tag "boolean"          'x)] ~'x)))
 
                      ;; [x t/nil? -> (- t/nil? t/boolean?)]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__1|input-types)
-                       (*<> ~'t/nil?))
-                     (def ~'>boolean|__1
+                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__1|0|input-types)
+                       (*<> (t/value nil)))
+                     (def ~'>boolean|__1|0
                        (reify* [Object>boolean]
                          (~(tag "boolean" 'invoke) [~'_1__  ~(tag "java.lang.Object" 'x)] false)))
 
                      ;; [x t/any? -> (- t/any? t/nil? t/boolean?)]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__2|input-types)
-                       (*<> ~'t/any?))
-                     (def ~'>boolean|__2
+                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__2|0|input-types)
+                       (*<> t/any?))
+                     (def ~'>boolean|__2|0
                        (reify* [Object>boolean boolean>boolean byte>boolean short>boolean
                                 char>boolean int>boolean long>boolean float>boolean double>boolean]
                          (~(tag "boolean" 'invoke) [~'_2__  ~(tag "java.lang.Object" 'x)] true)
@@ -348,16 +348,16 @@
                                        ~'[t/nil?]
                                        ~'[t/any?])}
                        ([~'x00__]
-                         (ifs ((Array/get ~'>boolean|__0|input-types 0) ~'x00__)
+                         (ifs ((Array/get ~'>boolean|__0|0|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.boolean>boolean"
-                                               '>boolean|__0) ~'x00__)
-                              ((Array/get ~'>boolean|__1|input-types 0) ~'x00__)
+                                               '>boolean|__0|0) ~'x00__)
+                              ((Array/get ~'>boolean|__1|0|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
-                                               '>boolean|__1) ~'x00__)
+                                               '>boolean|__1|0) ~'x00__)
                               ;; TODO eliminate this check because it's not needed (`t/any?`)
-                              ((Array/get ~'>boolean|__2|input-types 0) ~'x00__)
+                              ((Array/get ~'>boolean|__2|0|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>boolean"
-                                               '>boolean|__2) ~'x00__)
+                                               '>boolean|__2|0) ~'x00__)
                               (unsupported! `>boolean [~'x00__] 0))))))
             :cljs
               ($ (do (defn ~'>boolean [~'x]
