@@ -481,9 +481,18 @@
                                                '>int*|__1|0) ~'x00__)
                               (unsupported! `>int* [~'x00__] 0)))))))]
     (testing "code equivalence" (is-code= actual expected))
-    #_(testing "functionality"
+    (testing "functionality"
       (eval actual)
-      (eval '(do ...)))))
+      (eval '(do (throws (>int*))
+                 (throws (>int* nil))
+                 (throws (>int* ""))
+                 (is (identical? (>int*  1)       (clojure.lang.RT/uncheckedIntCast  1)))
+                 (is (identical? (>int*  1.0)     (clojure.lang.RT/uncheckedIntCast  1.0)))
+                 (is (identical? (>int*  1.1)     (clojure.lang.RT/uncheckedIntCast  1.1)))
+                 (is (identical? (>int* -1)       (clojure.lang.RT/uncheckedIntCast -1)))
+                 (is (identical? (>int* -1.0)     (clojure.lang.RT/uncheckedIntCast -1.0)))
+                 (is (identical? (>int* -1.1)     (clojure.lang.RT/uncheckedIntCast -1.1)))
+                 (is (identical? (>int* (byte 1)) (clojure.lang.RT/uncheckedIntCast (byte 1)))))))))
 
 (deftest test|>
   (let [actual
