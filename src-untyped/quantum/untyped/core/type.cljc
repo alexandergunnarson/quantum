@@ -644,7 +644,7 @@
          (-def  double?   (isa? #?(:clj Double :cljs js/Number)))
          (-def ?double?   (? double?))
 
-         (-def primitive? (or boolean? #?@(:clj [byte? char? short? int? long? float?]) double?))
+         (-def primitive? (or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
 
 #?(:clj  (-def comparable-primitive? (- primitive? boolean?)))
 

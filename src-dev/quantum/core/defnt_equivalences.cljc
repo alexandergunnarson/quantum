@@ -392,51 +392,51 @@
             :clj
               ($ (do ;; [x (t/- t/primitive? t/boolean?)]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|__0|input-types)
-                       (*<> ~'(t/isa? java.lang.Byte)))
-                     (def ~'>int*|__0|__0
+                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|0|input-types)
+                       (*<> (t/isa? java.lang.Byte)))
+                     (def ~'>int*|__0|0
                        (reify* [byte>int]
                          (~(tag "int" 'invoke) [~'_0__ ~(tag "byte"             'x)]
                            ~'(Primitive/uncheckedIntCast x))))
 
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|__1|input-types)
-                       (*<> ~'(t/isa? java.lang.Short)))
-                     (def ~'>int*|__0|__1
+                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|1|input-types)
+                       (*<> (t/isa? java.lang.Short)))
+                     (def ~'>int*|__0|1
                        (reify* [short>int]
                          (~(tag "int" 'invoke) [~'_1__ ~(tag "short"            'x)]
                            ~'(Primitive/uncheckedIntCast x))))
 
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|__2|input-types)
-                       (*<> ~'(t/isa? java.lang.Character)))
-                     (def ~'>int*|__0|__2
+                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|2|input-types)
+                       (*<> (t/isa? java.lang.Character)))
+                     (def ~'>int*|__0|2
                        (reify* [char>int]
                          (~(tag "int" 'invoke) [~'_2__ ~(tag "char"             'x)]
                            ~'(Primitive/uncheckedIntCast x))))
 
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|__3|input-types)
-                       (*<> ~'(t/isa? java.lang.Integer)))
-                     (def ~'>int*|__0|__3
+                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|3|input-types)
+                       (*<> (t/isa? java.lang.Integer)))
+                     (def ~'>int*|__0|3
                        (reify* [int>int]
                          (~(tag "int" 'invoke) [~'_3__ ~(tag "int"              'x)]
                            ~'(Primitive/uncheckedIntCast x))))
 
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|__4|input-types)
-                       (*<> ~'(t/isa? java.lang.Long)))
-                     (def ~'>int*|__0|__4
+                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|4|input-types)
+                       (*<> (t/isa? java.lang.Long)))
+                     (def ~'>int*|__0|4
                        (reify* [long>int]
                          (~(tag "int" 'invoke) [~'_4__ ~(tag "long"             'x)]
                            ~'(Primitive/uncheckedIntCast x))))
 
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|__5|input-types)
-                       (*<> ~'(t/isa? java.lang.Float)))
-                     (def ~'>int*|__0|__5
+                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|5|input-types)
+                       (*<> (t/isa? java.lang.Float)))
+                     (def ~'>int*|__0|5
                        (reify* [float>int]
                          (~(tag "int" 'invoke) [~'_5__ ~(tag "float"            'x)]
                            ~'(Primitive/uncheckedIntCast x))))
 
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|__6|input-types)
-                       (*<> ~'(t/isa? java.lang.Double)))
-                     (def ~'>int*|__0|__6
+                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|6|input-types)
+                       (*<> (t/isa? java.lang.Double)))
+                     (def ~'>int*|__0|6
                        (reify* [double>int]
                          (~(tag "int" 'invoke) [~'_6__ ~(tag "double"           'x)]
                            ~'(Primitive/uncheckedIntCast x))))
@@ -444,41 +444,41 @@
                      ;; [x (t/ref (t/isa? Number))
                      ;;  -> (t/- (t/ref (t/isa? Number)) (t/- t/primitive? t/boolean?))]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__1|input-types)
-                       (*<> ~'(t/ref (t/isa? Number))))
-                     (def ~'>int*|__1
+                     (def ~(tag "[Ljava.lang.Object;" '>int*|__1|0|input-types)
+                       (*<> ~(with-meta `(t/isa? Number) {:ref? true})))
+                     (def ~'>int*|__1|0
                        (reify* [Object>int]
                          (~(tag "int" 'invoke) [~'_7__ ~(tag "java.lang.Object" 'x)]
                            (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(.intValue x)))))
 
                      (defn ~'>int*
-                       {::t/type (t/fn ~'[(t/- t/primitive? t/boolean?)]
-                                       ~'[(t/ref (t/isa? Number))])}
+                       {::t/type (t/fn ~'[(t/- t/primitive? t/boolean?) :> t/int?]
+                                       ~'[(t/ref (t/isa? Number)) :> t/int?])}
                        ([~'x00__]
-                         (ifs ((Array/get ~'>int*|__0|__0|input-types 0) ~'x00__)
+                         (ifs ((Array/get ~'>int*|__0|0|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.byte>int"
-                                               '>int*|__0|__0) ~'x00__)
-                              ((Array/get ~'>int*|__0|__1|input-types 0) ~'x00__)
+                                               '>int*|__0|0) ~'x00__)
+                              ((Array/get ~'>int*|__0|1|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.short>int"
-                                               '>int*|__0|__1) ~'x00__)
-                              ((Array/get ~'>int*|__0|__2|input-types 0) ~'x00__)
+                                               '>int*|__0|1) ~'x00__)
+                              ((Array/get ~'>int*|__0|2|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.char>int"
-                                               '>int*|__0|__2) ~'x00__)
-                              ((Array/get ~'>int*|__0|__3|input-types 0) ~'x00__)
+                                               '>int*|__0|2) ~'x00__)
+                              ((Array/get ~'>int*|__0|3|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.int>int"
-                                               '>int*|__0|__3) ~'x00__)
-                              ((Array/get ~'>int*|__0|__4|input-types 0) ~'x00__)
+                                               '>int*|__0|3) ~'x00__)
+                              ((Array/get ~'>int*|__0|4|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.long>int"
-                                               '>int*|__0|__4) ~'x00__)
-                              ((Array/get ~'>int*|__0|__5|input-types 0) ~'x00__)
+                                               '>int*|__0|4) ~'x00__)
+                              ((Array/get ~'>int*|__0|5|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.float>int"
-                                               '>int*|__0|__5) ~'x00__)
-                              ((Array/get ~'>int*|__0|__6|input-types 0) ~'x00__)
+                                               '>int*|__0|5) ~'x00__)
+                              ((Array/get ~'>int*|__0|6|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.double>int"
-                                               '>int*|__0|__6) ~'x00__)
-                              ((Array/get ~'>int*|__1|input-types 0) ~'x00__)
+                                               '>int*|__0|6) ~'x00__)
+                              ((Array/get ~'>int*|__1|0|input-types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>int"
-                                               '>int*|__1) ~'x00__)
+                                               '>int*|__1|0) ~'x00__)
                               (unsupported! `>int* [~'x00__] 0)))))))]
     (testing "code equivalence" (is-code= actual expected))
     #_(testing "functionality"
