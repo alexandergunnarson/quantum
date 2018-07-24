@@ -5,7 +5,9 @@
     [clojure.string             :as str]
     [clojure.test               :as test]
     [quantum.untyped.core.core  :as ucore]
-    [quantum.untyped.core.error :as err]
+    [quantum.untyped.core.error :as uerr]
+    [quantum.untyped.core.log
+      :refer [pr!]]
     [quantum.untyped.core.print
       :refer [ppr-meta]]
     [quantum.untyped.core.vars
@@ -30,8 +32,8 @@
              (let [meta0 (-> code0 meta (dissoc :line :column))
                    meta1 (-> code1 meta (dissoc :line :column))]
                (or (= meta0 meta1)
-                   (println "FAIL: meta should be match for" (pr-str meta0) (pr-str meta1)
-                                                   "on code" (pr-str code0) (pr-str code1))))
+                   (pr! "FAIL: meta should be match for" (pr-str meta0) (pr-str meta1)
+                                               "on code" (pr-str code0) (pr-str code1))))
              (let [similar-class?
                      (cond (seq?    code0) (seq?    code1)
                            (seq?    code1) (seq?    code0)
@@ -42,12 +44,12 @@
                            :else           ::not-applicable)]
                (if (= similar-class? ::not-applicable)
                    (or (= code0 code1)
-                       (println "FAIL: should be `(= code0 code1)`" (pr-str code0) (pr-str code1)))
+                       (pr! "FAIL: should be `(= code0 code1)`" (pr-str code0) (pr-str code1)))
                    (and (or similar-class?
-                            (println "FAIL: should be similar class" (pr-str code0) (pr-str code1)))
+                            (pr! "FAIL: should be similar class" (pr-str code0) (pr-str code1)))
                         (or (ucore/seq= (seq code0) (seq code1) code=)
-                            (println "FAIL: `(ucore/seq= code0 code1 code=)`"
-                                     (pr-str code0) (pr-str code1)))))))
+                            (pr! "FAIL: `(ucore/seq= code0 code1 code=)`"
+                                 (pr-str code0) (pr-str code1)))))))
         (and (not (ucore/metable? code1))
              (or (= code0 code1)
                  (println "FAIL: should be `(= code0 code1)`" (pr-str code0) (pr-str code1))))))
@@ -58,11 +60,11 @@
 #?(:clj (defmacro is= [& args] `(is (= ~@args))))
 
 #?(:clj (defmacro throws
-          ([x] `(do (is (~'thrown? ~(err/env>generic-error &env) ~x)) true))
+          ([x] `(do (is (~'thrown? ~(uerr/env>generic-error &env) ~x)) true))
           ([expr err-pred]
             `(try ~expr
                   (is (throws '~err-pred))
-               (catch ~(err/env>generic-error &env) e# (is (~err-pred e#)))))))
+               (catch ~(uerr/env>generic-error &env) e# (is (~err-pred e#)))))))
 
 ; Makes test failures and errors print prettily
 ; TODO CLJS
