@@ -71,7 +71,7 @@
             :clj
               ($ (do ;; [x t/any?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'identity|uninlined|__0|0|input-types)
+                     (def ~(tag "[Ljava.lang.Object;" 'identity|uninlined|__0|input0|types)
                        (*<> t/any?))
                      ;; One `reify` because `t/any?` in CLJ does not have any `t/or`-separability
                      (def ~'identity|uninlined|__0|0
@@ -128,8 +128,8 @@
 
                      ;; [t/string?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'name|test|__0|0|input-types)
-                       (*<> (t/isa? java.lang.String))) ;; TODO probably failing because class vs. symbol
+                     (def ~(tag "[Ljava.lang.Object;" 'name|test|__0|input0|types)
+                       (*<> (t/isa? java.lang.String)))
                      (def ~'name|test|__0|0
                        (reify* [Object>Object]
                          (~(tag "java.lang.Object" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)]
@@ -137,7 +137,7 @@
 
                      ;; [(t/isa? Named)]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'name|test|__1|0|input-types)
+                     (def ~(tag "[Ljava.lang.Object;" 'name|test|__1|input0|types)
                        (*<> (t/isa? Named)))
                      (def ~'name|test|__1|0
                        (reify* [Object>Object]
@@ -150,10 +150,10 @@
                          (t/fn ~'[t/string?      :> t/string?]
                                ~'[(t/isa? Named) :> (* t/string?)])}
                        ([~'x00__]
-                         (ifs ((Array/get ~'name|test|__0|0|input-types 0) ~'x00__)
+                         (ifs ((Array/get ~'name|test|__0|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `Object>Object)
                                                'name|test|__0|0) ~'x00__)
-                              ((Array/get ~'name|test|__1|0|input-types 0) ~'x00__)
+                              ((Array/get ~'name|test|__1|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `Object>Object)
                                                'name|test|__1|0) ~'x00__)
                               (unsupported! `name|test [~'x00__] 0))))))
@@ -187,7 +187,7 @@
             :clj
               ($ (do ;; [x t/nil?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'some?|test|__0|0|input-types)
+                     (def ~(tag "[Ljava.lang.Object;" 'some?|test|__0|input0|types)
                        (*<> (t/value nil)))
                      (def ~'some?|test|__0|0
                        (reify* [Object>boolean]
@@ -195,7 +195,7 @@
 
                      ;; [x t/any?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'some?|test|__1|0|input-types)
+                     (def ~(tag "[Ljava.lang.Object;" 'some?|test|__1|input0|types)
                        (*<> t/any?))
                      (def ~'some?|test|__1|0
                        (reify* [Object>boolean boolean>boolean byte>boolean short>boolean
@@ -214,10 +214,10 @@
                        {::t/type (t/fn ~'[t/nil?]
                                        ~'[t/any?])}
                        ([~'x00__]
-                         (ifs ((Array/get ~'some?|test|__0|0|input-types 0) ~'x00__)
+                         (ifs ((Array/get ~'some?|test|__0|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `Object>boolean) 'some?|test|__0|0) ~'x00__)
                               ;; TODO eliminate this check because it's not needed (`t/any?`)
-                              ((Array/get ~'some?|test|__1|0|input-types 0) ~'x00__)
+                              ((Array/get ~'some?|test|__1|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `Object>boolean) 'some?|test|__1|0) ~'x00__)
                               (unsupported! `some?|test [~'x00__] 0))))))
             :cljs
@@ -246,7 +246,7 @@
             :clj
               ($ (do ;; [x (t/isa? Reduced)]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'reduced?|test|__0|0|input-types)
+                     (def ~(tag "[Ljava.lang.Object;" 'reduced?|test|__0|input0|types)
                        (*<> (t/isa? Reduced)))
                      (def ~'reduced?|test|__0|0
                        (reify* [Object>boolean]
@@ -255,7 +255,7 @@
 
                      ;; [x t/any?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'reduced?|test|__1|0|input-types)
+                     (def ~(tag "[Ljava.lang.Object;" 'reduced?|test|__1|input0|types)
                        (*<> t/any?))
                      (def ~'reduced?|test|__1|0
                        (reify* [Object>boolean boolean>boolean byte>boolean short>boolean
@@ -274,10 +274,10 @@
                        {::t/type (t/fn ~'[(t/isa? Reduced)]
                                        ~'[t/any?])}
                        ([~'x00__]
-                         (ifs ((Array/get ~'reduced?|test|__0|0|input-types 0) ~'x00__)
+                         (ifs ((Array/get ~'reduced?|test|__0|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `Object>boolean) 'reduced?|test|__0|0) ~'x00__)
                               ;; TODO eliminate this check because it's not needed (`t/any?`)
-                              ((Array/get ~'reduced?|test|__1|0|input-types 0) ~'x00__)
+                              ((Array/get ~'reduced?|test|__1|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `Object>boolean) 'reduced?|test|__1|0) ~'x00__)
                               (unsupported! `reduced?|test [~'x00__] 0))))))
             :cljs
@@ -308,7 +308,7 @@
             :clj
               ($ (do ;; [x t/boolean?]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__0|0|input-types)
+                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__0|input0|types)
                        (*<> (t/isa? Boolean)))
                      (def ~'>boolean|__0|0
                        (reify* [boolean>boolean]
@@ -316,7 +316,7 @@
 
                      ;; [x t/nil? -> (- t/nil? t/boolean?)]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__1|0|input-types)
+                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__1|input0|types)
                        (*<> (t/value nil)))
                      (def ~'>boolean|__1|0
                        (reify* [Object>boolean]
@@ -324,7 +324,7 @@
 
                      ;; [x t/any? -> (- t/any? t/nil? t/boolean?)]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__2|0|input-types)
+                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__2|input0|types)
                        (*<> t/any?))
                      (def ~'>boolean|__2|0
                        (reify* [Object>boolean boolean>boolean byte>boolean short>boolean
@@ -344,13 +344,13 @@
                                        ~'[t/nil?]
                                        ~'[t/any?])}
                        ([~'x00__]
-                         (ifs ((Array/get ~'>boolean|__0|0|input-types 0) ~'x00__)
+                         (ifs ((Array/get ~'>boolean|__0|input0|types 0) ~'x00__)
                                 (.invoke ~(tag "quantum.core.test.defnt_equivalences.boolean>boolean"
                                                '>boolean|__0|0) ~'x00__)
-                              ((Array/get ~'>boolean|__1|0|input-types 0) ~'x00__)
+                              ((Array/get ~'>boolean|__1|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `Object>boolean) '>boolean|__1|0) ~'x00__)
                               ;; TODO eliminate this check because it's not needed (`t/any?`)
-                              ((Array/get ~'>boolean|__2|0|input-types 0) ~'x00__)
+                              ((Array/get ~'>boolean|__2|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `Object>boolean) '>boolean|__2|0) ~'x00__)
                               (unsupported! `>boolean [~'x00__] 0))))))
             :cljs
@@ -386,50 +386,39 @@
             :clj
               ($ (do ;; [x (t/- t/primitive? t/boolean?)]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|0|input-types)
-                       (*<> (t/isa? java.lang.Byte)))
+                     ;; These are non-primitivized
+                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|input0|types)
+                       (*<> (t/isa? java.lang.Byte)
+                            (t/isa? java.lang.Short)
+                            (t/isa? java.lang.Character)
+                            (t/isa? java.lang.Integer)
+                            (t/isa? java.lang.Long)
+                            (t/isa? java.lang.Float)
+                            (t/isa? java.lang.Double)))
                      (def ~'>int*|__0|0
                        (reify* [byte>int]
                          (~(tag "int" 'invoke) [~'_0__ ~(tag "byte"             'x)]
                            ~'(Primitive/uncheckedIntCast x))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|1|input-types)
-                       (*<> (t/isa? java.lang.Short)))
                      (def ~'>int*|__0|1
                        (reify* [short>int]
                          (~(tag "int" 'invoke) [~'_1__ ~(tag "short"            'x)]
                            ~'(Primitive/uncheckedIntCast x))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|2|input-types)
-                       (*<> (t/isa? java.lang.Character)))
                      (def ~'>int*|__0|2
                        (reify* [char>int]
                          (~(tag "int" 'invoke) [~'_2__ ~(tag "char"             'x)]
                            ~'(Primitive/uncheckedIntCast x))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|3|input-types)
-                       (*<> (t/isa? java.lang.Integer)))
                      (def ~'>int*|__0|3
                        (reify* [int>int]
                          (~(tag "int" 'invoke) [~'_3__ ~(tag "int"              'x)]
                            ~'(Primitive/uncheckedIntCast x))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|4|input-types)
-                       (*<> (t/isa? java.lang.Long)))
                      (def ~'>int*|__0|4
                        (reify* [long>int]
                          (~(tag "int" 'invoke) [~'_4__ ~(tag "long"             'x)]
                            ~'(Primitive/uncheckedIntCast x))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|5|input-types)
-                       (*<> (t/isa? java.lang.Float)))
                      (def ~'>int*|__0|5
                        (reify* [float>int]
                          (~(tag "int" 'invoke) [~'_5__ ~(tag "float"            'x)]
                            ~'(Primitive/uncheckedIntCast x))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|6|input-types)
-                       (*<> (t/isa? java.lang.Double)))
                      (def ~'>int*|__0|6
                        (reify* [double>int]
                          (~(tag "int" 'invoke) [~'_6__ ~(tag "double"           'x)]
@@ -438,7 +427,7 @@
                      ;; [x (t/ref (t/isa? Number))
                      ;;  -> (t/- (t/ref (t/isa? Number)) (t/- t/primitive? t/boolean?))]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__1|0|input-types)
+                     (def ~(tag "[Ljava.lang.Object;" '>int*|__1|input0|types)
                        (*<> ~(with-meta `(t/isa? Number) {:ref? true})))
                      (def ~'>int*|__1|0
                        (reify* [Object>int]
@@ -449,21 +438,21 @@
                        {::t/type (t/fn ~'[(t/- t/primitive? t/boolean?) :> t/int?]
                                        ~'[(t/ref (t/isa? Number)) :> t/int?])}
                        ([~'x00__]
-                         (ifs ((Array/get ~'>int*|__0|0|input-types 0) ~'x00__)
+                         (ifs ((Array/get ~'>int*|__0|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `byte>int)   '>int*|__0|0) ~'x00__)
-                              ((Array/get ~'>int*|__0|1|input-types 0) ~'x00__)
+                              ((Array/get ~'>int*|__0|input0|types 1) ~'x00__)
                                 (.invoke ~(tag (str `short>int)  '>int*|__0|1) ~'x00__)
-                              ((Array/get ~'>int*|__0|2|input-types 0) ~'x00__)
+                              ((Array/get ~'>int*|__0|input0|types 2) ~'x00__)
                                 (.invoke ~(tag (str `char>int)   '>int*|__0|2) ~'x00__)
-                              ((Array/get ~'>int*|__0|3|input-types 0) ~'x00__)
+                              ((Array/get ~'>int*|__0|input0|types 3) ~'x00__)
                                 (.invoke ~(tag (str `int>int)    '>int*|__0|3) ~'x00__)
-                              ((Array/get ~'>int*|__0|4|input-types 0) ~'x00__)
+                              ((Array/get ~'>int*|__0|input0|types 4) ~'x00__)
                                 (.invoke ~(tag (str `long>int)   '>int*|__0|4) ~'x00__)
-                              ((Array/get ~'>int*|__0|5|input-types 0) ~'x00__)
+                              ((Array/get ~'>int*|__0|input0|types 5) ~'x00__)
                                 (.invoke ~(tag (str `float>int)  '>int*|__0|5) ~'x00__)
-                              ((Array/get ~'>int*|__0|6|input-types 0) ~'x00__)
+                              ((Array/get ~'>int*|__0|input0|types 6) ~'x00__)
                                 (.invoke ~(tag (str `double>int) '>int*|__0|6) ~'x00__)
-                              ((Array/get ~'>int*|__1|0|input-types 0) ~'x00__)
+                              ((Array/get ~'>int*|__1|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `Object>int) '>int*|__1|0) ~'x00__)
                               (unsupported! `>int* [~'x00__] 0)))))))]
     (testing "code equivalence" (is-code= actual expected))
@@ -495,6 +484,7 @@
             :clj
               ($ (do ;; [a t/comparable-primitive? b t/comparable-primitive? > t/boolean?]
 
+                     ;; These are non-primitivized
                      (def ~(tag "[Ljava.lang.Object;" '>|test|__0|input0|types)
                        (*<> (t/isa? java.lang.Byte)
                             (t/isa? java.lang.Short)
@@ -503,7 +493,6 @@
                             (t/isa? java.lang.Long)
                             (t/isa? java.lang.Float)
                             (t/isa? java.lang.Double)))
-
                      (def ~(tag "[Ljava.lang.Object;" '>|test|__0|input1|types)
                        (*<> (t/isa? java.lang.Byte)
                             (t/isa? java.lang.Short)
@@ -512,345 +501,198 @@
                             (t/isa? java.lang.Long)
                             (t/isa? java.lang.Float)
                             (t/isa? java.lang.Double)))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|0|input-types)
-                       (*<> (t/isa? java.lang.Byte) (t/isa? java.lang.Byte)))
                      (def ~'>|test|__0|0
                        (reify* [byte+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_0__  ~(tag "byte"   'a) ~(tag "byte"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|1|input-types)
-                       (*<> (t/isa? java.lang.Byte) (t/isa? java.lang.Short)))
                      (def ~'>|test|__0|1
                        (reify* [byte+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_1__  ~(tag "byte"   'a) ~(tag "short"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|2|input-types)
-                       (*<> (t/isa? java.lang.Byte) (t/isa? java.lang.Character)))
                      (def ~'>|test|__0|2
                        (reify* [byte+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_2__  ~(tag "byte"   'a) ~(tag "char"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|3|input-types)
-                       (*<> (t/isa? java.lang.Byte) (t/isa? java.lang.Integer)))
                      (def ~'>|test|__0|3
                        (reify* [byte+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_3__  ~(tag "byte"   'a) ~(tag "int"    'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|4|input-types)
-                       (*<> (t/isa? java.lang.Byte) (t/isa? java.lang.Long)))
                      (def ~'>|test|__0|4
                        (reify* [byte+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_4__  ~(tag "byte"   'a) ~(tag "long"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|5|input-types)
-                       (*<> (t/isa? java.lang.Byte) (t/isa? java.lang.Float)))
                      (def ~'>|test|__0|5
                        (reify* [byte+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_5__  ~(tag "byte"   'a) ~(tag "float"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|6|input-types)
-                       (*<> (t/isa? java.lang.Byte) (t/isa? java.lang.Double)))
                      (def ~'>|test|__0|6
                        (reify* [byte+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_6__  ~(tag "byte"   'a) ~(tag "double" 'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|7|input-types)
-                       (*<> (t/isa? java.lang.Short) (t/isa? java.lang.Byte)))
                      (def ~'>|test|__0|7
                        (reify* [short+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_7__  ~(tag "short"  'a) ~(tag "byte"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|8|input-types)
-                       (*<> (t/isa? java.lang.Short) (t/isa? java.lang.Short)))
                      (def ~'>|test|__0|8
                        (reify* [short+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_8__  ~(tag "short"  'a) ~(tag "short"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|9|input-types)
-                       (*<> (t/isa? java.lang.Short) (t/isa? java.lang.Character)))
                      (def ~'>|test|__0|9
                        (reify* [short+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_9__  ~(tag "short"  'a) ~(tag "char"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|10|input-types)
-                       (*<> (t/isa? java.lang.Short) (t/isa? java.lang.Integer)))
                      (def ~'>|test|__0|10
                        (reify* [short+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_10__ ~(tag "short"  'a) ~(tag "int"    'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|11|input-types)
-                       (*<> (t/isa? java.lang.Short) (t/isa? java.lang.Long)))
                      (def ~'>|test|__0|11
                        (reify* [short+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_11__ ~(tag "short"  'a) ~(tag "long"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|12|input-types)
-                       (*<> (t/isa? java.lang.Short) (t/isa? java.lang.Float)))
                      (def ~'>|test|__0|12
                        (reify* [short+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_12__ ~(tag "short"  'a) ~(tag "float"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|13|input-types)
-                       (*<> (t/isa? java.lang.Short) (t/isa? java.lang.Double)))
                      (def ~'>|test|__0|13
                        (reify* [short+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_13__ ~(tag "short"  'a) ~(tag "double" 'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|14|input-types)
-                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Byte)))
                      (def ~'>|test|__0|14
                        (reify* [char+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_14__ ~(tag "char"   'a) ~(tag "byte"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|15|input-types)
-                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Short)))
                      (def ~'>|test|__0|15
                        (reify* [char+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_15__ ~(tag "char"   'a) ~(tag "short"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|16|input-types)
-                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Character)))
                      (def ~'>|test|__0|16
                        (reify* [char+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_16__ ~(tag "char"   'a) ~(tag "char"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|17|input-types)
-                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Integer)))
                      (def ~'>|test|__0|17
                        (reify* [char+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_17__ ~(tag "char"   'a) ~(tag "int"    'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|18|input-types)
-                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Long)))
                      (def ~'>|test|__0|18
                        (reify* [char+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_18__ ~(tag "char"   'a) ~(tag "long"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|19|input-types)
-                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Float)))
                      (def ~'>|test|__0|19
                        (reify* [char+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_19__ ~(tag "char"   'a) ~(tag "float"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|20|input-types)
-                       (*<> (t/isa? java.lang.Character) (t/isa? java.lang.Double)))
                      (def ~'>|test|__0|20
                        (reify* [char+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_20__ ~(tag "char"   'a) ~(tag "double" 'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|21|input-types)
-                       (*<> (t/isa? java.lang.Integer) (t/isa? java.lang.Byte)))
                      (def ~'>|test|__0|21
                        (reify* [int+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_21__ ~(tag "int"    'a) ~(tag "byte"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|22|input-types)
-                       (*<> (t/isa? java.lang.Integer) (t/isa? java.lang.Short)))
                      (def ~'>|test|__0|22
                        (reify* [int+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_22__ ~(tag "int"    'a) ~(tag "short"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|23|input-types)
-                       (*<> (t/isa? java.lang.Integer) (t/isa? java.lang.Character)))
                      (def ~'>|test|__0|23
                        (reify* [int+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_23__ ~(tag "int"    'a) ~(tag "char"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|24|input-types)
-                       (*<> (t/isa? java.lang.Integer) (t/isa? java.lang.Integer)))
                      (def ~'>|test|__0|24
                        (reify* [int+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_24__ ~(tag "int"    'a) ~(tag "int"    'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|25|input-types)
-                       (*<> (t/isa? java.lang.Integer) (t/isa? java.lang.Long)))
                      (def ~'>|test|__0|25
                        (reify* [int+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_25__ ~(tag "int"    'a) ~(tag "long"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|26|input-types)
-                       (*<> (t/isa? java.lang.Integer) (t/isa? java.lang.Float)))
                      (def ~'>|test|__0|26
                        (reify* [int+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_26__ ~(tag "int"    'a) ~(tag "float"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|27|input-types)
-                       (*<> (t/isa? java.lang.Integer) (t/isa? java.lang.Double)))
                      (def ~'>|test|__0|27
                        (reify* [int+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_27__ ~(tag "int"    'a) ~(tag "double" 'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|28|input-types)
-                       (*<> (t/isa? java.lang.Long) (t/isa? java.lang.Byte)))
                      (def ~'>|test|__0|28
                        (reify* [long+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_28__ ~(tag "long"   'a) ~(tag "byte"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|29|input-types)
-                       (*<> (t/isa? java.lang.Long) (t/isa? java.lang.Short)))
                      (def ~'>|test|__0|29
                        (reify* [long+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_29__ ~(tag "long"   'a) ~(tag "short"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|30|input-types)
-                       (*<> (t/isa? java.lang.Long) (t/isa? java.lang.Character)))
                      (def ~'>|test|__0|30
                        (reify* [long+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_30__ ~(tag "long"   'a) ~(tag "char"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|31|input-types)
-                       (*<> (t/isa? java.lang.Long) (t/isa? java.lang.Integer)))
                      (def ~'>|test|__0|31
                        (reify* [long+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_31__ ~(tag "long"   'a) ~(tag "int"    'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|32|input-types)
-                       (*<> (t/isa? java.lang.Long) (t/isa? java.lang.Long)))
                      (def ~'>|test|__0|32
                        (reify* [long+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_32__ ~(tag "long"   'a) ~(tag "long"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|33|input-types)
-                       (*<> (t/isa? java.lang.Long) (t/isa? java.lang.Float)))
                      (def ~'>|test|__0|33
                        (reify* [long+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_33__ ~(tag "long"   'a) ~(tag "float"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|34|input-types)
-                       (*<> (t/isa? java.lang.Long) (t/isa? java.lang.Double)))
                      (def ~'>|test|__0|34
                        (reify* [long+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_34__ ~(tag "long"   'a) ~(tag "double" 'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|35|input-types)
-                       (*<> (t/isa? java.lang.Float) (t/isa? java.lang.Byte)))
                      (def ~'>|test|__0|35
                        (reify* [float+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_35__ ~(tag "float"  'a) ~(tag "byte"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|36|input-types)
-                       (*<> (t/isa? java.lang.Float) (t/isa? java.lang.Short)))
                      (def ~'>|test|__0|36
                        (reify* [float+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_36__ ~(tag "float"  'a) ~(tag "short"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|37|input-types)
-                       (*<> (t/isa? java.lang.Float) (t/isa? java.lang.Character)))
                      (def ~'>|test|__0|37
                        (reify* [float+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_37__ ~(tag "float"  'a) ~(tag "char"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|38|input-types)
-                       (*<> (t/isa? java.lang.Float) (t/isa? java.lang.Integer)))
                      (def ~'>|test|__0|38
                        (reify* [float+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_38__ ~(tag "float"  'a) ~(tag "int"    'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|39|input-types)
-                       (*<> (t/isa? java.lang.Float) (t/isa? java.lang.Long)))
                      (def ~'>|test|__0|39
                        (reify* [float+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_39__ ~(tag "float"  'a) ~(tag "long"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|40|input-types)
-                       (*<> (t/isa? java.lang.Float) (t/isa? java.lang.Float)))
                      (def ~'>|test|__0|40
                        (reify* [float+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_40__ ~(tag "float"  'a) ~(tag "float"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|41|input-types)
-                       (*<> (t/isa? java.lang.Float) (t/isa? java.lang.Double)))
                      (def ~'>|test|__0|41
                        (reify* [float+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_41__ ~(tag "float"  'a) ~(tag "double" 'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|42|input-types)
-                       (*<> (t/isa? java.lang.Double) (t/isa? java.lang.Byte)))
                      (def ~'>|test|__0|42
                        (reify* [double+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_42__ ~(tag "double" 'a) ~(tag "byte"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|43|input-types)
-                       (*<> (t/isa? java.lang.Double) (t/isa? java.lang.Short)))
                      (def ~'>|test|__0|43
                        (reify* [double+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_43__ ~(tag "double" 'a) ~(tag "short"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|44|input-types)
-                       (*<> (t/isa? java.lang.Double) (t/isa? java.lang.Character)))
                      (def ~'>|test|__0|44
                        (reify* [double+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_44__ ~(tag "double" 'a) ~(tag "char"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|45|input-types)
-                       (*<> (t/isa? java.lang.Double) (t/isa? java.lang.Integer)))
                      (def ~'>|test|__0|45
                        (reify* [double+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_45__ ~(tag "double" 'a) ~(tag "int"    'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|46|input-types)
-                       (*<> (t/isa? java.lang.Double) (t/isa? java.lang.Long)))
                      (def ~'>|test|__0|46
                        (reify* [double+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_46__ ~(tag "double" 'a) ~(tag "long"   'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|47|input-types)
-                       (*<> (t/isa? java.lang.Double) (t/isa? java.lang.Float)))
                      (def ~'>|test|__0|47
                        (reify* [double+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_47__ ~(tag "double" 'a) ~(tag "float"  'b)]
                            ~'(Numeric/gt a b))))
-
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|48|input-types)
-                       (*<> (t/isa? java.lang.Double) (t/isa? java.lang.Double)))
                      (def ~'>|test|__0|48
                        (reify* [double+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_48__ ~(tag "double" 'a) ~(tag "double" 'b)]
