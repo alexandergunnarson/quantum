@@ -1074,7 +1074,7 @@ LEFT OFF LAST TIME (7/24/2018):
    dynamic dispatch uses to dispatch off input types."
   [{:as   in
     :keys [arg-types|split ::expanded-overload-groups|arg-types|split
-           ::uss/fn|name   ::uss/fn|name
+           fn|name         ::uss/fn|name
            i|fnt-overload  t/index?]} _
    > (s/vec-of ::input-types-decl)]
   (->> arg-types|split
@@ -1192,7 +1192,8 @@ LEFT OFF LAST TIME (7/24/2018):
   ([fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?)
     direct-dispatch-data-for-arity (s/seq-of ::direct-dispatch-data)]
     (if (empty? arglist)
-        (>dynamic-dispatch|reify-call (-> direct-dispatch-data-for-arity :reify-seq first) arglist)
+        (>dynamic-dispatch|reify-call
+          (-> direct-dispatch-data-for-arity first :reify-seq first) arglist)
         (let [i|arg 0]
           `(ifs ~@(->> direct-dispatch-data-for-arity
                        (c/lmap
