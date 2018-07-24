@@ -80,12 +80,6 @@
 #_"
 
 LEFT OFF LAST TIME (7/23/2018):
-- In defnt_equivalences:
-  ;; TODO the dispatch here should realize that `>int*|__0` has multiple
-  ;; non-primitivized overloads and must dispatch not merely on the whole typedef
-  ;; but rather on each 'branch' of `(t/- t/primitive? t/boolean?)`
-
-
 
 - With `defnt`, protocols and interfaces aren't needed. You can just create `t/fn`s that you can
   then conform your fns to.
@@ -1020,15 +1014,14 @@ LEFT OFF LAST TIME (7/23/2018):
                              (c/map #(fnt|overload>reify-overload % gen-gensym)))
         reify-name (>fnt|reify|name fn|name i)
         form `(~'def ~reify-name
-                (reify
+                (reify*
+                  ~(->> reify-overloads (mapv #(-> % :interface >name >symbol)))
                   ~@(->> reify-overloads
-                         (c/lmap (fn [{:keys [interface out-class method-sym arglist-code
+                         (c/lmap (fn [{:keys [out-class method-sym arglist-code
                                               body-form]} #_::reify|overload]
-                                   [(-> interface >name >symbol)
-                                    `(~(ufth/with-type-hint method-sym
-                                         (ufth/>arglist-embeddable-tag out-class))
-                                      ~arglist-code ~body-form)]))
-                         lcat)))]
+                                   `(~(ufth/with-type-hint method-sym
+                                        (ufth/>arglist-embeddable-tag out-class))
+                                     ~arglist-code ~body-form))))))]
     {:form      form
      :name      reify-name
      :overloads reify-overloads})))
