@@ -86,7 +86,8 @@
                         com.esotericsoftware/reflectasm]]
          [co.paralleluniverse/quasar-core       "0.7.6"
            :exclusions [com.esotericsoftware/reflectasm]]
-       ; ==== DATA ====
+       ; ==== quantum.core.data ====
+         [org.dthume/data.interval-treeset      "0.1.2"           ]
          [com.carrotsearch/hppc                 "0.7.1"           ] ; High performance primitive collections for Java
          [it.unimi.dsi/fastutil                 "7.0.12"          ]
        #_[colt/colt                             "1.2.0"           ]

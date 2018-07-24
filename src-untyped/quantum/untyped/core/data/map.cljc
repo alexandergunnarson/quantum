@@ -17,7 +17,7 @@
     [quantum.untyped.core.reducers :as ur
       :refer [reduce-pair]]
     [quantum.untyped.core.vars
-      :refer [defalias]])
+      :refer [defalias def-]])
   (:import
 #?@(:clj  [[java.util HashMap IdentityHashMap LinkedHashMap TreeMap]
            [it.unimi.dsi.fastutil.ints    Int2ReferenceOpenHashMap]
@@ -467,6 +467,52 @@
 (defalias avl/subrange)
 (defalias avl/split-key)
 (defalias avl/split-at)
+
+;; ===== Interval Tree / Map ===== ;;
+
+;; TODO this is just a placeholder until we can use `com.dean.clojure-interval-tree`
+;; (Adapted from http://clj-me.cgrand.net/2012/03/16/a-poor-mans-interval-tree/)
+
+(defn- interval< [[a b] [c d]]
+  (boolean (and b c
+                (if (= a b)
+                    (neg? (compare b c))
+                    (<= (compare b c) 0)))))
+
+(def- interval-map|empty (sorted-map-by interval< [nil nil] #{}))
+
+(defn- interval-map|split-at [m x]
+  (if x
+    (let [[[a b :as k] vs] (find m [x x])]
+      (if (or (= a x) (= b x))
+        m
+        (-> m (dissoc k) (assoc [a x] vs [x b] vs))))
+    m))
+
+(defn- interval-map|alter [m from to f & args]
+  (let [m (-> m (interval-map|split-at from) (interval-map|split-at to))
+        kvs (for [[r vs]
+                  (cond
+                    (and from to) (subseq m >= [from from] < [to to])
+                    from          (subseq m >= [from from])
+                    to            (subseq m <  [to   to])
+                    :else         m)]
+              [r (apply f vs args)])]
+    (into m kvs)))
+
+(defn interval|assoc  [m from to v] (interval-map|alter m from to conj v))
+(defn interval|dissoc [m from to v] (interval-map|alter m from to disj v))
+(defn interval|get    [m x] (get m [x x]))
+
+(defn interval-map [] interval-map|empty)
+
+(-> (interval-map)
+    (interval|assoc 0 5 :a)
+    (interval|assoc 1 6 :b)
+    (interval|assoc 2 7 :c)
+    (interval|get 2))
+
+;; ===== General ===== ;;
 
 ; TODO look at imap/merge
 
