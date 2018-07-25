@@ -5,17 +5,106 @@
   (:refer-clojure :exclude
     [split-at, merge, sorted-map sorted-map-by, array-map, hash-map])
   (:require
+    [quantum.core.defnt
+      :refer [defnt]]
     [quantum.untyped.core.data.map :as u]
+    [quantum.untyped.core.type     :as t]
     [quantum.untyped.core.vars
-      :refer [defaliases]]))
+      :refer [defaliases]])
+  (:import
+#?@(:clj  [[java.util HashMap IdentityHashMap LinkedHashMap TreeMap]
+           [it.unimi.dsi.fastutil.ints    Int2ReferenceOpenHashMap]
+           [it.unimi.dsi.fastutil.longs   Long2LongOpenHashMap
+                                          Long2ReferenceOpenHashMap]
+           [it.unimi.dsi.fastutil.doubles Double2ReferenceOpenHashMap]
+           [it.unimi.dsi.fastutil.objects Reference2LongOpenHashMap]]
+    :cljs [[goog.structs AvlTree LinkedMap]])))
 
+;; ===== Map entries ===== ;;
+
+(defnt >map-entry
+  "A performant replacement for creating 2-tuples (vectors), e.g., as return values
+   in a |kv-reduce| function.
+
+   Now overshadowed by ztellman's unrolled vectors in 1.8.0.
+
+   Time to create 100000000 2-tuples:
+   new tuple-vector 55.816415 ms
+   map-entry        37.542442 ms
+
+   However, insertion into maps is faster with map-entry:
+
+   (def vs [[1 2] [3 4]])
+   (def ms [(map-entry 1 2) (map-entry 3 4)])
+   (def m0 {})
+   508.122831 ms (dotimes [n 1000000] (into m0 vs))
+   310.335998 ms (dotimes [n 1000000] (into m0 ms))"
+  {:attribution "alexandergunnarson"}
+  [k _, v _ > t/+map-entry?]
+  #?(:clj  (clojure.lang.MapEntry. k v)
+     :cljs (cljs.core.MapEntry. k v nil)))
+
+;; ===== Unordered identity-semantic maps ===== ;;
+
+;; TODO generate this via macro?
+(defnt >!identity-map
+  "Creates a single-threaded, mutable identity map.
+   On the JVM, this is a `java.util.IdentityHashMap`.
+   On JS, this is a `js/Map` (ECMAScript 6 Map)."
+  ([> t/!identity-map?] #?(:clj (IdentityHashMap.) :cljs (js/Map.)))
+  ([k0 _, v0 _]
+    (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
+          (#?(:clj .put :cljs .set) k0 v0)))
+  #_([k0 _, v0 _, k1 _, v1 _]
+    (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
+          (#?(:clj .put :cljs .set) k0 v0)
+          (#?(:clj .put :cljs .set) k1 v1)))
+  #_([k0 _, v0 _, k1 _, v1 _, k2 _, v2 _]
+    (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
+          (#?(:clj .put :cljs .set) k0 v0)
+          (#?(:clj .put :cljs .set) k1 v1)
+          (#?(:clj .put :cljs .set) k2 v2)))
+  #_([k0 _, v0 _, k1 _, v1 _, k2 _, v2 _, k3 _, v3 _]
+    (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
+          (#?(:clj .put :cljs .set) k0 v0)
+          (#?(:clj .put :cljs .set) k1 v1)
+          (#?(:clj .put :cljs .set) k2 v2)
+          (#?(:clj .put :cljs .set) k3 v3)))
+  #_([k0 _, v0 _, k1 _, v1 _, k2 _, v2 _, k3 _, v3 _, k4 _, v4 _]
+    (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
+          (#?(:clj .put :cljs .set) k0 v0)
+          (#?(:clj .put :cljs .set) k1 v1)
+          (#?(:clj .put :cljs .set) k2 v2)
+          (#?(:clj .put :cljs .set) k3 v3)
+          (#?(:clj .put :cljs .set) k4 v4)))
+  #_([k0 _, v0 _, k1 _, v1 _, k2 _, v2 _, k3 _, v3 _, k4 _, v4 _, k5 _, v5 _]
+    (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
+          (#?(:clj .put :cljs .set) k0 v0)
+          (#?(:clj .put :cljs .set) k1 v1)
+          (#?(:clj .put :cljs .set) k2 v2)
+          (#?(:clj .put :cljs .set) k3 v3)
+          (#?(:clj .put :cljs .set) k4 v4)
+          (#?(:clj .put :cljs .set) k5 v5)))
+  #_([k0 _, v0 _, k1 _, v1 _, k2 _, v2 _, k3 _, v3 _, k4 _, v4 _, k5 _, v5 _ k6, _ v6, _ & kvs _]
+    (reduce-pair
+      (fn [#?(:clj ^IdentityHashMap m :cljs m) k v] (doto m (#?(:clj .put :cljs .set) k v)))
+      (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
+            (#?(:clj .put :cljs .set) k0 v0)
+            (#?(:clj .put :cljs .set) k1 v1)
+            (#?(:clj .put :cljs .set) k2 v2)
+            (#?(:clj .put :cljs .set) k3 v3)
+            (#?(:clj .put :cljs .set) k4 v4)
+            (#?(:clj .put :cljs .set) k5 v5)
+            (#?(:clj .put :cljs .set) k6 v6))
+      kvs)))
+
+; `(apply hash-map pairs)` <~> `lodash/fromPairs`
 (defaliases u
   #?@(:clj [int-map hash-map|long->ref])
   array-map hash-map ordered-map om #?(:clj !ordered-map) #?(:clj kw-omap)
   sorted-map      sorted-map-by sorted-map-by-val
   sorted-rank-map sorted-rank-map-by
   nearest rank-of subrange split-key split-at
-  map-entry map-entry-seq
   #?(:clj hash-map?)
   merge #?(:clj pmerge)
   !hash-map

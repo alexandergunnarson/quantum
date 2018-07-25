@@ -29,14 +29,13 @@
 
 ;; TO EXPLORE
 ;; - Optimizing Hash-Array Mapped Tries for Fast and Lean Immutable JVM Collections
+;;   - Actual usable implementation: https://github.com/usethesource/capsule
 ;;   - http://michael.steindorfer.name/publications/oopsla15.pdf
 ;;   - Overall significantly faster on what they've chosen to measure.
 ;;   - Alex Miller: "We have seen it and will probably investigate some of these ideas after 1.8."
 ;; =======================
 
 ;; ===== Map entries ===== ;;
-
-; `(apply hash-map pairs)` <~> `lodash/fromPairs`
 
 (defn map-entry
   "A performant replacement for creating 2-tuples (vectors), e.g., as return values
@@ -60,6 +59,7 @@
   #?(:clj  (clojure.lang.MapEntry. k v)
      :cljs (cljs.core.MapEntry. k v nil)))
 
+;; TODO excise?
 (defn map-entry-seq [args]
   (loop [[k v :as args-n] args
          accum []]

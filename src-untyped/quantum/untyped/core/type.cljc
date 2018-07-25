@@ -716,6 +716,7 @@
          (-def tuple?           ;; clojure.lang.Tuple was discontinued; we won't support it for now
                                 (isa? quantum.untyped.core.data.tuple.Tuple))
 #?(:clj  (-def map-entry?       (isa? java.util.Map$Entry)))
+         (-def +map-entry?      (isa? #?(:clj clojure.lang.MapEntry :cljs cljs.core.MapEntry)))
 
 ;; ===== Sequences ===== ;; Sequential (generally not efficient Lookup / RandomAccess)
 
