@@ -703,50 +703,135 @@
                          (~(tag "boolean" 'invoke) [~'_48__ ~(tag "double" 'a) ~(tag "double" 'b)]
                            ~'(Numeric/gt a b))))
 
-                     (defn ~'>|test
-                       {::t/type
-                         (t/fn #?(:clj  ~'[t/comparable-primitive? t/comparable-primitive?
-                                           :> t/boolean?]
-                                  :cljs ~'[t/double?               t/double?
-                                           :> (t/assume t/boolean?)]))}
-                       ([~'x00__ ~'x10__]
-                         (ifs
-                           ((Array/get ~'>|test|__0|input0|types 0) ~'x00__)
-                             (ifs
-                               ((Array/get ~'>|test|__0|input1|types 0) ~'x00__)
-                                 (.invoke ~(tag (str `byte+byte>boolean)    '>|test|__0|0)  ~'x00__)
-                               ((Array/get ~'>|test|__0|input1|types 1) ~'x00__)
-                                 (.invoke ~(tag (str `byte+short>boolean)   '>|test|__0|1)  ~'x00__)
-                               ((Array/get ~'>|test|__0|input1|types 2) ~'x00__)
-                                 (.invoke ~(tag (str `byte+char>boolean)    '>|test|__0|2)  ~'x00__)
-                               ((Array/get ~'>|test|__0|input1|types 3) ~'x00__)
-                                 (.invoke ~(tag (str `byte+int>boolean)     '>|test|__0|3)  ~'x00__)
-                               ((Array/get ~'>|test|__0|input1|types 4) ~'x00__)
-                                 (.invoke ~(tag (str `byte+long>boolean)    '>|test|__0|4)  ~'x00__)
-                               ((Array/get ~'>|test|__0|input1|types 5) ~'x00__)
-                                 (.invoke ~(tag (str `byte+float>boolean)   '>|test|__0|5)  ~'x00__)
-                               ((Array/get ~'>|test|__0|input1|types 6) ~'x00__)
-                                 (.invoke ~(tag (str `byte+double>boolean)  '>|test|__0|6)  ~'x00__)
-                               (unsupported! `>|test [~'x00__ ~'x10__] 1))
-                           ((Array/get ~'>|test|__0|input0|types 1) ~'x00__)
-                             (ifs
-                               ((Array/get ~'>|test|__0|input1|types 0) ~'x00__)
-                                 (.invoke ~(tag (str `short+byte>boolean)   '>|test|__0|7)  ~'x00__)
-                               ((Array/get ~'>|test|__0|input1|types 1) ~'x00__)
-                                 (.invoke ~(tag (str `short+short>boolean)  '>|test|__0|8)  ~'x00__)
-                               ((Array/get ~'>|test|__0|input1|types 2) ~'x00__)
-                                 (.invoke ~(tag (str `short+char>boolean)   '>|test|__0|9)  ~'x00__)
-                               ((Array/get ~'>|test|__0|input1|types 3) ~'x00__)
-                                 (.invoke ~(tag (str `short+int>boolean)    '>|test|__0|10) ~'x00__)
-                               ((Array/get ~'>|test|__0|input1|types 4) ~'x00__)
-                                 (.invoke ~(tag (str `short+long>boolean)   '>|test|__0|11) ~'x00__)
-                               ((Array/get ~'>|test|__0|input1|types 5) ~'x00__)
-                                 (.invoke ~(tag (str `short+float>boolean)  '>|test|__0|12) ~'x00__)
-                               ((Array/get ~'>|test|__0|input1|types 6) ~'x00__)
-                                 (.invoke ~(tag (str `short+double>boolean) '>|test|__0|13) ~'x00__)
-                               (unsupported! `>|test [~'x00__ ~'x10__] 1))
-                           ...
-                           (unsupported! `>|test [~'x00__ ~'x10__] 0))))))
+           ;; Unindented for greater vertical brevity
+           (defn ~'>|test
+             {::t/type
+               (t/fn #?(:clj  ~'[t/comparable-primitive? t/comparable-primitive?
+                                 :> t/boolean?]
+                        :cljs ~'[t/double?               t/double?
+                                 :> (t/assume t/boolean?)]))}
+             ([~'x00__ ~'x10__]
+               (ifs
+                 ((Array/get ~'>|test|__0|input0|types 0) ~'x00__)
+                   (ifs
+                     ((Array/get ~'>|test|__0|input1|types 0) ~'x10__)
+                       (.invoke ~(tag (str `byte+byte>boolean)      '>|test|__0|0)  ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 1) ~'x10__)
+                       (.invoke ~(tag (str `byte+short>boolean)     '>|test|__0|1)  ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 2) ~'x10__)
+                       (.invoke ~(tag (str `byte+char>boolean)      '>|test|__0|2)  ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 3) ~'x10__)
+                       (.invoke ~(tag (str `byte+int>boolean)       '>|test|__0|3)  ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 4) ~'x10__)
+                       (.invoke ~(tag (str `byte+long>boolean)      '>|test|__0|4)  ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 5) ~'x10__)
+                       (.invoke ~(tag (str `byte+float>boolean)     '>|test|__0|5)  ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 6) ~'x10__)
+                       (.invoke ~(tag (str `byte+double>boolean)    '>|test|__0|6)  ~'x00__ ~'x10__)
+                     (unsupported! `>|test [~'x00__ ~'x10__] 1))
+                 ((Array/get ~'>|test|__0|input0|types 1) ~'x00__)
+                   (ifs
+                     ((Array/get ~'>|test|__0|input1|types 0) ~'x10__)
+                       (.invoke ~(tag (str `short+byte>boolean)     '>|test|__0|7)  ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 1) ~'x10__)
+                       (.invoke ~(tag (str `short+short>boolean)    '>|test|__0|8)  ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 2) ~'x10__)
+                       (.invoke ~(tag (str `short+char>boolean)     '>|test|__0|9)  ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 3) ~'x10__)
+                       (.invoke ~(tag (str `short+int>boolean)      '>|test|__0|10) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 4) ~'x10__)
+                       (.invoke ~(tag (str `short+long>boolean)     '>|test|__0|11) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 5) ~'x10__)
+                       (.invoke ~(tag (str `short+float>boolean)    '>|test|__0|12) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 6) ~'x10__)
+                       (.invoke ~(tag (str `short+double>boolean)   '>|test|__0|13) ~'x00__ ~'x10__)
+                     (unsupported! `>|test [~'x00__ ~'x10__] 1))
+                 ((Array/get ~'>|test|__0|input0|types 2) ~'x00__)
+                   (ifs
+                     ((Array/get ~'>|test|__0|input1|types 0) ~'x10__)
+                       (.invoke ~(tag (str `char+byte>boolean)      '>|test|__0|14) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 1) ~'x10__)
+                       (.invoke ~(tag (str `char+short>boolean)     '>|test|__0|15) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 2) ~'x10__)
+                       (.invoke ~(tag (str `char+char>boolean)      '>|test|__0|16) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 3) ~'x10__)
+                       (.invoke ~(tag (str `char+int>boolean)       '>|test|__0|17) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 4) ~'x10__)
+                       (.invoke ~(tag (str `char+long>boolean)      '>|test|__0|18) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 5) ~'x10__)
+                       (.invoke ~(tag (str `char+float>boolean)     '>|test|__0|19) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 6) ~'x10__)
+                       (.invoke ~(tag (str `char+double>boolean)    '>|test|__0|20) ~'x00__ ~'x10__)
+                     (unsupported! `>|test [~'x00__ ~'x10__] 1))
+                 ((Array/get ~'>|test|__0|input0|types 3) ~'x00__)
+                   (ifs
+                     ((Array/get ~'>|test|__0|input1|types 0) ~'x10__)
+                       (.invoke ~(tag (str `int+byte>boolean)       '>|test|__0|21) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 1) ~'x10__)
+                       (.invoke ~(tag (str `int+short>boolean)      '>|test|__0|22) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 2) ~'x10__)
+                       (.invoke ~(tag (str `int+char>boolean)       '>|test|__0|23) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 3) ~'x10__)
+                       (.invoke ~(tag (str `int+int>boolean)        '>|test|__0|24) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 4) ~'x10__)
+                       (.invoke ~(tag (str `int+long>boolean)       '>|test|__0|25) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 5) ~'x10__)
+                       (.invoke ~(tag (str `int+float>boolean)      '>|test|__0|26) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 6) ~'x10__)
+                       (.invoke ~(tag (str `int+double>boolean)     '>|test|__0|27) ~'x00__ ~'x10__)
+                     (unsupported! `>|test [~'x00__ ~'x10__] 1))
+                 ((Array/get ~'>|test|__0|input0|types 4) ~'x00__)
+                   (ifs
+                     ((Array/get ~'>|test|__0|input1|types 0) ~'x10__)
+                       (.invoke ~(tag (str `long+byte>boolean)      '>|test|__0|28) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 1) ~'x10__)
+                       (.invoke ~(tag (str `long+short>boolean)     '>|test|__0|29) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 2) ~'x10__)
+                       (.invoke ~(tag (str `long+char>boolean)      '>|test|__0|30) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 3) ~'x10__)
+                       (.invoke ~(tag (str `long+int>boolean)       '>|test|__0|31) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 4) ~'x10__)
+                       (.invoke ~(tag (str `long+long>boolean)      '>|test|__0|32) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 5) ~'x10__)
+                       (.invoke ~(tag (str `long+float>boolean)     '>|test|__0|33) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 6) ~'x10__)
+                       (.invoke ~(tag (str `long+double>boolean)    '>|test|__0|34) ~'x00__ ~'x10__)
+                     (unsupported! `>|test [~'x00__ ~'x10__] 1))
+                 ((Array/get ~'>|test|__0|input0|types 5) ~'x00__)
+                   (ifs
+                     ((Array/get ~'>|test|__0|input1|types 0) ~'x10__)
+                       (.invoke ~(tag (str `float+byte>boolean)     '>|test|__0|35) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 1) ~'x10__)
+                       (.invoke ~(tag (str `float+short>boolean)    '>|test|__0|36) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 2) ~'x10__)
+                       (.invoke ~(tag (str `float+char>boolean)     '>|test|__0|37) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 3) ~'x10__)
+                       (.invoke ~(tag (str `float+int>boolean)      '>|test|__0|38) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 4) ~'x10__)
+                       (.invoke ~(tag (str `float+long>boolean)     '>|test|__0|39) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 5) ~'x10__)
+                       (.invoke ~(tag (str `float+float>boolean)    '>|test|__0|40) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 6) ~'x10__)
+                       (.invoke ~(tag (str `float+double>boolean)   '>|test|__0|41) ~'x00__ ~'x10__)
+                     (unsupported! `>|test [~'x00__ ~'x10__] 1))
+                 ((Array/get ~'>|test|__0|input0|types 6) ~'x00__)
+                   (ifs
+                     ((Array/get ~'>|test|__0|input1|types 0) ~'x10__)
+                       (.invoke ~(tag (str `double+byte>boolean)    '>|test|__0|42) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 1) ~'x10__)
+                       (.invoke ~(tag (str `double+short>boolean)   '>|test|__0|43) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 2) ~'x10__)
+                       (.invoke ~(tag (str `double+char>boolean)    '>|test|__0|44) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 3) ~'x10__)
+                       (.invoke ~(tag (str `double+int>boolean)     '>|test|__0|45) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 4) ~'x10__)
+                       (.invoke ~(tag (str `double+long>boolean)    '>|test|__0|46) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 5) ~'x10__)
+                       (.invoke ~(tag (str `double+float>boolean)   '>|test|__0|47) ~'x00__ ~'x10__)
+                     ((Array/get ~'>|test|__0|input1|types 6) ~'x10__)
+                       (.invoke ~(tag (str `double+double>boolean)  '>|test|__0|48) ~'x00__ ~'x10__)
+                     (unsupported! `>|test [~'x00__ ~'x10__] 1))
+                 (unsupported! `>|test [~'x00__ ~'x10__] 0))))))
             :cljs
               ($ (do (defn ~'>|test
                        ([a0 a1]
@@ -756,12 +841,12 @@
                                      (unsupported! `>|test [a0 a1] 1))
                               (unsupported! `>|test [a0 a1] 0)))))))]
     (testing "code equivalence" (is-code= actual expected))
-    #_(testing "functionality"
+    (testing "functionality"
       (eval actual)
-      (eval '(do ...))))
+      (eval '(do (is= (>|test 0 1)   (> 0 1))
+                 (is= (>|test 1 0)   (> 1 0))
+                 (is= (>|test 1.0 0) (> 1.0 0))))))
 
-;; TODO fix: current implementation prefers to consolidate into one `reify` rather than splitting it
-;; up as below
 (is-code=
 
 (macroexpand '

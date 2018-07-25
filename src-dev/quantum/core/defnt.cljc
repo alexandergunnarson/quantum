@@ -35,7 +35,7 @@
       :refer [TODO err!]]
     [quantum.untyped.core.fn
       :refer [aritoid fn1 fnl fn', fn-> fn->> <-, rcomp
-              firsta seconda]]
+              firsta seconda with-do]]
     [quantum.untyped.core.form                  :as uform
       :refer [>form]]
     [quantum.untyped.core.form.evaluate         :as ufeval]
@@ -1205,23 +1205,25 @@ LEFT OFF LAST TIME (7/24/2018):
                             (c/lmap
                               (fn [{:keys [reify-seq i-arg->input-types-decl]}]
                                 (>dynamic-dispatch|body-for-arity fn|name arglist reify-seq
-                                  i-arg->input-types-decl i|arg 0)))
+                                  i-arg->input-types-decl (atom 0) i|arg)))
                             c/lcat)]
           (>dynamic-dispatch|conditional fn|name arglist i|arg branches))))
   ([fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?), reify-seq (s/vec-of ::reify)
-    input-types-decl-group' (s/seq-of ::input-types-decl), i|arg t/index?, i|arg-type t/index?]
+    input-types-decl-group' (s/seq-of ::input-types-decl), *i|reify _, i|arg t/index?]
     (let [{:as input-types-decl :keys [arg-type|split]} (first input-types-decl-group')
           input-types-decl-group'' (rest input-types-decl-group')]
       (->> arg-type|split
            (c/lmap-indexed
              (fn [i|arg-type' _]
-               [`((Array/get ~(:name input-types-decl) ~i|arg-type') ~@arglist)
+               [`((Array/get ~(:name input-types-decl) ~i|arg-type') ~(get arglist i|arg))
                 (if (empty? input-types-decl-group'')
-                    (let [i|reify i|arg-type]
-                      (>dynamic-dispatch|reify-call (get reify-seq i|reify) arglist))
-                    (let [next-branch (>dynamic-dispatch|body-for-arity fn|name arglist reify-seq
-                                        input-types-decl-group'' (inc i|arg) i|arg-type')]
-                      (>dynamic-dispatch|conditional fn|name arglist i|arg next-branch)))]))
+                    (with-do (>dynamic-dispatch|reify-call (get reify-seq @*i|reify) arglist)
+                      ;; TODO take out this ugly bit
+                      (swap! *i|reify inc))
+                    (let [i|arg' (inc i|arg)
+                          next-branch (>dynamic-dispatch|body-for-arity fn|name arglist reify-seq
+                                        input-types-decl-group'' *i|reify i|arg')]
+                      (>dynamic-dispatch|conditional fn|name arglist i|arg' next-branch)))]))
            c/lcat))))
 
 (defns >dynamic-dispatch-fn|form
