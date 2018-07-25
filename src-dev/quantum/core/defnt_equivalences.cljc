@@ -868,34 +868,42 @@
                                (t/isa? java.lang.Float)
                                (t/isa? java.lang.Double)))
                         (def ~'>long*|__0|0
-                          (reify* [byte>long]   (~(tag "long" 'invoke) [~'_0__ ~(tag "byte"             'x)]
-                            ~'(Primitive/uncheckedLongCast x))))
+                          (reify* [byte>long]
+                            (~(tag "long" 'invoke) [~'_0__ ~(tag "byte"             'x)]
+                              ~'(Primitive/uncheckedLongCast x))))
                         (def ~'>long*|__0|1
-                          (reify* [char>long]   (~(tag "long" 'invoke) [~'_1__ ~(tag "char"             'x)]
-                            ~'(Primitive/uncheckedLongCast x))))
+                          (reify* [char>long]
+                            (~(tag "long" 'invoke) [~'_1__ ~(tag "char"             'x)]
+                              ~'(Primitive/uncheckedLongCast x))))
                         (def ~'>long*|__0|2
-                          (reify* [short>long]  (~(tag "long" 'invoke) [~'_2__ ~(tag "short"            'x)]
-                            ~'(Primitive/uncheckedLongCast x))))
+                          (reify* [short>long]
+                            (~(tag "long" 'invoke) [~'_2__ ~(tag "short"            'x)]
+                              ~'(Primitive/uncheckedLongCast x))))
                         (def ~'>long*|__0|3
-                          (reify* [int>long]    (~(tag "long" 'invoke) [~'_3__ ~(tag "int"              'x)]
-                            ~'(Primitive/uncheckedLongCast x))))
+                          (reify* [int>long]
+                            (~(tag "long" 'invoke) [~'_3__ ~(tag "int"              'x)]
+                              ~'(Primitive/uncheckedLongCast x))))
                         (def ~'>long*|__0|4
-                          (reify* [long>long]   (~(tag "long" 'invoke) [~'_4__ ~(tag "long"             'x)]
-                            ~'(Primitive/uncheckedLongCast x))))
+                          (reify* [long>long]
+                            (~(tag "long" 'invoke) [~'_4__ ~(tag "long"             'x)]
+                              ~'(Primitive/uncheckedLongCast x))))
                         (def ~'>long*|__0|5
-                          (reify* [float>long]  (~(tag "long" 'invoke) [~'_5__ ~(tag "float"            'x)]
-                            ~'(Primitive/uncheckedLongCast x))))
+                          (reify* [float>long]
+                            (~(tag "long" 'invoke) [~'_5__ ~(tag "float"            'x)]
+                              ~'(Primitive/uncheckedLongCast x))))
                         (def ~'>long*|__0|6
-                          (reify* [double>long] (~(tag "long" 'invoke) [~'_6__ ~(tag "double"           'x)]
-                            ~'(Primitive/uncheckedLongCast x))))
+                          (reify* [double>long]
+                            (~(tag "long" 'invoke) [~'_6__ ~(tag "double"           'x)]
+                              ~'(Primitive/uncheckedLongCast x))))
 
                         ;; [x (t/ref (t/isa? Number))]
 
                         (def ~(tag "[Ljava.lang.Object;" '>long*|__1|input0|types)
                           (*<> ~(with-meta `(t/isa? Number) {:ref? true})))
                         (def ~'>long*|__1|0
-                          (reify* [Object>long] (~(tag "long" 'invoke) [~'_7__ ~(tag "java.lang.Object" 'x)]
-                            (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(.longValue x)))))
+                          (reify* [Object>long]
+                            (~(tag "long" 'invoke) [~'_7__ ~(tag "java.lang.Object" 'x)]
+                              (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(.longValue x)))))
 
                         (defn ~'>long*
                           {::t/type (t/fn ~'[(t/- t/primitive? t/boolean?) :> t/long?]
@@ -920,7 +928,7 @@
                                 (.invoke >long*|__1|0 x00__)
                               (unsupported! `>long* [~'x00__] 0)))))))]
     (testing "code equivalence" (is-code= actual expected))
-  (testing "functionality"
+    (testing "functionality"
       (eval actual)
       (eval
         '(do (throws (>long*))
@@ -934,7 +942,9 @@
              (is (identical? (>long* -1.1)     (clojure.lang.RT/uncheckedLongCast -1.1)))
              (is (identical? (>long* (byte 1)) (clojure.lang.RT/uncheckedLongCast (byte 1)))))))))
 
-;; =====|=====|=====|=====|===== ;;
+
+(defnt defnt-reference-test
+  ([] (>long* 1)))
 
 (is-code=
 
