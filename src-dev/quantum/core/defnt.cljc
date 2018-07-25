@@ -1188,34 +1188,40 @@ LEFT OFF LAST TIME (7/24/2018):
             (-> reify- :non-primitivized-overload :interface >name))]
     `(~dotted-reify-method-sym ~hinted-reify-sym ~@arglist)))
 
+(defns >dynamic-dispatch|conditional
+  [fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?), i|arg t/index?, body _]
+  (if (-> body count (= 1))
+      (first body)
+      `(ifs ~@body (unsupported! (quote ~(qualify fn|name)) [~@arglist] ~i|arg))))
+
 (defns >dynamic-dispatch|body-for-arity
   ([fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?)
     direct-dispatch-data-for-arity (s/seq-of ::direct-dispatch-data)]
     (if (empty? arglist)
         (>dynamic-dispatch|reify-call
           (-> direct-dispatch-data-for-arity first :reify-seq first) arglist)
-        (let [i|arg 0]
-          `(ifs ~@(->> direct-dispatch-data-for-arity
-                       (c/lmap
-                         (fn [{:keys [reify-seq i-arg->input-types-decl]}]
-                           (>dynamic-dispatch|body-for-arity fn|name arglist reify-seq
-                             i-arg->input-types-decl i|arg 0)))
-                       c/lcat))
-                (unsupported! (quote ~(qualify fn|name)) [~@arglist] ~i|arg))))
+        (let [i|arg    0
+              branches (->> direct-dispatch-data-for-arity
+                            (c/lmap
+                              (fn [{:keys [reify-seq i-arg->input-types-decl]}]
+                                (>dynamic-dispatch|body-for-arity fn|name arglist reify-seq
+                                  i-arg->input-types-decl i|arg 0)))
+                            c/lcat)]
+          (>dynamic-dispatch|conditional fn|name arglist i|arg branches))))
   ([fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?), reify-seq (s/vec-of ::reify)
     input-types-decl-group' (s/seq-of ::input-types-decl), i|arg t/index?, i|arg-type t/index?]
     (let [{:as input-types-decl :keys [arg-type|split]} (first input-types-decl-group')
           input-types-decl-group'' (rest input-types-decl-group')]
       (if (empty? input-types-decl-group'')
           (let [i|reify i|arg-type]
-            (>dynamic-dispatch|reify-call (get reify-seq i|reify) arglist))
+            [(>dynamic-dispatch|reify-call (get reify-seq i|reify) arglist)])
           (->> arg-type|split
                (c/lmap-indexed
                  (fn [i|arg-type' _]
                    [`((Array/get ~(:name input-types-decl) ~i|arg-type') ~@arglist)
-                    `(ifs ~@(>dynamic-dispatch|body-for-arity fn|name arglist reify-seq
-                              input-types-decl-group'' (inc i|arg) i|arg-type')
-                          (unsupported! (quote ~(qualify fn|name)) [~@arglist] ~i|arg))]))
+                    (let [next-branch (>dynamic-dispatch|body-for-arity fn|name arglist reify-seq
+                                        input-types-decl-group'' (inc i|arg) i|arg-type')]
+                      (>dynamic-dispatch|conditional fn|name arglist i|arg next-branch))]))
                c/lcat)))))
 
 (defns >dynamic-dispatch-fn|form
