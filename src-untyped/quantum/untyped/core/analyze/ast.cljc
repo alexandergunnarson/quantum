@@ -92,7 +92,7 @@
 (defrecord Do
   [env  #_::env
    form #_::t/form
-   unexpanded-form #_::t/form
+   expanded-form #_::t/form
    body #_(t/and t/sequential? t/indexed? (t/every? ::node))
    type #_t/type?]
   INode

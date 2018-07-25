@@ -150,27 +150,28 @@
          (->expr-info {:env env :form (transient {})}))
        (persistent!-and-add-file-context form)))
 
-(defns- analyze-seq|do [env ::env, form _, body _]
-  (if (empty? body)
-      (uast/do {:env             env
-                :unexpanded-form form
-                :form            form
-                :body            (>vec body)
-                :type            t/nil?})
-      (let [expr (analyze-non-map-seqable env body []
-                   (fn [accum expr _]
-                     (assoc expr ;; The env should be the same as whatever it was originally
-                                 ;; because no new scopes are created
-                                 :env  (:env accum)
-                                 :form (conj! (:form accum) (:form expr))
-                                 :body (conj! (:body accum) expr))))]
-        (uast/do {:env             env
-                  :unexpanded-form form
-                  :form            (list* 'do (:form expr))
-                  :body            (:body expr)
+(defns- analyze-seq|do [env ::env, [_ _ & body|form _ :as form] _]
+  (if (empty? body|form)
+      (uast/do {:env           env
+                :form          form
+                :expanded-form form
+                :body          []
+                :type          t/nil?})
+      (let [{expanded-form :form body :body}
+              (analyze-non-map-seqable env body|form []
+                (fn [accum expr _]
+                  (assoc expr ;; The env should be the same as whatever it was originally
+                              ;; because no new scopes are created
+                              :env  (:env accum)
+                              :form (conj! (:form accum) (:form expr))
+                              :body (conj! (:body accum) expr))))]
+        (uast/do {:env           env
+                  :form          form
+                  :expanded-form (with-meta (list* 'do expanded-form) (meta expanded-form))
+                  :body          body
                   ;; To types, only the last subexpression ever matters, as each is independent
                   ;; from the others
-                  :type            (-> expr :body c/last :type)}))))
+                  :type          (-> body c/last :type)}))))
 
 (defns analyze-seq|let*|bindings [env ::env, bindings _]
   (TODO "`let*|bindings` analysis")
@@ -186,10 +187,10 @@
          (->expr-info {:env env :form (transient [])}))
        (persistent!-and-add-file-context bindings)))
 
-(defns analyze-seq|let* [env ::env, form _, [bindings _ & body _] _]
-  {:pre [(prl! env bindings body)]}
-  (let [env' (analyze-seq|let*|bindings env )
-        expr (analyze-seq|do env' (list* 'do form) body)]
+(defns analyze-seq|let* [env ::env, [_ _, bindings|form _ & body|form _ :as form] _]
+  {:pre [(prl! env form)]}
+  (let [env' (analyze-seq|let*|bindings env bindings|form)
+        expr (analyze-seq|do env' (list* 'do body|form))]
     (prl! expr)
     (TODO "`let*` analysis")
     #_(uast/let* {:env env
@@ -339,7 +340,7 @@
         (err! "Found more than one class" cs))))
 
 ;; TODO type these arguments; e.g. check that ?method||field, if present, is an unqualified symbol
-(defns- analyze-seq|dot [env ::env, form _, [target-form _, ?method-or-field _ & ?args _] _]
+(defns- analyze-seq|dot [env ::env, [_ _, target-form _, ?method-or-field _ & ?args _ :as form] _]
   {:pre  [(prl! env form target-form ?method-or-field ?args)]
    :post [(prl! %)]}
   (let [target          (analyze* #_?resolve-with-env env target-form)
@@ -377,7 +378,7 @@
 (defns- analyze-seq|if
   "If `*conditional-branch-pruning?*` is falsey, the dead branch's original form will be
    retained, but it will not be type-analyzed."
-  [env ::env, form _, [pred-form _, true-form _, false-form _ :as body] _]
+  [env ::env, [_ _ & [pred-form _, true-form _, false-form _ :as body] _ :as form] _]
   {:post [(prl! %)]}
   (if (-> body count (not= 3))
       (err! "`if` accepts exactly 3 arguments: one predicate test and two branches; received"
@@ -408,12 +409,12 @@
                               (assoc :form (list 'if pred-form true-form (:form @false-expr))))))
           nil       @whole-expr))))
 
-(defns- analyze-seq|quote [env ::env, form _, body _]
+(defns- analyze-seq|quote [env ::env, [_ _ & body _ :as form] _]
   {:post [(prl! %)]}
   (uast/quoted env form (tcore/most-primitive-class-of body)))
 
-(defns- analyze-seq|new [env ::env, form _ [c|form _ #_t/class? & args _ :as body] _]
-  {:pre [(prl! env form body)]}
+(defns- analyze-seq|new [env ::env, [_ _ & [c|form _ #_t/class? & args _ :as body] _ :as form] _]
+  {:pre [(prl! env form)]}
   (let [c|analyzed (analyze* env c|form)]
     (if-not (and (-> c|analyzed :type t/value-type?)
                  (-> c|analyzed :type utr/value-type>value class?))
@@ -446,16 +447,16 @@
   [env ::env, [caller|form _ & body _ :as form] _]
   (ifs (special-symbols caller|form)
        (case caller|form
-         do       (analyze-seq|do    env form body)
-         let*     (analyze-seq|let*  env form body)
+         do       (analyze-seq|do    env form)
+         let*     (analyze-seq|let*  env form)
          deftype* (TODO "deftype*")
          fn*      (TODO "fn*")
          def      (TODO "def")
-         .        (analyze-seq|dot   env form body)
-         if       (analyze-seq|if    env form body)
-         quote    (analyze-seq|quote env form body)
-         new      (analyze-seq|new   env form body)
-         throw    (analyze-seq|throw env form body))
+         .        (analyze-seq|dot   env form)
+         if       (analyze-seq|if    env form)
+         quote    (analyze-seq|quote env form)
+         new      (analyze-seq|new   env form)
+         throw    (analyze-seq|throw env form))
        ;; TODO support recursion
        (let [caller|expr (analyze* env caller|form)
              caller|type (:type caller|expr)

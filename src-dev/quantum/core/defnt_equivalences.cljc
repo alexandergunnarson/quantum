@@ -5,7 +5,7 @@
   (:require
     [quantum.untyped.core.type.defnt
       :refer [defnt fnt unsupported!]]
-    [quantum.untyped.core.core :as ucore
+    [quantum.untyped.core.core              :as ucore
       :refer [code=]]
     [quantum.untyped.core.data.array
       :refer [*<>]]
@@ -17,10 +17,10 @@
       :refer [tag]]
     [quantum.untyped.core.logic
       :refer [ifs]]
-    [quantum.untyped.core.spec         :as s]
-    [quantum.untyped.core.test         :as test
+    [quantum.untyped.core.spec              :as s]
+    [quantum.untyped.core.test              :as test
       :refer [deftest is is= is-code= testing throws]]
-    [quantum.untyped.core.type :as t
+    [quantum.untyped.core.type              :as t
       :refer [? *]]
     [quantum.untyped.core.type.reifications :as utr])
   (:import
