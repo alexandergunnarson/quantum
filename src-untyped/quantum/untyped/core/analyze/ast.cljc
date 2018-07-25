@@ -51,17 +51,18 @@
   ([env form t] (Literal. env form t)))
 
 (defrecord Symbol
-  [env  #_::env
-   form #_t/symbol?
-   type #_t/type?]
+  [env   #_::env
+   form  #_t/symbol?
+   value #_t/any?
+   type  #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (list `symbol (into (array-map) this))))
 
 (defn symbol
-  ([form t] (symbol nil form t))
-  ([env form t] (Symbol. env form t)))
+  ([form value t] (symbol nil form value t))
+  ([env form value t] (Symbol. env form value t)))
 
 (defn symbol? [x] (instance? Symbol x))
 
@@ -103,10 +104,11 @@
 (defn do [m] (map->Do m))
 
 (defrecord MacroCall
-  [env      #_::env
-   form     #_::t/form
-   expanded #_::node
-   type     #_t/type?]
+  [env           #_::env
+   form          #_::t/form
+   expanded-form #_::t/form ; the *fully* expanded form
+   expanded      #_::node
+   type          #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn

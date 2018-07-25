@@ -22,6 +22,8 @@
       :refer [prl!]]
     [quantum.untyped.core.logic
       :refer [if-not-let ifs]]
+    [quantum.untyped.core.print
+      :refer [ppr]]
     [quantum.untyped.core.reducers          :as r
       :refer [educe reducei]]
     [quantum.untyped.core.spec              :as s]
@@ -173,28 +175,25 @@
                   ;; from the others
                   :type          (-> body c/last :type)}))))
 
-(defns analyze-seq|let*|bindings [env ::env, bindings _]
-  (TODO "`let*|bindings` analysis")
-  #_(->> bindings
-       (partition-all+ 2)
-       (reduce (fn [{env' :env forms :form} [sym form]]
-                 (let [expr-ret (analyze* env' form)]
-                   (->expr-info
-                     {:env  (assoc env' sym (->type-info {:reifieds  (:reifieds  expr-ret) ; TODO should use type info or exprinfo?
-                                                          :abstracts (:abstracts expr-ret)
-                                                          :fn-types  (:fn-types  expr-ret)}))
-                      :form (conj! (conj! forms sym) (:form expr-ret))})))
-         (->expr-info {:env env :form (transient [])}))
-       (persistent!-and-add-file-context bindings)))
+(defns analyze-seq|let*|bindings [env ::env, bindings|form _]
+  (->> bindings|form
+       (c/partition-all+ 2)
+       (reduce (fn [{env' :env !bindings :form} [sym form :as binding|form]]
+                 (let [expr (analyze* env' form)] ; environment is additive with each binding
+                   {:env  (assoc env' sym expr)
+                    :form (conj! (conj! !bindings sym) (:form expr))}))
+         {:env env :form (transient [])})
+       (persistent!-and-add-file-context bindings|form)))
 
 (defns analyze-seq|let* [env ::env, [_ _, bindings|form _ & body|form _ :as form] _]
   {:pre [(prl! env form)]}
-  (let [env' (analyze-seq|let*|bindings env bindings|form)
-        expr (analyze-seq|do env' (list* 'do body|form))]
-    (prl! expr)
+  (let [{env' :env bindings|form' :form} (analyze-seq|let*|bindings env bindings|form)
+        {body|form :form :as expr} (analyze-seq|do env' (list* 'do body|form))]
+    (prl! env' expr)
     (TODO "`let*` analysis")
     #_(uast/let* {:env env
                   :form form
+                  :expanded-form (list* 'let* bindings|form' body|form')
                   :bindings (bindings>env bindings)
                   :body (>vec body)
                   :type (:type expr)}))
@@ -208,14 +207,12 @@
                   :type-info type-info'})))
 
 (defns ?resolve-with-env [sym t/symbol?, env ::env]
-  (let [local (c/get env sym)]
-    (if (some? local)
-        (if (uast/unbound? local)
-            local
-            (TODO "Need to figure out what to do when resolving local vars"))
-        (let [resolved (ns-resolve *ns* sym)]
-          (log/ppr :warn "Not sure how to handle non-local symbol; resolved it for now" (kw-map sym resolved))
-          resolved))))
+  (if-let [[_ local] (find env sym)]
+    {:value local}
+    (let [resolved (ns-resolve *ns* sym)]
+      (log/ppr :warn "Not sure how to handle non-local symbol; resolved it for now"
+                     (kw-map sym resolved))
+      (when resolved {:value resolved}))))
 
 (defns methods->type
   "Creates a type given ->`methods`."
@@ -523,24 +520,28 @@
   (let [expanded-form (ufeval/macroexpand form)]
     (if (ucomp/== form expanded-form)
         (analyze-seq* env expanded-form)
-        (uast/macro-call {:env env :form form :expanded (analyze-seq* env expanded-form)}))))
+        (let [expanded (analyze-seq* env expanded-form)]
+          (uast/macro-call
+            {:env           env
+             :form          form
+             :expanded-form (:form expanded)
+             :expanded      expanded})))))
 
 (defns- analyze-symbol [env ::env, form t/symbol?]
   {:post [(prl! %)]}
-  (let [resolved (?resolve-with-env form env)]
-    (if-not resolved
-      (err! "Could not resolve symbol" {:sym form})
-      (uast/symbol env form
-        (ifs (uast/node? resolved)
-               (:type resolved)
-             (or (t/literal? resolved) (t/class? resolved))
-               (t/value resolved)
-             (var? resolved)
-               (or (-> resolved meta ::t/type) (t/value @resolved))
-             (utpred/unbound? resolved)
-               ;; Because the var could be anything and cannot have metadata (type or otherwise)
-               t/any?
-             (TODO "Unsure of what to do in this case" (kw-map env form resolved)))))))
+  (if-not-let [{resolved :value} (?resolve-with-env form env)]
+    (err! "Could not resolve symbol" {:sym form})
+    (uast/symbol env form resolved
+      (ifs (uast/node? resolved)
+             (:type resolved)
+           (or (t/literal? resolved) (t/class? resolved))
+             (t/value resolved)
+           (var? resolved)
+             (or (-> resolved meta ::t/type) (t/value @resolved))
+           (utpred/unbound? resolved)
+             ;; Because the var could be anything and cannot have metadata (type or otherwise)
+             t/any?
+           (TODO "Unsure of what to do in this case" (kw-map env form resolved))))))
 
 (defns- analyze* [env ::env, form _]
   (prl! env form)
