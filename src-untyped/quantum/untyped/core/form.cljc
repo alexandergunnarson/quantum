@@ -17,6 +17,7 @@
 
 (extend-protocol PGenForm
             nil                 (>form [x] nil)
+            java.lang.Long      (>form [x] x)
             clojure.lang.Symbol (>form [x] (list 'quote x))
   #?@(:clj [Class               (>form [x] (-> x #_uconv/>symbol .getName symbol))]))
 

@@ -328,8 +328,9 @@ LEFT OFF LAST TIME (7/24/2018):
   [env ::env, form _, empty-form _, rf _]
   (->> form
        (reducei (fn [accum form' i] (rf accum (analyze* (:env accum) form') i))
-         {:env env :form (transient empty-form)})
-       (persistent!-and-add-file-context form)))
+         {:env env :form (transient empty-form) :body (transient [])})
+       (persistent!-and-add-file-context form)
+       (<- (update :body persistent!))))
 
 (defns- analyze-map
   {:todo #{"If the map is bound to a variable, preserve type info for it such that lookups
@@ -355,16 +356,18 @@ LEFT OFF LAST TIME (7/24/2018):
                :type t/nil?})
       (let [expr (analyze-non-map-seqable env body []
                    (fn [accum expr _]
-                     (assoc expr :form (conj! (:form accum) (:form expr))
-                                 ;; The env should be the same as whatever it was originally
+                     (assoc expr ;; The env should be the same as whatever it was originally
                                  ;; because no new scopes are created
-                                 :env  (:env accum))))]
+                                 :env  (:env accum)
+                                 :form (conj! (:form accum) (:form expr))
+                                 :body (conj! (:body accum) expr))))]
         (ast/do {:env  env
-                 :form form
-                 :body (>vec body)
+                 :form (list* 'do (:form expr))
+                 :unexpanded-form form
+                 :body (:body expr)
                  ;; To types, only the last subexpression ever matters, as each is independent
                  ;; from the others
-                 :type (-> expr :form c/last :type)}))))
+                 :type (-> expr :body c/last :type)}))))
 
 (defns analyze-seq|let*|bindings [env ::env, bindings _]
   (TODO "`let*|bindings` analysis")
