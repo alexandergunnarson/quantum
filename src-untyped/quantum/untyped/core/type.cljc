@@ -280,6 +280,10 @@
 (-def class-type?    (isa? ClassType))
 (-def value-type?    (isa? ValueType))
 
+;; For use in logical operators
+(-def nil?           (value nil))
+(-def object?        (isa? #?(:clj java.lang.Object :cljs js/Object)))
+
 ;; ===== Miscellaneous ===== ;;
 
 (defns *
@@ -322,14 +326,18 @@
 
 (defns- create-logical-type|inner|or
   [{:as accum :keys [t' utr/type?]} _, t* utr/type?, c* utc/comparison?]
-  (if ;; `s` must be either `><` or `<>` w.r.t. to all other args
-      (case c* (2 3) true false)
-      (if ;; Tautology/universal-set: (| A (! A))
-          (c/and (c/= c* <>ident) ; optimization before `complementary?`
-                 (complementary? t' t*))
-          (reduced (assoc accum :conj-t? false :types [universal-set]))
-          (update accum :types conj t*))
-      (reduced (assoc accum :prefer-orig-args? true))))
+  (if #?(:clj  (c/or (c/and (c/= t' object?) (c/= t* nil?))
+                     (c/and (c/= t* object?) (c/= t' nil?)))
+         :cljs false)
+      (reduced (assoc accum :conj-t? false :types [universal-set]))
+      (if ;; `s` must be either `><` or `<>` w.r.t. to all other args
+          (case c* (2 3) true false)
+          (if ;; Tautology/universal-set: (| A (! A))
+              (c/and (c/= c* <>ident) ; optimization before `complementary?`
+                     (complementary? t' t*))
+              (reduced (assoc accum :conj-t? false :types [universal-set]))
+              (update accum :types conj t*))
+          (reduced (assoc accum :prefer-orig-args? true)))))
 
 (defns- create-logical-type|inner|and
   [{:as accum :keys [conj-t? c/boolean?, prefer-orig-args? c/boolean?, t' utr/type?, types _]} _
@@ -592,10 +600,7 @@
          (-def none?         empty-set)
          (-def any?          universal-set)
 
-         (-def nil?          (value nil))
-         (-def object?       (isa? #?(:clj java.lang.Object :cljs js/Object)))
-
-                             ;; TODO this is incomplete for CLJS base classes, I think
+                              ;; TODO this is incomplete for CLJS base classes, I think
          (-def val|by-class? (or object? #?@(:cljs [(isa? js/String) (isa? js/Symbol)])))
          (-def val?          (not nil?))
 

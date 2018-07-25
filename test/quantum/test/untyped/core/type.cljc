@@ -103,6 +103,15 @@
            (| a b))
       (is= (| (| a b ><0) (| a ><0 b))
            (| a b ><0)))
+    (testing "via universal class + nil"
+      (is= t/universal-set (| (t/isa? Object) (t/value nil)))
+      (is= t/universal-set (| (t/value nil)   (t/isa? Object)))
+      (is= t/universal-set (| (t/isa? Object) (t/value nil)   (t/value 1)))
+      (is= t/universal-set (| (t/isa? Object) (t/value 1)     (t/value nil)))
+      (is= t/universal-set (| (t/value nil)   (t/isa? Object) (t/value 1)))
+      (is= t/universal-set (| (t/value nil)   (t/value 1)     (t/isa? Object)))
+      (is= t/universal-set (| (t/value 1)     (t/isa? Object) (t/value nil)))
+      (is= t/universal-set (| (t/value 1)     (t/value nil)   (t/isa? Object))))
     (testing "nested `or` is expanded"
       (is= (| (| a b) (| ><0 ><1))
            (| a b ><0 ><1))
@@ -230,7 +239,7 @@
         (is= (& (| a b) (! b) (| ><0 b))
              t/empty-set))
       (is= (& t/primitive? (! t/boolean?))
-           (| t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)))
+           (| t/byte? t/short? t/char? t/int? t/long? t/float? t/double?)))
     (testing "#{<+ =} -> #{=}"
       (is= (& i|>a+b i|>a0 i|a)
            i|a))
