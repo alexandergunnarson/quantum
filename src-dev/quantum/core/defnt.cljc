@@ -380,7 +380,7 @@ LEFT OFF LAST TIME (7/24/2018):
          (->expr-info {:env env :form (transient [])}))
        (persistent!-and-add-file-context bindings)))
 
-(defns analyze-seq|let* [env ::env, [bindings _ & body _] _]
+(defns analyze-seq|let* [env ::env, form _, [bindings _ & body _] _]
   (TODO "`let*` analysis")
   #_(let [{env' :env bindings' :form}
           (analyze-seq|let*|bindings env bindings)
