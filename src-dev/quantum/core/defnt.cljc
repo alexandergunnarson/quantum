@@ -563,7 +563,8 @@ LEFT OFF LAST TIME (7/24/2018):
   [env ::env, form _, [pred-form _, true-form _, false-form _ :as body] _]
   {:post [(prl! %)]}
   (if (-> body count (not= 3))
-      (err! "`if` accepts exactly 3 arguments: one predicate test and two branches; received" {:body body})
+      (err! "`if` accepts exactly 3 arguments: one predicate test and two branches; received"
+            {:body body})
       (let [pred-expr  (analyze* env pred-form)
             true-expr  (delay (analyze* env true-form))
             false-expr (delay (analyze* env false-form))
@@ -575,16 +576,19 @@ LEFT OFF LAST TIME (7/24/2018):
                    :pred-expr  pred-expr
                    :true-expr  @true-expr
                    :false-expr @false-expr
-                   :type       (apply t/or (->> [(:type @true-expr) (:type @false-expr)] (remove nil?)))}))]
+                   :type       (apply t/or (->> [(:type @true-expr) (:type @false-expr)]
+                                                (remove nil?)))}))]
         (case (truthy-expr? pred-expr)
           true      (do (ppr :warn "Predicate in `if` expression is always true" {:pred pred-form})
-                        (-> @true-expr  (assoc :env env)
-                                        (cond-> (not *conditional-branch-pruning?*)
-                                                (assoc :form (list 'if pred-form (:form @true-expr) false-form)))))
+                        (-> @true-expr
+                            (assoc :env env)
+                            (cond-> (not *conditional-branch-pruning?*)
+                              (assoc :form (list 'if pred-form (:form @true-expr) false-form)))))
           false     (do (ppr :warn "Predicate in `if` expression is always false" {:pred pred-form})
-                        (-> @false-expr (assoc :env env)
-                                        (cond-> (not *conditional-branch-pruning?*)
-                                                (assoc :form (list 'if pred-form true-form          (:form @false-expr))))))
+                        (-> @false-expr
+                            (assoc :env env)
+                            (cond-> (not *conditional-branch-pruning?*)
+                              (assoc :form (list 'if pred-form true-form (:form @false-expr))))))
           nil       @whole-expr))))
 
 (defns- analyze-seq|quote [env ::env, form _, body _]
@@ -643,34 +647,42 @@ LEFT OFF LAST TIME (7/24/2018):
            (1 2)  (err! "It is not known whether expression be called" {:expr caller|expr})
            3      (err! "Expression cannot be called" {:expr caller|expr})
            (-1 0) (let [assert-valid-args-ct
-                          (ifs (or (t/<= caller|type t/keyword?) (t/<= caller|type t/+map|built-in?))
+                          (ifs (or (t/<= caller|type t/keyword?)
+                                   (t/<= caller|type t/+map|built-in?))
                                (when-not (or (= args-ct 1) (= args-ct 2))
-                                 (err! (str "Keywords and `clojure.core` persistent maps must be provided "
-                                            "with exactly one or two args when calling them")
+                                 (err! (str "Keywords and `clojure.core` persistent maps must be "
+                                            "provided with exactly one or two args when calling "
+                                            "them")
                                        {:args-ct args-ct :caller caller|expr}))
 
-                               (or (t/<= caller|type t/+vector|built-in?) (t/<= caller|type t/+set|built-in?))
+                               (or (t/<= caller|type t/+vector|built-in?)
+                                   (t/<= caller|type t/+set|built-in?))
                                (when-not (= args-ct 1)
-                                 (err! (str "`clojure.core` persistent vectors and `clojure.core` persistent "
-                                            "sets must be provided with exactly one arg when calling them")
+                                 (err! (str "`clojure.core` persistent vectors and `clojure.core` "
+                                            "persistent sets must be provided with exactly one arg "
+                                            "when calling them")
                                        {:args-ct args-ct :caller caller|expr}))
 
                                (t/<= caller|type t/fnt?)
                                (TODO "Don't know how to handle typed fns yet" {:caller caller|expr})
                                ;; For non-typed fns, unknown; we will have to risk runtime exception
-                               ;; because we can't necessarily rely on metadata to tell us the whole truth
+                               ;; because we can't necessarily rely on metadata to tell us the
+                               ;; whole truth
                                (t/<= caller|type t/fn?)
                                nil
-                               ;; If it's ifn but not fn, we might have missed something in this dispatch so for now we throw
-                               (err! "Don't know how how to handle non-fn ifn" {:caller caller|expr}))
+                               ;; If it's ifn but not fn, we might have missed something in this
+                               ;; dispatch so for now we throw
+                               (err! "Don't know how how to handle non-fn ifn"
+                                     {:caller caller|expr}))
                         {:keys [args] t :type}
                           (->> body
                                (c/map+ #(analyze* env %))
                                (reduce (fn [{:keys [args]} arg|analyzed]
                                          (conj args))))]
 
-                    ;; TODO incrementally check by analyzing each arg in `reduce` and pruning branches of what the
-                    ;; type could be, and throwing if it's found something that's an impossible combination
+                    ;; TODO incrementally check by analyzing each arg in `reduce` and pruning
+                    ;; branches of what the type could be, and throwing if it's found something
+                    ;; that's an impossible combination
                     (ast/call-expr
                       {:env    env
                        :form   form
@@ -697,8 +709,7 @@ LEFT OFF LAST TIME (7/24/2018):
              (or (t/literal? resolved) (t/class? resolved))
                (t/value resolved)
              (var? resolved)
-               (or (-> resolved meta :type)
-                   (t/value @resolved))
+               (or (-> resolved meta ::t/type) (t/value @resolved))
              (utpred/unbound? resolved)
                ;; Because the var could be anything and cannot have metadata (type or otherwise)
                t/any?

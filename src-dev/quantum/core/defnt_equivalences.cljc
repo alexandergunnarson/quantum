@@ -5,7 +5,7 @@
   (:require
     [clojure.core              :as c]
     [quantum.core.defnt
-      :refer [analyze defnt fnt|code *fn->type unsupported!]]
+      :refer [analyze defnt fnt fnt|code *fn->type unsupported!]]
     [quantum.untyped.core.analyze.expr :as xp]
     [quantum.untyped.core.collections.diff :as diff
       :refer [diff]]
@@ -847,6 +847,7 @@
                  (is= (>|test 1 0)   (> 1 0))
                  (is= (>|test 1.0 0) (> 1.0 0))))))
 
+;; TODO finish test
 (is-code=
 
 (macroexpand '
@@ -925,13 +926,16 @@
   > t/long?
   ([x (t/- t/primitive? t/boolean? t/float? t/double?)] (>long* x))
   ([x (t/and (t/or t/double? t/float?)
-             (fnt [x (t/or double? float?)] (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
+             ;; TODO add this back in
+             #_(fnt [x (t/or t/double? t/float?)] (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
     (>long* x))
   ([x (t/and (t/isa? clojure.lang.BigInt)
-             (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
+             ;; TODO add this back in
+             #_(fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
     (.lpart x))
   ([x (t/and (t/isa? java.math.BigInteger)
-             (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
+             ;; TODO add this back in
+             #_(fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
     (.longValue x))
   ([x t/ratio?] (>long (.bigIntegerValue x)))
   ([x (t/value true)]  1)

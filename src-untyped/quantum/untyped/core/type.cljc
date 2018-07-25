@@ -174,6 +174,7 @@
    If `t0` <       `t1`, `∅`
    If `t0` <>      `t1`, `t0`
    If `t0` > | ><  `t1`, `t0` with all elements of `t1` removed"
+  ([t0 utr/type? > utr/type?] t0)
   ([t0 utr/type?, t1 utr/type? > utr/type?]
     (let [c (compare t0 t1)]
       (case c
@@ -436,11 +437,11 @@
 ;; TODO do this
 #_(do
 
-(udt/deftype FnSpec
+(udt/deftype FnType
   [name   #_(t/? t/symbol?)
    dispatch ...
    meta]
-  {PSpec nil
+  {PType nil
    ;; Outputs whether the args match any input spec
    ?Fn   {invoke    ([this args]
                       (if-let [arity-specs (get lookup (count args))]
@@ -449,32 +450,30 @@
    ?Meta {meta      ([this] meta)
           with-meta ([this meta'] (FnSpec. name lookup spec meta'))}
    fipp.ednize/IOverride nil
-   fipp.ednize/IEdn {-edn ([this] (list `fn name lookup))}})
+   fipp.ednize/IEdn {-edn ([this] (list `fn name lookup))}}))
 
-(defns fn-spec? [x _ > c/boolean?] (instance? FnSpec x))
+(udt/deftype FnType
+  [arg]
+  {PType nil
+   fipp.ednize/IOverride nil
+   fipp.ednize/IEdn {-edn ([this] (list `fn arg))}})
 
-(defns fn|args>out-spec
-  "Returns nil if args do not match any input spec"
-  [^FnSpec spec fn-spec?, args _]
-  (when-let [spec-or-arity-specs (get (.-lookup spec) (count args))]
-    (if (spec? spec-or-arity-specs)
-        spec-or-arity-specs
-        (->> spec-or-arity-specs (uc/filter+ #((first %) args)) uc/first second))))
+(defns fn-type? [x _ > c/boolean?] (instance? FnType x))
 
 (defns fn
-  [name-  (s/nilable c/symbol?)
+  [& args _]
+  (FnType. args)
+  #_[name-  (s/nilable c/symbol?)
    lookup _ #_(t/map-of t/integer?
                       (t/or (spec spec? "output-spec")
                             (t/vec-of (t/tuple (t/vec-of (spec spec? "input-spec"))
                                                (spec spec? "output-spec")))))]
-  (let [spec (->> lookup vals
+  #_(let [spec (->> lookup vals
                   (uc/map+ (c/fn [spec-or-arity-specs]
                              (if (spec? spec-or-arity-specs)
                                  spec-or-arity-specs
                                  (->> spec-or-arity-specs (map (TODO)))))))]
-    (FnSpec. name- lookup spec nil)))
-
-)
+    (FnType. name- lookup spec nil)))
 
 (defn unkeyed
   "Creates an unkeyed collection type, in which the collection may
@@ -557,10 +556,6 @@
   (if-let [valid? (t x)]
     x
     (err! "Type-validation failed" {:type t :to-validate x})))
-
-;; ===== `t/fn` ===== ;;
-
-(defn fn [& args] (println "TODO `t/fnn`") nil)
 
 ;; ---------------------- ;;
 ;; ===== Predicates ===== ;;
