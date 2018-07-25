@@ -18,7 +18,19 @@
 (extend-protocol PGenForm
             nil                 (>form [x] nil)
             java.lang.Long      (>form [x] x)
-            clojure.lang.Symbol (>form [x] (list 'quote x))
+   #?(:clj  clojure.lang.Symbol
+      :cljs cljs.core.Symbol)   (>form [x] (list 'quote x))
+
+  #?@(:clj [clojure.lang.Fn     (>form [x]
+                                  ;; TODO can probably use uconv to good effect here
+                                  (or (when-let [ns- (-> x meta :ns)]
+                                        (symbol (ns-name ns-) (-> x meta :name name)))
+                                      (let [demunged (-> x class .getName
+                                                         clojure.lang.Compiler/demunge)]
+                                        (if-let [anonymous-fn? (not= (.indexOf     demunged "/")
+                                                                     (.lastIndexOf demunged "/"))]
+                                          (tagged-literal 'fn (symbol demunged))
+                                          (symbol demunged)))))])
   #?@(:clj [Class               (>form [x] (-> x #_uconv/>symbol .getName symbol))]))
 
 (defn core-symbol [env sym] (symbol (str (case-env* env :cljs "cljs" "clojure") ".core") (name sym)))
