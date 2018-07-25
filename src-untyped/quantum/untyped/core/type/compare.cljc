@@ -223,7 +223,7 @@
 
 (defns- compare|expr+expr [t0 _, t1 _ > comparison?] (if (c/= t0 t1) =ident <>ident))
 
-(def- compare|expr+value fn<>)
+(def- compare|expr+value fn><) ; TODO not entirely true
 
 ;; ----- ProtocolType ----- ;;
 
@@ -334,7 +334,7 @@
         NotType          #'compare|not+not
         OrType           #'compare|not+or
         AndType          #'compare|not+and
-        Expression       #'fn<> ; TODO not entirely true
+        Expression       #'fn>< ; TODO not entirely true
         ProtocolType     #'compare|not+protocol
         ClassType        #'compare|not+class
         ValueType        #'compare|not+value}
@@ -344,7 +344,7 @@
         NotType          (inverted #'compare|not+or)
         OrType           #'compare|or+or
         AndType          #'compare|or+and
-        Expression       #'fn<> ; TODO not entirely true
+        Expression       #'fn>< ; TODO not entirely true
         ProtocolType     #'compare|todo
         ClassType        (inverted #'compare|class+or)
         ValueType        (inverted #'compare|value+or)}
@@ -354,7 +354,7 @@
         NotType          #'compare|todo
         OrType           (inverted #'compare|or+and)
         AndType          #'compare|and+and
-        Expression       #'fn<> ; TODO not entirely true
+        Expression       #'fn>< ; TODO not entirely true
         ProtocolType     #'compare|todo
         ClassType        (inverted #'compare|class+and)
         ValueType        (inverted #'compare|value+and)}
@@ -362,12 +362,12 @@
      Expression
        {UniversalSetType (inverted #'compare|universal+expr)
         EmptySetType     (inverted #'compare|empty+expr)
-        NotType          #'compare|todo
-        OrType           #'compare|todo
-        AndType          #'compare|todo
+        NotType          #'fn>< ; TODO not entirely true
+        OrType           #'fn>< ; TODO not entirely true
+        AndType          #'fn>< ; TODO not entirely true
         Expression       #'compare|expr+expr
-        ProtocolType     #'compare|todo
-        ClassType        #'fn<> ; TODO not entirely true
+        ProtocolType     #'fn>< ; TODO not entirely true
+        ClassType        #'fn>< ; TODO not entirely true
         ValueType        #'compare|expr+value}
      ProtocolType
        {UniversalSetType (inverted #'compare|universal+protocol)
@@ -375,7 +375,7 @@
         NotType          (inverted #'compare|not+protocol)
         OrType           #'compare|todo
         AndType          #'compare|todo
-        Expression       #'fn<>
+        Expression       #'fn>< ; TODO not entirely true
         ProtocolType     #'compare|protocol+protocol
         ClassType        #'compare|todo
         ValueType        (inverted #'compare|value+protocol)}
@@ -385,7 +385,7 @@
         NotType          (inverted #'compare|not+class)
         OrType           #'compare|class+or
         AndType          #'compare|class+and
-        Expression       #'fn<> ; TODO not entirely true
+        Expression       #'fn>< ; TODO not entirely true
         ProtocolType     #'compare|todo
         ClassType        #'compare|class+class
         ValueType        #'compare|class+value}

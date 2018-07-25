@@ -1291,35 +1291,62 @@
          (-def   !sorted-map|boolean->double?    none?)
          (-def   !sorted-map|boolean->ref?       none?)
 
-         (-def   !sorted-map|byte->boolean?      #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2BooleanSortedMap)          :cljs none?))
-         (-def   !sorted-map|byte->byte?         #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ByteSortedMap)             :cljs none?))
-         (-def   !sorted-map|byte->char?         #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2CharSortedMap)             :cljs none?))
-         (-def   !sorted-map|byte->short?        #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ShortSortedMap)            :cljs none?))
-         (-def   !sorted-map|byte->int?          #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2IntSortedMap)              :cljs none?))
-         (-def   !sorted-map|byte->long?         #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2LongSortedMap)             :cljs none?))
-         (-def   !sorted-map|byte->float?        #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2FloatSortedMap)            :cljs none?))
-         (-def   !sorted-map|byte->double?       #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2DoubleSortedMap)           :cljs none?))
-         (-def   !sorted-map|byte->ref?          #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ReferenceSortedMap)        :cljs none?))
+         (-def   !sorted-map|byte->boolean?
+           #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2BooleanSortedMap)          :cljs none?))
+         (-def   !sorted-map|byte->byte?
+           #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ByteSortedMap)             :cljs none?))
+         (-def   !sorted-map|byte->char?
+           #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2CharSortedMap)             :cljs none?))
+         (-def   !sorted-map|byte->short?
+           #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ShortSortedMap)            :cljs none?))
+         (-def   !sorted-map|byte->int?
+           #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2IntSortedMap)              :cljs none?))
+         (-def   !sorted-map|byte->long?
+           #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2LongSortedMap)             :cljs none?))
+         (-def   !sorted-map|byte->float?
+           #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2FloatSortedMap)            :cljs none?))
+         (-def   !sorted-map|byte->double?
+           #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2DoubleSortedMap)           :cljs none?))
+         (-def   !sorted-map|byte->ref?
+           #?(:clj (isa? it.unimi.dsi.fastutil.bytes.Byte2ReferenceSortedMap)        :cljs none?))
 
-         (-def   !sorted-map|char->ref?          #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ReferenceSortedMap)        :cljs none?))
-         (-def   !sorted-map|char->boolean?      #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2BooleanSortedMap)          :cljs none?))
-         (-def   !sorted-map|char->byte?         #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ByteSortedMap)             :cljs none?))
-         (-def   !sorted-map|char->char?         #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2CharSortedMap)             :cljs none?))
-         (-def   !sorted-map|char->short?        #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ShortSortedMap)            :cljs none?))
-         (-def   !sorted-map|char->int?          #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2IntSortedMap)              :cljs none?))
-         (-def   !sorted-map|char->long?         #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2LongSortedMap)             :cljs none?))
-         (-def   !sorted-map|char->float?        #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2FloatSortedMap)            :cljs none?))
-         (-def   !sorted-map|char->double?       #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2DoubleSortedMap)           :cljs none?))
+         (-def   !sorted-map|char->ref?
+           #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ReferenceSortedMap)        :cljs none?))
+         (-def   !sorted-map|char->boolean?
+           #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2BooleanSortedMap)          :cljs none?))
+         (-def   !sorted-map|char->byte?
+           #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ByteSortedMap)             :cljs none?))
+         (-def   !sorted-map|char->char?
+           #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2CharSortedMap)             :cljs none?))
+         (-def   !sorted-map|char->short?
+           #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2ShortSortedMap)            :cljs none?))
+         (-def   !sorted-map|char->int?
+           #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2IntSortedMap)              :cljs none?))
+         (-def   !sorted-map|char->long?
+           #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2LongSortedMap)             :cljs none?))
+         (-def   !sorted-map|char->float?
+           #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2FloatSortedMap)            :cljs none?))
+         (-def   !sorted-map|char->double?
+           #?(:clj (isa? it.unimi.dsi.fastutil.chars.Char2DoubleSortedMap)           :cljs none?))
 
-         (-def   !sorted-map|short->boolean?     #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2BooleanSortedMap)        :cljs none?))
-         (-def   !sorted-map|short->byte?        #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ByteSortedMap)           :cljs none?))
-         (-def   !sorted-map|short->char?        #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2CharSortedMap)           :cljs none?))
-         (-def   !sorted-map|short->short?       #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ShortSortedMap)          :cljs none?))
-         (-def   !sorted-map|short->int?         #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2IntSortedMap)            :cljs none?))
-         (-def   !sorted-map|short->long?        #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2LongSortedMap)           :cljs none?))
-         (-def   !sorted-map|short->float?       #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2FloatSortedMap)          :cljs none?))
-         (-def   !sorted-map|short->double?      #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2DoubleSortedMap)         :cljs none?))
-         (-def   !sorted-map|short->ref?         #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ReferenceSortedMap)      :cljs none?))
+         (-def   !sorted-map|short->boolean?
+           #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2BooleanSortedMap)        :cljs none?))
+         (-def   !sorted-map|short->byte?
+           #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ByteSortedMap)           :cljs none?))
+         (-def   !sorted-map|short->char?
+           #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2CharSortedMap)           :cljs none?))
+         (-def   !sorted-map|short->short?
+           #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ShortSortedMap)          :cljs none?))
+         (-def   !sorted-map|short->int?
+           #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2IntSortedMap)            :cljs none?))
+         (-def   !sorted-map|short->long?
+           #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2LongSortedMap)           :cljs none?))
+         (-def   !sorted-map|short->float?
+           #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2FloatSortedMap)          :cljs none?))
+         (-def   !sorted-map|short->double?
+           #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2DoubleSortedMap)         :cljs none?))
+         (-def   !sorted-map|short->ref?
+           #?(:clj (isa? it.unimi.dsi.fastutil.shorts.Short2ReferenceSortedMap)      :cljs none?))
 
          (-def   !sorted-map|int->boolean?       #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2BooleanSortedMap)            :cljs none?))
          (-def   !sorted-map|int->byte?          #?(:clj (isa? it.unimi.dsi.fastutil.ints.Int2ByteSortedMap)               :cljs none?))
@@ -1662,7 +1689,8 @@
 
          ;; I.e., can you call/invoke it by being in functor position (first element of an unquoted list)
          ;; within a typed context?
-         ;; TODO should we allow java.lang.Runnable, java.util.concurrent.Callable to be `callable?`?
+         ;; TODO should we allow java.lang.Runnable, java.util.concurrent.Callable, and other
+         ;; functional interfaces to be `callable?`?
          (-def callable?    (or ifn? fnt?))
 
 ;; ===== References ===== ;;

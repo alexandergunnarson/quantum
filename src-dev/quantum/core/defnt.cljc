@@ -350,10 +350,11 @@ LEFT OFF LAST TIME (7/24/2018):
 
 (defns- analyze-seq|do [env ::env, form _, body _]
   (if (empty? body)
-      (ast/do {:env  env
-               :form form
-               :body (>vec body)
-               :type t/nil?})
+      (ast/do {:env             env
+               :unexpanded-form form
+               :form            form
+               :body            (>vec body)
+               :type            t/nil?})
       (let [expr (analyze-non-map-seqable env body []
                    (fn [accum expr _]
                      (assoc expr ;; The env should be the same as whatever it was originally
@@ -361,13 +362,13 @@ LEFT OFF LAST TIME (7/24/2018):
                                  :env  (:env accum)
                                  :form (conj! (:form accum) (:form expr))
                                  :body (conj! (:body accum) expr))))]
-        (ast/do {:env  env
-                 :form (list* 'do (:form expr))
+        (ast/do {:env             env
                  :unexpanded-form form
-                 :body (:body expr)
+                 :form            (list* 'do (:form expr))
+                 :body            (:body expr)
                  ;; To types, only the last subexpression ever matters, as each is independent
                  ;; from the others
-                 :type (-> expr :body c/last :type)}))))
+                 :type            (-> expr :body c/last :type)}))))
 
 (defns analyze-seq|let*|bindings [env ::env, bindings _]
   (TODO "`let*|bindings` analysis")
@@ -660,53 +661,62 @@ LEFT OFF LAST TIME (7/24/2018):
          (case (t/compare caller|type t/callable?)
            (1 2)  (err! "It is not known whether expression be called" {:expr caller|expr})
            3      (err! "Expression cannot be called" {:expr caller|expr})
-           (-1 0) (let [assert-valid-args-ct
-                          (ifs (or (t/<= caller|type t/keyword?)
-                                   (t/<= caller|type t/+map|built-in?))
-                               (when-not (or (= args-ct 1) (= args-ct 2))
-                                 (err! (str "Keywords and `clojure.core` persistent maps must be "
-                                            "provided with exactly one or two args when calling "
-                                            "them")
-                                       {:args-ct args-ct :caller caller|expr}))
+           (-1 0) (let [caller-kind
+                          (ifs (t/<= caller|type t/keyword?)          :keyword
+                               (t/<= caller|type t/+map|built-in?)    :map
+                               (t/<= caller|type t/+vector|built-in?) :vector
+                               (t/<= caller|type t/+set|built-in?)    :set
+                               (t/<= caller|type t/fnt?)              :fnt
+                               (t/<= caller|type t/fn?)               :fn
+                               ;; If it's callable but not fn, we might have missed something in
+                               ;; this dispatch so for now we throw
+                               (err! "Don't know how how to handle non-fn callable"
+                                     {:caller caller|expr}))
+                        assert-valid-args-ct
+                          (case caller-kind
+                            (:keyword :map)
+                              (when-not (or (= args-ct 1) (= args-ct 2))
+                                (err! (str "Keywords and `clojure.core` persistent maps must be "
+                                           "provided with exactly one or two args when calling "
+                                           "them")
+                                      {:args-ct args-ct :caller caller|expr}))
 
-                               (or (t/<= caller|type t/+vector|built-in?)
-                                   (t/<= caller|type t/+set|built-in?))
-                               (when-not (= args-ct 1)
+                            (:vector :set)
+                              (when-not (= args-ct 1)
                                  (err! (str "`clojure.core` persistent vectors and `clojure.core` "
                                             "persistent sets must be provided with exactly one arg "
                                             "when calling them")
                                        {:args-ct args-ct :caller caller|expr}))
 
-                               (t/<= caller|type t/fnt?)
-                               (TODO "Don't know how to handle typed fns yet" {:caller caller|expr})
-                               ;; For non-typed fns, unknown; we will have to risk runtime exception
-                               ;; because we can't necessarily rely on metadata to tell us the
-                               ;; whole truth
-                               (t/<= caller|type t/fn?)
-                               nil
-                               ;; If it's ifn but not fn, we might have missed something in this
-                               ;; dispatch so for now we throw
-                               (err! "Don't know how how to handle non-fn ifn"
-                                     {:caller caller|expr}))
-                        {:keys [args] t :type}
-                          (->> body
-                               (c/map+ #(analyze* env %))
-                               (reduce (fn [{:keys [args]} arg|analyzed]
-                                         (conj args))))]
-
-                    ;; TODO incrementally check by analyzing each arg in `reduce` and pruning
-                    ;; branches of what the type could be, and throwing if it's found something
-                    ;; that's an impossible combination
+                            :fnt
+                              (TODO "Don't know how to handle typed fns yet" {:caller caller|expr})
+                              ;; For non-typed fns, unknown; we will have to risk runtime exception
+                              ;; because we can't necessarily rely on metadata to tell us the
+                              ;; whole truth
+                            :fn nil)
+                        ;; TODO incrementally check by analyzing each arg in `reduce` and pruning
+                        ;; branches of what the type could be, and throwing if it's found something
+                        ;; that's an impossible combination
+                        arg-exprs (->> body
+                                       (c/map+ #(analyze* env %))
+                                       (reduce (fn [args arg|analyzed]
+                                                 (conj args arg|analyzed))
+                                               []))
+                        out-type
+                          (case caller-kind
+                            ;; We could do a little smarter analysis here but we'll keep it simple
+                            ;; for now
+                            (:keyword :map :vector :set :fn) t/any?
+                            :fnt (TODO "Use `::t/type` metadata to make this decision"))]
                     (ast/call-expr
                       {:env    env
                        :form   form
                        :caller caller|expr
-                       :args   args
-                       :type   t}))))))
+                       :args   arg-exprs
+                       :type   out-type}))))))
 
 (defns- analyze-seq [env ::env, form _]
   {:post [(prl! %)]}
-  (prl! form)
   (let [expanded-form (ufeval/macroexpand form)]
     (if (== form expanded-form)
         (analyze-seq* env expanded-form)
