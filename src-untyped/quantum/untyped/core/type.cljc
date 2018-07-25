@@ -1655,7 +1655,7 @@
 
          (-def ifn?         (isa? #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
 
-         (-def fnt?         (and fn? (>expr (fn-> c/meta :type))))
+         (-def fnt?         (and fn? (>expr (fn-> c/meta ::type))))
 
          (-def multimethod? (isa? #?(:clj clojure.lang.MultiFn :cljs cljs.core/IMultiFn)))
 

@@ -917,7 +917,6 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
-;; TODO requires `>long*` being defined for it to work
 (is-code=
 
 (macroexpand '

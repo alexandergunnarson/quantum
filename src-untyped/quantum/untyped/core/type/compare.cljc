@@ -334,7 +334,7 @@
         NotType          #'compare|not+not
         OrType           #'compare|not+or
         AndType          #'compare|not+and
-        Expression       #'fn<>
+        Expression       #'fn<> ; TODO not entirely true
         ProtocolType     #'compare|not+protocol
         ClassType        #'compare|not+class
         ValueType        #'compare|not+value}
@@ -344,7 +344,7 @@
         NotType          (inverted #'compare|not+or)
         OrType           #'compare|or+or
         AndType          #'compare|or+and
-        Expression       #'fn<>
+        Expression       #'fn<> ; TODO not entirely true
         ProtocolType     #'compare|todo
         ClassType        (inverted #'compare|class+or)
         ValueType        (inverted #'compare|value+or)}
@@ -354,7 +354,7 @@
         NotType          #'compare|todo
         OrType           (inverted #'compare|or+and)
         AndType          #'compare|and+and
-        Expression       #'fn<>
+        Expression       #'fn<> ; TODO not entirely true
         ProtocolType     #'compare|todo
         ClassType        (inverted #'compare|class+and)
         ValueType        (inverted #'compare|value+and)}
@@ -385,7 +385,7 @@
         NotType          (inverted #'compare|not+class)
         OrType           #'compare|class+or
         AndType          #'compare|class+and
-        Expression       #'fn<>
+        Expression       #'fn<> ; TODO not entirely true
         ProtocolType     #'compare|todo
         ClassType        #'compare|class+class
         ValueType        #'compare|class+value}
@@ -461,4 +461,3 @@
   "Computes whether the respective extensions of types ->`t0` and ->`t1` are disjoint."
   ([t1 type?] #(<> % t1))
   ([t0 type? t1 type? > boolean?] (c/= (compare t0 t1) <>ident)))
-

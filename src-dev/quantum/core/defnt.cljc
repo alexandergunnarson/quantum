@@ -83,9 +83,10 @@
 #_"
 
 LEFT OFF LAST TIME (7/24/2018):
-- ;; TODO probably failing because class vs. symbol
-- This is because of the `>form` not quite returning the right thing for `t/isa?` stuff in reifications
-- After that, keep going making sure the test cases pass, especially the >int* cases
+- expressions (`quantum.untyped.core.analyze.expr`)
+- `t/fn`
+- `(defnt >long ...)` : enable to refer to `>long*` and have that analyzed
+- finish `>long` example
 
 
 
