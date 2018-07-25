@@ -5,37 +5,48 @@
     #?(:clj [clojure.core.specs.alpha  :as ss])
             [cuerdas.core              :as str+]
     #?(:clj [environ.core              :as env])
+            ;; TODO TYPED move to quantum.core.type
+            [quantum.core.defnt
+              :refer [defnt]]
             #_[quantum.core.type         :as t
-              :refer [defnt defmacrot defprotocolt]]
+              :refer [defnt defmacrot defprotocolt deft]]
             [quantum.untyped.core.core :as u]
+            ;; TODO TYPED move to quantum.core.type
+            [quantum.untyped.core.type :as t
+              :refer [?]]
             [quantum.untyped.core.vars
               :refer [defalias defaliases]]))
 
 ;; ===== Environment ===== ;;
 
-(defaliases u lang #?(:clj pid))
+(deft lang t/keyword? "The language this code is compiled under" u/lang)
+
+#?(:clj
+(defnt pid [> (? t/string?)]
+  (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
+       (.getName))))
 
 ;; ===== Compilation ===== ;;
 
+;; TODO TYPED
 (defalias u/externs?)
 
 ;; ===== quantum.core.system ===== ;;
 
+;; TODO TYPED
+;; TODO move
 (defalias u/*registered-components)
 
 ;; ===== Miscellaneous ===== ;;
 
-(defaliases u >sentinel >object)
-
-;; TODO typed
-;; TODO excise
-(def unchecked-inc-long
-  #?(:clj  (fn [^long x] (unchecked-inc x))
-     :cljs inc))
+;; TODO move
+(defnt >sentinel [> t/object?] #?(:clj (Object.) :cljs #js {}))
+(defalias >object >sentinel)
 
 ;; ===== Mutability/Effects ===== ;;
 
-;; TODO excise when typed
+;; TODO TYPED
+;; TODO move?
 (defprotocol IValue
   (get [this])
   (set [this newv]))
@@ -44,15 +55,14 @@
   (get [this _])
   (set [this _, newv _]))
 
-;; TODO excise when typed
+;; TODO TYPED
+;; TODO move?
 #?(:clj
 (defmacro with
   "Evaluates @expr, then @body, then returns @expr.
    For (side) effects."
   [expr & body]
-  `(let [expr# ~expr]
-    ~@body
-    expr#)))
+  `(let [expr# ~expr] ~@body expr#)))
 
 #_(:clj
 (defmacrot with
