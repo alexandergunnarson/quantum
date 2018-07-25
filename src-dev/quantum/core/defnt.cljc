@@ -326,7 +326,6 @@ LEFT OFF LAST TIME (7/24/2018):
                       overall expression; the second is the deduced type of
                       the current subexpression."}}
   [env ::env, form _, empty-form _, rf _]
-  (prl! env form empty-form)
   (->> form
        (reducei (fn [accum form' i] (rf accum (analyze* (:env accum) form') i))
          {:env env :form (transient empty-form)})
@@ -343,12 +342,12 @@ LEFT OFF LAST TIME (7/24/2018):
                           ast-ret-v (analyze* env' form'v)]
                       (->expr-info {:env       env'
                                     :form      (assoc! forms (:form ast-ret-k) (:form ast-ret-v))
-                                    :type-info nil}))) ; TODO fix; we want the types of the keys and vals to be deduced
+                                   ;; TODO fix; we want the types of the keys and vals to be deduced
+                                    :type-info nil})))
          (->expr-info {:env env :form (transient {})}))
        (persistent!-and-add-file-context form)))
 
 (defns- analyze-seq|do [env ::env, form _, body _]
-  (prl! env body)
   (if (empty? body)
       (ast/do {:env  env
                :form form
@@ -356,15 +355,16 @@ LEFT OFF LAST TIME (7/24/2018):
                :type t/nil?})
       (let [expr (analyze-non-map-seqable env body []
                    (fn [accum expr _]
-                     ;; for types, only the last subexpression ever matters, as each is independent :; from the others
                      (assoc expr :form (conj! (:form accum) (:form expr))
-                                 ;; but the env should be the same as whatever it was originally
+                                 ;; The env should be the same as whatever it was originally
                                  ;; because no new scopes are created
                                  :env  (:env accum))))]
         (ast/do {:env  env
                  :form form
                  :body (>vec body)
-                 :type (:type expr)}))))
+                 ;; To types, only the last subexpression ever matters, as each is independent
+                 ;; from the others
+                 :type (-> expr :form c/last :type)}))))
 
 (defns analyze-seq|let*|bindings [env ::env, bindings _]
   (TODO "`let*|bindings` analysis")
@@ -381,7 +381,17 @@ LEFT OFF LAST TIME (7/24/2018):
        (persistent!-and-add-file-context bindings)))
 
 (defns analyze-seq|let* [env ::env, form _, [bindings _ & body _] _]
-  (TODO "`let*` analysis")
+  {:pre [(prl! env bindings body)]}
+  (let [env' (analyze-seq|let*|bindings env )
+        expr (analyze-seq|do env' (list* 'do form) body)]
+    (prl! expr)
+    (TODO "`let*` analysis")
+    #_(ast/let* {:env env
+               :form form
+               :bindings (bindings>env bindings)
+               :body (>vec body)
+               :type (:type expr)}))
+
   #_(let [{env' :env bindings' :form}
           (analyze-seq|let*|bindings env bindings)
         {env'' :env body' :form type-info' :type-info}
