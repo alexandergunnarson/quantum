@@ -461,8 +461,8 @@
 (defns fn-type? [x _ > c/boolean?] (instance? FnType x))
 
 (defns fn
-  [& args _]
-  (FnType. args)
+  [arg _ & args _] ; TODO fix — & args should have been sufficient but `defnt` has a bug that way
+  (FnType. (cons arg args))
   #_[name-  (s/nilable c/symbol?)
    lookup _ #_(t/map-of t/integer?
                       (t/or (spec spec? "output-spec")

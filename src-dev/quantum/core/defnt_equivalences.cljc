@@ -54,7 +54,7 @@
                        ~'(->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
                               (.getName)))))
                  (defn ~'pid|test
-                   {::t/type (t/fn [:> ~'(? t/string?)])}
+                   {::t/type (t/fn ~'[:> (? t/string?)])}
                    ([] (.invoke ~(tag (str `>Object)
                                 'pid|test|__0|0))))))]
     (testing "code equivalence" (is-code= actual expected))
@@ -168,7 +168,7 @@
                           (satisfies? INamed x) (-name x)
                           (unsupported! `name|test [~'x00__] 0))))))]
     (testing "code equivalence" (is-code= actual expected))
-    #_(testing "functionality"
+    (testing "functionality"
       (eval actual)
       (eval '(do (is= (name|test "")       (name ""))
                  (is= (name|test "abc")    (name "abc"))
@@ -230,7 +230,7 @@
                        (ifs (nil? x) false
                             true)))))]
     (testing "code equivalence" (is-code= actual expected))
-    #_(testing "functionality"
+    (testing "functionality"
       (eval actual)
       (eval '(do (throws (some?|test))
                  (is= (some?|test 123)   (some? 123))
@@ -289,7 +289,7 @@
               ($ (do (defn ~'reduced?|test [~'x]
                        (ifs (instance? Reduced x) true false)))))]
     (testing "code equivalence" (is-code= actual expected))
-    #_(testing "functionality"
+    (testing "functionality"
       (eval actual)
       (eval '(do (throws (reduced?|test))
                  (is= (reduced?|test 123)             (reduced? 123))
@@ -364,7 +364,7 @@
                             (nil?     x) false
                             true)))))]
     (testing "code equivalence" (is-code= actual expected))
-    #_(testing "functionality"
+    (testing "functionality"
       (eval actual)
       (eval '(do (throws (>boolean))
                  (is= (>boolean true)  (boolean true))
@@ -461,7 +461,7 @@
                                 (.invoke ~(tag (str `Object>int) '>int*|__1|0) ~'x00__)
                               (unsupported! `>int* [~'x00__] 0)))))))]
     (testing "code equivalence" (is-code= actual expected))
-    #_(testing "functionality"
+    (testing "functionality"
       (eval actual)
       (eval '(do (throws (>int*))
                  (throws (>int* nil))
@@ -841,7 +841,7 @@
                                      (unsupported! `>|test [a0 a1] 1))
                               (unsupported! `>|test [a0 a1] 0)))))))]
     (testing "code equivalence" (is-code= actual expected))
-    #_(testing "functionality"
+    (testing "functionality"
       (eval actual)
       (eval '(do (is= (>|test 0 1)   (> 0 1))
                  (is= (>|test 1 0)   (> 1 0))
@@ -920,9 +920,19 @@
                                 (.invoke >long*|__1|0 x00__)
                               (unsupported! `>long* [~'x00__] 0)))))))]
     (testing "code equivalence" (is-code= actual expected))
-  #_(testing "functionality"
+  (testing "functionality"
       (eval actual)
-      (eval '(do )))))
+      (eval
+        '(do (throws (>long*))
+             (throws (>long* nil))
+             (throws (>long* ""))
+             (is (identical? (>long*  1)       (clojure.lang.RT/uncheckedLongCast  1)))
+             (is (identical? (>long*  1.0)     (clojure.lang.RT/uncheckedLongCast  1.0)))
+             (is (identical? (>long*  1.1)     (clojure.lang.RT/uncheckedLongCast  1.1)))
+             (is (identical? (>long* -1)       (clojure.lang.RT/uncheckedLongCast -1)))
+             (is (identical? (>long* -1.0)     (clojure.lang.RT/uncheckedLongCast -1.0)))
+             (is (identical? (>long* -1.1)     (clojure.lang.RT/uncheckedLongCast -1.1)))
+             (is (identical? (>long* (byte 1)) (clojure.lang.RT/uncheckedLongCast (byte 1)))))))))
 
 ;; =====|=====|=====|=====|===== ;;
 
