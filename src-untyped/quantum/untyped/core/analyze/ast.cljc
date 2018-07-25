@@ -100,7 +100,7 @@
   fipp.ednize/IEdn
     (-edn [this] (list `do (into (array-map) this))))
 
-(defn do [m] (map->Do* m))
+(defn do [m] (map->Do m))
 
 (defrecord MacroCall
   [env      #_::env

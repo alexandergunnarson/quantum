@@ -3,12 +3,8 @@
 (ns quantum.core.test.defnt-equivalences
   (:refer-clojure :exclude [*])
   (:require
-    [clojure.core              :as c]
-    [quantum.core.defnt
-      :refer [analyze defnt fnt fnt|code *fn->type unsupported!]]
-    [quantum.untyped.core.analyze.expr :as xp]
-    [quantum.untyped.core.collections.diff :as diff
-      :refer [diff]]
+    [quantum.untyped.core.type.defnt
+      :refer [defnt fnt unsupported!]]
     [quantum.untyped.core.core :as ucore
       :refer [code=]]
     [quantum.untyped.core.data.array
@@ -28,13 +24,8 @@
       :refer [? *]]
     [quantum.untyped.core.type.reifications :as utr])
   (:import
-    clojure.lang.Named
-    clojure.lang.Reduced
-    clojure.lang.ISeq
-    clojure.lang.ASeq
-    clojure.lang.LazySeq
-    clojure.lang.Seqable
-    quantum.core.data.Array
+    [clojure.lang ASeq ISeq LazySeq Named Reduced Seqable]
+    [quantum.core.data Array]
     [quantum.core Numeric Primitive]))
 
 ;; Just in case
