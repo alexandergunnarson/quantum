@@ -1212,17 +1212,17 @@ LEFT OFF LAST TIME (7/24/2018):
     input-types-decl-group' (s/seq-of ::input-types-decl), i|arg t/index?, i|arg-type t/index?]
     (let [{:as input-types-decl :keys [arg-type|split]} (first input-types-decl-group')
           input-types-decl-group'' (rest input-types-decl-group')]
-      (if (empty? input-types-decl-group'')
-          (let [i|reify i|arg-type]
-            [(>dynamic-dispatch|reify-call (get reify-seq i|reify) arglist)])
-          (->> arg-type|split
-               (c/lmap-indexed
-                 (fn [i|arg-type' _]
-                   [`((Array/get ~(:name input-types-decl) ~i|arg-type') ~@arglist)
+      (->> arg-type|split
+           (c/lmap-indexed
+             (fn [i|arg-type' _]
+               [`((Array/get ~(:name input-types-decl) ~i|arg-type') ~@arglist)
+                (if (empty? input-types-decl-group'')
+                    (let [i|reify i|arg-type]
+                      (>dynamic-dispatch|reify-call (get reify-seq i|reify) arglist))
                     (let [next-branch (>dynamic-dispatch|body-for-arity fn|name arglist reify-seq
                                         input-types-decl-group'' (inc i|arg) i|arg-type')]
-                      (>dynamic-dispatch|conditional fn|name arglist i|arg next-branch))]))
-               c/lcat)))))
+                      (>dynamic-dispatch|conditional fn|name arglist i|arg next-branch)))]))
+           c/lcat))))
 
 (defns >dynamic-dispatch-fn|form
   [{:keys [::uss/fn|name                            ::uss/fn|name

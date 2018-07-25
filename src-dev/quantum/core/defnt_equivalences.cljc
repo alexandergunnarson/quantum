@@ -102,10 +102,12 @@
                      (defn ~'identity|uninlined
                        {::t/type (t/fn ~'[t/any?])}
                        ([~'x00__]
-                         ;; Checks elided because `t/any?` doesn't require a check
+                         ;; TODO elide check because `t/any?` doesn't require a check
                          ;; and all args are `t/=` `t/any?`
-                         (.invoke ~(tag (str `Object>Object)
-                                        'identity|uninlined|__0|0) ~'x00__)))))
+                         (ifs ((Array/get ~'identity|uninlined|__0|input0|types 0) ~'x00__)
+                                (.invoke ~(tag (str `Object>Object)
+                                               'identity|uninlined|__0|0) ~'x00__)
+                              (unsupported! `name|test [~'x00__] 0))))))
             :cljs
               ;; Direct dispatch will be simple functions, not `reify`s
               ($ (do (defn ~'identity|uninlined [~'x] ~'x))))]
