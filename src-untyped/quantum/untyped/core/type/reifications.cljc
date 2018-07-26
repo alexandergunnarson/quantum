@@ -30,9 +30,11 @@
 (udt/deftype
   ^{:doc "Represents the set of all sets that do not include themselves (including the empty set).
           Equivalent to `(constantly true)`."}
-  UniversalSetType []
+  UniversalSetType [meta #_(t/? ::meta)]
   {PType          nil
    ?Fn            {invoke    ([_ x] true)}
+   ?Meta          {meta      ([this] meta)
+                   with-meta ([this meta'] (UniversalSetType. meta'))}
    ?Hash          {hash      ([this] (hash       UniversalSetType))}
    ?Object        {hash-code ([this] (uhash/code UniversalSetType))
                    equals    ([this that] (or (== this that) (instance? UniversalSetType that)))}
@@ -40,16 +42,18 @@
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] 'quantum.untyped.core.type/U)}})
 
-(def universal-set (UniversalSetType.))
+(def universal-set (UniversalSetType. nil))
 
 ;; ----- EmptySetType (`t/∅`) ----- ;;
 
 (udt/deftype
   ^{:doc "Represents the empty set.
           Equivalent to `(constantly false)`."}
-  EmptySetType []
+  EmptySetType [meta #_(t/? ::meta)]
   {PType          nil
    ?Fn            {invoke    ([_ x] false)}
+   ?Meta          {meta      ([this] meta)
+                   with-meta ([this meta'] (EmptySetType. meta'))}
    ?Hash          {hash      ([this] (hash       EmptySetType))}
    ?Object        {hash-code ([this] (uhash/code EmptySetType))
                    equals    ([this that] (or (== this that) (instance? EmptySetType that)))}
@@ -57,7 +61,7 @@
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] 'quantum.untyped.core.type/∅)}})
 
-(def empty-set (EmptySetType.))
+(def empty-set (EmptySetType. nil))
 
 ;; ----- NotType (`t/not` / `t/!`) ----- ;;
 
