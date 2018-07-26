@@ -15,6 +15,8 @@
     [quantum.untyped.core.core                  :as ucore]
     [quantum.untyped.core.error                 :as uerr
       :refer [err! TODO]]
+    [quantum.untyped.core.form                  :as uform
+      :refer [>form]]
     [quantum.untyped.core.print                 :as upr]
     [quantum.untyped.core.qualify               :as uqual]
     [quantum.untyped.core.reducers              :as ur
@@ -24,21 +26,18 @@
 
 (ucore/log-this-ns)
 
-(do
-
-(defn expr>code [x] (cond-> x (fn? x) >symbol))
+(defn expr>form [x] (cond-> x (fn? x) >symbol))
 
 (#?(:clj definterface :cljs defprotocol) IExpr)
 
 (defprotocol PExpr
-  (>code       [this])
-  (with-code   [this code'])
-  (update-code [this f])
+  (with-form   [this form'])
+  (update-form [this f])
   (>evaled     [this]))
 
 (#?(:clj definterface :cljs defprotocol) ICall)
 
-(defn icall? [x] (instance? ICall x))
+(defn icall? [x] (#?(:clj instance? :cljs satisfies?) ICall x))
 
 #?(:clj
 (defmacro def [sym x]
@@ -68,7 +67,7 @@
   fipp.ednize/IEdn
     (-edn [this]
       (if upr/*print-as-code?*
-          (list* `casef (expr>code f) (map upr/>group cases))
+          (list* `casef (expr>form f) (map upr/>group cases))
           (list* `casef f cases))))
 
 (defn casef [f & cases]
@@ -94,8 +93,8 @@
     (-edn [this]
       (if upr/*print-as-code?*
           (list* `condpf->
-            (expr>code pred)
-            (expr>code f)
+            (expr>form pred)
+            (expr>form f)
             (map upr/>group clauses))
           (list* `condpf-> pred f clauses))))
 
@@ -123,72 +122,58 @@
     (-edn [this] (concat [`fn] (when name [name]) arities)))
 
 (udt/deftype
-  ^{:doc "All possible behaviors of `code` are inherited except function-callability, which
-          is used for calling the evaled code itself.
-          A code form may consist of any of the following, recursively:
-          - nil
-          - number
-            - double
-            - long
-            - bigdec (`M`)
-            - bigint (`N`)
-          - string
-          - symbol
-          - keyword
-          - seq
-          - vector
-          - map
+  ^{:doc "All possible behaviors of `form` are inherited except function-callability, which
+          is used for calling the evaled form itself.
 
           Modification of a tagged literal is only supported to the extent the quoted form
           of the literal may be modified."}
-  Expression [code evaled]
+  Expression [form evaled]
   {;; expression-like
-   IExpr        nil
-   PExpr        {>code       ([this]         code)
-                 with-code   ([this code']   (Expression. code' (#?(:clj eval :cljs (TODO "eval not supported")) code')))
-                 update-code ([this f]       (with-code this (f code)))
-                 >evaled     ([this]         evaled)}
-   ;; `code`-like
-   ?Associative {assoc       ([this k v]     (with-code this (assoc  code k v)))
-                 dissoc      ([this k]       (with-code this (dissoc code k)))
-                 keys        ([this]         (with-code this (keys      code)))
-                 vals        ([this]         (with-code this (vals      code)))
-                 contains?   ([this]         (contains? code))
-                 find        (([this k]      (with-code this (find      code)))
-                              ([this k else] (with-code this (find      code else))))}
-   ?Collection  {empty       ([this]         (with-code this (empty     code)))
-                 conj        ([this x]       (with-code this (conj      code x)))
-                 empty?      ([this]         (empty?    code))
-                 equals      ([this that]    (or (== this that)
-                                                 (and (instance? Expression that)
-                                                      (let [^Expression that that]
-                                                        (= evaled (.-evaled that))
-                                                        (= code   (.-code   that))))))}
-   ?Counted     {count       ([this]         (count     code))}
-   ?Indexed     {nth         ([this i]       (with-code this (nth       code i)))}
-   ?Lookup      {get         (([this k]      (with-code this (core/get  code k)))
-                            #_([this k else] (with-code this (core/get  code k else))))} ; TODO make it work
-   ?Meta        {meta        ([this]         (meta  code))
-                 with-meta   ([this meta']   (Expression. (with-meta code meta') evaled))}
-   ?Reversible  {rseq        ([this]         (with-code this (rseq  code)))}
-   ?Seq         {first       ([this]         (with-code this (first code)))
-                 rest        ([this]         (with-code this (rest  code)))
-                 next        ([this]         (with-code this (next  code)))}
-   ?Seqable     {seq         ([this]         (with-code this (seq   code)))}
-   ?Stack       {peek        ([this]         (with-code this (peek  code)))
-                 pop         ([this]         (with-code this (pop   code)))}
+   IExpr          nil
+   uform/PGenForm {>form       ([this]         form)}
+   PExpr          {with-form   ([this form']
+                                 (Expression. form'
+                                   (#?(:clj eval :cljs (TODO "eval not supported")) form')))
+                   update-form ([this f]       (with-form this (f form)))
+                   >evaled     ([this]         evaled)}
+   ;; `form`-like
+   ?Associative   {assoc       ([this k v]     (with-form this (assoc  form k v)))
+                   dissoc      ([this k]       (with-form this (dissoc form k)))
+                   keys        ([this]         (with-form this (keys      form)))
+                   vals        ([this]         (with-form this (vals      form)))
+                   contains?   ([this]         (contains? form))
+                   find        (([this k]      (with-form this (find      form)))
+                                ([this k else] (with-form this (find      form else))))}
+   ?Collection    {empty       ([this]         (with-form this (empty     form)))
+                   conj        ([this x]       (with-form this (conj      form x)))
+                   empty?      ([this]         (empty?    form))
+                   equals      ([this that]    (or (== this that)
+                                                   (and (instance? Expression that)
+                                                        (let [^Expression that that]
+                                                          (= evaled (.-evaled that))
+                                                          (= form   (.-form   that))))))}
+   ?Counted       {count       ([this]         (count     form))}
+   ?Indexed       {nth         ([this i]       (with-form this (nth       form i)))}
+   ?Lookup        {get         (([this k]      (with-form this (core/get  form k)))
+                              #_([this k else] (with-form this (core/get  form k else))))} ; TODO   make it work
+   ?Meta          {meta        ([this]         (meta  form))
+                   with-meta   ([this meta']   (Expression. (with-meta form meta') evaled))}
+   ?Reversible    {rseq        ([this]         (with-form this (rseq  form)))}
+   ?Seq           {first       ([this]         (with-form this (first form)))
+                   rest        ([this]         (with-form this (rest  form)))
+                   next        ([this]         (with-form this (next  form)))}
+   ?Seqable       {seq         ([this]         (with-form this (seq   form)))}
+   ?Stack         {peek        ([this]         (with-form this (peek  form)))
+                   pop         ([this]         (with-form this (pop   form)))}
    ;; `evaled`-like
-   ?Fn          {invoke      (([this]        (evaled))
-                              ([this a0]     (evaled a0))
-                              ([this a0 a1]  (evaled a0 a1)))}
+   ?Fn            {invoke      (([this]        (evaled))
+                                ([this a0]     (evaled a0))
+                                ([this a0 a1]  (evaled a0 a1)))}
    ;; printing
    fipp.ednize/IOverride nil
-   fipp.ednize/IEdn
-     {-edn ([this] (tagged-literal 'expr code))}})
+   fipp.ednize/IEdn      {-edn ([this] (tagged-literal 'expr form))}})
 
 #?(:clj
 (defmacro >expr [expr-] `(quantum.untyped.core.analyze.expr.Expression. '~expr- ~expr-)))
 
 #?(:clj (defn expr? [x] (instance? Expression x)))
-
-)

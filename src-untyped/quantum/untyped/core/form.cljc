@@ -13,7 +13,21 @@
                  If evaluated, the form should evaluate to something exactly equivalent to the
                  value of the object (even stronger than a `=` guarantee — all properties up to
                  but not including identity).
-                 Effectively the inverse of `eval`."))
+                 Effectively the inverse of `eval`.
+
+                 A form may consist of any of the following, recursively:
+                 - nil
+                 - number
+                   - double
+                   - long
+                   - bigdec (`M`)
+                   - bigint (`N`)
+                 - string
+                 - symbol
+                 - keyword
+                 - seq
+                 - vector
+                 - map"))
 
 (extend-protocol PGenForm
             nil                 (>form [x] nil)
