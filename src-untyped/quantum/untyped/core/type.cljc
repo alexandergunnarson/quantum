@@ -595,6 +595,8 @@
                                           (list* `or)))]
             `(do ~@(concat anys [any->any])))))
 
+;; TODO TYPED — split the below predicate definitions into appropriate namespaces
+
 ;; ===== General ===== ;;
 
          (-def none?         empty-set)

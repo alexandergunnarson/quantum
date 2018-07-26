@@ -204,7 +204,11 @@
     (let [resolved (ns-resolve *ns* sym)]
       (log/ppr :warn "Not sure how to handle non-local symbol; resolved it for now"
                      (kw-map sym resolved))
-      (when resolved {:value resolved}))))
+      (ifs resolved
+             {:value resolved}
+           (some-> sym namespace symbol resolve class?)
+             {:value (analyze-seq|dot env (list '. (-> sym namespace symbol) (-> sym name symbol)))}
+           nil))))
 
 (defns methods->type
   "Creates a type given ->`methods`."
