@@ -178,33 +178,25 @@
 (defns analyze-seq|let*|bindings [env ::env, bindings|form _]
   (->> bindings|form
        (c/partition-all+ 2)
-       (reduce (fn [{env' :env !bindings :form} [sym form :as binding|form]]
+       (reduce (fn [{env' :env !bindings :form :keys [bindings-map]} [sym form :as binding|form]]
                  (let [expr (analyze* env' form)] ; environment is additive with each binding
-                   {:env  (assoc env' sym expr)
-                    :form (conj! (conj! !bindings sym) (:form expr))}))
-         {:env env :form (transient [])})
+                   {:env          (assoc env' sym expr)
+                    :form         (conj! (conj! !bindings sym) (:form expr))
+                    :bindings-map (assoc bindings-map sym expr)}))
+         {:env env :form (transient []) :bindings-map {}})
        (persistent!-and-add-file-context bindings|form)))
 
 (defns analyze-seq|let* [env ::env, [_ _, bindings|form _ & body|form _ :as form] _]
-  {:pre [(prl! env form)]}
-  (let [{env' :env bindings|form' :form} (analyze-seq|let*|bindings env bindings|form)
-        {body|form :form :as expr} (analyze-seq|do env' (list* 'do body|form))]
-    (prl! env' expr)
-    (TODO "`let*` analysis")
-    #_(uast/let* {:env env
-                  :form form
-                  :expanded-form (list* 'let* bindings|form' body|form')
-                  :bindings (bindings>env bindings)
-                  :body (>vec body)
-                  :type (:type expr)}))
-
-  #_(let [{env' :env bindings' :form}
-          (analyze-seq|let*|bindings env bindings)
-        {env'' :env body' :form type-info' :type-info}
-          (analyze-seq|do env' body)]
-    (->expr-info {:env       env
-                  :form      (list 'let* bindings' body')
-                  :type-info type-info'})))
+  (let [{env' :env bindings|form' :form :keys [bindings-map]}
+          (analyze-seq|let*|bindings env bindings|form)
+        {body|form' :expanded-form body|type :type body :body}
+          (analyze-seq|do env' (list* 'do body|form))]
+    (uast/let* {:env           env
+                :form          form
+                :expanded-form (list* 'let* bindings|form' (rest body|form'))
+                :bindings      bindings-map
+                :body          body
+                :type          body|type})))
 
 (defns ?resolve-with-env [sym t/symbol?, env ::env]
   (if-let [[_ local] (find env sym)]
@@ -281,6 +273,7 @@
    If only one method is found, that is noted too. If no matching method is found, an
    exception is thrown."
   [env ::env, form _, target _, target-class t/class?, static? t/boolean?, method-form simple-symbol?, args-forms _ #_(seq-of form?)]
+  (log/pr!)
   ;; TODO cache type by method
   (if-not-let [methods-for-name (-> target-class class->methods|with-cache (c/get (name method-form)))]
     (if (empty? args-forms)
@@ -305,7 +298,6 @@
                   (r/fori [arg-form args-forms
                            call'    call
                            i|arg]
-                    (prl! call' arg-form)
                     (let [arg-node (analyze* env arg-form)]
                       ;; TODO can incrementally calculate return value, but possibly not worth it
                       (update call' :args conj arg-node)))
@@ -320,6 +312,7 @@
 
 (defns- analyze-seq|dot|field-access
   [env ::env, form _, target _, field-form simple-symbol?, field (t/isa? Field)]
+  (log/pr!)
   (uast/field-access
     {:env    env
      :form   form
@@ -331,6 +324,7 @@
   "Ensure that given a set of classes, that set consists of at most a class C and nil.
    If so, returns C. Otherwise, throws."
   [cs (s/set-of (? t/class?)) > t/class?]
+  (log/pr!)
   (let [cs' (disj cs nil)]
     (if (-> cs' count (= 1))
         (first cs')
@@ -338,8 +332,7 @@
 
 ;; TODO type these arguments; e.g. check that ?method||field, if present, is an unqualified symbol
 (defns- analyze-seq|dot [env ::env, [_ _, target-form _, ?method-or-field _ & ?args _ :as form] _]
-  {:pre  [(prl! env form target-form ?method-or-field ?args)]
-   :post [(prl! %)]}
+  (log/pr!)
   (let [target          (analyze* #_?resolve-with-env env target-form)
         method-or-field (if (symbol? ?method-or-field) ?method-or-field (first ?method-or-field))
         args-forms      (if (symbol? ?method-or-field) ?args            (rest  ?method-or-field))]
@@ -366,6 +359,7 @@
 
 ;; TODO move this
 (defns truthy-expr? [{:as expr t [:type _]} _ > t/boolean?]
+  (log/pr!)
   (ifs (or (t/= t t/nil?)
            (t/= t t/false?)) false
        (or (t/> t t/nil?)
@@ -376,7 +370,7 @@
   "If `*conditional-branch-pruning?*` is falsey, the dead branch's original form will be
    retained, but it will not be type-analyzed."
   [env ::env, [_ _ & [pred-form _, true-form _, false-form _ :as body] _ :as form] _]
-  {:post [(prl! %)]}
+  (log/pr!)
   (if (-> body count (not= 3))
       (err! "`if` accepts exactly 3 arguments: one predicate test and two branches; received"
             {:body body})
@@ -407,11 +401,11 @@
           nil       @whole-expr))))
 
 (defns- analyze-seq|quote [env ::env, [_ _ & body _ :as form] _]
-  {:post [(prl! %)]}
+  (log/pr!)
   (uast/quoted env form (tcore/most-primitive-class-of body)))
 
 (defns- analyze-seq|new [env ::env, [_ _ & [c|form _ #_t/class? & args _ :as body] _ :as form] _]
-  {:pre [(prl! env form)]}
+  (log/pr!)
   (let [c|analyzed (analyze* env c|form)]
     (if-not (and (-> c|analyzed :type t/value-type?)
                  (-> c|analyzed :type utr/value-type>value class?))
@@ -425,7 +419,7 @@
                               :type  (t/isa? c)})))))
 
 (defns- analyze-seq|throw [env ::env, form _ [arg _ :as body] _]
-  {:pre [(prl! env form body)]}
+  (log/pr!)
   (if (-> body count (not= 1))
       (err! "Must supply exactly one input to `throw`; supplied" {:body body})
       (let [arg|analyzed (analyze* env arg)]
@@ -442,6 +436,7 @@
   "Analyze a seq after it has been macro-expanded.
    The ->`form` is post- incremental macroexpansion."
   [env ::env, [caller|form _ & body _ :as form] _]
+  (log/pr!)
   (ifs (special-symbols caller|form)
        (case caller|form
          do       (analyze-seq|do    env form)
@@ -516,7 +511,7 @@
                        :type   out-type}))))))
 
 (defns- analyze-seq [env ::env, form _]
-  {:post [(prl! %)]}
+  (log/pr!)
   (let [expanded-form (ufeval/macroexpand form)]
     (if (ucomp/== form expanded-form)
         (analyze-seq* env expanded-form)
@@ -528,7 +523,7 @@
              :expanded      expanded})))))
 
 (defns- analyze-symbol [env ::env, form t/symbol?]
-  {:post [(prl! %)]}
+  (log/pr!)
   (if-not-let [{resolved :value} (?resolve-with-env form env)]
     (err! "Could not resolve symbol" {:sym form})
     (uast/symbol env form resolved
@@ -544,7 +539,7 @@
            (TODO "Unsure of what to do in this case" (kw-map env form resolved))))))
 
 (defns- analyze* [env ::env, form _]
-  (prl! env form)
+  (log/pr! form)
   (when (> (swap! *analyze-depth inc) 100) (throw (ex-info "Stack too deep" {:form form})))
   (ifs (symbol? form)
          (analyze-symbol env form)
@@ -560,7 +555,8 @@
        (throw (ex-info "Unrecognized form" {:form form}))))
 
 (defns analyze
-  ([body _] (analyze {} body))
-  ([env ::env, body _]
+  ([form _] (analyze {} form))
+  ([env ::env, form _]
+    (log/pr! form)
     (reset! *analyze-depth 0)
-    (analyze* env body)))
+    (analyze* env form)))
