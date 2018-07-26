@@ -1,10 +1,13 @@
 #_"
 
-LEFT OFF LAST TIME (7/24/2018):
+LEFT OFF LAST TIME (7/25/2018):
+- handle calling of other `fnt`s from `fnt`s
+  - `(defnt >long ...)` : enable to refer to `>long*` and have that analyzed
+  - finish `>long` example
+  - quantum.core.data.map
 - expressions (`quantum.untyped.core.analyze.expr`)
 - `t/fn`
-- `(defnt >long ...)` : enable to refer to `>long*` and have that analyzed
-- finish `>long` example
+- handle `defnt` varargs
 
 
 
