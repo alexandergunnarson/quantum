@@ -1,4 +1,5 @@
 (ns quantum.untyped.core.analyze.expr
+  "An expression is an object whose form is retained and editable to form new objects."
   (:refer-clojure :exclude
     [flatten get ==])
   (:require

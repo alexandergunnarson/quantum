@@ -780,3 +780,19 @@
   (test-comparison 0 t/any? t/universal-set)
   (testing "universal class(-set) identity"
     (is (t/= t/val? (& t/any? t/val?)))))
+
+;; TODO incorporate into the other test?
+(deftest test|fn
+  #_"What does it mean to compare with a `t/fn`?
+     t/fn A could be t/<= w.r.t. t/fn B if A's input types are t/>= B's and A's output types t/<= B's.
+
+     When we compare a t/fn to another t/fn, we are comparing sets of capabilities.
+     If you give t/fn #1 A, B, and C, can t/fn #2 handle it too?"
+  (test-comparison  0 (t/fn [])
+                      (t/fn []))
+  (test-comparison -1 (t/fn [])
+                      (t/fn [] [t/any?]))
+  (test-comparison  0 (t/fn [] [t/any?])
+                      (t/fn [] [t/any?]))
+  (test-comparison -1 (t/fn [t/any?])
+                      (t/fn [] [t/any?])))
