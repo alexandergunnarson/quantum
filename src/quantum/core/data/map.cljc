@@ -5,10 +5,13 @@
   (:refer-clojure :exclude
     [split-at, merge, sorted-map sorted-map-by, array-map, hash-map])
   (:require
-    [quantum.core.defnt
-      :refer [defnt]]
+    ;; TODO TYPED
+    #_[quantum.core.reducers :as r
+      :refer [reduce-pair]]
     [quantum.untyped.core.data.map :as u]
     [quantum.untyped.core.type     :as t]
+    [quantum.untyped.core.type.defnt
+      :refer [defnt]]
     [quantum.untyped.core.vars
       :refer [defaliases]])
   (:import
@@ -47,37 +50,44 @@
 ;; ===== Unordered identity-semantic maps ===== ;;
 
 ;; TODO generate this via macro?
+(in-ns 'quantum.core.data.map)
 (defnt >!identity-map
   "Creates a single-threaded, mutable identity map.
    On the JVM, this is a `java.util.IdentityHashMap`.
    On JS, this is a `js/Map` (ECMAScript 6 Map)."
   ([> t/!identity-map?] #?(:clj (IdentityHashMap.) :cljs (js/Map.)))
-  ([k0 _, v0 _]
+  ([k0 (t/ref t/any?), v0 (t/ref t/any?)]
     (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)))
-  #_([k0 _, v0 _, k1 _, v1 _]
+  ([k0 (t/ref t/any?), v0 (t/ref t/any?), k1 (t/ref t/any?), v1 (t/ref t/any?)]
     (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)))
-  #_([k0 _, v0 _, k1 _, v1 _, k2 _, v2 _]
+  ([k0 (t/ref t/any?), v0 (t/ref t/any?), k1 (t/ref t/any?), v1 (t/ref t/any?)
+    k2 (t/ref t/any?), v2 (t/ref t/any?)]
     (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)
           (#?(:clj .put :cljs .set) k2 v2)))
-  #_([k0 _, v0 _, k1 _, v1 _, k2 _, v2 _, k3 _, v3 _]
+  ([k0 (t/ref t/any?), v0 (t/ref t/any?), k1 (t/ref t/any?), v1 (t/ref t/any?)
+    k2 (t/ref t/any?), v2 (t/ref t/any?), k3 (t/ref t/any?), v3 (t/ref t/any?)]
     (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)
           (#?(:clj .put :cljs .set) k2 v2)
           (#?(:clj .put :cljs .set) k3 v3)))
-  #_([k0 _, v0 _, k1 _, v1 _, k2 _, v2 _, k3 _, v3 _, k4 _, v4 _]
+  ([k0 (t/ref t/any?), v0 (t/ref t/any?), k1 (t/ref t/any?), v1 (t/ref t/any?)
+    k2 (t/ref t/any?), v2 (t/ref t/any?), k3 (t/ref t/any?), v3 (t/ref t/any?)
+    k4 (t/ref t/any?), v4 (t/ref t/any?)]
     (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)
           (#?(:clj .put :cljs .set) k2 v2)
           (#?(:clj .put :cljs .set) k3 v3)
           (#?(:clj .put :cljs .set) k4 v4)))
-  #_([k0 _, v0 _, k1 _, v1 _, k2 _, v2 _, k3 _, v3 _, k4 _, v4 _, k5 _, v5 _]
+  ([k0 (t/ref t/any?), v0 (t/ref t/any?), k1 (t/ref t/any?), v1 (t/ref t/any?)
+    k2 (t/ref t/any?), v2 (t/ref t/any?), k3 (t/ref t/any?), v3 (t/ref t/any?)
+    k4 (t/ref t/any?), v4 (t/ref t/any?), k5 (t/ref t/any?), v5 (t/ref t/any?)]
     (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)
@@ -85,7 +95,11 @@
           (#?(:clj .put :cljs .set) k3 v3)
           (#?(:clj .put :cljs .set) k4 v4)
           (#?(:clj .put :cljs .set) k5 v5)))
-  #_([k0 _, v0 _, k1 _, v1 _, k2 _, v2 _, k3 _, v3 _, k4 _, v4 _, k5 _, v5 _ k6, _ v6, _ & kvs _]
+  ;; TODO TYPED handle varargs
+#_([k0 (t/ref t/any?), v0 (t/ref t/any?), k1 (t/ref t/any?), v1 (t/ref t/any?)
+    k2 (t/ref t/any?), v2 (t/ref t/any?), k3 (t/ref t/any?), v3 (t/ref t/any?)
+    k4 (t/ref t/any?), v4 (t/ref t/any?), k5 (t/ref t/any?), v5 (t/ref t/any?)
+    k6 (t/ref t/any?), v6 (t/ref t/any?) & kvs _]
     (reduce-pair
       (fn [#?(:clj ^IdentityHashMap m :cljs m) k v] (doto m (#?(:clj .put :cljs .set) k v)))
       (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
