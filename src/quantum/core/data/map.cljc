@@ -3,17 +3,18 @@
     :attribution "alexandergunnarson"}
   quantum.core.data.map
   (:refer-clojure :exclude
-    [split-at, merge, sorted-map sorted-map-by, array-map, hash-map])
+    [split-at, merge, sorted-map sorted-map-by])
   (:require
-    ;; TODO TYPED
-    #_[quantum.core.reducers :as r
-      :refer [reduce-pair]]
-    [quantum.untyped.core.data.map :as u]
-    [quantum.untyped.core.type     :as t]
-    [quantum.untyped.core.type.defnt
-      :refer [defnt]]
-    [quantum.untyped.core.vars
-      :refer [defaliases]])
+    #?(:clj [clojure.data.int-map])
+            ;; TODO TYPED
+          #_[quantum.core.reducers :as r
+              :refer [reduce-pair]]
+            [quantum.untyped.core.data.map :as u]
+            [quantum.untyped.core.type     :as t]
+            [quantum.untyped.core.type.defnt
+              :refer [defnt]]
+            [quantum.untyped.core.vars
+              :refer [defalias]])
   (:import
 #?@(:clj  [[java.util HashMap IdentityHashMap LinkedHashMap TreeMap]
            [it.unimi.dsi.fastutil.ints    Int2ReferenceOpenHashMap]
@@ -50,12 +51,12 @@
 ;; ===== Unordered identity-semantic maps ===== ;;
 
 ;; TODO generate this via macro?
-(in-ns 'quantum.core.data.map)
 (defnt >!identity-map
   "Creates a single-threaded, mutable identity map.
    On the JVM, this is a `java.util.IdentityHashMap`.
    On JS, this is a `js/Map` (ECMAScript 6 Map)."
-  ([> t/!identity-map?] #?(:clj (IdentityHashMap.) :cljs (js/Map.)))
+  > t/!identity-map?
+  ([] #?(:clj (IdentityHashMap.) :cljs (js/Map.)))
   ([k0 (t/ref t/any?), v0 (t/ref t/any?)]
     (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)))
@@ -112,14 +113,48 @@
             (#?(:clj .put :cljs .set) k6 v6))
       kvs)))
 
+;; ===== Unordered value-semantic maps ===== ;;
+
+(defnt >array-map
+  "Creates a persistent array map. If any keys are equal, they are handled as if by repeated
+   applications of `assoc`."
+  > t/+array-map?
+  ([] (. clojure.lang.PersistentArrayMap EMPTY))
+  ;; TODO TYPED handle varargs
+#_([& kvs]
+     (clojure.lang.PersistentArrayMap/createAsIfByAssoc (to-array kvs))))
+
+;; ----- Hash maps ----- ;;
+
+(defnt >hash-map
+  "Creates a persistent hash map. If any keys are equal, they are handled as if by repeated
+   applications of `assoc`."
+  > t/+array-map?
+  ([] clojure.lang.PersistentArrayMap/EMPTY)
+  ;; TODO TYPED handle varargs
+#_([& keyvals]
+     (clojure.lang.PersistentHashMap/create kvs)))
+
+(def +hash-map|long->ref? (t/isa? clojure.data.int_map.PersistentIntMap))
+
+#?(:clj
+(defnt >hash-map|long->ref
+  "Creates a persistent integer map that can only have non-negative integers as keys."
+  > +hash-map|long->ref?
+  ([] (clojure.data.int_map.PersistentIntMap. clojure.data.int_map.Nodes$Empty/EMPTY 0 nil))
+  ;; TODO TYPED handle varargs
+  ([k t/nneg-int? v (t/ref t/any?)] (assoc (>hash-map|long->ref) k v))
+  ;; TODO TYPED handle calling other typed fns
+#_([kv & kvs] (apply assoc (>hash-map|long->ref) k v kvs))))
+
+#?(:clj (defalias int-map hash-map|long->ref))
+
 ; `(apply hash-map pairs)` <~> `lodash/fromPairs`
 (defaliases u
-  #?@(:clj [int-map hash-map|long->ref])
-  array-map hash-map ordered-map om #?(:clj !ordered-map) #?(:clj kw-omap)
+  ordered-map om #?(:clj !ordered-map) #?(:clj kw-omap)
   sorted-map      sorted-map-by sorted-map-by-val
   sorted-rank-map sorted-rank-map-by
   nearest rank-of subrange split-key split-at
-  #?(:clj hash-map?)
   merge #?(:clj pmerge)
   !hash-map
   #?@(:clj [!hash-map|int->ref    !hash-map|int->object
