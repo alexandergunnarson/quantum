@@ -199,18 +199,6 @@
                 :body          body
                 :type          body|type})))
 
-(defns ?resolve-with-env [sym t/symbol?, env ::env]
-  (if-let [[_ local] (find env sym)]
-    {:value local}
-    (let [resolved (ns-resolve *ns* sym)]
-      (log/ppr :warn "Not sure how to handle non-local symbol; resolved it for now"
-                     (kw-map sym resolved))
-      (ifs resolved
-             {:value resolved}
-           (some-> sym namespace symbol resolve class?)
-             {:value (analyze-seq|dot env (list '. (-> sym namespace symbol) (-> sym name symbol)))}
-           nil))))
-
 (defns methods->type
   "Creates a type given ->`methods`."
   [methods (s/seq-of t/any? #_method?) > t/type?]
@@ -338,7 +326,7 @@
 ;; TODO type these arguments; e.g. check that ?method||field, if present, is an unqualified symbol
 (defns- analyze-seq|dot [env ::env, [_ _, target-form _, ?method-or-field _ & ?args _ :as form] _]
   (log/pr!)
-  (let [target          (analyze* #_?resolve-with-env env target-form)
+  (let [target          (analyze* env target-form)
         method-or-field (if (symbol? ?method-or-field) ?method-or-field (first ?method-or-field))
         args-forms      (if (symbol? ?method-or-field) ?args            (rest  ?method-or-field))]
     (if (t/= (:type target) t/nil?)
@@ -456,6 +444,7 @@
          throw    (analyze-seq|throw env form))
        ;; TODO support recursion
        (let [caller|node (analyze* env caller|form)
+             _ (ppr caller|node)
              caller|type (:type caller|node)
              args-ct     (count body)]
          (case (t/compare caller|type t/callable?)
@@ -466,8 +455,9 @@
                                (t/<= caller|type t/+map|built-in?)    :map
                                (t/<= caller|type t/+vector|built-in?) :vector
                                (t/<= caller|type t/+set|built-in?)    :set
-                               (t/<= caller|type t/fnt?)              :fnt
                                (t/<= caller|type t/fn?)               :fn
+                               ;; TODO maybe have a better check?
+                               (t/<= caller|type t/fnt?)              :fnt
                                ;; If it's callable but not fn, we might have missed something in
                                ;; this dispatch so for now we throw
                                (err! "Don't know how how to handle non-fn callable"
@@ -526,6 +516,18 @@
              :form          form
              :expanded-form (:form expanded)
              :expanded      expanded})))))
+
+(defns ?resolve-with-env [sym t/symbol?, env ::env]
+  (if-let [[_ local] (find env sym)]
+    {:value local}
+    (let [resolved (ns-resolve *ns* sym)]
+      (log/ppr :warn "Not sure how to handle non-local symbol; resolved it for now"
+                     (kw-map sym resolved))
+      (ifs resolved
+             {:value resolved}
+           (some-> sym namespace symbol resolve class?)
+             {:value (analyze-seq|dot env (list '. (-> sym namespace symbol) (-> sym name symbol)))}
+           nil))))
 
 (defns- analyze-symbol [env ::env, form t/symbol?]
   (log/pr!)
