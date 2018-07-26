@@ -90,8 +90,8 @@
   (let [from-meta (meta from)]
     (update-meta to assoc :line (:line from-meta) :column (:column from-meta))))
 
-(defn persistent!-and-add-file-context [form ast-ret]
-  (update ast-ret :form (fn-> persistent! (add-file-context form))))
+(defn persistent!-and-add-file-context [form ast-data]
+  (update ast-data :form (fn-> persistent! (add-file-context form))))
 
 (def special-symbols '#{do let* deftype* fn* def . if quote new throw}) ; TODO make more complete
 
@@ -127,8 +127,8 @@
   {:params-doc
     '{merge-types-fn "2-arity fn that merges two types (or sets of types).
                       The first argument is the current deduced type of the
-                      overall expression; the second is the deduced type of
-                      the current subexpression."}}
+                      overall AST node; the second is the deduced type of
+                      the current sub-AST-node."}}
   [env ::env, form _, empty-form _, rf _]
   (->> form
        (reducei (fn [accum form' i] (rf accum (analyze* (:env accum) form') i))
@@ -143,10 +143,10 @@
   (TODO "analyze-map")
   #_(->> form
        (reduce-kv (fn [{env' :env forms :form} form'k form'v]
-                    (let [ast-ret-k (analyze* env' form'k)
-                          ast-ret-v (analyze* env' form'v)]
+                    (let [ast-node-k (analyze* env' form'k)
+                          ast-node-v (analyze* env' form'v)]
                       (->expr-info {:env       env'
-                                    :form      (assoc! forms (:form ast-ret-k) (:form ast-ret-v))
+                                    :form      (assoc! forms (:form ast-node-k) (:form ast-node-v))
                                    ;; TODO fix; we want the types of the keys and vals to be deduced
                                     :type-info nil})))
          (->expr-info {:env env :form (transient {})}))
@@ -161,17 +161,18 @@
                 :type          t/nil?})
       (let [{expanded-form :form body :body}
               (analyze-non-map-seqable env body|form []
-                (fn [accum expr _]
-                  (assoc expr ;; The env should be the same as whatever it was originally
-                              ;; because no new scopes are created
-                              :env  (:env accum)
-                              :form (conj! (:form accum) (:form expr))
-                              :body (conj! (:body accum) expr))))]
+                (fn [accum ast-data _]
+                  (assoc ast-data
+                    ;; The env should be the same as whatever it was originally
+                    ;; because no new scopes are created
+                    :env  (:env accum)
+                    :form (conj! (:form accum) (:form ast-data))
+                    :body (conj! (:body accum) ast-data))))]
         (uast/do {:env           env
                   :form          form
                   :expanded-form (with-meta (list* 'do expanded-form) (meta expanded-form))
                   :body          body
-                  ;; To types, only the last subexpression ever matters, as each is independent
+                  ;; To types, only the last sub-AST-node ever matters, as each is independent
                   ;; from the others
                   :type          (-> body c/last :type)}))))
 
@@ -179,10 +180,10 @@
   (->> bindings|form
        (c/partition-all+ 2)
        (reduce (fn [{env' :env !bindings :form :keys [bindings-map]} [sym form :as binding|form]]
-                 (let [expr (analyze* env' form)] ; environment is additive with each binding
-                   {:env          (assoc env' sym expr)
-                    :form         (conj! (conj! !bindings sym) (:form expr))
-                    :bindings-map (assoc bindings-map sym expr)}))
+                 (let [node (analyze* env' form)] ; environment is additive with each binding
+                   {:env          (assoc env' sym node)
+                    :form         (conj! (conj! !bindings sym) (:form node))
+                    :bindings-map (assoc bindings-map sym node)}))
          {:env env :form (transient []) :bindings-map {}})
        (persistent!-and-add-file-context bindings|form)))
 
@@ -362,7 +363,7 @@
               method-or-field args-forms))))))
 
 ;; TODO move this
-(defns truthy-expr? [{:as expr t [:type _]} _ > t/boolean?]
+(defns truthy-node? [{:as ast t [:type _]} _ > t/boolean?]
   (log/pr!)
   (ifs (or (t/= t t/nil?)
            (t/= t t/false?)) false
@@ -378,31 +379,31 @@
   (if (-> body count (not= 3))
       (err! "`if` accepts exactly 3 arguments: one predicate test and two branches; received"
             {:body body})
-      (let [pred-expr  (analyze* env pred-form)
-            true-expr  (delay (analyze* env true-form))
-            false-expr (delay (analyze* env false-form))
-            whole-expr
+      (let [pred-node  (analyze* env pred-form)
+            true-node  (delay (analyze* env true-form))
+            false-node (delay (analyze* env false-form))
+            whole-node
               (delay
-                (uast/if-expr
+                (uast/if-node
                   {:env        env
-                   :form       (list 'if (:form pred-expr) (:form @true-expr) (:form @false-expr))
-                   :pred-expr  pred-expr
-                   :true-expr  @true-expr
-                   :false-expr @false-expr
-                   :type       (apply t/or (->> [(:type @true-expr) (:type @false-expr)]
+                   :form       (list 'if (:form pred-node) (:form @true-node) (:form @false-node))
+                   :pred-node  pred-node
+                   :true-node  @true-node
+                   :false-node @false-node
+                   :type       (apply t/or (->> [(:type @true-node) (:type @false-node)]
                                                 (remove nil?)))}))]
-        (case (truthy-expr? pred-expr)
-          true      (do (log/ppr :warn "Predicate in `if` expression is always true" {:pred pred-form})
-                        (-> @true-expr
+        (case (truthy-node? pred-node)
+          true      (do (log/ppr :warn "Predicate in `if` node is always true" {:pred pred-form})
+                        (-> @true-node
                             (assoc :env env)
                             (cond-> (not *conditional-branch-pruning?*)
-                              (assoc :form (list 'if pred-form (:form @true-expr) false-form)))))
-          false     (do (log/ppr :warn "Predicate in `if` expression is always false" {:pred pred-form})
-                        (-> @false-expr
+                              (assoc :form (list 'if pred-form (:form @true-node) false-form)))))
+          false     (do (log/ppr :warn "Predicate in `if` node is always false" {:pred pred-form})
+                        (-> @false-node
                             (assoc :env env)
                             (cond-> (not *conditional-branch-pruning?*)
-                              (assoc :form (list 'if pred-form true-form (:form @false-expr))))))
-          nil       @whole-expr))))
+                              (assoc :form (list 'if pred-form true-form (:form @false-node))))))
+          nil       @whole-node))))
 
 (defns- analyze-seq|quote [env ::env, [_ _ & body _ :as form] _]
   (log/pr!)
@@ -413,10 +414,10 @@
   (let [c|analyzed (analyze* env c|form)]
     (if-not (and (-> c|analyzed :type t/value-type?)
                  (-> c|analyzed :type utr/value-type>value class?))
-            (err! "Supplied non-class to `new` expression" {:x c|form})
+            (err! "Supplied non-class to `new` form" {:x c|form})
             (let [c             (-> c|analyzed :type utr/value-type>value)
                   args|analyzed (mapv #(analyze* env %) args)]
-              (uast/new-expr {:env   env
+              (uast/new-node {:env   env
                               :form  (list* 'new c|form (map :form args|analyzed))
                               :class c
                               :args  args|analyzed
@@ -430,7 +431,7 @@
         ;; TODO this is not quite true for CLJS but it's nice at least
         (if-not (-> arg|analyzed :type (t/<= t/throwable?))
           (err! "`throw` requires a throwable; received" {:arg arg :type (:type arg|analyzed)})
-          (uast/throw-expr {:env  env
+          (uast/throw-node {:env  env
                             :form (list 'throw (:form arg|analyzed))
                             :arg  arg|analyzed
                             ;; `t/none?` because nothing is actually returned
@@ -454,12 +455,12 @@
          new      (analyze-seq|new   env form)
          throw    (analyze-seq|throw env form))
        ;; TODO support recursion
-       (let [caller|expr (analyze* env caller|form)
-             caller|type (:type caller|expr)
+       (let [caller|node (analyze* env caller|form)
+             caller|type (:type caller|node)
              args-ct     (count body)]
          (case (t/compare caller|type t/callable?)
-           (1 2)  (err! "It is not known whether expression be called" {:expr caller|expr})
-           3      (err! "Expression cannot be called" {:expr caller|expr})
+           (1 2)  (err! "It is not known whether form can be called" {:node caller|node})
+           3      (err! "Form cannot be called" {:node caller|node})
            (-1 0) (let [caller-kind
                           (ifs (t/<= caller|type t/keyword?)          :keyword
                                (t/<= caller|type t/+map|built-in?)    :map
@@ -470,7 +471,7 @@
                                ;; If it's callable but not fn, we might have missed something in
                                ;; this dispatch so for now we throw
                                (err! "Don't know how how to handle non-fn callable"
-                                     {:caller caller|expr}))
+                                     {:caller caller|node}))
                         assert-valid-args-ct
                           (case caller-kind
                             (:keyword :map)
@@ -478,17 +479,17 @@
                                 (err! (str "Keywords and `clojure.core` persistent maps must be "
                                            "provided with exactly one or two args when calling "
                                            "them")
-                                      {:args-ct args-ct :caller caller|expr}))
+                                      {:args-ct args-ct :caller caller|node}))
 
                             (:vector :set)
                               (when-not (= args-ct 1)
                                  (err! (str "`clojure.core` persistent vectors and `clojure.core` "
                                             "persistent sets must be provided with exactly one arg "
                                             "when calling them")
-                                       {:args-ct args-ct :caller caller|expr}))
+                                       {:args-ct args-ct :caller caller|node}))
 
                             :fnt
-                              (TODO "Don't know how to handle typed fns yet" {:caller caller|expr})
+                              (TODO "Don't know how to handle typed fns yet" {:caller caller|node})
                               ;; For non-typed fns, unknown; we will have to risk runtime exception
                               ;; because we can't necessarily rely on metadata to tell us the
                               ;; whole truth
@@ -496,7 +497,7 @@
                         ;; TODO incrementally check by analyzing each arg in `reduce` and pruning
                         ;; branches of what the type could be, and throwing if it's found something
                         ;; that's an impossible combination
-                        arg-exprs (->> body
+                        arg-nodes (->> body
                                        (c/map+ #(analyze* env %))
                                        (reduce (fn [args arg|analyzed]
                                                  (conj args arg|analyzed))
@@ -507,11 +508,11 @@
                             ;; for now
                             (:keyword :map :vector :set :fn) t/any?
                             :fnt (TODO "Use `::t/type` metadata to make this decision"))]
-                    (uast/call-expr
+                    (uast/call-node
                       {:env    env
                        :form   form
-                       :caller caller|expr
-                       :args   arg-exprs
+                       :caller caller|node
+                       :args   arg-nodes
                        :type   out-type}))))))
 
 (defns- analyze-seq [env ::env, form _]

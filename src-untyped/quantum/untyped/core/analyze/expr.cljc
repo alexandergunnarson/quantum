@@ -37,7 +37,7 @@
 
 (#?(:clj definterface :cljs defprotocol) ICall)
 
-(defn icall? [x] (#?(:clj instance? :cljs satisfies?) ICall x))
+(defn call? [x] (#?(:clj instance? :cljs satisfies?) ICall x))
 
 #?(:clj
 (defmacro def [sym x]
@@ -45,8 +45,7 @@
 
 #?(:clj (defalias -def def))
 
-(defrecord NamedExpr
-  [sym #_symbol? x #__]
+(defrecord NamedExpr [sym #_symbol? x #__]
   IExpr
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -61,7 +60,7 @@
     (#?(:clj invoke :cljs -invoke) [_ x]
       (let [dispatch (f x)]
         (if-let [[_ then] (find cases dispatch)]
-          (if (icall? then) (then x) then)
+          (if (call? then) (then x) then)
           (err! "No matching clause found" {:dispatch dispatch}))))
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -86,7 +85,7 @@
                                       (let [[condition then] clause]
                                         (pred v condition)))))
                         first)]
-          (if (icall? then) (then x) then)
+          (if (call? then) (then x) then)
           (err! "No matching clause found" {:v v}))))
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -122,8 +121,8 @@
     (-edn [this] (concat [`fn] (when name [name]) arities)))
 
 (udt/deftype
-  ^{:doc "All possible behaviors of `form` are inherited except function-callability, which
-          is used for calling the evaled form itself.
+  ^{:doc "All possible behaviors of `form` (e.g. `get`/`update`/`conj`) are inherited except
+          function-callability, which is used for calling the evaled form itself.
 
           Modification of a tagged literal is only supported to the extent the quoted form
           of the literal may be modified."}
@@ -139,24 +138,24 @@
    ;; `form`-like
    ?Associative   {assoc       ([this k v]     (with-form this (assoc  form k v)))
                    dissoc      ([this k]       (with-form this (dissoc form k)))
-                   keys        ([this]         (with-form this (keys      form)))
-                   vals        ([this]         (with-form this (vals      form)))
+                   keys        ([this]         (with-form this (keys   form)))
+                   vals        ([this]         (with-form this (vals   form)))
                    contains?   ([this]         (contains? form))
-                   find        (([this k]      (with-form this (find      form)))
-                                ([this k else] (with-form this (find      form else))))}
-   ?Collection    {empty       ([this]         (with-form this (empty     form)))
-                   conj        ([this x]       (with-form this (conj      form x)))
-                   empty?      ([this]         (empty?    form))
+                   find        (([this k]      (with-form this (find   form)))
+                                ([this k else] (with-form this (find   form else))))}
+   ?Collection    {empty       ([this]         (with-form this (empty  form)))
+                   conj        ([this x]       (with-form this (conj   form x)))
+                   empty?      ([this]         (empty? form))
                    equals      ([this that]    (or (== this that)
                                                    (and (instance? Expression that)
                                                         (let [^Expression that that]
                                                           (= evaled (.-evaled that))
                                                           (= form   (.-form   that))))))}
-   ?Counted       {count       ([this]         (count     form))}
-   ?Indexed       {nth         ([this i]       (with-form this (nth       form i)))}
-   ?Lookup        {get         (([this k]      (with-form this (core/get  form k)))
-                              #_([this k else] (with-form this (core/get  form k else))))} ; TODO   make it work
-   ?Meta          {meta        ([this]         (meta  form))
+   ?Counted       {count       ([this]         (count form))}
+   ?Indexed       {nth         ([this i]       (with-form this (nth      form i)))}
+   ?Lookup        {get         (([this k]      (with-form this (core/get form k)))
+                              #_([this k else] (with-form this (core/get form k else))))} ; TODO   make it work
+   ?Meta          {meta        ([this]         (meta form))
                    with-meta   ([this meta']   (Expression. (with-meta form meta') evaled))}
    ?Reversible    {rseq        ([this]         (with-form this (rseq  form)))}
    ?Seq           {first       ([this]         (with-form this (first form)))

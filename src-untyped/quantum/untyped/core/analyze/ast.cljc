@@ -116,19 +116,19 @@
 
 (defn macro-call [m] (-> m map->MacroCall (assoc :type (-> m :expanded :type))))
 
-(defrecord IfExpr
+(defrecord IfNode
   [env        #_::env
    form       #_::t/form
-   pred-expr  #_::node
-   true-expr  #_::node
-   false-expr #_::node
+   pred-node  #_::node
+   true-node  #_::node
+   false-node #_::node
    type       #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `if-expr (into (array-map) this))))
+    (-edn [this] (list `if-node (into (array-map) this))))
 
-(defn if-expr [m] (map->IfExpr m))
+(defn if-node [m] (map->IfNode m))
 
 ;; ===== RUNTIME CALLS ===== ;;
 
@@ -159,7 +159,7 @@
 
 (defn method-call [m] (map->MethodCall m))
 
-(defrecord CallExpr ; by a `t/callable?`
+(defrecord CallNode ; by a `t/callable?`
   [env    #_::env
    form   #_::t/form
    caller #_::node
@@ -168,11 +168,11 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `call-expr (into (array-map) this))))
+    (-edn [this] (list `call-node (into (array-map) this))))
 
-(defn call-expr [m] (map->CallExpr m))
+(defn call-node [m] (map->CallNode m))
 
-(defrecord NewExpr
+(defrecord NewNode
   [env   #_::env
    form  #_::t/form
    class #_t/class?
@@ -181,11 +181,11 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `new-expr (into (array-map) this))))
+    (-edn [this] (list `new-node (into (array-map) this))))
 
-(defn new-expr [m] (map->NewExpr m))
+(defn new-node [m] (map->NewNode m))
 
-(defrecord ThrowExpr
+(defrecord ThrowNode
   [env  #_::env
    form #_::t/form
    arg  #_::node
@@ -193,8 +193,8 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `throw-expr (into (array-map) this))))
+    (-edn [this] (list `throw-node (into (array-map) this))))
 
-(defn throw-expr [m] (map->ThrowExpr m))
+(defn throw-node [m] (map->ThrowNode m))
 
 )
