@@ -461,16 +461,18 @@
    fipp.ednize/IEdn {-edn ([this] (list `fn name lookup))}}))
 
 (udt/deftype FnType
-  [arg]
+  [arities]
   {PType nil
    fipp.ednize/IOverride nil
-   fipp.ednize/IEdn {-edn ([this] (list `fn arg))}})
+   fipp.ednize/IEdn {-edn ([this] (list `fn arities))}})
 
 (defns fn-type? [x _ > c/boolean?] (instance? FnType x))
 
+(defns fn-type>arities [^FnType x fn-type?] (.-arities x))
+
 (defn fn
-  [arg & args ] ; TODO fix — & args should have been sufficient but `defnt` has a bug that way
-  (FnType. (cons arg args))
+  [arity & arities] ; TODO fix — & args should have been sufficient but `defnt` has a bug that way
+  (FnType. (cons arity arities))
   #_[name-  (s/nilable c/symbol?)
    lookup _ #_(t/map-of t/integer?
                       (t/or (spec spec? "output-spec")
