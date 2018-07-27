@@ -255,7 +255,7 @@ Take the below code:
 It is infeasible to do inferences in the general case for the following reasons:
 - The code will be complex and greatly increase time it takes to get any value out of `defnt`
 - The code will likely have high computational complexity even if some impressive algorithm comes out of it
-- Even if the code could do it instantly, it would still be a maintenance issue to try to mentally work out for each inference what that ends up being. Labels help quite a lot.
+- **Even if the code could do it instantly, it would still be a maintenance issue to try to mentally work out for each inference what that ends up being. Labels help quite a lot.**
 
 I think the best approach is not inference, but rather being able to at least do:
 - Input/output specs that rely on the input/output specs of other spec'ed fns
@@ -265,13 +265,13 @@ Thus the code turns into:
 *(TODO: conditionally optional arities etc.)*
 
 ```clojure
-(t/def rf? "Reducing function"
-  (t/fn [    {:doc "seed arity"}]
-        [_   {:doc "completing arity"}]
-        [_ _ {:doc "reducing arity"}]))
+(def rf? "Reducing function"
+  (t/fn [      {:doc "seed arity"}]
+        [:_    {:doc "completing arity"}]
+        [:_ :_ {:doc "reducing arity"}]))
 
-(t/def xf? "Transforming function"
-  (t/fn [rf? > rf?]))
+(def xf? "Transforming function"
+  (t/fn [rf? :> rf?]))
 
 (defnt transduce
   ([        f rf?,        xs t/reducible?] (transduce identity f     xs))
