@@ -3,6 +3,7 @@
     [clojure.core                               :as core]
     [quantum.untyped.core.analyze.expr          :as xp
       :refer [>expr]]
+    [quantum.untyped.core.compare               :as ucomp]
     [quantum.untyped.core.data.hash             :as uhash]
     [quantum.untyped.core.fn
       :refer [fn1]]
@@ -160,8 +161,33 @@
             [a*# (type>type-combos ~a)
              b*# (type>type-combos ~b)]
        ;; Symmetry
-       (is= c#             (t/compare a*# b*#))
-       (is= (t/inverse c#) (t/compare b*# a*#))))))
+       (is= c#                (t/compare a*# b*#))
+       (is= (ucomp/invert c#) (t/compare b*# a*#))))))
+
+#?(:clj
+(defmacro test-comparison|set
+  "Performs a `t/compare` on `a` and `b`, ensuring that their relationship is symmetric, and that
+   the inputs are internally commutative if applicable (e.g. if `a` is an `AndType`, ensures that
+   it is commutative).
+   The basis comparison is the first input."
+  [c #_t/comparisons a #_t/type? b #_t/type?]
+  `(let [c# ~c, a# ~a, b# ~b]
+     ;; Symmetry
+     (is= c#                (tcomp/compare|set a# b#))
+     (is= (ucomp/invert c#) (tcomp/compare|set b# a#)))))
+
+#?(:clj
+(defmacro test-comparison|fn
+  "Performs a `tcomp/compare|input` and `tcomp/compare|output` on `a` and `b`, ensuring that the
+   comparison-relationship between `a` and `b` is symmetric.
+   The basis comparison is the first input."
+  [[c|out #_t/comparisons, c|in #_t/comparisons] #__, a #_t/type? b #_t/type?]
+  `(let [c|out# ~c|out, c|in# ~c|in, a# ~a, b# ~b]
+     ;; Symmetry
+     (is= c|in#                 (tcomp/compare|in  a# b#))
+     (is= (ucomp/invert c|in#)  (tcomp/compare|in  b# a#))
+     (is= c|out#                (tcomp/compare|out a# b#))
+     (is= (ucomp/invert c|out#) (tcomp/compare|out b# a#)))))
 
 (def comparison-combinations
   ["#{<}"
@@ -784,6 +810,24 @@
   (testing "universal class(-set) identity"
     (is (t/= t/val? (& t/any? t/val?)))))
 
+(deftest test|set
+  (testing "< , >"
+    (test-comparison|set -1 #{1}     #{1 2})
+    (test-comparison|set -1 #{1 2}   #{1 2 3}))
+  (testing "="
+    (test-comparison|set  0 #{}      #{})
+    (test-comparison|set  0 #{1}     #{1})
+    (test-comparison|set  0 #{1 2}   #{1 2}))
+  (testing "><"
+    (test-comparison|set  2 #{1 2}   #{1 3})
+    (test-comparison|set  2 #{1 2}   #{1 3})
+    (test-comparison|set  2 #{1 2 3} #{1 4}))
+  (testing "<>"
+    (test-comparison|set  3 #{}      #{1})
+    (test-comparison|set  3 #{}      #{1 2})
+    (test-comparison|set  3 #{1}     #{2})
+    (test-comparison|set  3 #{3}     #{1 2})))
+
 ;; TODO incorporate into the other test?
 (deftest test|fn
   #_"When we compare a t/fn to another t/fn, we are comparing set extensionality, as always.
@@ -803,40 +847,139 @@
      to behave.
      "
   ;; [0 1 2] means t/compare|input is 0, t/compare|output is 1, and t/compare is 2
+    "Liskov’s Substitution Principle
+     Contract satisfaction ('Growth') is `t/<=|input` (you cannot require more) and `t/>=|output`
+     (you cannot guarantee less)
+     - Inputs
+       - I require an animal and you give me a sheep:
+         - `(t/<= sheep? animal?)`
+       - If I require an animal and you give me a sheep and some wheat, it has to be in an
+         acceptable open container of some sort (generally a map) because the caller is not
+         guaranteed to know how to handle it otherwise:
+         - `(t/<> (t/tuple sheep? wheat?) animal?)
+         - `(t/<> (t/map :requirement sheep? :extra0 wheat?) animal?)
+         - `(t/<= (t/closed-map :requirement sheep? :extra0 wheat?)
+                  (t/merge (t/closed-map :requirement animal?) (t/map-of t/keyword? t/any?)))
+         - `(t/<= (t/map :requirement sheep? :extra0 wheat?)
+                  (t/map :requirement animal?))
+     - Outputs
+       - I guarantee an animal and I provide a sheep:
+         - `(t/<= sheep? animal?)`
+       - If I guarantee an animal and I provide a sheep and some wheat, it has to be in an
+         acceptable open container of some sort (generally a map) because the caller is not
+         guaranteed to know how to handle it otherwise:
+         - `(t/<> (t/tuple sheep? wheat?) animal?)
+         - `(t/<> (t/map :guarantee sheep? :extra0 wheat?) animal?)
+         - `(t/<= (t/closed-map :guarantee sheep? :extra0 wheat?)
+                  (t/merge (t/closed-map :requirement animal?) (t/map-of t/keyword? t/any?)))
+     Contract non-satisfaction ('Breakage') is `>=|input` (input covariance) and `t/<=|output`
+     (output contravariance)
+     - Inputs
+       - I require an animal but you give me any old organism
+     - Outputs
+       - I guarantee an animal but I provide any old organism
+       - I guarantee a sheep and some wheat but I provide only a sheep
+         - (t/?? (t/map :guarantee))"
+
+  ;; For comparing arities:
+  ;; (This uses set/difference in both directions)
+  ;; (set/compare (-> f0 fn>arities (map count) set) (-> f1 fn>arities (map count) set))
+
+  (testing "output <"
+    (testing "input <"
+      (test-comparison|fn [-1 -1] (t/fn [t/boolean? :> t/boolean?])
+                                  (t/fn []
+                                        [t/any?])))
+    (testing "input =")
+    (testing "input >")
+    (testing "input ><")
+    (testing "input <>"))
+  (testing "output ="
+    (testing "input <"
+      (testing "due to input arity <"
+        (test-comparison|fn [ 0 -1] (t/fn [t/any?])
+                                    (t/fn []
+                                          [t/any?])))
+      (testing "due to input types <"
+        (test-comparison|fn [ 0 -1] (t/fn []
+                                          [t/boolean?])
+                                    (t/fn []
+                                          [t/any?])))
+      (testing "due to input arity and types <"
+        (test-comparison|fn [ 0 -1] (t/fn [t/boolean?])
+                                    (t/fn []
+                                          [t/any?]))))
+    (testing "input ="
+      (test-comparison|fn [ 0  0] (t/fn [])
+                                  (t/fn [])))
+    (testing "input >")
+    (testing "input ><")
+    (testing "input <>"))
+  (testing "output >"
+    (testing "input <"
+      (testing "due to input arity <"
+        (test-comparison|fn [ 1 -1] (t/fn [t/any?])
+                                    (t/fn []
+                                          [t/any? :> t/boolean?])))
+      (testing "due to input types <"
+        (test-comparison|fn [ 1 -1] (t/fn []
+                                          [t/boolean?])
+                                    (t/fn []
+                                          [t/any? :> t/boolean?])))
+      (testing "due to input arity and types <"
+        (test-comparison|fn [ 1 -1] (t/fn [t/boolean?])
+                                    (t/fn []
+                                          [t/any? :> t/boolean?]))))
+    (testing "input ="
+      (test-comparison|fn [ 1  0] (t/fn [:> t/boolean?])
+                                  (t/fn []))
+      (test-comparison|fn [ 1  0] (t/fn [:> t/boolean?]
+                                        [t/any? :> t/boolean?])
+                                  (t/fn []
+                                        [t/any?])))
+    (testing "input >")
+    (testing "input ><")
+    (testing "input <>"))
+  (testing "output ><"
+    (testing "input <"
+      (test-comparison|fn [ 2 -1] (t/fn [t/boolean? :> i|><0])
+                                  (t/fn []
+                                        [t/any?     :> i|><1])))
+    (testing "input =")
+    (testing "input >")
+    (testing "input ><")
+    (testing "input <>"))
+  (testing "output <>"
+    (testing "input <")
+    (testing "input =")
+    (testing "input >")
+    (testing "input ><")
+    (testing "input <>"))
+
   (testing "input arities <"
     (testing "input types <"
-      (testing "output <"
-        (test-comparison|fn [-1 -1 -1] (t/fn    [t/boolean? :> t/boolean?])
-                                       (t/fn [] [t/any?])))
-      (testing "output ="
-        (test-comparison|fn [-1  0  ?] (t/fn    [t/boolean?])
-                                       (t/fn [] [t/any?])))
-      (testing "output >"
-        (test-comparison|fn [-1  1  2] (t/fn    [t/boolean?])
-                                       (t/fn [] [t/any? :> t/boolean?])))
-      (testing "output ><"
-        (test-comparison|fn [-1  2  2] (t/fn    [t/boolean? :> i|><0])
-                                       (t/fn [] [t/any?     :> i|><1])))
       (testing "output <>"
-        (test-comparison|fn [-1  3  2] (t/fn    [t/boolean? :> t/boolean?])
-                                       (t/fn [] [t/any?     :> t/long?]))))
+        (test-comparison|fn [-1  3  ?] (t/fn                 [t/boolean? :> t/boolean?])
+                                       (t/fn []              [t/any?     :> t/long?]))))
     (testing "input types ="
       (testing "output <"
-        (test-comparison|fn [-1 -1 -1] (t/fn [:> t/boolean?])
-                                       (t/fn [] [t/any?])))
+        (test-comparison|fn [-1 -1  ?] (t/fn [:> t/boolean?])
+                                       (t/fn []              [t/any?])))
       (testing "output ="
         (test-comparison|fn [-1  0  ?] (t/fn [])
-                                       (t/fn [] [t/any?])))
+                                       (t/fn []              [t/any?])))
       (testing "output >"
-        (test-comparison|fn [-1  1  2] (t/fn [])
+        (test-comparison|fn [-1  1  ?] (t/fn [])
                                        (t/fn [:> t/boolean?] [t/any? :> t/long?])))
       (testing "output ><")
       (testing "output <>"))
     (testing "input types >"
-      (testing "output <")
+      (testing "output <"
+        (test-comparison|fn [ 2 -1  ?] (t/fn    [t/any?])
+                                       (t/fn [] [t/long?])))
       (testing "output ="
-        (test-comparison|fn [ 2  0  ?]  (t/fn    [t/any?])
-                                        (t/fn [] [t/boolean?])))
+        (test-comparison|fn [ 2  0  ?] (t/fn                [t/any?])
+                                       (t/fn []             [t/boolean?])))
       (testing "output >")
       (testing "output ><")
       (testing "output <>"))
@@ -862,7 +1005,7 @@
                                        (t/fn [t/any?])))
       (testing "output >"
         (test-comparison|fn [-1  1  2] (t/fn [t/boolean?])
-                                       (t/fn [t/any? :> t/boolean?])))
+                                       (t/fn [t/any?     :> t/boolean?])))
       (testing "output ><"
         (test-comparison|fn [-1  2  2] (t/fn [t/boolean? :> i|><0])
                                        (t/fn [t/any?     :> i|><1])))
@@ -872,124 +1015,11 @@
     (testing "input types ="
       (testing "output <")
       (testing "output ="
-        (test-comparison|fn [ 0  0  0] (t/fn [])
-                                       (t/fn [])))
+        )
       (testing "output >"
-        (test-comparison|fn [ 0  1  1] (t/fn [])
-                                       (t/fn [:> t/boolean?])))
+        )
       (testing "output ><")
       (testing "output <>"))
-    (testing "input types >"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types ><"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types <>"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>")))
-  (testing "input arities >"
-    (testing "input types <"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types ="
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types >"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types ><"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types <>"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>")))
-  (testing "input arities ><"
-    (testing "input types <"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types ="
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types >"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types ><"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types <>"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>")))
-  (testing "input arities <>"
-    (testing "input types <"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types ="
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types >"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types ><"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))
-    (testing "input types <>"
-      (testing "output <")
-      (testing "output =")
-      (testing "output >")
-      (testing "output ><")
-      (testing "output <>"))))
 
 (require '[quantum.untyped.core.data.bits :as ubit])
 (let [cs [0 0]]
