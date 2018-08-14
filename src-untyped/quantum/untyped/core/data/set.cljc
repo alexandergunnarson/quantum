@@ -1,12 +1,15 @@
 (ns quantum.untyped.core.data.set
-  (:refer-clojure :exclude [not])
+  (:refer-clojure :exclude [- +, not < <= >= >])
   (:require
 #?@(:clj
    [[seqspert.hash-set]])
-    [clojure.core              :as core]
-    [clojure.set               :as set]
-    [linked.core               :as linked]
-    [quantum.untyped.core.core :as ucore]))
+    [clojure.core                 :as core]
+    [clojure.set                  :as set]
+    [linked.core                  :as linked]
+    [quantum.untyped.core.compare :as ucomp]
+    [quantum.untyped.core.core    :as ucore]
+    [quantum.untyped.core.vars
+      :refer [defalias]]))
 
 (ucore/log-this-ns)
 
@@ -16,6 +19,11 @@
 (def oset        ordered-set)
 
 (def not complement)
+
+; (and a (not b))
+(defalias differencel         set/difference)
+(defalias -                   differencel)
+(defalias relative-complement differencel)
 
 #?(:clj
     (defn union
@@ -34,3 +42,36 @@
       ([s0 s1 & ss]
         (reduce union (union s0 s1) ss)))
    :cljs (def union set/union))
+
+(defalias + union)
+
+;; ===== Comparison ===== ;;
+
+(defn compare [s0 #_set?, s1 #_set?]
+  (if (empty? s0)
+      (if (empty? s1) ucomp/=ident ucomp/<>ident)
+      (if (empty? s1)
+          ucomp/<>ident
+          ;; TODO do fewer comparisons here
+          (let [diff0 (- s0 s1), diff1 (- s1 s0)]
+            (if (empty? diff0)
+                (if (empty? diff1)
+                    ucomp/=ident
+                    ucomp/<ident)
+                (if (empty? diff1)
+                    ucomp/>ident
+                    (if (some #(contains? s1 %) s0)
+                        ucomp/><ident
+                        ucomp/<>ident)))))))
+
+(defn <     [x0 x1] (ucomp/compf<  compare x0 x1))
+(defalias proper-subset?  <)
+(defn <=    [x0 x1] (ucomp/compf<= compare x0 x1))
+(defalias subset? <=)
+(defn >=    [x0 x1] (ucomp/compf>= compare x0 x1))
+(defalias superset? >=)
+(defn >     [x0 x1] (ucomp/compf>  compare x0 x1))
+(defalias proper-superset? >)
+(defn ><    [x0 x1] (ucomp/compf>< compare x0 x1))
+(defn <>    [x0 x1] (ucomp/compf<> compare x0 x1))
+(defalias disjoint? >)
