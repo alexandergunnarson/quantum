@@ -50,7 +50,7 @@
              :refer [educe join]]
            [quantum.untyped.core.refs
              :refer [?deref]]
-           [quantum.untyped.core.spec                  :as s]
+           [quantum.untyped.core.spec                  :as us]
            [quantum.untyped.core.type.compare          :as utc
              :refer [<ident =ident >ident ><ident <>ident]]
            [quantum.untyped.core.type.core             :as utcore]
@@ -73,7 +73,8 @@
               UniversalSetType EmptySetType
               NotType OrType AndType
               ProtocolType ClassType
-              ValueType])))
+              ValueType
+              FnType])))
 
 (ucore/log-this-ns)
 
@@ -97,7 +98,7 @@
 
 ;; ===== Comparison ===== ;;
 
-(uvar/defaliases utc compare < <= = not= >= > >< <> inverse)
+(uvar/defaliases utc compare compare|in compare|out < <= = not= >= > >< <> inverse)
 
 ;; ===== Type Reification Constructors ===== ;;
 
@@ -195,7 +196,7 @@
                                       0 empty-set
                                       1 (first args)
                                       (OrType. uhash/default uhash/default args (atom nil))))))))))
-  ([t0 utr/type?, t1 utr/type? & ts (s/seq-of utr/type?) > utr/type?] (reduce - (- t0 t1) ts)))
+  ([t0 utr/type?, t1 utr/type? & ts (us/seq-of utr/type?) > utr/type?] (reduce - (- t0 t1) ts)))
 
 (defn isa? [x]
   (ifs (utpred/protocol? x)
@@ -208,7 +209,7 @@
 (defns >type
   "Coerces ->`x` to a type, recording its ->`name-sym` if provided."
   ([x _ > utr/type?] (>type x nil))
-  ([x _, name-sym (s/nilable c/symbol?) > utr/type?]
+  ([x _, name-sym (us/nilable c/symbol?) > utr/type?]
     #?(:clj
         (ifs
           (satisfies? PType x)
@@ -442,48 +443,13 @@
   "Creates a type that ... TODO"
   [pred (<= iterable?), t utr/type?] (TODO))
 
-;; TODO do this
-#_(do
-
-(udt/deftype FnType
-  [name   #_(t/? t/symbol?)
-   dispatch ...
-   meta]
-  {PType nil
-   ;; Outputs whether the args match any input spec
-   ?Fn   {invoke    ([this args]
-                      (if-let [arity-specs (get lookup (count args))]
-                        (->> arity-specs (uc/map+ first) (seq-or #(% args)))
-                        false))}
-   ?Meta {meta      ([this] meta)
-          with-meta ([this meta'] (FnSpec. name lookup spec meta'))}
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn {-edn ([this] (list `fn name lookup))}}))
-
-(udt/deftype FnType
-  [arities]
-  {PType nil
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn {-edn ([this] (list `fn arities))}})
-
-(defns fn-type? [x _ > c/boolean?] (instance? FnType x))
-
-(defns fn-type>arities [^FnType x fn-type?] (.-arities x))
-
-(defn fn
-  [arity & arities] ; TODO fix — & args should have been sufficient but `defnt` has a bug that way
-  (FnType. (cons arity arities))
-  #_[name-  (s/nilable c/symbol?)
-   lookup _ #_(t/map-of t/integer?
-                      (t/or (spec spec? "output-spec")
-                            (t/vec-of (t/tuple (t/vec-of (spec spec? "input-spec"))
-                                               (spec spec? "output-spec")))))]
-  #_(let [spec (->> lookup vals
-                  (uc/map+ (c/fn [spec-or-arity-specs]
-                             (if (spec? spec-or-arity-specs)
-                                 spec-or-arity-specs
-                                 (->> spec-or-arity-specs (map (TODO)))))))]
-    (FnType. name- lookup spec nil)))
+(defn fn [arity & arities] ; TODO fix — & args should have been sufficient but `defnt` has a bug that way
+  (let [name- nil
+        arities-form (cons arity arities)
+        arities (->> arities-form
+                     (uc/map+ #(us/conform ::fn-type|arity %))
+                     (uc/group-by #(-> % :input-types count)))]
+    (FnType. name- arities-form arities)))
 
 (defn unkeyed
   "Creates an unkeyed collection type, in which the collection may
@@ -518,7 +484,7 @@
 #?(:clj (def primitive-classes (->> unboxed-symbol->type-meta vals (uc/map+ :unboxed) (join #{}))))
 
 (defns- -type>classes
-  [t utr/type?, classes c/set? > (s/set-of (s/nilable #?(:clj c/class? :cljs c/fn?)))]
+  [t utr/type?, classes c/set? > (us/set-of (us/nilable #?(:clj c/class? :cljs c/fn?)))]
   (cond (utr/class-type? t)
           (conj classes (utr/class-type>class t))
         (utr/value-type? t)
@@ -540,7 +506,7 @@
 (defns type>classes
   "Outputs the set of all the classes ->`t` can embody according to its various conditional
    branches, if any. Ignores nils, treating in Clojure simply as a `java.lang.Object`."
-  [t utr/type? > (s/set-of (s/nilable #?(:clj c/class? :cljs c/fn?)))] (-type>classes t #{}))
+  [t utr/type? > (us/set-of (us/nilable #?(:clj c/class? :cljs c/fn?)))] (-type>classes t #{}))
 
 #?(:clj
 (defns- -type>?class-value [t utr/type?, type-nilable? c/boolean?]

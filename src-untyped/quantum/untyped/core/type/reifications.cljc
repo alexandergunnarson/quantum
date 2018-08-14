@@ -2,6 +2,7 @@
           (:refer-clojure :exclude
             [==])
           (:require
+            [clojure.set                                :as set]
             [fipp.ednize                                :as fedn]
             [quantum.untyped.core.analyze.expr
 #?@(:cljs    [:refer [Expression]])]
@@ -9,11 +10,15 @@
               :refer [== not==]]
             [quantum.untyped.core.core                  :as ucore]
             [quantum.untyped.core.data.hash             :as uhash]
+
             [quantum.untyped.core.defnt
               :refer [defns]]
+            [quantum.untyped.core.error
+              :refer [TODO]]
             [quantum.untyped.core.form                  :as uform
               :refer [>form]]
-            [quantum.untyped.core.form.generate.deftype :as udt])
+            [quantum.untyped.core.form.generate.deftype :as udt]
+            [quantum.untyped.core.spec                  :as us])
  #?(:clj  (:import
             [quantum.untyped.core.analyze.expr Expression])))
 
@@ -218,3 +223,27 @@
 (defns value-type? [x _] (instance? ValueType x))
 
 (defns value-type>value [v value-type?] (.-v ^ValueType v))
+
+;; ----- FnType ----- ;;
+
+(udt/deftype FnType
+  [name arities-form arities]
+  {PType nil
+   ;; Outputs whether the args match any input spec
+   ?Fn {invoke ([this args] (TODO))}
+   fipp.ednize/IOverride nil
+   fipp.ednize/IEdn {-edn ([this] (list 'quantum.untyped.core.type/fn arities-form))}})
+
+(defns fn-type? [x _ > boolean?] (instance? FnType x))
+
+(defns fn-type>arities [^FnType x fn-type?] (.-arities x))
+
+(us/def :quantum.untyped.core.type/fn-type|arity
+  (us/and
+    (us/cat
+      :input-types      (us/* type?)
+      :output-type-pair (us/? (us/cat :ident #{:>} :type type?)))
+    (us/conformer
+      (fn [x] (-> x (update :output-type-pair #(or (:type %) universal-set))
+                    (update :input-types vec)
+                    (set/rename-keys {:output-type-pair :output-type}))))))
