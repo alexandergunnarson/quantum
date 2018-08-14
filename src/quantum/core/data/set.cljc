@@ -4,14 +4,14 @@
     :attribution "alexandergunnarson"}
   quantum.core.data.set
   (:refer-clojure :exclude
-    [+ - and or not split-at hash-set])
+    [+ -, and or not, compare, split-at hash-set])
   (:require
     [clojure.core             :as core]
     [clojure.set              :as set]
     [clojure.data.avl         :as avl]
     [linked.core              :as linked]
     [quantum.core.vars        :as var
-      :refer [defalias]]
+      :refer [defalias defaliases]]
     [quantum.core.error       :as err
       :refer [>ex-info TODO]]
     [quantum.core.fn          :as fn]
@@ -72,26 +72,9 @@
   {:see-also "net/openhft/chronicle/algo/bitset/ConcurrentFlatBitSetFrame"}
   [& args] (TODO)))
 
-; ============ PREDICATES ============
+;; ===== Comparison ===== ;;
 
-(defn xset?
-  {:attribution "alexandergunnarson"
-   :todo ["A cool idea... but improve performance"]}
-  [fn-key set1 set2]
-  (let [funcs
-         (case fn-key
-           :sub          {:eq <= :fn #(vector (partial contains? %2) %1)}
-           :super        {:eq >= :fn #(vector (partial contains? %1) %2)}
-           :proper-sub   {:eq <  :fn #(vector %2 %1)}
-           :proper-super {:eq >  :fn #(vector %1 %2)})]
-    (core/and ((:eq funcs) (count set1) (count set2))
-              (apply every? ((:fn funcs) set1 set2)))))
-
-#_(def subset?          #(xset? :sub          %1 %2))
-(defalias subset?          set/subset?)
-(def      superset?        #(xset? :super        %1 %2))
-(def      proper-subset?   #(xset? :proper-sub   %1 %2))
-(def      proper-superset? #(xset? :proper-super %1 %2))
+(defaliases u compare < proper-subset? <= subset? >= superset? > proper-superset?)
 
 ; ============ OPERATIONS ============
 
@@ -130,10 +113,7 @@
 (defalias and                 intersection    )
 
 ; (and a (not b))
-(defalias difference          set/difference  )
-(defalias -                   difference      )
-(defalias relative-complement difference      )
-(defalias differencel         difference      )
+(defaliases u - relative-complement differencel)
 
 (def differencer (fn/reversea differencel))
 
