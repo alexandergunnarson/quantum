@@ -10,10 +10,11 @@
               :refer [seq-and seq-or]]
             ;; TODO remove this dependency
             [quantum.untyped.core.classes           :as uclass]
-            [quantum.untyped.core.compare
-              :refer [==]]
+            [quantum.untyped.core.compare           :as ucomp
+              :refer [== <ident =ident >ident ><ident <>ident comparison?]]
             [quantum.untyped.core.core              :as ucore]
             [quantum.untyped.core.data.bits         :as ubit]
+            [quantum.untyped.core.data.set          :as uset]
             [quantum.untyped.core.defnt
               :refer [defns defns-]]
             [quantum.untyped.core.error
@@ -30,6 +31,7 @@
                       not-type? or-type? and-type?
                       protocol-type? class-type?
                       value-type?
+                      fn-type?
                       #?@(:cljs [UniversalSetType EmptySetType
                                  NotType OrType AndType
                                  ProtocolType ClassType
@@ -50,26 +52,11 @@
 
 ;; ===== (Comparison) idents ===== ;;
 
-(def ^:const <ident -1)
-(def ^:const =ident  0)
-(def ^:const >ident  1)
-(def ^:const ><ident 2)
-(def ^:const <>ident 3)
-
 (def- fn<  (fn' <ident))
 (def- fn=  (fn' =ident))
 (def- fn>  (fn' >ident))
 (def- fn>< (fn' ><ident))
 (def- fn<> (fn' <>ident))
-
-(def comparisons #{<ident =ident >ident ><ident <>ident})
-(def comparison? comparisons)
-
-(defns inverse [comparison comparison? > comparison?]
-  (case comparison
-    -1      >ident
-     1      <ident
-    (0 2 3) comparison))
 
 ;; ===== Comparison Implementations ===== ;;
 
@@ -421,43 +408,60 @@
 (defns <
   "Computes whether the extension of type ->`t0` is a strict subset of that of ->`t1`."
   ([t1 type?] #(< % t1))
-  ([t0 type?, t1 type? > boolean?] (c/= (compare t0 t1) <ident)))
+  ([t0 type?, t1 type? > boolean?] (ucomp/compf< compare t0 t1)))
 
 (defns <=
   "Computes whether the extension of type ->`t0` is a (lax) subset of that of ->`t1`."
   ([t1 type?] #(<= % t1))
-  ([t0 type?, t1 type? > boolean?]
-    (let [ret (compare t0 t1)] (or (c/= ret <ident) (c/= ret =ident)))))
+  ([t0 type?, t1 type? > boolean?] (ucomp/compf<= compare t0 t1)))
 
 (defns =
   "Computes whether the extension of type ->`t0` is equal to that of ->`t1`."
   ([t1 type?] #(= % t1))
-  ([t0 type?, t1 type? > boolean?] (c/= (compare t0 t1) =ident)))
+  ([t0 type?, t1 type? > boolean?] (ucomp/compf= compare t0 t1)))
 
 (defns not=
   "Computes whether the extension of type ->`t0` is not equal to that of ->`t1`."
   ([t1 type?] #(not= % t1))
-  ([t0 type?, t1 type? > boolean?] (not (= t0 t1))))
+  ([t0 type?, t1 type? > boolean?] (ucomp/compf-not= compare t0 t1)))
 
 (defns >=
   "Computes whether the extension of type ->`t0` is a (lax) superset of that of ->`t1`."
   ([t1 type?] #(>= % t1))
-  ([t0 type?, t1 type? > boolean?]
-    (let [ret (compare t0 t1)] (or (c/= ret >ident) (c/= ret =ident)))))
+  ([t0 type?, t1 type? > boolean?] (ucomp/compf>= compare t0 t1)))
 
 (defns >
   "Computes whether the extension of type ->`t0` is a strict superset of that of ->`t1`."
   ([t1 type?] #(> % t1))
-  ([t0 type?, t1 type? > boolean?] (c/= (compare t0 t1) >ident)))
+  ([t0 type?, t1 type? > boolean?] (ucomp/compf> compare t0 t1)))
 
 (defns ><
   "Computes whether it is the case that the intersect of the extensions of type ->`t0`
    and ->`t1` is non-empty, and neither ->`t0` nor ->`t1` share a subset/equality/superset
    relationship."
   ([t1 type?] #(>< % t1))
-  ([t0 type?, t1 type? > boolean?] (c/= (compare t0 t1) ><ident)))
+  ([t0 type?, t1 type? > boolean?] (ucomp/compf>< compare t0 t1)))
 
 (defns <>
   "Computes whether the respective extensions of types ->`t0` and ->`t1` are disjoint."
   ([t1 type?] #(<> % t1))
-  ([t0 type? t1 type? > boolean?] (c/= (compare t0 t1) <>ident)))
+  ([t0 type? t1 type? > boolean?] (ucomp/compf<> compare t0 t1)))
+
+;; ===== FnType ===== ;;
+
+(do
+  (defns compare|in [t0 fn-type?, t1 fn-type?]
+    (let [a0 (utr/fn-type>arities t0)
+          a1 (utr/fn-type>arities t1)
+          arglist-count-comparison (uset/compare (-> a0 keys set) (-> a1 keys set))]
+      arglist-count-comparison))
+  (compare|in
+    (quantum.untyped.core.type/fn
+      [])
+    (quantum.untyped.core.type/fn
+      []
+      [quantum.untyped.core.type/any?])))
+
+
+
+(defns compare|out [t0 fn-type?, t1 fn-type?] 3)
