@@ -388,7 +388,7 @@
    :aot '[sparkling.serialization sparkling.destructuring]
    ;; ===== REPL ===== ;;
    :repl-options
-     {:init '(do (clojure.core/require
+     {:init nil #_'(do (clojure.core/require
                    'quantum.core.print
                    'quantum.core.print.prettier)
                  (quantum.core.print.prettier/extend-pretty-printing!)
