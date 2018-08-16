@@ -40,14 +40,20 @@
 
 #?(:clj (defmacro nor  [& args] `(not (or  ~@args))))
 
+;; NOTE: n-ary `xor` is true when the number of 1-bits is odd.
+;; The below implements "some but not all" as in `(and (some identity args) (not (every? identity args)))`
 #?(:clj
 (defmacro xor
   {:attribution 'alexandergunnarson}
   ([] nil)
-  ([x] false)
-  ([x y] (if x (not y) y))
-  ([x y & next]
-    `(if ~x (when-not (and ~y ~@next) ~x) (xor ~y ~@next)))))
+  ([a] false)
+  ([a b] `(let [a# ~a b# ~b] (if a# (not b#) b#)))
+  ([a b & next]
+   `(let [a# ~a b# ~b]
+      (if a#
+          (when-not (and b# ~@next) a#)
+          (xor b# ~@next))))))
+
 
 ;; TODO `xnor`
 #?(:clj (declare xnor))
