@@ -165,18 +165,6 @@
        (is= (ucomp/invert c#) (t/compare b*# a*#))))))
 
 #?(:clj
-(defmacro test-comparison|set
-  "Performs a `t/compare` on `a` and `b`, ensuring that their relationship is symmetric, and that
-   the inputs are internally commutative if applicable (e.g. if `a` is an `AndType`, ensures that
-   it is commutative).
-   The basis comparison is the first input."
-  [c #_t/comparisons a #_t/type? b #_t/type?]
-  `(let [c# ~c, a# ~a, b# ~b]
-     ;; Symmetry
-     (is= c#                (tcomp/compare|set a# b#))
-     (is= (ucomp/invert c#) (tcomp/compare|set b# a#)))))
-
-#?(:clj
 (defmacro test-comparison|fn
   "Performs a `tcomp/compare|input` and `tcomp/compare|output` on `a` and `b`, ensuring that the
    comparison-relationship between `a` and `b` is symmetric.
@@ -810,24 +798,6 @@
   (testing "universal class(-set) identity"
     (is (t/= t/val? (& t/any? t/val?)))))
 
-(deftest test|set
-  (testing "< , >"
-    (test-comparison|set -1 #{1}     #{1 2})
-    (test-comparison|set -1 #{1 2}   #{1 2 3}))
-  (testing "="
-    (test-comparison|set  0 #{}      #{})
-    (test-comparison|set  0 #{1}     #{1})
-    (test-comparison|set  0 #{1 2}   #{1 2}))
-  (testing "><"
-    (test-comparison|set  2 #{1 2}   #{1 3})
-    (test-comparison|set  2 #{1 2}   #{1 3})
-    (test-comparison|set  2 #{1 2 3} #{1 4}))
-  (testing "<>"
-    (test-comparison|set  3 #{}      #{1})
-    (test-comparison|set  3 #{}      #{1 2})
-    (test-comparison|set  3 #{1}     #{2})
-    (test-comparison|set  3 #{3}     #{1 2})))
-
 ;; TODO incorporate into the other test?
 (deftest test|fn
   #_"When we compare a t/fn to another t/fn, we are comparing set extensionality, as always.
@@ -1027,18 +997,18 @@
     (reduce
       (fn [[ret found] c]
         (let [found' (-> found (ubit/conj c) long)]
-          (ifs (ubit/contains? found' tcomp/<ident)
+          (ifs (ubit/contains? found' ucomp/<ident)
                )
 
 
-          (ifs (or (ubit/contains? found' tcomp/<ident)
-                   (ubit/contains? found' tcomp/=ident))
-               (reduced [tcomp/<ident found'])
+          (ifs (or (ubit/contains? found' ucomp/<ident)
+                   (ubit/contains? found' ucomp/=ident))
+               (reduced [ucomp/<ident found'])
 
-               (or (ubit/contains? found' tcomp/><ident)
-                   (and (ubit/contains? found' tcomp/>ident)
-                        (ubit/contains? found' tcomp/<>ident)))
-               [tcomp/><ident found']
+               (or (ubit/contains? found' ucomp/><ident)
+                   (and (ubit/contains? found' ucomp/>ident)
+                        (ubit/contains? found' ucomp/<>ident)))
+               [ucomp/><ident found']
 
                [c found'])))
       [(first cs) ubit/empty]
