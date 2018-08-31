@@ -109,7 +109,7 @@
   ([^keyword?          k]
     (-> (get formats k)
         (or (err! "Format not found" k))
-        ->formatter))))
+        ->formatter-protocol))))
 
 #?(:clj
 (defnt ^ZoneId ->zone-id
@@ -198,7 +198,7 @@
                     (#?(:clj LocalDateTime/now   :cljs js/JSJoda.LocalDateTime.now  ) x))
   (^{:doc "Obtain an instance of LocalDateTime from an ISO8601 formatted text string"}
    [^string? x    ] (#?(:clj LocalDateTime/parse :cljs js/JSJoda.LocalDateTime.parse) x))
-  #?(:clj  ([^string? s format] (-> format ->formatter (.parse s) (LocalDateTime/from))))
+  #?(:clj  ([^string? s format] (-> format ->formatter-protocol (.parse s) (LocalDateTime/from))))
   #?(:cljs ([^js/Date x] (-> x js/JSJoda.nativeJs js/JSJoda.LocalDateTime.from)))
   (^{:doc "Obtain an instance of LocalDateTime from a year, month, day, hour, and minute value"}
    [#?(:cljs ^number? y
@@ -234,7 +234,7 @@
   (^{:doc "Obtain an instance of ZonedDateTime from an ISO8601 formatted text string"}
    [^string? x    ] (#?(:clj ZonedDateTime/parse :cljs js/JSJoda.ZonedDateTime.parse) x))
   ; TODO CLJS
-#?(:clj ([^string? x formatter] (ZonedDateTime/parse x (->formatter formatter))))
+#?(:clj ([^string? x formatter] (ZonedDateTime/parse x (->formatter-protocol formatter))))
   #?(:cljs ([^js/Date x] (-> x js/JSJoda.nativeJs js/JSJoda.ZonedDateTime.from)))
   (^{:doc "Obtain an instance of ZonedDateTime from a year, month, day, hour, and minute value"}
    [#?(:cljs ^js/JSJoda.ZonedDateTime t
@@ -330,9 +330,9 @@
 
 #?(:clj
 (defnt ->string*
-  ([^string?           formatting date] (.format (->formatter formatting) date))
+  ([^string?           formatting date] (.format (->formatter-protocol formatting) date))
   ([^DateTimeFormatter formatting date] (.format formatting date))
-  ([^keyword?          formatting date] (.format (->formatter formatting) date))))
+  ([^keyword?          formatting date] (.format (->formatter-protocol formatting) date))))
 
 
 (defn ->string
@@ -709,4 +709,3 @@
 
 
 ; ===== DAYS OF WEEK ===== ;
-

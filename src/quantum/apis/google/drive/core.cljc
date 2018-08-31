@@ -12,6 +12,7 @@
   (:require
     [quantum.core.collections :as coll
       :refer [join]]
+    [quantum.core.convert     :as conv]
     [quantum.core.data.set    :as set]
     [quantum.core.error       :as err
       :refer [err!]]
@@ -23,7 +24,8 @@
       :refer [validate]]
     [quantum.core.type        :as t]
     [quantum.core.vars        :as var]
-    [quantum.apis.google.auth :as gauth]))
+    [quantum.apis.google.auth :as gauth]
+    [quantum.net.http         :as http]))
 
 ;; ----- URIS ----- ;;
 
@@ -90,7 +92,11 @@
 
 ;; ----- RESOURCE TYPE: FILES ----- ;;
 
-(defn request [kind & [data :as args]]
+(def update-query-params-not-body-keys
+  #{:addParents :keepRevisionForever :ocrLanguage :removeParents :supportsTeamDrives
+    :useContentAsIndexableText})
+
+(defn request [access-token kind & [data :as args]]
   (-> (case kind
         ;; Gets a file's metadata by ID.
         :meta
@@ -106,28 +112,27 @@
           (let [{:keys [file-id updated-data]} (validate args (s/cat :file-id string? :updated-data map?))]
             {:method  :patch
              :url     (path/url-path drive-files-uri file-id)
+             :query-params (select-keys updated-data update-query-params-not-body-keys)
              :headers {"Content-Type" "application/json"}
-             :body    (conv/->json updated-data)}))
+             :body    (conv/->json (apply dissoc updated-data update-query-params-not-body-keys))}))
       (assoc :oauth-token access-token)))
 
 (defn- handle-request! [req]
-  (let [resp (-> req
-                 http/request!
-                 :body
-                 conv/json->)]
-    (if (contains? resp :error)
-        (err! "Error in Google Drive HTTP request" (:error resp))
-        resp)))
+  (let [resp (http/request! req)
+        body (-> resp :body conv/json->)]
+    (cond (contains? resp :error)    (err! "Error in Google Drive HTTP request" (:error resp))
+          (-> resp :status (>= 400)) (err! "Error in Google Drive HTTP request" resp)
+          :else                      body)))
 
-(defn request! [& args]
+(defn request! [access-token & args]
   (loop [items []
-         resp  (-> (apply request args)
+         resp  (-> (apply request access-token args)
                    handle-request!)]
     (if-let [next-page-token (:nextPageToken resp)]
       (do (log/pr ::debug "Found" (count items) "items so far")
           (validate (:items resp) vector?)
           (recur (join items (:items resp))
-                 (-> (apply request args)
+                 (-> (apply request access-token args)
                      (update :query-params assoc :pageToken next-page-token)
                      handle-request!)))
       (if (:items resp)
@@ -137,23 +142,38 @@
 (defonce *folder-id->child-ids (atom {}))
 (defonce *file-id->meta (atom {}))
 
-(defn get-children!|async [folder-id]
-  (future (swap! *folder-id->child-ids assoc folder-id
-            (->> (request! :children folder-id)
-                 (coll/map+ :id)
-                 (join #{})))
-          (log/pr ::debug "===== Done getting children of" folder-id "=====")))
+(defn move! [access-token id from-parent-id to-parent-id]
+  (request! access-token :update id {:removeParents [from-parent-id] :addParents [to-parent-id]}))
 
-(defn cached-ids->meta!|async []
-  (future (let [folder-id->child-ids @*folder-id->child-ids
-                ids (join (-> folder-id->child-ids keys set)
-                          (->> folder-id->child-ids vals (reduce (fn [a b] (join a b)))))
-                cached-ids (-> @*file-id->meta keys set)
-                need-ids (set/- ids cached-ids)]
-            (doseq [id need-ids]
-              (log/pr ::debug "Getting metadata for" id)
-              (swap! *file-id->meta assoc id (request! :meta id))))
-          (log/pr ::debug "===== Done caching metadata =====")))
+;; TODO have a better caching strategy than "force refresh all"
+
+(defn get-children! [access-token folder-id & [force?]]
+  (or (and (not force?) (get @*folder-id->child-ids folder-id))
+      (fn/with-do-let [children (->> (request! access-token :children folder-id)
+                                     (coll/map+ :id)
+                                     (join #{}))]
+        (swap! *folder-id->child-ids assoc folder-id children)
+        (log/pr ::debug "===== Done getting children of" folder-id "====="))))
+
+(defn get-meta! [access-token id & [force?]]
+  (or (and (not force?) (get @*file-id->meta id))
+      (fn/with-do-let [meta- (request! access-token :meta id)]
+        (swap! *file-id->meta assoc id meta-))))
+
+(defn get-children|meta!+ [access-token folder-id & [force?]]
+  (->> (get-children! access-token folder-id force?)
+       (coll/map+ (fn [id] (get-meta! access-token id force?)))))
+
+(defn cached-ids->meta! [access-token]
+  (let [folder-id->child-ids @*folder-id->child-ids
+        ids (join (-> folder-id->child-ids keys set)
+                  (->> folder-id->child-ids vals (reduce (fn [a b] (join a b)))))
+        cached-ids (-> @*file-id->meta keys set)
+        need-ids (set/- ids cached-ids)]
+    (doseq [id need-ids]
+      (log/pr ::debug "Getting metadata for" id)
+      (swap! *file-id->meta assoc id (request! access-token :meta id))))
+  (log/pr ::debug "===== Done caching metadata ====="))
 
 (defn file|id->name [file-id]
   (get-in @*file-id->meta [file-id :title]))
@@ -529,4 +549,3 @@
 ;       :maxApertureValue         <float>      ; The smallest f-number of the lens at the focal length used to create the photo (APEX value).
 ;       :subjectDistance          <integer>    ; The distance to the subject of the photo, in meters.
 ;       :lens                    "<string>"}}) ; The lens used to create the photo.
-
