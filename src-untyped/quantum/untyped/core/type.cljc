@@ -24,8 +24,8 @@
            [quantum.untyped.core.collections           :as uc]
            [quantum.untyped.core.collections.logic
              :refer [seq-and seq-or]]
-           [quantum.untyped.core.compare
-             :refer [==]]
+           [quantum.untyped.core.compare               :as ucomp
+             :refer [== <ident =ident >ident ><ident <>ident]]
            [quantum.untyped.core.convert
              :refer [>symbol]]
            [quantum.untyped.core.core                  :as ucore]
@@ -51,8 +51,7 @@
            [quantum.untyped.core.refs
              :refer [?deref]]
            [quantum.untyped.core.spec                  :as us]
-           [quantum.untyped.core.type.compare          :as utc
-             :refer [<ident =ident >ident ><ident <>ident]]
+           [quantum.untyped.core.type.compare          :as utcomp]
            [quantum.untyped.core.type.core             :as utcore]
            [quantum.untyped.core.type.defs             :as utdef]
            [quantum.untyped.core.type.predicates       :as utpred]
@@ -98,7 +97,7 @@
 
 ;; ===== Comparison ===== ;;
 
-(uvar/defaliases utc compare compare|in compare|out < <= = not= >= > >< <> inverse)
+(uvar/defaliases utcomp compare compare|in compare|out < <= = not= >= > >< <>)
 
 ;; ===== Type Reification Constructors ===== ;;
 
@@ -326,7 +325,7 @@
 (defns complementary? [t0 utr/type? t1 utr/type?] (= t0 (not t1)))
 
 (defns- create-logical-type|inner|or
-  [{:as accum :keys [t' utr/type?]} _, t* utr/type?, c* utc/comparison?]
+  [{:as accum :keys [t' utr/type?]} _, t* utr/type?, c* ucomp/comparison?]
   (if #?(:clj  (c/or (c/and (c/= t' object?) (c/= t* nil?))
                      (c/and (c/= t* object?) (c/= t' nil?)))
          :cljs false)
@@ -342,7 +341,7 @@
 
 (defns- create-logical-type|inner|and
   [{:as accum :keys [conj-t? c/boolean?, prefer-orig-args? c/boolean?, t' utr/type?, types _]} _
-   t* utr/type?, c* utc/comparison?]
+   t* utr/type?, c* ucomp/comparison?]
   (if       ;; Contradiction/empty-set: (& A (! A))
       (c/or (c/= c* <>ident) ; optimization before `complementary?`
             (complementary? t' t*))

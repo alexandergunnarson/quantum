@@ -294,7 +294,7 @@
 
 ;; TODO take away var indirection once done
 (def- compare|dispatch
-  (let [inverted (fn [f] (fn [t0 t1] (inverse (f t1 t0))))]
+  (let [inverted (fn [f] (fn [t0 t1] (ucomp/invert (f t1 t0))))]
     {UniversalSetType
        {UniversalSetType #'fn=
         EmptySetType     #'compare|universal+empty
@@ -461,7 +461,5 @@
     (quantum.untyped.core.type/fn
       []
       [quantum.untyped.core.type/any?])))
-
-
 
 (defns compare|out [t0 fn-type?, t1 fn-type?] 3)
