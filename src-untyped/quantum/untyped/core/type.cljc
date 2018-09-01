@@ -33,6 +33,7 @@
            [quantum.untyped.core.data.hash             :as uhash]
            [quantum.untyped.core.data.map
              #?@(:cljs [:refer [MutableHashMap]])]
+           [quantum.untyped.core.data.set              :as uset]
            [quantum.untyped.core.data.tuple]
            [quantum.untyped.core.defnt
              :refer [defns defns-]]
@@ -97,7 +98,7 @@
 
 ;; ===== Comparison ===== ;;
 
-(uvar/defaliases utcomp compare compare|in compare|out < <= = not= >= > >< <>)
+(uvar/defaliases utcomp compare < <= = not= >= > >< <>)
 
 ;; ===== Type Reification Constructors ===== ;;
 
@@ -449,6 +450,37 @@
                      (uc/map+ #(us/conform ::fn-type|arity %))
                      (uc/group-by #(-> % :input-types count)))]
     (FnType. name- arities-form arities)))
+
+(defns compare|in [x0 utr/fn-type?, x1 utr/fn-type? > ucomp/comparison?]
+  (let [ct->overloads|x0 (utr/fn-type>arities x0)
+        ct->overloads|x1 (utr/fn-type>arities x1)
+        cts-only-in-x0 (uset/- (-> ct->overloads|x0 keys set) (-> ct->overloads|x1 keys set))
+        cts-only-in-x1 (uset/- (-> ct->overloads|x1 keys set) (-> ct->overloads|x0 keys set))
+        comparison|cts (uset/compare cts-only-in-x0 cts-only-in-x1)
+        cts-in-both (->> ct->overloads|x0 (filter (fn-> first ct->overloads|x1)))
+        overloads->ored-input-types
+          ;; Yes, there must be a more performant way to do this
+          (c/fn [overloads] (->> overloads (uc/lmap :input-types) (apply uc/lmap or)))]
+    (utcomp/combine-comparisons
+      comparison|cts
+      (->> cts-in-both
+           (map (c/fn [[ct overloads|x0]]
+                  (if (zero? ct)
+                      0
+                      (utcomp/combine-comparisons
+                        (uc/lmap utcomp/compare
+                          (->> overloads|x0        overloads->ored-input-types)
+                          (->> ct ct->overloads|x1 overloads->ored-input-types))))))
+           utcomp/combine-comparisons))))
+
+(defns compare|out [x0 utr/fn-type?, x1 utr/fn-type?]
+  (let [fn-type>output-type
+          (c/fn [f] (->> f utr/fn-type>arities
+                           vals
+                           (apply concat)
+                           (uc/lmap :output-type)
+                           (apply or)))]
+    (utcomp/compare (fn-type>output-type x0) (fn-type>output-type x1))))
 
 (defn unkeyed
   "Creates an unkeyed collection type, in which the collection may

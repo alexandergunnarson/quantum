@@ -3,8 +3,13 @@
     [clojure.core                               :as core]
     [quantum.untyped.core.analyze.expr          :as xp
       :refer [>expr]]
-    [quantum.untyped.core.compare               :as ucomp]
+    [quantum.untyped.core.collections           :as c]
+    [quantum.untyped.core.compare               :as ucomp
+      :refer [<ident =ident >ident ><ident <>ident]]
     [quantum.untyped.core.data.hash             :as uhash]
+    [quantum.untyped.core.data.set              :as uset]
+    [quantum.untyped.core.defnt
+      :refer [defns]]
     [quantum.untyped.core.fn
       :refer [fn1]]
     [quantum.untyped.core.logic
@@ -17,9 +22,7 @@
     [quantum.untyped.core.type                  :as t
       :refer [& | !]]
     [quantum.untyped.core.type.compare          :as tcomp]
-    [quantum.untyped.core.type.reifications     :as utr]
-    [quantum.untyped.core.defnt
-      :refer [defns]]))
+    [quantum.untyped.core.type.reifications     :as utr]))
 
 ;; Here, `NotType` labels on `testing` mean such *after* simplification
 
@@ -166,16 +169,16 @@
 
 #?(:clj
 (defmacro test-comparison|fn
-  "Performs a `tcomp/compare|input` and `tcomp/compare|output` on `a` and `b`, ensuring that the
+  "Performs a `t/compare|in` and `t/compare|out` on `a` and `b`, ensuring that the
    comparison-relationship between `a` and `b` is symmetric.
    The basis comparison is the first input."
-  [[c|out #_t/comparisons, c|in #_t/comparisons] #__, a #_t/type? b #_t/type?]
+  [[c|in #_t/comparisons, c|out #_t/comparisons] #__, a #_t/type? b #_t/type?]
   `(let [c|out# ~c|out, c|in# ~c|in, a# ~a, b# ~b]
      ;; Symmetry
-     (is= c|in#                 (tcomp/compare|in  a# b#))
-     (is= (ucomp/invert c|in#)  (tcomp/compare|in  b# a#))
-     (is= c|out#                (tcomp/compare|out a# b#))
-     (is= (ucomp/invert c|out#) (tcomp/compare|out b# a#)))))
+     (is= c|in#                 (t/compare|in  a# b#))
+     (is= (ucomp/invert c|in#)  (t/compare|in  b# a#))
+     (is= c|out#                (t/compare|out a# b#))
+     (is= (ucomp/invert c|out#) (t/compare|out b# a#)))))
 
 (def comparison-combinations
   ["#{<}"
@@ -213,60 +216,60 @@
 (deftest test|in|compare
   (testing "UniversalSetType"
     (testing "+ UniversalSetType"
-      (test-comparison  0 t/universal-set t/universal-set))
+      (test-comparison =ident t/universal-set t/universal-set))
     (testing "+ EmptySetType"
-      (test-comparison  1 t/universal-set t/empty-set))
+      (test-comparison >ident t/universal-set t/empty-set))
     (testing "+ NotType"
-      (test-comparison  1 t/universal-set (! a)))
+      (test-comparison >ident t/universal-set (! a)))
     (testing "+ OrType"
-      (test-comparison  1 t/universal-set (| ><0 ><1)))
+      (test-comparison >ident t/universal-set (| ><0 ><1)))
     (testing "+ AndType")
     (testing "+ Expression")
     (testing "+ ProtocolType"
       (doseq [t protocol-types]
-        (test-comparison 1 t/universal-set t)))
+        (test-comparison >ident t/universal-set t)))
     (testing "+ ClassType")
     (testing "+ ValueType"
       (doseq [t [(t/value t/universal-set)
                  (t/value t/empty-set)
                  (t/value 0)
                  (t/value nil)]]
-        (test-comparison 1 t/universal-set t))))
+        (test-comparison >ident t/universal-set t))))
   ;; The null set is considered to always (vacuously) be a subset of any set
   (testing "EmptySetType"
     (testing "+ EmptySetType"
-      (test-comparison 0 t/empty-set t/empty-set))
+      (test-comparison =ident t/empty-set t/empty-set))
     (testing "+ NotType"
       (testing "Inner ClassType"
-        (test-comparison -1 t/empty-set (! a)))
+        (test-comparison <ident t/empty-set (! a)))
       (testing "Inner ValueType"
-        (test-comparison -1 t/empty-set (! (t/value 1)))))
+        (test-comparison <ident t/empty-set (! (t/value 1)))))
     (testing "+ OrType"
-      (test-comparison -1 t/empty-set (| ><0 ><1)))
+      (test-comparison <ident t/empty-set (| ><0 ><1)))
     (testing "+ AndType")
     (testing "+ Expression")
     (testing "+ ProtocolType"
       (doseq [t protocol-types]
-        (test-comparison -1 t/empty-set t)))
+        (test-comparison <ident t/empty-set t)))
     (testing "+ ClassType")
     (testing "+ ValueType"
-      (test-comparison -1 t/empty-set (t/value t/empty-set))
-      (test-comparison -1 t/empty-set (t/value 0))))
+      (test-comparison <ident t/empty-set (t/value t/empty-set))
+      (test-comparison <ident t/empty-set (t/value 0))))
   (testing "NotType"
     (testing "+ NotType"
-      (test-comparison  0 (! a)           (! a))
-      (test-comparison  2 (! a)           (! b))
-      (test-comparison  2 (! i|a)         (! i|b))
-      (test-comparison  2 (! t/string?)   (! t/byte?))
-      (test-comparison  1 (! a)           (! >a))
-      (test-comparison -1 (! a)           (! <a0))
-      (test-comparison  0 (! (t/value 1)) (! (t/value 1)))
-      (test-comparison  2 (! (t/value 1)) (! (t/value 2))))
+      (test-comparison  =ident (! a)           (! a))
+      (test-comparison ><ident (! a)           (! b))
+      (test-comparison ><ident (! i|a)         (! i|b))
+      (test-comparison ><ident (! t/string?)   (! t/byte?))
+      (test-comparison  >ident (! a)           (! >a))
+      (test-comparison  <ident (! a)           (! <a0))
+      (test-comparison  =ident (! (t/value 1)) (! (t/value 1)))
+      (test-comparison ><ident (! (t/value 1)) (! (t/value 2))))
     ;; TODO continue to implement
     (testing "+ OrType"
       (testing "#{<}"
         ;; TODO Technically something like this but can't do the below b/c of simplification
-        #_(test-comparison -1 (! a) (| (| (! a) <a0) (| (! a) <a1))))
+        #_(test-comparison <ident (! a) (| (| (! a) <a0) (| (! a) <a1))))
     #_(testing "#{< =}")         ; Impossible for `OrType`
     #_(testing "#{< = >}")       ; Impossible for `OrType`
     #_(testing "#{< = > ><}")    ; Impossible for `OrType`
@@ -280,44 +283,44 @@
     #_(testing "#{< > >< <>}")   ; Impossible for `OrType`
     #_(testing "#{< > <>}")      ; Impossible for `OrType`
       (testing "#{< ><}"
-        #_(test-comparison -1 i|a   (| i|>a+b i|>a0 i|><0 i|><1))
-        #_(test-comparison -1 i|>a0 (| i|>a+b i|>a0)))
+        #_(test-comparison <ident i|a   (| i|>a+b i|>a0 i|><0 i|><1))
+        #_(test-comparison <ident i|>a0 (| i|>a+b i|>a0)))
       (testing "#{< >< <>}"
-        #_(test-comparison -1 i|a   (| i|>a+b i|>a0 i|><0 i|><1 t/string?)))
+        #_(test-comparison <ident i|a   (| i|>a+b i|>a0 i|><0 i|><1 t/string?)))
       (testing "#{< <>}"
-        #_(test-comparison -1 a     (| >a ><0 ><1)))
+        #_(test-comparison <ident a     (| >a ><0 ><1)))
     #_(testing "#{=}")           ; Impossible for `OrType`
     #_(testing "#{= >}")         ; Impossible for `OrType`
     #_(testing "#{= > ><}")      ; Impossible for `OrType`
     #_(testing "#{= > >< <>}")   ; Impossible for `OrType`
     #_(testing "#{= > <>}")      ; Impossible for `OrType`
       (testing "#{= ><}"
-        (test-comparison -1 (! a)   (| (! a)   i|><0 i|><1))
-        (test-comparison -1 (! i|a) (| (! i|a) i|><0 i|><1)))
+        (test-comparison <ident (! a)   (| (! a)   i|><0 i|><1))
+        (test-comparison <ident (! i|a) (| (! i|a) i|><0 i|><1)))
       (testing "#{= >< <>}"
-        #_(test-comparison -1 i|a   (| i|a i|><0 i|><1 t/string?)))
+        #_(test-comparison <ident i|a   (| i|a i|><0 i|><1 t/string?)))
       (testing "#{= <>}"
-        (test-comparison -1 (! a) (| (! a) <a0))
-        (test-comparison -1 (! a) (| (! a) <a1))
-        (test-comparison -1 (! a) (| (! a) <a0 <a1)))
+        (test-comparison <ident (! a) (| (! a) <a0))
+        (test-comparison <ident (! a) (| (! a) <a1))
+        (test-comparison <ident (! a) (| (! a) <a0 <a1)))
       (testing "#{>}"
-        #_(test-comparison  1 a     (| <a0 <a1))
-        #_(test-comparison  1 i|a   (| i|<a0 i|<a1)))
+        #_(test-comparison  >ident a     (| <a0 <a1))
+        #_(test-comparison  >ident i|a   (| i|<a0 i|<a1)))
       (testing "#{> ><}"
-        #_(test-comparison  2 i|a   (| i|<a+b i|<a0 i|><0 i|><1)))
+        #_(test-comparison ><ident i|a   (| i|<a+b i|<a0 i|><0 i|><1)))
       (testing "#{> >< <>}"
-        #_(test-comparison  2 i|a   (| i|<a+b i|<a0 i|><0 i|><1 t/string?)))
+        #_(test-comparison ><ident i|a   (| i|<a+b i|<a0 i|><0 i|><1 t/string?)))
       (testing "#{> <>}"
-        (test-comparison  2 (! a)   (| b a))
-        (test-comparison  2 (! b)   (| a b))
-        (test-comparison  2 (! ><0) (| ><0 ><1))
-        (test-comparison  2 (! ><1) (| ><1 ><0)))
+        (test-comparison ><ident (! a)   (| b a))
+        (test-comparison ><ident (! b)   (| a b))
+        (test-comparison ><ident (! ><0) (| ><0 ><1))
+        (test-comparison ><ident (! ><1) (| ><1 ><0)))
       (testing "#{><}"
-        #_(test-comparison  2 i|a   (| i|><0 i|><1)))
+        #_(test-comparison ><ident i|a   (| i|><0 i|><1)))
       (testing "#{>< <>}"
-        #_(test-comparison  2 i|a   (| i|><0 i|><1 t/string?)))
+        #_(test-comparison ><ident i|a   (| i|><0 i|><1 t/string?)))
       (testing "#{<>}"
-        (test-comparison  3 (! a)   (| <a0 <a1))))
+        (test-comparison <>ident (! a)   (| <a0 <a1))))
     ;; TODO
     #_(testing "+ AndType"
       (testing "inner #{= <>}"
@@ -325,43 +328,43 @@
     (testing "+ Expression")
     (testing "+ ProtocolType")
     (testing "+ ClassType"
-      (test-comparison  3 (!     a)     a) ; inner =
-      (test-comparison  3 (!   i|a)   i|a) ; inner =
-      (test-comparison  3 (!     a)   <a0) ; inner >
-      (test-comparison  3 (!   i|a) i|<a0) ; inner >
-      (test-comparison  2 (!     a)    >a) ; inner <
-      (test-comparison  2 (!   i|a) i|>a0) ; inner ><
-      (test-comparison  1 (!   a  )   ><0) ; inner <>
-      (test-comparison  2 (!   i|a) i|><0) ; inner ><
-      (test-comparison  2 (!     a)    Uc) ; inner <
-      (test-comparison  2 (!   i|a)    Uc) ; inner <
-      (test-comparison  2 (!   <a0)     a) ; inner <
-      (test-comparison  2 (! i|<a0)   i|a) ; inner <
-      (test-comparison  2 (!   <a0)    >a) ; inner <
-      (test-comparison  2 (! i|<a0) i|>a0) ; inner <
-      (test-comparison  1 (!   <a0)   ><0) ; inner <>
-      (test-comparison  2 (! i|<a0) i|><0) ; inner ><
-      (test-comparison  2 (!   <a0)    Uc) ; inner <
-      (test-comparison  2 (! i|<a0)    Uc) ; inner <
-      (test-comparison  3 (!    >a)     a) ; inner >
-      (test-comparison  3 (! i|>a0)   i|a) ; inner >
-      (test-comparison  3 (!    >a)   <a0) ; inner >
-      (test-comparison  3 (! i|>a0) i|<a0) ; inner >
-      (test-comparison  1 (!    >a)   ><0) ; inner <>
-      (test-comparison  2 (! i|>a0) i|><0) ; inner ><
-      (test-comparison  2 (!    >a)    Uc) ; inner <
-      (test-comparison  2 (! i|>a0)    Uc) ; inner <
-      (test-comparison  1 (!   ><0)     a) ; inner <>
-      (test-comparison  2 (! i|><0)   i|a) ; inner ><
-      (test-comparison  1 (!   ><0)   <a0) ; inner <>
-      (test-comparison  2 (! i|><0) i|<a0) ; inner ><
-      (test-comparison  1 (!   ><0)    >a) ; inner <>
-      (test-comparison  2 (! i|><0) i|>a0) ; inner ><
-      (test-comparison  2 (!   ><0)    Uc) ; inner <
-      (test-comparison  2 (! i|><0)    Uc) ; inner <
+      (test-comparison <>ident (!     a)     a) ; inner =
+      (test-comparison <>ident (!   i|a)   i|a) ; inner =
+      (test-comparison <>ident (!     a)   <a0) ; inner >
+      (test-comparison <>ident (!   i|a) i|<a0) ; inner >
+      (test-comparison ><ident (!     a)    >a) ; inner <
+      (test-comparison ><ident (!   i|a) i|>a0) ; inner ><
+      (test-comparison  >ident (!   a  )   ><0) ; inner <>
+      (test-comparison ><ident (!   i|a) i|><0) ; inner ><
+      (test-comparison ><ident (!     a)    Uc) ; inner <
+      (test-comparison ><ident (!   i|a)    Uc) ; inner <
+      (test-comparison ><ident (!   <a0)     a) ; inner <
+      (test-comparison ><ident (! i|<a0)   i|a) ; inner <
+      (test-comparison ><ident (!   <a0)    >a) ; inner <
+      (test-comparison ><ident (! i|<a0) i|>a0) ; inner <
+      (test-comparison  >ident (!   <a0)   ><0) ; inner <>
+      (test-comparison ><ident (! i|<a0) i|><0) ; inner ><
+      (test-comparison ><ident (!   <a0)    Uc) ; inner <
+      (test-comparison ><ident (! i|<a0)    Uc) ; inner <
+      (test-comparison <>ident (!    >a)     a) ; inner >
+      (test-comparison <>ident (! i|>a0)   i|a) ; inner >
+      (test-comparison <>ident (!    >a)   <a0) ; inner >
+      (test-comparison <>ident (! i|>a0) i|<a0) ; inner >
+      (test-comparison  >ident (!    >a)   ><0) ; inner <>
+      (test-comparison ><ident (! i|>a0) i|><0) ; inner ><
+      (test-comparison ><ident (!    >a)    Uc) ; inner <
+      (test-comparison ><ident (! i|>a0)    Uc) ; inner <
+      (test-comparison  >ident (!   ><0)     a) ; inner <>
+      (test-comparison ><ident (! i|><0)   i|a) ; inner ><
+      (test-comparison  >ident (!   ><0)   <a0) ; inner <>
+      (test-comparison ><ident (! i|><0) i|<a0) ; inner ><
+      (test-comparison  >ident (!   ><0)    >a) ; inner <>
+      (test-comparison ><ident (! i|><0) i|>a0) ; inner ><
+      (test-comparison ><ident (!   ><0)    Uc) ; inner <
+      (test-comparison ><ident (! i|><0)    Uc) ; inner <
     (testing "+ ValueType"
-      (test-comparison -1 (t/value 1)  (! (t/value 2)))
-      (test-comparison  3 (t/value "") (! t/string?))))
+      (test-comparison  <ident (t/value 1)  (! (t/value 2)))
+      (test-comparison <>ident (t/value "") (! t/string?))))
   (testing "OrType"
     (testing "+ OrType"
       ;; Comparison annotations achieved by first comparing each element of the first/left
@@ -369,77 +372,77 @@
       ;; entire first/left
       ;; TODO add complete comparisons via `comparison-combinations`
       (testing "#{<}, #{<}"
-        ;; comparisons:        < <                        < <
-        (test-comparison  0 (| a b)                    (| a b))
-        ;; comparisons:            <      <               <      <
-        (test-comparison  0 (|     i|>a+b i|>a0)       (| i|>a+b i|>a0)))
+        ;; comparisons:             < <                        < <
+        (test-comparison  =ident (| a b)                    (| a b))
+        ;; comparisons:                 <      <               <      <
+        (test-comparison  =ident (|     i|>a+b i|>a0)       (| i|>a+b i|>a0)))
       (testing "#{<}, #{<, ><}"
-        ;; comparisons:            <      <               <      <     ><    ><
-        (test-comparison -1 (|     i|>a+b i|>a0)       (| i|>a+b i|>a0 i|><0 i|><1))
-        ;; comparisons:            <      <               <      <     ><    ><    ><
-        (test-comparison -1 (|     i|>a+b i|>a0)       (| i|>a+b i|>a0 i|>a1 i|><0 i|><1))
-        ;; comparisons:            <      <     <         <      <     <     ><    ><
-        (test-comparison -1 (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0 i|>a1 i|><0 i|><1)))
+        ;; comparisons:                 <      <               <      <     ><    ><
+        (test-comparison  <ident (|     i|>a+b i|>a0)       (| i|>a+b i|>a0 i|><0 i|><1))
+        ;; comparisons:                 <      <               <      <     ><    ><    ><
+        (test-comparison  <ident (|     i|>a+b i|>a0)       (| i|>a+b i|>a0 i|>a1 i|><0 i|><1))
+        ;; comparisons:                 <      <     <         <      <     <     ><    ><
+        (test-comparison  <ident (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0 i|>a1 i|><0 i|><1)))
       (testing "#{<, ><}, #{<}"
-        ;; comparisons:            <      <     ><        <      <
-        (test-comparison  1 (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0))
-        ;; comparisons:        ><  <     <                <     <
-        (test-comparison  1 (| i|a i|><0 i|><1)        (| i|><0 i|><1)))
+        ;; comparisons:                 <      <     ><        <      <
+        (test-comparison  >ident (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0))
+        ;; comparisons:             ><  <     <                <     <
+        (test-comparison  >ident (| i|a i|><0 i|><1)        (| i|><0 i|><1)))
       (testing "#{<, ><}, #{<, ><}"
-        ;; comparisons:            <      ><              <                  ><
-        (test-comparison  2 (|     i|>a+b i|>a0)       (| i|>a+b             i|><0))
-        ;; comparisons:            <      ><    ><        <                  ><    ><
-        (test-comparison  2 (|     i|>a+b i|>a0 i|>a1) (| i|>a+b             i|><0 i|><1))
-        ;; comparisons:            <      <     ><        <      <           ><    ><
-        (test-comparison  2 (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0       i|><0 i|><1))
-        ;; comparisons:        <   <      ><              <                  ><
-        (test-comparison  2 (| i|a i|>a+b i|>a0)       (| i|a                i|><0))
-        ;; comparisons:        <   ><     ><              <                  ><    ><
-        (test-comparison  2 (| i|a i|>a+b i|>a0)       (| i|a                i|><0 i|><1))
-        ;; comparisons:        ><  <                                         <     ><
-        (test-comparison  2 (| i|a i|><0)              (|                    i|><0 i|><1))
-        ;; comparisons:        ><        <     ><                                  ><    <
-        (test-comparison  2 (| i|a       i|><1 i|><2)  (|                    i|><0 i|><1))
-        ;; comparisons:        ><  ><    <                                         <     ><
-        (test-comparison  2 (| i|a i|><0 i|><1)        (|                          i|><1 i|><2)))
+        ;; comparisons:                 <      ><              <                  ><
+        (test-comparison ><ident (|     i|>a+b i|>a0)       (| i|>a+b             i|><0))
+        ;; comparisons:                 <      ><    ><        <                  ><    ><
+        (test-comparison ><ident (|     i|>a+b i|>a0 i|>a1) (| i|>a+b             i|><0 i|><1))
+        ;; comparisons:                 <      <     ><        <      <           ><    ><
+        (test-comparison ><ident (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0       i|><0 i|><1))
+        ;; comparisons:             <   <      ><              <                  ><
+        (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|a                i|><0))
+        ;; comparisons:             <   ><     ><              <                  ><    ><
+        (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|a                i|><0 i|><1))
+        ;; comparisons:             ><  <                                         <     ><
+        (test-comparison ><ident (| i|a i|><0)              (|                    i|><0 i|><1))
+        ;; comparisons:             ><        <     ><                                  ><    <
+        (test-comparison ><ident (| i|a       i|><1 i|><2)  (|                    i|><0 i|><1))
+        ;; comparisons:             ><  ><    <                                         <     ><
+        (test-comparison ><ident (| i|a i|><0 i|><1)        (|                          i|><1 i|><2)))
       (testing "#{<, ><}, #{><}"
-        ;; comparisons:        <   ><                     ><     ><
-        (test-comparison  2 (| i|a i|><0)              (| i|>a+b i|>a0))
-        ;; comparisons:        <   ><    ><               ><     ><
-        (test-comparison  2 (| i|a i|><0 i|><1)        (| i|>a+b i|>a0))
-        ;; comparisons:        <   ><                     ><     ><    ><
-        (test-comparison  2 (| i|a i|><0)              (| i|>a+b i|>a0 i|>a1))
-        ;; comparisons:        <   ><    ><               ><     ><    ><
-        (test-comparison  2 (| i|a i|><0 i|><1)        (| i|>a+b i|>a0 i|>a1)))
+        ;; comparisons:             <   ><                     ><     ><
+        (test-comparison ><ident (| i|a i|><0)              (| i|>a+b i|>a0))
+        ;; comparisons:             <   ><    ><               ><     ><
+        (test-comparison ><ident (| i|a i|><0 i|><1)        (| i|>a+b i|>a0))
+        ;; comparisons:             <   ><                     ><     ><    ><
+        (test-comparison ><ident (| i|a i|><0)              (| i|>a+b i|>a0 i|>a1))
+        ;; comparisons:             <   ><    ><               ><     ><    ><
+        (test-comparison ><ident (| i|a i|><0 i|><1)        (| i|>a+b i|>a0 i|>a1)))
       (testing "#{<, <>}, #{<, <>}"
-        ;; comparisons:        <  <>                      <      <>
-        (test-comparison  2 (| a  b)                   (| a      ><1))
-        ;; comparisons:        <> <                       <      <>
-        (test-comparison  2 (| a  b)                   (| b      ><1)))
+        ;; comparisons:             <  <>                      <      <>
+        (test-comparison ><ident (| a  b)                   (| a      ><1))
+        ;; comparisons:             <> <                       <      <>
+        (test-comparison ><ident (| a  b)                   (| b      ><1)))
       (testing "#{<, <>}, #{><, <>}"
-        ;; comparisons:        <, <>                      >< <>  <>
-        (test-comparison  2 (| a  b)                   (| >a ><0 ><1)))
+        ;; comparisons:             <, <>                      >< <>  <>
+        (test-comparison ><ident (| a  b)                   (| >a ><0 ><1)))
       (testing "#{><}, #{<, ><}"
-        ;; comparisons:        ><  ><     ><              <                  ><    ><
-        (test-comparison  2 (| i|a i|>a+b i|>a0)       (| i|<a+b             i|><0 i|><1))
-        ;; comparisons:        ><  ><     ><    ><        <                  ><    ><
-        (test-comparison  2 (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b             i|><0 i|><1))
-        ;; comparisons:        ><  ><     ><              <      <           ><    ><
-        (test-comparison  2 (| i|a i|>a+b i|>a0)       (| i|<a+b i|<a0       i|><0 i|><1))
-        ;; comparisons:        ><  ><     ><    ><        <      <           ><    ><
-        (test-comparison  2 (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b i|<a0       i|><0 i|><1))
-        ;; comparisons:        ><  ><     ><              <      <     <     ><    ><
-        (test-comparison  2 (| i|a i|>a+b i|>a0)       (| i|<a+b i|<a0 i|<a1 i|><0 i|><1))
-        ;; comparisons:        ><  ><     ><    ><        <      <     <     ><    ><
-        (test-comparison  2 (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b i|<a0 i|<a1 i|><0 i|><1)))
+        ;; comparisons:             ><  ><     ><              <                  ><    ><
+        (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|<a+b             i|><0 i|><1))
+        ;; comparisons:             ><  ><     ><    ><        <                  ><    ><
+        (test-comparison ><ident (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b             i|><0 i|><1))
+        ;; comparisons:             ><  ><     ><              <      <           ><    ><
+        (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|<a+b i|<a0       i|><0 i|><1))
+        ;; comparisons:             ><  ><     ><    ><        <      <           ><    ><
+        (test-comparison ><ident (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b i|<a0       i|><0 i|><1))
+        ;; comparisons:             ><  ><     ><              <      <     <     ><    ><
+        (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|<a+b i|<a0 i|<a1 i|><0 i|><1))
+        ;; comparisons:             ><  ><     ><    ><        <      <     <     ><    ><
+        (test-comparison ><ident (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b i|<a0 i|<a1 i|><0 i|><1)))
       (testing "#{><}, #{><}"
-        ;; comparisons:        ><  ><                                        ><    ><
-        (test-comparison  2 (| i|a i|><2)              (|                    i|><0 i|><1))
-        ;; comparisons:        ><  ><                                              ><    ><
-        (test-comparison  2 (| i|a i|><0)              (|                          i|><1 i|><2)))
+        ;; comparisons:             ><  ><                                        ><    ><
+        (test-comparison ><ident (| i|a i|><2)              (|                    i|><0 i|><1))
+        ;; comparisons:             ><  ><                                        ><    ><
+        (test-comparison ><ident (| i|a i|><0)              (|                    i|><1 i|><2)))
       (testing "#{<>}, #{<>}"
-        ;; comparisons:        <> <>                         <>  <>
-        (test-comparison  3 (| a  b)                   (|    ><0 ><1)))))
+        ;; comparisons:             <> <>                         <>  <>
+        (test-comparison <>ident (| a  b)                   (|    ><0 ><1)))))
     ;; TODO fix tests/impl
     #_(testing "+ AndType"
       ;; Comparison annotations achieved by first comparing each element of the first/left
@@ -450,50 +453,50 @@
           ;; comparisons: [-1, -1], [-1, -1]
           (test-comparison  1 (| a >a+b >a0)     (& >a+b >a0))
           ;; comparisons: [-1, -1, 3], [-1, -1]
-          (test-comparison  1 (| a >a+b >a0 >a1) (& >a+b >a0))
+          (test-comparison  >ident (| a >a+b >a0 >a1) (& >a+b >a0))
           ;; comparisons: [-1, -1], [-1, -1, 3]
-          (test-comparison  3 (| a >a+b >a0)     (& >a+b >a0 >a1))
+          (test-comparison <>ident (| a >a+b >a0)     (& >a+b >a0 >a1))
           ;; comparisons: [-1, -1, -1], [-1, -1, -1]
-          (test-comparison  1 (| a >a+b >a0 >a1) (& >a+b >a0 >a1)))
+          (test-comparison  >ident (| a >a+b >a0 >a1) (& >a+b >a0 >a1)))
         (testing "+ #{∅+}"
           ;; comparisons: [3, 3, 3], [3, 3]
-          (test-comparison  3 (| a >a+b >a0)     (& ><0 ><1)))
+          (test-comparison <>ident (| a >a+b >a0)     (& ><0 ><1)))
         (testing "+ #{<+ ∅+}"
           ;; comparisons: [-1, 3], [-1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0)    (& >a+b         ><0 ><1))
+          (test-comparison <>ident (| a >a+b >a0)    (& >a+b         ><0 ><1))
           ;; comparisons: [-1, 3, 3], [-1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0 >a1) (& >a+b         ><0 ><1))
+          (test-comparison <>ident (| a >a+b >a0 >a1) (& >a+b         ><0 ><1))
           ;; comparisons: [-1, -1], [-1, -1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0)     (& >a+b >a0     ><0 ><1))
+          (test-comparison <>ident (| a >a+b >a0)     (& >a+b >a0     ><0 ><1))
           ;; comparisons: [-1, -1, 3], [-1, -1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0 >a1) (& >a+b >a0     ><0 ><1))
+          (test-comparison <>ident (| a >a+b >a0 >a1) (& >a+b >a0     ><0 ><1))
           ;; comparisons: [-1, -1], [-1, -1, 3, 3, 3]
-          (test-comparison  3 (| a >a+b >a0)     (& >a+b >a0 >a1 ><0 ><1))
+          (test-comparison <>ident (| a >a+b >a0)     (& >a+b >a0 >a1 ><0 ><1))
           ;; comparisons: [-1, -1, -], [-1, -1, -1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0 >a1) (& >a+b >a0 >a1 ><0 ><1)))
+          (test-comparison <>ident (| a >a+b >a0 >a1) (& >a+b >a0 >a1 ><0 ><1)))
         (testing "+ #{= ∅+}"
           ;; comparisons: [3, 3], [-1, 3]
-          (test-comparison  3 (| a >a+b >a0)     (& a ><0))
+          (test-comparison <>ident (| a >a+b >a0)     (& a ><0))
           ;; comparisons: [3, 3], [-1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0)     (& a ><0 ><1)))
+          (test-comparison <>ident (| a >a+b >a0)     (& a ><0 ><1)))
         (testing "+ #{>+ ∅+}"
           ;; comparisons: [3, 3], [-1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0)     (& <a+b         ><0 ><1))
+          (test-comparison <>ident (| a >a+b >a0)     (& <a+b         ><0 ><1))
           ;; comparisons: [3, 3, 3], [-1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0 >a1) (& <a+b         ><0 ><1))
+          (test-comparison <>ident (| a >a+b >a0 >a1) (& <a+b         ><0 ><1))
           ;; comparisons: [3, 3], [-1, -1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0)     (& <a+b <a0     ><0 ><1))
+          (test-comparison <>ident (| a >a+b >a0)     (& <a+b <a0     ><0 ><1))
           ;; comparisons: [3, 3, 3], [-1, -1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0 >a1) (& <a+b <a0     ><0 ><1))
+          (test-comparison <>ident (| a >a+b >a0 >a1) (& <a+b <a0     ><0 ><1))
           ;; comparisons: [3, 3], [-1, -1, 3, 3, 3]
-          (test-comparison  3 (| a >a+b >a0)     (& <a+b <a0 <a1 ><0 ><1))
+          (test-comparison <>ident (| a >a+b >a0)     (& <a+b <a0 <a1 ><0 ><1))
           ;; comparisons: [3, 3, 3], [-1, -1, -1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0 >a1) (& <a+b <a0 <a1 ><0 ><1)))))
+          (test-comparison <>ident (| a >a+b >a0 >a1) (& <a+b <a0 <a1 ><0 ><1)))))
     (testing "+ Expression")
     (testing "+ ProtocolType")
     (testing "+ ClassType"
       (testing "#{<}"
-        (test-comparison -1 i|<a0 (| i|>a+b i|>a0 i|>a1)))
+        (test-comparison  <ident i|<a0 (| i|>a+b i|>a0 i|>a1)))
     #_(testing "#{< =}")         ; Impossible for `OrType`
     #_(testing "#{< = >}")       ; Impossible for `OrType`
     #_(testing "#{< = > ><}")    ; Impossible for `OrType`
@@ -507,49 +510,49 @@
     #_(testing "#{< > >< <>}")   ; Impossible for `OrType`
     #_(testing "#{< > <>}")      ; Impossible for `OrType`
       (testing "#{< ><}"
-        (test-comparison -1 i|a   (| i|>a+b i|>a0 i|><0 i|><1))
-        (test-comparison -1 i|>a0 (| i|>a+b i|>a0)))
+        (test-comparison  <ident i|a   (| i|>a+b i|>a0 i|><0 i|><1))
+        (test-comparison  <ident i|>a0 (| i|>a+b i|>a0)))
       (testing "#{< >< <>}"
-        (test-comparison -1 i|a   (| i|>a+b i|>a0 i|><0 i|><1 t/string?)))
+        (test-comparison  <ident i|a   (| i|>a+b i|>a0 i|><0 i|><1 t/string?)))
       (testing "#{< <>}"
-        (test-comparison -1 a     (| >a ><0 ><1)))
+        (test-comparison  <ident a     (| >a ><0 ><1)))
     #_(testing "#{=}")           ; Impossible for `OrType`
     #_(testing "#{= >}")         ; Impossible for `OrType`
     #_(testing "#{= > ><}")      ; Impossible for `OrType`
     #_(testing "#{= > >< <>}")   ; Impossible for `OrType`
     #_(testing "#{= > <>}")      ; Impossible for `OrType`
       (testing "#{= ><}"
-        (test-comparison -1 i|a   (| i|a i|><0 i|><1)))
+        (test-comparison  <ident i|a   (| i|a i|><0 i|><1)))
       (testing "#{= >< <>}"
-        (test-comparison -1 i|a   (| i|a i|><0 i|><1 t/string?)))
+        (test-comparison  <ident i|a   (| i|a i|><0 i|><1 t/string?)))
       (testing "#{= <>}"
-        (test-comparison -1 a     (| a ><0 ><1)))
+        (test-comparison  <ident a     (| a ><0 ><1)))
       (testing "#{>}"
-        (test-comparison  1 a     (| <a0 <a1))
-        (test-comparison  1 i|a   (| i|<a0 i|<a1)))
+        (test-comparison  >ident a     (| <a0 <a1))
+        (test-comparison  >ident i|a   (| i|<a0 i|<a1)))
       (testing "#{> ><}"
-        (test-comparison  2 i|a   (| i|<a+b i|<a0 i|><0 i|><1)))
+        (test-comparison ><ident i|a   (| i|<a+b i|<a0 i|><0 i|><1)))
       (testing "#{> >< <>}"
-        (test-comparison  2 i|a   (| i|<a+b i|<a0 i|><0 i|><1 t/string?)))
+        (test-comparison ><ident i|a   (| i|<a+b i|<a0 i|><0 i|><1 t/string?)))
       (testing "#{> <>}"
-        (test-comparison  2 a     (| <a0 ><0 ><1)))
+        (test-comparison ><ident a     (| <a0 ><0 ><1)))
       (testing "#{><}"
-        (test-comparison  2 i|a   (| i|><0 i|><1)))
+        (test-comparison ><ident i|a   (| i|><0 i|><1)))
       (testing "#{>< <>}"
-        (test-comparison  2 i|a   (| i|><0 i|><1 t/string?)))
+        (test-comparison ><ident i|a   (| i|><0 i|><1 t/string?)))
       (testing "#{<>}"
-        (test-comparison  3 a     (| ><0 ><1)))
+        (test-comparison <>ident a     (| ><0 ><1)))
       (testing "Nilable"
         (testing "<  nilabled: #{< <>}"
-          (test-comparison -1 t/long?     (t/? t/object?)))
+          (test-comparison  <ident t/long?     (t/? t/object?)))
         (testing "=  nilabled: #{= <>}"
-          (test-comparison -1 t/long?     (t/? t/long?)))
+          (test-comparison  <ident t/long?     (t/? t/long?)))
         (testing ">  nilabled: #{> <>}"
-          (test-comparison  2 t/object?   (t/? t/long?)))
+          (test-comparison ><ident t/object?   (t/? t/long?)))
         (testing ">< nilabled: #{>< <>}"
-          (test-comparison  2 t/iterable? (t/? t/comparable?)))
+          (test-comparison ><ident t/iterable? (t/? t/comparable?)))
         (testing "<> nilabled: #{<>}"
-          (test-comparison  3 t/long?     (t/? t/string?)))))
+          (test-comparison <>ident t/long?     (t/? t/string?)))))
     (testing "+ ValueType"
       (testing "arg <"
         (testing "+ arg <")
@@ -557,20 +560,20 @@
         (testing "+ arg >")
         (testing "+ arg ><")
         (testing "+ arg <>"
-          (test-comparison -1 (t/value "a") (| t/string? t/byte?))
-          (test-comparison -1 (t/value 1)   (| (t/value 1) (t/value 2)))
-          (test-comparison -1 (t/value 1)   (| (t/value 2) (t/value 1)))
+          (test-comparison <ident (t/value "a") (| t/string? t/byte?))
+          (test-comparison <ident (t/value 1)   (| (t/value 1) (t/value 2)))
+          (test-comparison <ident (t/value 1)   (| (t/value 2) (t/value 1)))
           (testing "+ arg <>"
-            (test-comparison -1 (t/value 1) (| (t/value 1) (t/value 2) (t/value 3)))
-            (test-comparison -1 (t/value 1) (| (t/value 2) (t/value 1) (t/value 3)))
-            (test-comparison -1 (t/value 1) (| (t/value 2) (t/value 3) (t/value 1))))))
+            (test-comparison <ident (t/value 1) (| (t/value 1) (t/value 2) (t/value 3)))
+            (test-comparison <ident (t/value 1) (| (t/value 2) (t/value 1) (t/value 3)))
+            (test-comparison <ident (t/value 1) (| (t/value 2) (t/value 3) (t/value 1))))))
       (testing "arg ="
         (testing "+ arg <>"
-          (test-comparison -1 t/nil?        (| t/nil? t/string?))))
+          (test-comparison <ident t/nil?        (| t/nil? t/string?))))
       (testing "arg <>"
         (testing "+ arg <>"
-          (test-comparison  3 (t/value "a") (| t/byte? t/long?))
-          (test-comparison  3 (t/value 3)   (| (t/value 1) (t/value 2)))))))
+          (test-comparison <>ident (t/value "a") (| t/byte? t/long?))
+          (test-comparison <>ident (t/value 3)   (| (t/value 1) (t/value 2)))))))
   (testing "AndType"
     (testing "+ AndType")
     (testing "+ Expression")
@@ -578,18 +581,18 @@
     (testing "+ ClassType"
       (testing "#{<}"
         (testing "Boxed Primitive"
-          (test-comparison -1 t/byte?        (& t/number?   t/comparable?)))
+          (test-comparison <ident t/byte?        (& t/number?   t/comparable?)))
         (testing "Final Concrete"
-          (test-comparison -1 t/string?      (& t/char-seq? t/comparable?)))
+          (test-comparison <ident t/string?      (& t/char-seq? t/comparable?)))
         (testing "Extensible Concrete"
-          (test-comparison -1 a (& t/iterable? (t/isa? java.util.RandomAccess))))
+          (test-comparison <ident a (& t/iterable? (t/isa? java.util.RandomAccess))))
         (testing "Abstract"
-          (test-comparison -1 (t/isa? java.util.AbstractMap$SimpleEntry)
-                              (& (t/isa? java.util.Map$Entry) (t/isa? java.io.Serializable))))
+          (test-comparison <ident (t/isa? java.util.AbstractMap$SimpleEntry)
+                                  (& (t/isa? java.util.Map$Entry) (t/isa? java.io.Serializable))))
         (testing "Interface"
-          (test-comparison -1 i|a           (& i|>a0 i|>a1))))
+          (test-comparison <ident i|a           (& i|>a0 i|>a1))))
       (testing "#{<}"
-        (test-comparison -1 i|a           (& i|>a0 i|>a1)))
+        (test-comparison <ident i|a           (& i|>a0 i|>a1)))
     #_(testing "#{< =}")         ; Impossible for `AndType`
     #_(testing "#{< = >}")       ; Impossible for `AndType`
     #_(testing "#{< = > ><}")    ; Impossible for `AndType`
@@ -603,45 +606,45 @@
     #_(testing "#{< > >< <>}")   ; Impossible for `AndType`
     #_(testing "#{< > <>}")      ; Impossible for `AndType`
       (testing "#{< ><}"
-        (test-comparison  2 i|a            (& i|>a+b i|>a0 i|>a1 i|><0 i|><1)))
+        (test-comparison ><ident i|a            (& i|>a+b i|>a0 i|>a1 i|><0 i|><1)))
       (testing "#{< >< <>}"
-        (test-comparison  2 t/java-set?    (& t/java-coll? t/char-seq?
-                                              (t/isa? java.nio.ByteBuffer))))
+        (test-comparison ><ident t/java-set?    (& t/java-coll? t/char-seq?
+                                                   (t/isa? java.nio.ByteBuffer))))
       (testing "#{< <>}"
-        (test-comparison  3 t/string?      (& t/char-seq? t/java-set?))
-        (test-comparison  3 ><0            (& (! ><1) (! ><0)))
-        (test-comparison  3 a              (& (! a)   (! b))))
+        (test-comparison <>ident t/string?      (& t/char-seq? t/java-set?))
+        (test-comparison <>ident ><0            (& (! ><1) (! ><0)))
+        (test-comparison <>ident a              (& (! a)   (! b))))
     #_(testing "#{=}")           ; Impossible for `AndType`
     #_(testing "#{= >}")         ; Impossible for `AndType`
     #_(testing "#{= > ><}")      ; Impossible for `AndType`
     #_(testing "#{= > >< <>}")   ; Impossible for `AndType`
     #_(testing "#{= > <>}")      ; Impossible for `AndType`
       (testing "#{= ><}"
-        (test-comparison  1 i|a            (& i|a i|><0 i|><1))
-        (test-comparison  1 t/char-seq?    (& t/char-seq?   t/java-set?))
-        (test-comparison  1 t/char-seq?    (& t/char-seq?   t/java-set? a)))
-      (testing "#{= >< <>}") ; <- TODO comparison should be 1
+        (test-comparison  >ident i|a            (& i|a i|><0 i|><1))
+        (test-comparison  >ident t/char-seq?    (& t/char-seq?   t/java-set?))
+        (test-comparison  >ident t/char-seq?    (& t/char-seq?   t/java-set? a)))
+      (testing "#{= >< <>}") ; <- TODO comparison should be >ident
       ;; TODO fix
       (testing "#{= <>}"
-        (test-comparison  1 a              (& a t/java-set?)))
+        (test-comparison  >ident a              (& a t/java-set?)))
       (testing "#{>}"
-        (test-comparison  1 i|a            (& i|<a+b i|<a0 i|<a1)))
+        (test-comparison  >ident i|a            (& i|<a+b i|<a0 i|<a1)))
       (testing "#{> ><}"
-        (test-comparison  2 i|a            (& i|<a+b i|<a0 i|><0 i|><1))
-        (test-comparison  2 a              (& (t/isa? javax.management.AttributeList) t/java-set?))
-        (test-comparison  2 t/comparable?  (& (t/isa? java.nio.ByteBuffer) t/java-set?)))
+        (test-comparison ><ident i|a            (& i|<a+b i|<a0 i|><0 i|><1))
+        (test-comparison ><ident a              (& (t/isa? javax.management.AttributeList) t/java-set?))
+        (test-comparison ><ident t/comparable?  (& (t/isa? java.nio.ByteBuffer) t/java-set?)))
       (testing "#{> >< <>}"
-        (test-comparison  2 i|a            (& i|<a0 i|><0 a)))
+        (test-comparison ><ident i|a            (& i|<a0 i|><0 a)))
       (testing "#{> <>}") ; <- TODO comparison should be 1
       (testing "#{><}"
-        (test-comparison  2 i|a            (& i|><0 i|><1))
-        (test-comparison  2 t/char-seq?    (& t/java-set? a)))
+        (test-comparison ><ident i|a            (& i|><0 i|><1))
+        (test-comparison ><ident t/char-seq?    (& t/java-set? a)))
       (testing "#{>< <>}") ; <- TODO comparison should be 3
       (testing "#{<>}"
-        (test-comparison  3 t/string?      (& a t/java-set?))))
+        (test-comparison <>ident t/string?      (& a t/java-set?))))
     (testing "+ ValueType"
       (testing "#{<}"
-        (test-comparison -1 (t/value "a")  (& t/char-seq? t/comparable?)))
+        (test-comparison <ident (t/value "a")  (& t/char-seq? t/comparable?)))
     #_(testing "#{< =}")         ; not possible for `AndType`
     #_(testing "#{< = >}")       ; not possible for `AndType`; `>` not possible for `ValueType`
     #_(testing "#{< = > ><}")    ; not possible for `AndType`; `>` and `><` not possible for `ValueType`
@@ -657,8 +660,8 @@
     #_(testing "#{< ><}")        ; `><` not possible for `ValueType`
     #_(testing "#{< >< <>}")     ; `><` not possible for `ValueType`
       (testing "#{< <>}"
-        (test-comparison  3 (t/value "a") (& t/char-seq? a))
-        (test-comparison  3 (t/value "a") (& t/char-seq? t/java-set?)))
+        (test-comparison <>ident (t/value "a") (& t/char-seq? a))
+        (test-comparison <>ident (t/value "a") (& t/char-seq? t/java-set?)))
     #_(testing "#{=}")           ; not possible for `AndType`
     #_(testing "#{= >}")         ; not possible for `AndType`; `>` not possible for `ValueType`
     #_(testing "#{= > ><}")      ; not possible for `AndType`; `>` and `><` not possible for `ValueType`
@@ -674,7 +677,7 @@
     #_(testing "#{><}")          ; `><` not possible for `ValueType`
     #_(testing "#{>< <>}")       ; `><` not possible for `ValueType`
       (testing "#{<>}"
-        (test-comparison  3 (t/value "a") (& a t/java-set?)))))
+        (test-comparison <>ident (t/value "a") (& a t/java-set?)))))
   (testing "Expression"
     (testing "+ Expression")
     (testing "+ ProtocolType")
@@ -682,112 +685,112 @@
     (testing "+ ValueType"))
   (testing "ProtocolType"
     (testing "+ ProtocolType"
-      (test-comparison  0 (t/isa? AProtocolAll) (t/isa? AProtocolAll))
-      (test-comparison  3 (t/isa? AProtocolAll) (t/isa? AProtocolNone)))
+      (test-comparison  =ident (t/isa? AProtocolAll) (t/isa? AProtocolAll))
+      (test-comparison <>ident (t/isa? AProtocolAll) (t/isa? AProtocolNone)))
     (testing "+ ClassType")
     (testing "+ ValueType"
       (let [values #{t/universal-set t/empty-set nil {} 1 "" AProtocolAll
                      quantum.test.untyped.core.type.compare.AProtocolAll}]
         (doseq [v values]
-          (test-comparison -1 (t/value v) (t/isa? AProtocolAll)))
+          (test-comparison  <ident (t/value v) (t/isa? AProtocolAll)))
         (doseq [v [""]]
-          (test-comparison -1 (t/value v) (t/isa? AProtocolString)))
+          (test-comparison  <ident (t/value v) (t/isa? AProtocolString)))
         (doseq [v (disj values "")]
-          (test-comparison  3 (t/value v) (t/isa? AProtocolString)))
+          (test-comparison <>ident (t/value v) (t/isa? AProtocolString)))
         (doseq [v (disj values nil)]
-          (test-comparison -1 (t/value v) (t/isa? AProtocolNonNil)))
+          (test-comparison  <ident (t/value v) (t/isa? AProtocolNonNil)))
         (doseq [v [nil]]
-          (test-comparison  3 (t/value v) (t/isa? AProtocolNonNil)))
+          (test-comparison <>ident (t/value v) (t/isa? AProtocolNonNil)))
         (doseq [v [nil]]
-          (test-comparison -1 (t/value v) (t/isa? AProtocolOnlyNil)))
+          (test-comparison  <ident (t/value v) (t/isa? AProtocolOnlyNil)))
         (doseq [v (disj values nil)]
-          (test-comparison  3 (t/value v) (t/isa? AProtocolOnlyNil)))
+          (test-comparison <>ident (t/value v) (t/isa? AProtocolOnlyNil)))
         (doseq [v values]
-          (test-comparison  3 (t/value v) (t/isa? AProtocolNone))))))
+          (test-comparison <>ident (t/value v) (t/isa? AProtocolNone))))))
   (testing "ClassType"
     (testing "+ ClassType"
       (testing "Boxed Primitive + Boxed Primitive"
-        (test-comparison 0 t/long? t/long?)
-        (test-comparison 3 t/long? t/int?))
+        (test-comparison  =ident t/long? t/long?)
+        (test-comparison <>ident t/long? t/int?))
       (testing "Boxed Primitive + Final Concrete"
-        (test-comparison 3 t/long? t/string?))
+        (test-comparison <>ident t/long? t/string?))
       (testing "Boxed Primitive + Extensible Concrete"
         (testing "< , >"
-          (test-comparison -1  t/long? t/object?))
+          (test-comparison  <ident t/long? t/object?))
         (testing "<>"
-          (test-comparison 3 t/long? t/thread?)))
+          (test-comparison <>ident t/long? t/thread?)))
       (testing "Boxed Primitive + Abstract"
-        (test-comparison 3 t/long? (t/isa? java.util.AbstractCollection)))
+        (test-comparison <>ident t/long? (t/isa? java.util.AbstractCollection)))
       (testing "Boxed Primitive + Interface"
-        (test-comparison 3 t/long? t/char-seq?))
+        (test-comparison <>ident t/long? t/char-seq?))
       (testing "Final Concrete + Final Concrete"
-        (test-comparison 0 t/string? t/string?))
+        (test-comparison =ident t/string? t/string?))
       (testing "Final Concrete + Extensible Concrete"
         (testing "< , >"
-          (test-comparison -1 t/string? t/object?))
+          (test-comparison  <ident t/string? t/object?))
         (testing "<>"
-          (test-comparison  3 t/string? a)))
+          (test-comparison <>ident t/string? a)))
       (testing "Final Concrete + Abstract")
       (testing "Final Concrete + Interface"
         (testing "< , >"
-          (test-comparison -1 t/string? t/comparable?))
+          (test-comparison  <ident t/string? t/comparable?))
         (testing "<>"
-          (test-comparison  3 t/string? t/java-coll?)))
+          (test-comparison <>ident t/string? t/java-coll?)))
       (testing "Extensible Concrete + Extensible Concrete"
-        (test-comparison 0 t/object? t/object?)
+        (test-comparison =ident t/object? t/object?)
         (testing "< , >"
-          (test-comparison -1 a t/object?))
+          (test-comparison  <ident a t/object?))
         (testing "<>"
-          (test-comparison  3 a t/thread?)))
+          (test-comparison <>ident a t/thread?)))
       (testing "Extensible Concrete + Abstract"
         (testing "< , >"
-          (test-comparison -1 (t/isa? java.util.AbstractCollection) t/object?)
-          (test-comparison -1 a (t/isa? java.util.AbstractCollection)))
+          (test-comparison  <ident (t/isa? java.util.AbstractCollection) t/object?)
+          (test-comparison  <ident a (t/isa? java.util.AbstractCollection)))
         (testing "<>"
-          (test-comparison  3 t/thread? (t/isa? java.util.AbstractCollection))
-          (test-comparison  3 (t/isa? java.util.AbstractCollection) t/thread?)))
+          (test-comparison <>ident t/thread? (t/isa? java.util.AbstractCollection))
+          (test-comparison <>ident (t/isa? java.util.AbstractCollection) t/thread?)))
       (testing "Extensible Concrete + Interface"
-        (test-comparison 2 a t/char-seq?))
+        (test-comparison ><ident a t/char-seq?))
       (testing "Abstract + Abstract"
-        (test-comparison 0 (t/isa? java.util.AbstractCollection) (t/isa? java.util.AbstractCollection))
+        (test-comparison  =ident (t/isa? java.util.AbstractCollection) (t/isa? java.util.AbstractCollection))
         (testing "< , >"
-          (test-comparison -1 (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractCollection)))
+          (test-comparison  <ident (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractCollection)))
         (testing "<>"
-          (test-comparison  3 (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractQueue))))
+          (test-comparison <>ident (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractQueue))))
       (testing "Abstract + Interface"
         (testing "< , >"
-          (test-comparison -1 (t/isa? java.util.AbstractCollection) t/java-coll?))
+          (test-comparison  <ident (t/isa? java.util.AbstractCollection) t/java-coll?))
         (testing "><"
-          (test-comparison  2 (t/isa? java.util.AbstractCollection) t/comparable?)))
+          (test-comparison ><ident (t/isa? java.util.AbstractCollection) t/comparable?)))
       (testing "Interface + Interface"
-        (testing "< , >"
-          (test-comparison -1 t/java-coll? t/iterable?))
+        (testing "< , >",
+          (test-comparison  <ident t/java-coll? t/iterable?))
         (testing "><"
-          (test-comparison  2 t/char-seq?  t/comparable?))))
+          (test-comparison ><ident t/char-seq?  t/comparable?))))
     (testing "+ ValueType"
       (testing "<"
         (testing "Class equality"
-          (test-comparison -1 (t/value "a") t/string?))
+          (test-comparison  <ident (t/value "a") t/string?))
         (testing "Class inheritance"
-          (test-comparison -1 (t/value "a") t/char-seq?)
-          (test-comparison -1 (t/value "a") t/object?)))
+          (test-comparison  <ident (t/value "a") t/char-seq?)
+          (test-comparison  <ident (t/value "a") t/object?)))
       (testing "<>"
-        (test-comparison 3 (t/value "a") t/byte?))))
+        (test-comparison <>ident (t/value "a") t/byte?))))
   (testing "ValueType"
     (testing "+ ValueType"
       (testing "="
-        (test-comparison 0 (t/value nil) (t/value nil))
-        (test-comparison 0 (t/value 1  ) (t/value 1  ))
-        (test-comparison 0 (t/value "a") (t/value "a")))
+        (test-comparison  =ident (t/value nil) (t/value nil))
+        (test-comparison  =ident (t/value 1  ) (t/value 1  ))
+        (test-comparison  =ident (t/value "a") (t/value "a")))
       (testing "=, non-strict"
-        (test-comparison 0 (t/value (vector)         ) (t/value (list)          ))
-        (test-comparison 0 (t/value (vector (vector))) (t/value (vector (list))))
-        (test-comparison 0 (t/value (hash-map)       ) (t/value (sorted-map)    )))
+        (test-comparison  =ident (t/value (vector)         ) (t/value (list)          ))
+        (test-comparison  =ident (t/value (vector (vector))) (t/value (vector (list))))
+        (test-comparison  =ident (t/value (hash-map)       ) (t/value (sorted-map)    )))
       (testing "<>"
-        (test-comparison 3 (t/value 1  ) (t/value 2  ))
-        (test-comparison 3 (t/value "a") (t/value "b"))
-        (test-comparison 3 (t/value 1  ) (t/value "a"))
-        (test-comparison 3 (t/value nil) (t/value "a"))))))
+        (test-comparison <>ident (t/value 1  ) (t/value 2  ))
+        (test-comparison <>ident (t/value "a") (t/value "b"))
+        (test-comparison <>ident (t/value 1  ) (t/value "a"))
+        (test-comparison <>ident (t/value nil) (t/value "a"))))))
 
 (deftest test|=
   ;; Takes an inordinately long time to do `test-comparison 0 ...` even without instrumentation
@@ -965,23 +968,25 @@
       (testing "output >")
       (testing "output ><")
       (testing "output <>")))
+
+  ;; Tests that pass!!
   (testing "input arities ="
     (testing "input types <"
       (testing "output <"
-        (test-comparison|fn [-1 -1 -1] (t/fn [t/boolean? :> t/boolean?])
-                                       (t/fn [t/any?])))
+        (test-comparison|fn [<ident  <ident] (t/fn [t/boolean? :> t/boolean?])
+                                             (t/fn [t/any?])))
       (testing "output ="
-        (test-comparison|fn [-1  0 -1] (t/fn [t/boolean?])
-                                       (t/fn [t/any?])))
+        (test-comparison|fn [<ident  =ident] (t/fn [t/boolean?])
+                                             (t/fn [t/any?])))
       (testing "output >"
-        (test-comparison|fn [-1  1  2] (t/fn [t/boolean?])
-                                       (t/fn [t/any?     :> t/boolean?])))
+        (test-comparison|fn [<ident  >ident] (t/fn [t/boolean?])
+                                             (t/fn [t/any?     :> t/boolean?])))
       (testing "output ><"
-        (test-comparison|fn [-1  2  2] (t/fn [t/boolean? :> i|><0])
-                                       (t/fn [t/any?     :> i|><1])))
+        (test-comparison|fn [<ident ><ident] (t/fn [t/boolean? :> i|><0])
+                                             (t/fn [t/any?     :> i|><1])))
       (testing "output <>"
-        (test-comparison|fn [-1  3  ?] (t/fn [t/boolean? :> i|><0])
-                                       (t/fn [t/any?     :> i|><1]))))
+        (test-comparison|fn [<ident <>ident] (t/fn [t/boolean? :> ><0])
+                                             (t/fn [t/any?     :> ><1]))))
     (testing "input types ="
       (testing "output <")
       (testing "output ="
@@ -989,48 +994,4 @@
       (testing "output >"
         )
       (testing "output ><")
-      (testing "output <>"))
-
-(require '[quantum.untyped.core.data.bits :as ubit])
-(let [cs [0 0]]
-  (first
-    (reduce
-      (fn [[ret found] c]
-        (let [found' (-> found (ubit/conj c) long)]
-          (ifs (ubit/contains? found' ucomp/<ident)
-               )
-
-
-          (ifs (or (ubit/contains? found' ucomp/<ident)
-                   (ubit/contains? found' ucomp/=ident))
-               (reduced [ucomp/<ident found'])
-
-               (or (ubit/contains? found' ucomp/><ident)
-                   (and (ubit/contains? found' ucomp/>ident)
-                        (ubit/contains? found' ucomp/<>ident)))
-               [ucomp/><ident found']
-
-               [c found'])))
-      [(first cs) ubit/empty]
-      (rest cs))))
-
-
-(defns compare|input [x0 t/fnt-type?, x1 t/fnt-type?]
-  (let [ct->arity|x0 (->> x0 fn>arities (group-by arity>count) (c/map-vals' first))
-        ct->arity|x1 (->> x1 fn>arities (group-by arity>count) (c/map-vals' first))
-        arity-cts-only-in-x0 (uset/- (-> ct->arity|x0 keys set) (-> ct->arity|x1 keys set))
-        arity-cts-only-in-x1 (uset/- (-> ct->arity|x1 keys set) (-> ct->arity|x0 keys set))]
-    (->> ct->arity|x0
-         (filter (fn-> first ct->arity|x1))
-         (map (fn [ct arity|x0] (combine-in-some-way
-                                  (c/lmap t/compare arity|x0 (ct->arity|x1 ct)))))
-         combine-in-some-possibly-other-way)))
-
-(defns compare|output [x0 t/fnt-type?, x1 t/fnt-type?]
-  (t/compare (->> x0 fn>arities (c/lmap fn|arity>output) (apply t/or))
-             (->> x1 fn>arities (c/lmap fn|arity>output) (apply t/or))))
-
-(defns compare|fn+fn [x0 t/fnt-type?, x1 t/fnt-type?]
-  (combine-comparisons-in-a-tand???-sort-of-way ; maybe the combination is similar (or the same?) to the above not-yet-fleshed-out combination fns
-    (compare|input  x0 x1)
-    (compare|output x0 x1)))
+      (testing "output <>"))))

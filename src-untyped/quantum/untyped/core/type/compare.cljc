@@ -449,17 +449,40 @@
 
 ;; ===== FnType ===== ;;
 
-(do
-  (defns compare|in [t0 fn-type?, t1 fn-type?]
-    (let [a0 (utr/fn-type>arities t0)
-          a1 (utr/fn-type>arities t1)
-          arglist-count-comparison (uset/compare (-> a0 keys set) (-> a1 keys set))]
-      arglist-count-comparison))
-  (compare|in
-    (quantum.untyped.core.type/fn
-      [])
-    (quantum.untyped.core.type/fn
-      []
-      [quantum.untyped.core.type/any?])))
-
-(defns compare|out [t0 fn-type?, t1 fn-type?] 3)
+;; TODO unknown if this is `and`- or `or`-style combination
+(defns combine-comparisons
+  "Commutative in the 2-ary arity"
+  ([cs _ #_(seq-of ucomp/comparison?) > ucomp/comparison?]
+    (reduce (fn [c' c] (combine-comparisons c' c)) (first cs) (rest cs)))
+  ([^long c0 ucomp/comparison?, ^long c1 ucomp/comparison? > ucomp/comparison?]
+    (case c0
+      -1 (case c1
+           -1  <ident
+            0  <ident
+            1 ><ident
+            2 ><ident
+            3 <>ident)
+       0 (case c1
+           -1  <ident
+            0  =ident
+            1  >ident
+            2 ><ident
+            3 <>ident)
+       1 (case c1
+           -1 ><ident
+            0  >ident
+            1  >ident
+            2 ><ident
+            3 <>ident)
+       2 (case c1
+           -1 ><ident
+            0 ><ident
+            1 ><ident
+            2 ><ident
+            3 <>ident)
+       3 (case c1
+           -1 <>ident
+            0 <>ident
+            1 <>ident
+            2 <>ident
+            3 <>ident))))
