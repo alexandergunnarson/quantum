@@ -853,90 +853,15 @@
        - I guarantee an animal but I provide any old organism
        - I guarantee a sheep and some wheat but I provide only a sheep
          - (t/?? (t/map :guarantee))"
-
-  ;; For comparing arities:
-  ;; (This uses set/difference in both directions)
-  ;; (set/compare (-> f0 fn>arities (map count) set) (-> f1 fn>arities (map count) set))
-
-  (testing "output <"
-    (testing "input <"
-      (test-comparison|fn [-1 -1] (t/fn [t/boolean? :> t/boolean?])
-                                  (t/fn []
-                                        [t/any?])))
-    (testing "input =")
-    (testing "input >")
-    (testing "input ><")
-    (testing "input <>"))
-  (testing "output ="
-    (testing "input <"
-      (testing "due to input arity <"
-        (test-comparison|fn [ 0 -1] (t/fn [t/any?])
-                                    (t/fn []
-                                          [t/any?])))
-      (testing "due to input types <"
-        (test-comparison|fn [ 0 -1] (t/fn []
-                                          [t/boolean?])
-                                    (t/fn []
-                                          [t/any?])))
-      (testing "due to input arity and types <"
-        (test-comparison|fn [ 0 -1] (t/fn [t/boolean?])
-                                    (t/fn []
-                                          [t/any?]))))
-    (testing "input ="
-      (test-comparison|fn [ 0  0] (t/fn [])
-                                  (t/fn [])))
-    (testing "input >")
-    (testing "input ><")
-    (testing "input <>"))
-  (testing "output >"
-    (testing "input <"
-      (testing "due to input arity <"
-        (test-comparison|fn [ 1 -1] (t/fn [t/any?])
-                                    (t/fn []
-                                          [t/any? :> t/boolean?])))
-      (testing "due to input types <"
-        (test-comparison|fn [ 1 -1] (t/fn []
-                                          [t/boolean?])
-                                    (t/fn []
-                                          [t/any? :> t/boolean?])))
-      (testing "due to input arity and types <"
-        (test-comparison|fn [ 1 -1] (t/fn [t/boolean?])
-                                    (t/fn []
-                                          [t/any? :> t/boolean?]))))
-    (testing "input ="
-      (test-comparison|fn [ 1  0] (t/fn [:> t/boolean?])
-                                  (t/fn []))
-      (test-comparison|fn [ 1  0] (t/fn [:> t/boolean?]
-                                        [t/any? :> t/boolean?])
-                                  (t/fn []
-                                        [t/any?])))
-    (testing "input >")
-    (testing "input ><")
-    (testing "input <>"))
-  (testing "output ><"
-    (testing "input <"
-      (test-comparison|fn [ 2 -1] (t/fn [t/boolean? :> i|><0])
-                                  (t/fn []
-                                        [t/any?     :> i|><1])))
-    (testing "input =")
-    (testing "input >")
-    (testing "input ><")
-    (testing "input <>"))
-  (testing "output <>"
-    (testing "input <")
-    (testing "input =")
-    (testing "input >")
-    (testing "input ><")
-    (testing "input <>"))
-
-  ;; Tests that pass
   (testing "input arities <"
     (testing "same-arity input types <"
       (testing "output <"
         (test-comparison|fn [ <ident  <ident] (t/fn                 [t/boolean? :> t/boolean?])
                                               (t/fn []              [t/any?     :> t/long?])))
       (testing "output =")
-      (testing "output >")
+      (testing "output >"
+        (test-comparison|fn [ <ident  >ident] (t/fn                 [t/boolean?])
+                                              (t/fn [:> t/boolean?] [t/any? :> t/boolean?])))
       (testing "output ><")
       (testing "output <>"))
     (testing "same-arity input types ="
@@ -990,6 +915,99 @@
       (testing "output <>"
         (test-comparison|fn [<ident <>ident] (t/fn [t/boolean? :> ><0])
                                              (t/fn [t/any?     :> ><1]))))
+    (testing "same-arity input types ="
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>"))
+    (testing "same-arity input types >"
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>"))
+    (testing "same-arity input types ><"
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>"))
+    (testing "same-arity input types <>"
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>")))
+  (testing "input arities >"
+    (testing "same-arity input types <"
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>"))
+    (testing "same-arity input types ="
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>"))
+    (testing "same-arity input types >"
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>"))
+    (testing "same-arity input types ><"
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>"))
+    (testing "same-arity input types <>"
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>")))
+  (testing "input arities ><"
+    (testing "same-arity input types <"
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>"))
+    (testing "same-arity input types ="
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>"))
+    (testing "same-arity input types >"
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>"))
+    (testing "same-arity input types ><"
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>"))
+    (testing "same-arity input types <>"
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>")))
+  (testing "input arities <>"
+    (testing "same-arity input types <"
+      (testing "output <")
+      (testing "output =")
+      (testing "output >")
+      (testing "output ><")
+      (testing "output <>"))
     (testing "same-arity input types ="
       (testing "output <")
       (testing "output =")
