@@ -901,23 +901,27 @@
   (testing "input arities ="
     (testing "same-arity input types <"
       (testing "output <"
-        (test-comparison|fn [<ident  <ident] (t/fn [t/boolean? :> t/boolean?])
-                                             (t/fn [t/any?])))
+        (test-comparison|fn [ <ident  <ident] (t/fn [t/boolean? :> t/boolean?])
+                                              (t/fn [t/any?])))
       (testing "output ="
-        (test-comparison|fn [<ident  =ident] (t/fn [t/boolean?])
-                                             (t/fn [t/any?])))
+        (test-comparison|fn [ <ident  =ident] (t/fn [t/boolean?])
+                                              (t/fn [t/any?])))
       (testing "output >"
-        (test-comparison|fn [<ident  >ident] (t/fn [t/boolean?])
-                                             (t/fn [t/any?     :> t/boolean?])))
+        (test-comparison|fn [ <ident  >ident] (t/fn [t/boolean?])
+                                              (t/fn [t/any?     :> t/boolean?])))
       (testing "output ><"
-        (test-comparison|fn [<ident ><ident] (t/fn [t/boolean? :> i|><0])
-                                             (t/fn [t/any?     :> i|><1])))
+        (test-comparison|fn [ <ident ><ident] (t/fn [t/boolean? :> i|><0])
+                                              (t/fn [t/any?     :> i|><1])))
       (testing "output <>"
-        (test-comparison|fn [<ident <>ident] (t/fn [t/boolean? :> ><0])
-                                             (t/fn [t/any?     :> ><1]))))
+        (test-comparison|fn [ <ident <>ident] (t/fn [t/boolean? :> ><0])
+                                              (t/fn [t/any?     :> ><1]))))
     (testing "same-arity input types ="
-      (testing "output <")
-      (testing "output =")
+      (testing "output <"
+        (test-comparison|fn [ =ident  >ident] (t/fn [])
+                                              (t/fn [:> t/boolean?])))
+      (testing "output ="
+        (test-comparison|fn [ =ident  =ident] (t/fn [])
+                                              (t/fn [])))
       (testing "output >")
       (testing "output ><")
       (testing "output <>"))
