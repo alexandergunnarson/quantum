@@ -19,6 +19,8 @@
 
 (deftest test|set
   (testing "< , >"
+    (test-comparison|set -1 #{}      #{1})
+    (test-comparison|set -1 #{}      #{1 2})
     (test-comparison|set -1 #{1}     #{1 2})
     (test-comparison|set -1 #{1 2}   #{1 2 3}))
   (testing "="
@@ -30,7 +32,5 @@
     (test-comparison|set  2 #{1 2}   #{1 3})
     (test-comparison|set  2 #{1 2 3} #{1 4}))
   (testing "<>"
-    (test-comparison|set  3 #{}      #{1})
-    (test-comparison|set  3 #{}      #{1 2})
     (test-comparison|set  3 #{1}     #{2})
     (test-comparison|set  3 #{3}     #{1 2})))

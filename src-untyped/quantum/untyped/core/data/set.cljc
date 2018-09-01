@@ -49,9 +49,9 @@
 
 (defn compare [s0 #_set?, s1 #_set?]
   (if (empty? s0)
-      (if (empty? s1) ucomp/=ident ucomp/<>ident)
+      (if (empty? s1) ucomp/=ident ucomp/<ident)
       (if (empty? s1)
-          ucomp/<>ident
+          ucomp/>ident
           ;; TODO do fewer comparisons here
           (let [diff0 (- s0 s1), diff1 (- s1 s0)]
             (if (empty? diff0)
@@ -65,7 +65,7 @@
                         ucomp/<>ident)))))))
 
 (defn <     [x0 x1] (ucomp/compf<  compare x0 x1))
-(defalias proper-subset?  <)
+(defalias proper-subset? <)
 (defn <=    [x0 x1] (ucomp/compf<= compare x0 x1))
 (defalias subset? <=)
 (defn >=    [x0 x1] (ucomp/compf>= compare x0 x1))
@@ -74,4 +74,4 @@
 (defalias proper-superset? >)
 (defn ><    [x0 x1] (ucomp/compf>< compare x0 x1))
 (defn <>    [x0 x1] (ucomp/compf<> compare x0 x1))
-(defalias disjoint? >)
+(defalias disjoint? <>)
