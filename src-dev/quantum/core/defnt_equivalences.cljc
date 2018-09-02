@@ -941,209 +941,221 @@
     ([] (>long* 1)))
   (is (identical? (defnt-reference) 1)))
 
-(is-code=
+;; NOTE would use `>long` but that's already an interface
+(deftest test|>long-checked
+  (let [actual
+          (macroexpand '
+            (defnt >long-checked
+              {:source "clojure.lang.RT.longCast"}
+              > t/long?
+              ;; TODO multi-arity `t/-`
+              ([x (t/- (t/- (t/- t/primitive? t/boolean?) t/float?) t/double?)] (>long* x))
+              ([x (t/and (t/or t/double? t/float?)
+                         ;; TODO add this back in
+                         #_(fnt [x (t/or t/double? t/float?)] (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
+                (>long* x))
+              ([x (t/and (t/isa? clojure.lang.BigInt)
+                         ;; TODO add this back in
+                         #_(fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
+                (.lpart x))
+              ([x (t/and (t/isa? java.math.BigInteger)
+                         ;; TODO add this back in
+                         #_(fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
+                (.longValue x))
+              ;; TODO support recursion
+              #_([x t/ratio?] (>long-checked (.bigIntegerValue x)))
+              ([x (t/value true)]  1)
+              ([x (t/value false)] 0)
+              ([x t/string?] (Long/parseLong x))
+              ([x t/string?, radix t/int?] (Long/parseLong x radix))))
+        expected
+          (case (env-lang)
+            :clj ($ (do #_[x (t/- t/primitive? t/boolean? t/float? t/double?)]
 
-(macroexpand '
-(defnt >long
-  {:source "clojure.lang.RT.longCast"}
-  > t/long?
-  ;; TODO multi-arity `t/-`
-  ;; TODO fix reference to `>long*`
-  ([x (t/- t/primitive? t/boolean? t/float? t/double?)] (>long* x))
-  ([x (t/and (t/or t/double? t/float?)
-             ;; TODO add this back in
-             #_(fnt [x (t/or t/double? t/float?)] (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
-    (>long* x))
-  ([x (t/and (t/isa? clojure.lang.BigInt)
-             ;; TODO add this back in
-             #_(fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
-    (.lpart x))
-  ([x (t/and (t/isa? java.math.BigInteger)
-             ;; TODO add this back in
-             #_(fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
-    (.longValue x))
-  ([x t/ratio?] (>long (.bigIntegerValue x)))
-  ([x (t/value true)]  1)
-  ([x (t/value false)] 0)
-  ([x t/string?] (Long/parseLong x))
-  ([x t/string?, radix t/int?] (Long/parseLong x radix))))
+                        #_(def ~'>long|__0|input-types (*<> t/byte?))
+                        (def ~'>long|__0
+                          (reify byte>long
+                            (~(tag "long" 'invoke) [_## ~(tag "byte" 'x)]
+                              ;; Resolved from `(>long* x)`
+                              (.invoke >long*|__0 ~'x))))
 
-;; ----- expanded code ----- ;;
+                        #_(def ~'>long|__1|input-types (*<> t/char?))
+                        (def ~'>long|__1
+                          (reify char>long
+                            (~(tag "long" 'invoke) [_## ~(tag "char" 'x)]
+                              ;; Resolved from `(>long* x)`
+                              (.invoke >long*|__1 ~'x))))
 
-(case (env-lang)
-  :clj ($ (do #_[x (t/- t/primitive? t/boolean? t/float? t/double?)]
+                        #_(def ~'>long|__2|input-types (*<> t/short?))
+                        (def ~'>long|__2
+                          (reify short>long
+                            (~(tag "long" 'invoke) [_## ~(tag "short" 'x)]
+                              ;; Resolved from `(>long* x)`
+                              (.invoke >long*|__2 ~'x))))
 
-              #_(def ~'>long|__0|input-types (*<> t/byte?))
-              (def ~'>long|__0
-                (reify byte>long
-                  (~(tag "long" 'invoke) [_## ~(tag "byte" 'x)]
-                    ;; Resolved from `(>long* x)`
-                    (.invoke >long*|__0 ~'x))))
+                        #_(def ~'>long|__3|input-types (*<> t/int?))
+                        (def ~'>long|__3
+                          (reify int>long
+                            (~(tag "long" 'invoke) [_## ~(tag "int" 'x)]
+                              ;; Resolved from `(>long* x)`
+                              (.invoke >long*|__3 ~'x))))
 
-              #_(def ~'>long|__1|input-types (*<> t/char?))
-              (def ~'>long|__1
-                (reify char>long
-                  (~(tag "long" 'invoke) [_## ~(tag "char" 'x)]
-                    ;; Resolved from `(>long* x)`
-                    (.invoke >long*|__1 ~'x))))
+                        #_(def ~'>long|__4|input-types (*<> t/long?))
+                        (def ~'>long|__4
+                          (reify long>long
+                            (~(tag "long" 'invoke) [_## ~(tag "long" 'x)]
+                              ;; Resolved from `(>long* x)`
+                              (.invoke >long*|__4 ~'x))))
 
-              #_(def ~'>long|__2|input-types (*<> t/short?))
-              (def ~'>long|__2
-                (reify short>long
-                  (~(tag "long" 'invoke) [_## ~(tag "short" 'x)]
-                    ;; Resolved from `(>long* x)`
-                    (.invoke >long*|__2 ~'x))))
+                        #_[x (t/and (t/or t/double? t/float?)
+                                    (fnt [x (t/or double? float?)]
+                                      (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
 
-              #_(def ~'>long|__3|input-types (*<> t/int?))
-              (def ~'>long|__3
-                (reify int>long
-                  (~(tag "long" 'invoke) [_## ~(tag "int" 'x)]
-                    ;; Resolved from `(>long* x)`
-                    (.invoke >long*|__3 ~'x))))
+                        #_(def ~'>long|__5|input-types
+                          (*<> (t/and t/double?
+                                      (fnt [x (t/or double? float?)]
+                                        (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))))
+                        (def ~'>long|__5
+                          (reify double>long
+                            (~(tag "long" 'invoke) [_## ~(tag "double" 'x)]
+                              ;; Resolved from `(>long* x)`
+                              (.invoke >long*|__6 ~'x))))
 
-              #_(def ~'>long|__4|input-types (*<> t/long?))
-              (def ~'>long|__4
-                (reify long>long
-                  (~(tag "long" 'invoke) [_## ~(tag "long" 'x)]
-                    ;; Resolved from `(>long* x)`
-                    (.invoke >long*|__4 ~'x))))
+                        #_(def ~'>long|__6|input-types
+                          (*<> (t/and t/float?
+                                      (fnt [x (t/or double? float?)]
+                                        (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))))
+                        (def ~'>long|__6
+                          (reify float>long
+                            (~(tag "long" 'invoke) [_## ~(tag "float" 'x)]
+                              ;; Resolved from `(>long* x)`
+                              (.invoke >long*|__5 ~'x))))
 
-              #_[x (t/and (t/or t/double? t/float?)
-                          (fnt [x (t/or double? float?)]
-                            (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
+                        #_[(t/and (t/isa? clojure.lang.BigInt)
+                                  (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
 
-              #_(def ~'>long|__5|input-types
-                (*<> (t/and t/double?
-                            (fnt [x (t/or double? float?)]
-                              (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))))
-              (def ~'>long|__5
-                (reify double>long
-                  (~(tag "long" 'invoke) [_## ~(tag "double" 'x)]
-                    ;; Resolved from `(>long* x)`
-                    (.invoke >long*|__6 ~'x))))
+                        #_(def ~'>long|__7|input-types
+                          (*<> (t/and (t/isa? clojure.lang.BigInt)
+                                      (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))))
+                        (def ~'>long|__7
+                          (reify Object>long
+                            (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
+                              (let* [~(tag "clojure.lang.BigInt" 'x) ~'x] ~'(.lpart x)))))
 
-              #_(def ~'>long|__6|input-types
-                (*<> (t/and t/float?
-                            (fnt [x (t/or double? float?)]
-                              (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))))
-              (def ~'>long|__6
-                (reify float>long
-                  (~(tag "long" 'invoke) [_## ~(tag "float" 'x)]
-                    ;; Resolved from `(>long* x)`
-                    (.invoke >long*|__5 ~'x))))
+                        #_[x (t/and (t/isa? java.math.BigInteger)
+                                    (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
 
-              #_[(t/and (t/isa? clojure.lang.BigInt)
-                        (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
+                        #_(def ~'>long|__8|input-types
+                          (*<> (t/and (t/isa? java.math.BigInteger)
+                                      (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))))
+                        (def ~'>long|__8
+                          (reify Object>long
+                            (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
+                              (let* [~(tag "java.math.BigInteger" 'x) ~'x] ~'(.longValue x)))))
 
-              #_(def ~'>long|__7|input-types
-                (*<> (t/and (t/isa? clojure.lang.BigInt)
-                            (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))))
-              (def ~'>long|__7
-                (reify Object>long
-                  (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
-                    (let* [~(tag "clojure.lang.BigInt" 'x) ~'x] ~'(.lpart x)))))
+                        #_[x t/ratio?]
 
-              #_[x (t/and (t/isa? java.math.BigInteger)
-                          (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
+                        #_(def ~'>long|__9|input-types
+                          (*<> t/ratio?))
+                        #_(def ~'>long|__9|conditions
+                          (*<> (-> long|__8|input-types (get 0) utr/and-type>args (get 1))))
+                        (def ~'>long|__9
+                          (reify Object>long
+                            (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
+                              (let* [~(tag "clojure.lang.Ratio" 'x) ~'x]
+                                ;; Resolved from `(>long (.bigIntegerValue x))`
+                                ;; In this case, `(t/compare (type-of '(.bigIntegerValue x)) overload-type)`:
+                                ;; - `(t/- t/primitive? t/boolean? t/float? t/double?)` -> t/<>
+                                ;; - `(t/and (t/or t/double? t/float?) ...)`            -> t/<>
+                                ;; - `(t/and (t/isa? clojure.lang.BigInt) ...)`         -> t/<>
+                                ;; - `(t/and (t/isa? java.math.BigInteger) ...)`        -> t/>
+                                ;; - `t/ratio?`                                         -> t/<>
+                                ;; - `(t/value true)`                                   -> t/<>
+                                ;; - `(t/value false)`                                  -> t/<>
+                                ;; - `t/string?`                                        -> t/<>
+                                ;;
+                                ;; Since there is no overload that results in t/<, no compile-time match can
+                                ;; be found, but a possible runtime match lies in the overload that results in
+                                ;; t/>. The remaining uncertainty will have to be resolved at compile time.
+                                ;; Note that if there had been multiple overloads with t/>, we would have had
+                                ;; to dispatch on that and resolve accordingly.
+                                (let [x## ~'(.bigIntegerValue x)]
+                                  (if ((Array/get >long|__9|conditions 0) x##)
+                                      (.invoke >long|__8 x##)
+                                      (unsupported! `>long x##)))))))
 
-              #_(def ~'>long|__8|input-types
-                (*<> (t/and (t/isa? java.math.BigInteger)
-                            (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))))
-              (def ~'>long|__8
-                (reify Object>long
-                  (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
-                    (let* [~(tag "java.math.BigInteger" 'x) ~'x] ~'(.longValue x)))))
+                        #_[x (t/value true)]
 
-              #_[x t/ratio?]
+                        #_(def ~'>long|__10|input-types
+                          (*<> (t/value true)))
+                        (def ~'>long|__10
+                          (reify boolean>long
+                            (~(tag "long" 'invoke) [_## ~(tag "boolean" 'x)] 1)))
 
-              #_(def ~'>long|__9|input-types
-                (*<> t/ratio?))
-              #_(def ~'>long|__9|conditions
-                (*<> (-> long|__8|input-types (get 0) utr/and-type>args (get 1))))
-              (def ~'>long|__9
-                (reify Object>long
-                  (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
-                    (let* [~(tag "clojure.lang.Ratio" 'x) ~'x]
-                      ;; Resolved from `(>long (.bigIntegerValue x))`
-                      ;; In this case, `(t/compare (type-of '(.bigIntegerValue x)) overload-type)`:
-                      ;; - `(t/- t/primitive? t/boolean? t/float? t/double?)` -> t/<>
-                      ;; - `(t/and (t/or t/double? t/float?) ...)`            -> t/<>
-                      ;; - `(t/and (t/isa? clojure.lang.BigInt) ...)`         -> t/<>
-                      ;; - `(t/and (t/isa? java.math.BigInteger) ...)`        -> t/>
-                      ;; - `t/ratio?`                                         -> t/<>
-                      ;; - `(t/value true)`                                   -> t/<>
-                      ;; - `(t/value false)`                                  -> t/<>
-                      ;; - `t/string?`                                        -> t/<>
-                      ;;
-                      ;; Since there is no overload that results in t/<, no compile-time match can
-                      ;; be found, but a possible runtime match lies in the overload that results in
-                      ;; t/>. The remaining uncertainty will have to be resolved at compile time.
-                      ;; Note that if there had been multiple overloads with t/>, we would have had
-                      ;; to dispatch on that and resolve accordingly.
-                      (let [x## ~'(.bigIntegerValue x)]
-                        (if ((Array/get >long|__9|conditions 0) x##)
-                            (.invoke >long|__8 x##)
-                            (unsupported! `>long x##)))))))
+                        #_[x (t/value false)]
 
-              #_[x (t/value true)]
+                        #_(def ~'>long|__11|input-types
+                          (*<> (t/value false)))
+                        (def ~'>long|__11
+                          (reify boolean>long
+                            (~(tag "long" 'invoke) [_## ~(tag "boolean" 'x)] 0)))
 
-              #_(def ~'>long|__10|input-types
-                (*<> (t/value true)))
-              (def ~'>long|__10
-                (reify boolean>long
-                  (~(tag "long" 'invoke) [_## ~(tag "boolean" 'x)] 1)))
+                        #_[x t/string?]
 
-              #_[x (t/value false)]
+                        #_(def ~'>long|__12|input-types
+                          (*<> t/string?))
+                        (def ~'>long|__12
+                          (reify Object>long
+                            (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
+                              ~'(Long/parseLong x))))
 
-              #_(def ~'>long|__11|input-types
-                (*<> (t/value false)))
-              (def ~'>long|__11
-                (reify boolean>long
-                  (~(tag "long" 'invoke) [_## ~(tag "boolean" 'x)] 0)))
+                        #_[x t/string?]
 
-              #_[x t/string?]
+                        #_(def ~'>long|__13|input-types
+                          (*<> t/string? t/int?))
+                        (def ~'>long|__13
+                          (reify Object+int>long
+                            (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x) ~(tag "int" 'radix)]
+                              ~'(Long/parseLong x radix))))
 
-              #_(def ~'>long|__12|input-types
-                (*<> t/string?))
-              (def ~'>long|__12
-                (reify Object>long
-                  (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
-                    ~'(Long/parseLong x))))
-
-              #_[x t/string?]
-
-              #_(def ~'>long|__13|input-types
-                (*<> t/string? t/int?))
-              (def ~'>long|__13
-                (reify Object+int>long
-                  (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x) ~(tag "int" 'radix)]
-                    ~'(Long/parseLong x radix))))
-
-              #_(defn >long
-                {::t/type
-                  (t/fn
-                    [(t/- t/primitive? t/boolean? t/float? t/double?)]
-                    [(t/and (t/or t/double? t/float?)
-                            (fnt [x (t/or double? float?)]
-                              (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
-                    [(t/and (t/isa? clojure.lang.BigInt)
-                            (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
-                    [(t/and (t/isa? java.math.BigInteger)
-                            (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
-                    [t/ratio?]
-                    [(t/value true)]
-                    [(t/value false)]
-                    [t/string?]
-                    [t/string? t/int?])}
-                ([x0##] (ifs ((Array/get >long|__0|input-types 0) x0##)
-                               (.invoke >long|__0 x0##)
-                             ((Array/get >long|__1|input-types 0) x0##)
-                               (.invoke >long|__0 x0##)
-                             ((Array/get >long|__2|input-types 0) x0##)
-                               (.invoke >long|__2 x0##)))
-                ([x0## x1##] ...)))))
-
-)
+                        #_(defn >long
+                          {::t/type
+                            (t/fn
+                              [(t/- t/primitive? t/boolean? t/float? t/double?)]
+                              [(t/and (t/or t/double? t/float?)
+                                      (fnt [x (t/or double? float?)]
+                                        (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
+                              [(t/and (t/isa? clojure.lang.BigInt)
+                                      (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
+                              [(t/and (t/isa? java.math.BigInteger)
+                                      (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
+                              [t/ratio?]
+                              [(t/value true)]
+                              [(t/value false)]
+                              [t/string?]
+                              [t/string? t/int?])}
+                          ([x0##] (ifs ((Array/get >long|__0|input-types 0) x0##)
+                                         (.invoke >long|__0 x0##)
+                                       ((Array/get >long|__1|input-types 0) x0##)
+                                         (.invoke >long|__0 x0##)
+                                       ((Array/get >long|__2|input-types 0) x0##)
+                                         (.invoke >long|__2 x0##)))
+                          ([x0## x1##] ...)))))]
+    ;; TODO fix this
+    #_(testing "code equivalence" (is-code= actual expected))
+    (testing "functionality"
+      (eval actual)
+      (eval
+        '(do (throws (>long-checked))
+             (throws (>long-checked nil))
+             (throws (>long-checked ""))
+             (is (identical? (>long-checked  1)       (clojure.lang.RT/longCast  1)))
+             (is (identical? (>long-checked  1.0)     (clojure.lang.RT/longCast  1.0)))
+             (is (identical? (>long-checked  1.1)     (clojure.lang.RT/longCast  1.1)))
+             (is (identical? (>long-checked -1)       (clojure.lang.RT/longCast -1)))
+             (is (identical? (>long-checked -1.0)     (clojure.lang.RT/longCast -1.0)))
+             (is (identical? (>long-checked -1.1)     (clojure.lang.RT/longCast -1.1)))
+             (is (identical? (>long-checked (byte 1)) (clojure.lang.RT/longCast (byte 1)))))))))
 
 ;; =====|=====|=====|=====|===== ;;
 
