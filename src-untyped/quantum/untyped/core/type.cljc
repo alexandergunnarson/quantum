@@ -473,14 +473,15 @@
                           (->> ct ct->overloads|x1 overloads->ored-input-types))))))
            utcomp/combine-comparisons))))
 
-(defns compare|out [x0 utr/fn-type?, x1 utr/fn-type?]
-  (let [fn-type>output-type
-          (c/fn [f] (->> f utr/fn-type>arities
-                           vals
-                           (apply concat)
-                           (uc/lmap :output-type)
-                           (apply or)))]
-    (utcomp/compare (fn-type>output-type x0) (fn-type>output-type x1))))
+(defns fn-type>output-type [x utr/fn-type? > type?]
+  (->> x utr/fn-type>arities
+         vals
+         (apply concat)
+         (uc/lmap :output-type)
+         (apply or)))
+
+(defns compare|out [x0 utr/fn-type?, x1 utr/fn-type? > ucomp/comparison?]
+  (utcomp/compare (fn-type>output-type x0) (fn-type>output-type x1)))
 
 (defn unkeyed
   "Creates an unkeyed collection type, in which the collection may

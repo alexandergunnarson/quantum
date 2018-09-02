@@ -227,7 +227,8 @@
 ;; ----- FnType ----- ;;
 
 (udt/deftype FnType
-  [name arities-form arities]
+  [name arities-form
+   arities #_(s/map-of non-zero-int? (s/seq-of ::t/fn-type|arity))]
   {PType nil
    ;; Outputs whether the args match any input spec
    ?Fn {invoke ([this args] (TODO))}

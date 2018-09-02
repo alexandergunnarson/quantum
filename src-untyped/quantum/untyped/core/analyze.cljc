@@ -425,6 +425,57 @@
                             ;; `t/none?` because nothing is actually returned
                             :type t/none?})))))
 
+(defns- call>arg-nodes+out-type
+  [env _, caller|node _, caller|type _, caller-kind _, args-ct _, body _
+   > (s/kv {:arg-nodes t/any? #_(s/seq-of ast/node?)
+            :out-type  t/type?})]
+  {:post [(doto % (println))]}
+  (dissoc
+    (if (zero? args-ct)
+        {:arg-nodes []
+         :out-type  (case caller-kind
+                      ;; We could do a little smarter analysis here but we'll
+                      ;; keep it simple for now
+                      :fn  t/any?
+                      :fnt (-> caller|type (get args-ct) first :output-type))}
+        (->> body
+             (c/map+ #(analyze* env %))
+             (reducei (fn [{:as ret :keys [satisfying-overloads-seq]}
+                           arg|analyzed i]
+                        ;; TODO review this part as it's passing back a nil out-type somehow
+                        (if (= :fnt caller-kind)
+                            (if-let [satisfying-overloads-seq'
+                                      (->> satisfying-overloads-seq
+                                           (c/lfilter
+                                             (fn [{:keys [input-types]}]
+                                               (t/<= (:type arg|analyzed)
+                                                     (get input-types i))))
+                                           seq)]
+                              (-> ret
+                                  (update :arg-nodes conj arg|analyzed)
+                                  (assoc :satisfying-overloads-seq satisfying-overloads-seq'
+                                         :out-type
+                                           (when (and (= i (dec args-ct))
+                                                      (= (bounded-count 2 satisfying-overloads-seq')
+                                                         1))
+                                             (-> satisfying-overloads-seq'
+                                                 first
+                                                 :output-type))))
+                              (err! "No overloads satisfy the arguments"
+                                    {:caller caller|node
+                                     :args body}))
+                            (update ret :arg-nodes conj arg|analyzed)))
+                      {:arg-nodes []
+                       ;; We could do a little smarter analysis here but we'll
+                       ;; keep it simple for now
+                       :out-type (when-not (= :fnt caller-kind) t/any?)
+                       :satisfying-overloads-seq
+                         (when (= :fnt caller-kind)
+                           (-> caller|type
+                               utr/fn-type>arities
+                               (get args-ct)))})))
+    :satisfying-overloads-seq))
+
 (defns- analyze-seq*
   "Analyze a seq after it has been macro-expanded.
    The ->`form` is post- incremental macroexpansion."
@@ -447,17 +498,20 @@
              _ (ppr caller|node)
              caller|type (:type caller|node)
              args-ct     (count body)]
-         (case (t/compare caller|type t/callable?)
+               ;; TODO fix this line of code and extend t/compare so the comparison checks below
+               ;;      will work with t/fn
+         (case (if (utr/fn-type? caller|type)
+                   -1
+                   (t/compare caller|type t/callable?))
            (1 2)  (err! "It is not known whether form can be called" {:node caller|node})
            3      (err! "Form cannot be called" {:node caller|node})
            (-1 0) (let [caller-kind
-                          (ifs (t/<= caller|type t/keyword?)          :keyword
+                          (ifs (utr/fn-type? caller|type)             :fnt
+                               (t/<= caller|type t/keyword?)          :keyword
                                (t/<= caller|type t/+map|built-in?)    :map
                                (t/<= caller|type t/+vector|built-in?) :vector
                                (t/<= caller|type t/+set|built-in?)    :set
                                (t/<= caller|type t/fn?)               :fn
-                               ;; TODO maybe have a better check?
-                               (t/<= caller|type t/fnt?)              :fnt
                                ;; If it's callable but not fn, we might have missed something in
                                ;; this dispatch so for now we throw
                                (err! "Don't know how how to handle non-fn callable"
@@ -479,25 +533,16 @@
                                        {:args-ct args-ct :caller caller|node}))
 
                             :fnt
-                              (TODO "Don't know how to handle typed fns yet" {:caller caller|node})
+                              (when-not (-> caller|type utr/fn-type>arities (contains? args-ct))
+                                (err! "Unhandled number of arguments for fnt"
+                                      {:args-ct args-ct :caller caller|node}))
                               ;; For non-typed fns, unknown; we will have to risk runtime exception
                               ;; because we can't necessarily rely on metadata to tell us the
                               ;; whole truth
                             :fn nil)
-                        ;; TODO incrementally check by analyzing each arg in `reduce` and pruning
-                        ;; branches of what the type could be, and throwing if it's found something
-                        ;; that's an impossible combination
-                        arg-nodes (->> body
-                                       (c/map+ #(analyze* env %))
-                                       (reduce (fn [args arg|analyzed]
-                                                 (conj args arg|analyzed))
-                                               []))
-                        out-type
-                          (case caller-kind
-                            ;; We could do a little smarter analysis here but we'll keep it simple
-                            ;; for now
-                            (:keyword :map :vector :set :fn) t/any?
-                            :fnt (TODO "Use `::t/type` metadata to make this decision"))]
+                        {:keys [arg-nodes out-type]}
+                          (call>arg-nodes+out-type
+                            env caller|node caller|type caller-kind args-ct body)]
                     (uast/call-node
                       {:env    env
                        :form   form

@@ -451,7 +451,8 @@
 
 ;; TODO unknown if this is `and`- or `or`-style combination
 (defns combine-comparisons
-  "Commutative in the 2-ary arity"
+  "Used in `t/compare|in` and `t/compare|out`. Might be used for other things too in the future.
+   Commutative in the 2-ary arity."
   ([cs _ #_(seq-of ucomp/comparison?) > ucomp/comparison?]
     (reduce (fn [c' c] (combine-comparisons c' c)) (first cs) (rest cs)))
   ([^long c0 ucomp/comparison?, ^long c1 ucomp/comparison? > ucomp/comparison?]

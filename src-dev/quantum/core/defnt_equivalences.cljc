@@ -934,8 +934,9 @@
              (is (identical? (>long* (byte 1)) (clojure.lang.RT/uncheckedLongCast (byte 1)))))))))
 
 
-(defnt defnt-reference-test
-  ([] (>long* 1)))
+(deftest defnt-reference-test
+  (defnt defnt-reference
+    ([] (>long* 1))))
 
 (is-code=
 
@@ -943,6 +944,8 @@
 (defnt >long
   {:source "clojure.lang.RT.longCast"}
   > t/long?
+  ;; TODO multi-arity `t/-`
+  ;; TODO fix reference to `>long*`
   ([x (t/- t/primitive? t/boolean? t/float? t/double?)] (>long* x))
   ([x (t/and (t/or t/double? t/float?)
              ;; TODO add this back in
