@@ -452,11 +452,10 @@
                        (-> ret
                            (update :arg-nodes conj arg|analyzed)
                            (assoc :satisfying-overloads-seq satisfying-overloads-seq'
-                                  :out-type
-                                    (when-let [last-arg-to-check? (= i (dec args-ct))]
-                                      (-> satisfying-overloads-seq'
-                                          first
-                                          :output-type))))
+                                  :out-type (when-let [last-arg-to-check? (= i (dec args-ct))]
+                                              (-> satisfying-overloads-seq'
+                                                  first
+                                                  :output-type))))
                        (err! "No overloads satisfy the arguments"
                              {:caller caller|node
                               :args body}))
