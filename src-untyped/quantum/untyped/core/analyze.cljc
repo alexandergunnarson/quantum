@@ -6,6 +6,7 @@
     [quantum.untyped.core.analyze.expr      :as uxp]
     [quantum.untyped.core.collections       :as c
       :refer [>vec]]
+    [quantum.untyped.core.collections.logic :as clogic]
     [quantum.untyped.core.compare           :as ucomp]
     [quantum.untyped.core.core
       :refer [istr]]
@@ -20,7 +21,7 @@
     [quantum.untyped.core.form.evaluate     :as ufeval]
     [quantum.untyped.core.log               :as log
       :refer [prl!]]
-    [quantum.untyped.core.logic
+    [quantum.untyped.core.logic             :as l
       :refer [if-not-let ifs]]
     [quantum.untyped.core.print
       :refer [ppr]]
@@ -201,7 +202,7 @@
 
 (defns methods->type
   "Creates a type given ->`methods`."
-  [methods (s/seq-of t/any? #_method?) > t/type?]
+  [methods (s/seq-of t/any? #_method?) #_> #_t/type?]
   ;; TODO room for plenty of optimization here
   (let [methods|by-ct (->> methods
                            (c/group-by (fn-> :argtypes count))
@@ -425,50 +426,100 @@
                             ;; `t/none?` because nothing is actually returned
                             :type t/none?})))))
 
-(defns- call>arg-nodes+out-type
-  [env _, caller|node _, caller|type _, caller-kind _, args-ct _, body _
-   > (s/kv {:arg-nodes t/any? #_(s/seq-of ast/node?)
-            :out-type  t/type?})]
+(defn- filter-dynamic-dispatchable-overloads
+  "An example of dynamic dispatch:
+   - When we call `seq` on an input of type `(t/? (t/isa? java.util.Set))`, direct dispatch will
+     fail as it is not `t/<=` to any overload (including `t/iterable?` which is the only one under
+     which `(t/isa? java.util.Set)` falls).
+     However since all branches of the `t/or` are guaranteed to result in a successful dispatch
+     (i.e. `t/nil?` and `t/iterable?`) then dynamic dispatch will go forward without an error."
+  [{:as ret :keys [dispatchable-overloads-seq]} input|analyzed i caller|node body]
+  (if (-> input|analyzed :type utr/or-type?)
+      (let [or-types (-> input|analyzed :type utr/or-type>args)
+            {:keys [dispatchable-overloads-seq' non-dispatchable-or-types]}
+              (->> dispatchable-overloads-seq
+                   (reduce
+                     (fn [ret {:as overload :keys [input-types]}]
+                       (if-let [or-types-that-match
+                                  (->> or-types (c/lfilter #(t/<= % (get input-types i))) seq)]
+                         (-> ret
+                             (update :dispatchable-overloads-seq' conj overload)
+                             (update :non-dispatchable-or-types
+                               #(apply disj % or-types-that-match)))
+                         ret))
+                     {:dispatchable-overloads-seq' []
+                      :non-dispatchable-or-types (set or-types)}))]
+        (if (or (empty? dispatchable-overloads-seq')
+                (c/contains? non-dispatchable-or-types))
+            (err! "No overloads satisfy the inputs, whether direct or dynamic"
+                  {:caller caller|node
+                   :inputs body})
+            (assoc ret :dispatchable-overloads-seq dispatchable-overloads-seq'
+                       :dispatch-type              :dynamic)))
+      (err! "Cannot currently do a dynamic dispatch on a non-`t/or` input type"
+            {:input|analyzed input|analyzed})))
 
+(defn- filter-direct-dispatchable-overloads
+  [{:as ret :keys [dispatchable-overloads-seq]} input|analyzed i caller|node body]
+  (if-let [dispatchable-overloads-seq'
+            (->> dispatchable-overloads-seq
+                 (c/lfilter
+                   (fn [{:keys [input-types]}]
+                     (t/<= (:type input|analyzed) (get input-types i))))
+                 seq)]
+    (assoc ret :dispatchable-overloads-seq dispatchable-overloads-seq')
+    (filter-dynamic-dispatchable-overloads ret input|analyzed i caller|node body)))
+
+(defn- >dispatch|out-type [dispatch-type dispatchable-overloads-seq]
+  (case dispatch-type
+    :direct  (-> dispatchable-overloads-seq first :output-type)
+    :dynamic (->> dispatchable-overloads-seq
+                  (c/lmap :output-type)
+                  ;; Technically we could do a complex
+                  ;; conditional instead of a simple `t/or`
+                  ;; but no need
+                  (apply t/or))))
+
+(defns- call>input-nodes+out-type
+  [env _, caller|node _, caller|type _, caller-kind _, inputs-ct _, body _
+   > (s/kv {:input-nodes t/any? #_(s/seq-of ast/node?)
+            :out-type  t/type?})]
   (dissoc
-    (if (zero? args-ct)
-        {:arg-nodes []
+    (if (zero? inputs-ct)
+        {:input-nodes []
          :out-type
            (if (= :fnt caller-kind)
-               (-> caller|type (get args-ct) first :output-type)
+               (-> caller|type (get inputs-ct) first :output-type)
                ;; We could do a little smarter analysis here but we'll keep it simple for now
                t/any?)}
         (->> body
              (c/map+ #(analyze* env %))
              (reducei
-               (fn [{:as ret :keys [satisfying-overloads-seq]} arg|analyzed i]
+               (fn [{:as ret :keys [dispatch-type]} input|analyzed i]
                  (if (= :fnt caller-kind)
-                     (if-let [satisfying-overloads-seq'
-                               (->> satisfying-overloads-seq
-                                    (c/lfilter
-                                      (fn [{:keys [input-types]}]
-                                        (t/<= (:type arg|analyzed) (get input-types i))))
-                                    seq)]
-                       (-> ret
-                           (update :arg-nodes conj arg|analyzed)
-                           (assoc  :satisfying-overloads-seq satisfying-overloads-seq'
-                                   :out-type (when-let [last-arg-to-check? (= i (dec args-ct))]
-                                               (-> satisfying-overloads-seq'
-                                                   first
-                                                   :output-type))))
-                       (err! "No overloads satisfy the arguments"
-                             {:caller caller|node
-                              :args   body}))
-                     (update ret :arg-nodes conj arg|analyzed)))
-                 {:arg-nodes []
+                     (let [{:as ret' :keys [dispatchable-overloads-seq]}
+                             (case dispatch-type
+                               :direct  (filter-direct-dispatchable-overloads
+                                          ret input|analyzed i caller|node body)
+                               :dynamic (filter-dynamic-dispatchable-overloads
+                                          ret input|analyzed i caller|node body))]
+                       (-> ret'
+                           (update :input-nodes conj input|analyzed)
+                           (assoc  :out-type
+                                     (when-let [last-input-to-check? (= i (dec inputs-ct))]
+                                       (>dispatch|out-type
+                                         dispatch-type dispatchable-overloads-seq)))))
+                     (update ret :input-nodes conj input|analyzed)))
+                 {:input-nodes []
                   ;; We could do a little smarter analysis here but we'll keep it simple for now
                   :out-type  (when-not (= :fnt caller-kind) t/any?)
-                  :satisfying-overloads-seq
+                  :dispatch-type :direct
+                  :dispatchable-overloads-seq
                     (when (= :fnt caller-kind)
                       (-> caller|type
                           utr/fn-type>arities
-                          (get args-ct)))})))
-    :satisfying-overloads-seq))
+                          (get inputs-ct)))})))
+    :dispatchable-overloads-seq))
 
 (defns- analyze-seq*
   "Analyze a seq after it has been macro-expanded.
@@ -489,9 +540,8 @@
          throw    (analyze-seq|throw env form))
        ;; TODO support recursion
        (let [caller|node (analyze* env caller|form)
-             _ (ppr caller|node)
              caller|type (:type caller|node)
-             args-ct     (count body)]
+             inputs-ct   (count body)]
                ;; TODO fix this line of code and extend t/compare so the comparison checks below
                ;;      will work with t/fn
          (case (if (utr/fn-type? caller|type)
@@ -510,38 +560,38 @@
                                ;; this dispatch so for now we throw
                                (err! "Don't know how how to handle non-fn callable"
                                      {:caller caller|node}))
-                        assert-valid-args-ct
+                        assert-valid-inputs-ct
                           (case caller-kind
                             (:keyword :map)
-                              (when-not (or (= args-ct 1) (= args-ct 2))
+                              (when-not (or (= inputs-ct 1) (= inputs-ct 2))
                                 (err! (str "Keywords and `clojure.core` persistent maps must be "
-                                           "provided with exactly one or two args when calling "
+                                           "provided with exactly one or two inputs when calling "
                                            "them")
-                                      {:args-ct args-ct :caller caller|node}))
+                                      {:inputs-ct inputs-ct :caller caller|node}))
 
                             (:vector :set)
-                              (when-not (= args-ct 1)
+                              (when-not (= inputs-ct 1)
                                  (err! (str "`clojure.core` persistent vectors and `clojure.core` "
-                                            "persistent sets must be provided with exactly one arg "
-                                            "when calling them")
-                                       {:args-ct args-ct :caller caller|node}))
+                                            "persistent sets must be provided with exactly one "
+                                            "input when calling them")
+                                       {:inputs-ct inputs-ct :caller caller|node}))
 
                             :fnt
-                              (when-not (-> caller|type utr/fn-type>arities (contains? args-ct))
-                                (err! "Unhandled number of arguments for fnt"
-                                      {:args-ct args-ct :caller caller|node}))
+                              (when-not (-> caller|type utr/fn-type>arities (contains? inputs-ct))
+                                (err! "Unhandled number of inputs for fnt"
+                                      {:inputs-ct inputs-ct :caller caller|node}))
                               ;; For non-typed fns, unknown; we will have to risk runtime exception
                               ;; because we can't necessarily rely on metadata to tell us the
                               ;; whole truth
                             :fn nil)
-                        {:keys [arg-nodes out-type]}
-                          (call>arg-nodes+out-type
-                            env caller|node caller|type caller-kind args-ct body)]
+                        {:keys [input-nodes out-type]}
+                          (call>input-nodes+out-type
+                            env caller|node caller|type caller-kind inputs-ct body)]
                     (uast/call-node
                       {:env    env
                        :form   form
                        :caller caller|node
-                       :args   arg-nodes
+                       :args   input-nodes
                        :type   out-type}))))))
 
 (defns- analyze-seq [env ::env, form _]
