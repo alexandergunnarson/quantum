@@ -451,18 +451,18 @@
                                     seq)]
                        (-> ret
                            (update :arg-nodes conj arg|analyzed)
-                           (assoc :satisfying-overloads-seq satisfying-overloads-seq'
-                                  :out-type (when-let [last-arg-to-check? (= i (dec args-ct))]
-                                              (-> satisfying-overloads-seq'
-                                                  first
-                                                  :output-type))))
+                           (assoc  :satisfying-overloads-seq satisfying-overloads-seq'
+                                   :out-type (when-let [last-arg-to-check? (= i (dec args-ct))]
+                                               (-> satisfying-overloads-seq'
+                                                   first
+                                                   :output-type))))
                        (err! "No overloads satisfy the arguments"
                              {:caller caller|node
-                              :args body}))
-               (update ret :arg-nodes conj arg|analyzed)))
+                              :args   body}))
+                     (update ret :arg-nodes conj arg|analyzed)))
                  {:arg-nodes []
                   ;; We could do a little smarter analysis here but we'll keep it simple for now
-                  :out-type (when-not (= :fnt caller-kind) t/any?)
+                  :out-type  (when-not (= :fnt caller-kind) t/any?)
                   :satisfying-overloads-seq
                     (when (= :fnt caller-kind)
                       (-> caller|type
