@@ -1,7 +1,7 @@
 ;; See https://jsperf.com/js-property-access-comparison — all property accesses (at least of length 1) seem to be equal
 
 (ns quantum.core.test.defnt-equivalences
-  (:refer-clojure :exclude [*])
+  (:refer-clojure :exclude [* zero? count])
   (:require
     [quantum.untyped.core.type.defnt
       :refer [defnt fnt unsupported!]]
@@ -1315,12 +1315,13 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
+;; TODO enable the disabled parts of this
 (macroexpand '
-(defnt #_:inline count > t/nneg-integer?
-  ([xs t/array?  > t/nneg-int?] (.-length xs))
-  ([xs t/string? > #?(:clj t/nneg-int? :cljs (t/assume t/nneg-int?))]
+(defnt #_:inline count #_> #_t/nneg-integer?
+  ([xs t/array?  #_> #_t/nneg-int?] (.length xs))
+  #_([xs t/string? > #?(:clj t/nneg-int? :cljs (t/assume t/nneg-int?))]
     (#?(:clj .length :cljs .-length) xs))
-  ([xs !+vector? > t/nneg-int?] (#?(:clj count :cljs (do (TODO) 0)) xs)))
+  #_([xs !+vector? > t/nneg-int?] (#?(:clj count :cljs (do (TODO) 0)) xs)))
 )
 
 ;; ----- expanded code ----- ;;
@@ -1357,6 +1358,9 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
+(defnt zero? > t/boolean?
+  ([x (t/- t/primitive? t/boolean?)] (Numeric/isZero x)))
+
 ; TODO CLJS version will come after
 #?(:clj
 (macroexpand '
@@ -1367,10 +1371,31 @@
   ([xs (t/isa? ASeq)          ] xs)
   ([xs (t/or (t/isa? LazySeq)
              (t/isa? Seqable))] (.seq xs))
-  ([xs t/iterable?            ] (clojure.lang.RT/chunkIteratorSeq (.iterator xs)))
-  ([xs t/char-seq?            ] (clojure.lang.StringSeq/create xs))
-  ([xs (t/isa? java.util.Map) ] (seq|test (.entrySet xs)))
-  ([xs t/array?               ] (ArraySeq/createFromObject xs))))
+  ([xs t/iterable?] (clojure.lang.RT/chunkIteratorSeq (.iterator xs)))
+  ([xs t/char-seq?] (clojure.lang.StringSeq/create xs))
+  ;; TODO recursion
+  #_([xs (t/isa? java.util.Map)] (seq|test (.entrySet xs)))
+  ;; TODO for these, use `count` not `clojure.lang.RT/alength`
+  ([xs t/booleans?] (when-not (zero? (clojure.lang.RT/alength xs))
+                      (clojure.lang.ArraySeq$ArraySeq_boolean. nil xs 0)))
+  ([xs t/bytes?]    (when-not (zero? (clojure.lang.RT/alength xs))
+                      (clojure.lang.ArraySeq$ArraySeq_byte.    nil xs 0)))
+  ([xs t/chars?]    (when-not (zero? (clojure.lang.RT/alength xs))
+                      (clojure.lang.ArraySeq$ArraySeq_char.    nil xs 0)))
+  ([xs t/shorts?]   (when-not (zero? (clojure.lang.RT/alength xs))
+                      (clojure.lang.ArraySeq$ArraySeq_short.   nil xs 0)))
+  ([xs t/ints?]     (when-not (zero? (clojure.lang.RT/alength xs))
+                      (clojure.lang.ArraySeq$ArraySeq_int.     nil xs 0)))
+  ([xs t/longs?]    (when-not (zero? (clojure.lang.RT/alength xs))
+                      (clojure.lang.ArraySeq$ArraySeq_long.    nil xs 0)))
+  ([xs t/floats?]   (when-not (zero? (clojure.lang.RT/alength xs))
+                      (clojure.lang.ArraySeq$ArraySeq_float.   nil xs 0)))
+  ([xs t/doubles?]  (when-not (zero? (clojure.lang.RT/alength xs))
+                      (clojure.lang.ArraySeq$ArraySeq_double.  nil xs 0)))
+  ;; TODO fix
+  #_([xs t/array?]    (when-not (zero? (clojure.lang.RT/alength xs))
+                      (clojure.lang.ArraySeq. xs 0)))
+  ))
 )
 
 ;; ----- expanded code ----- ;;
