@@ -429,13 +429,12 @@
   [env _, caller|node _, caller|type _, caller-kind _, args-ct _, body _
    > (s/kv {:arg-nodes t/any? #_(s/seq-of ast/node?)
             :out-type  t/type?})]
-  {:post [(doto % (println))]}
+
   (dissoc
     (if (zero? args-ct)
         {:arg-nodes []
          :out-type  (case caller-kind
-                      ;; We could do a little smarter analysis here but we'll
-                      ;; keep it simple for now
+                      ;; We could do a little smarter analysis here but we'll keep it simple for now
                       :fn  t/any?
                       :fnt (-> caller|type (get args-ct) first :output-type))}
         (->> body
@@ -455,9 +454,7 @@
                                   (update :arg-nodes conj arg|analyzed)
                                   (assoc :satisfying-overloads-seq satisfying-overloads-seq'
                                          :out-type
-                                           (when (and (= i (dec args-ct))
-                                                      (= (bounded-count 2 satisfying-overloads-seq')
-                                                         1))
+                                           (when (= i (dec args-ct))
                                              (-> satisfying-overloads-seq'
                                                  first
                                                  :output-type))))
@@ -466,8 +463,8 @@
                                      :args body}))
                             (update ret :arg-nodes conj arg|analyzed)))
                       {:arg-nodes []
-                       ;; We could do a little smarter analysis here but we'll
-                       ;; keep it simple for now
+                       ;; We could do a little smarter analysis here but we'll keep it simple for
+                       ;; now
                        :out-type (when-not (= :fnt caller-kind) t/any?)
                        :satisfying-overloads-seq
                          (when (= :fnt caller-kind)

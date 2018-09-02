@@ -29,7 +29,9 @@
     [quantum.core Numeric Primitive]))
 
 ;; Just in case
-(clojure.spec.test.alpha/instrument)
+(clojure.spec.test.alpha/unstrument)
+(do (require '[orchestra.spec.test :as st])
+    (orchestra.spec.test/instrument))
 
 #?(:clj
 (deftest test|pid
@@ -936,7 +938,8 @@
 
 (deftest defnt-reference-test
   (defnt defnt-reference
-    ([] (>long* 1))))
+    ([] (>long* 1)))
+  (is (identical? (defnt-reference) 1)))
 
 (is-code=
 

@@ -386,7 +386,7 @@
     :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, out-class t/class?]}
    ::expanded-overload
    gen-gensym fn?
-   > (s/seq-of ::reify|overload)]
+   > ::reify|overload]
   (let [interface-k {:out out-class :in arg-classes}
         interface
           (-> *interfaces
