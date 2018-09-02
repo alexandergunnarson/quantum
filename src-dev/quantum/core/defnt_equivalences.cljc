@@ -1157,19 +1157,67 @@
              (is (identical? (>long-checked -1.1)     (clojure.lang.RT/longCast -1.1)))
              (is (identical? (>long-checked (byte 1)) (clojure.lang.RT/longCast (byte 1)))))))))
 
-;; =====|=====|=====|=====|===== ;;
+(deftest test|!str
+  (let [actual
+          (macroexpand '
+            (defnt !str > #?(:clj  (t/isa? StringBuilder)
+                             :cljs (t/isa? StringBuffer))
+                    ([] #?(:clj (StringBuilder.) :cljs (StringBuffer.)))
+                    ;; If we had combined this arity, `t/or`ing the `t/string?` means it wouldn't have been
+                    ;; handled any differently than `t/char-seq?`
+            #?(:clj ([x t/string?] (StringBuilder. x)))
+                    ([x #?(:clj  (t/or t/char-seq? t/int?)
+                           :cljs t/val?)]
+                      #?(:clj (StringBuilder. x) :cljs (StringBuffer. x)))))
+        expected
+          (case (env-lang)
+            :clj ($ (do (def ~'!str|__0|0
+                          (reify* [>Object]
+                            (~(tag "java.lang.Object" 'invoke) [~'_0__]
+                              ~'(StringBuilder.))))
 
-(macroexpand '
-(defnt !str > #?(:clj  (t/isa? StringBuilder)
-                 :cljs (t/isa? StringBuffer))
-        ([] #?(:clj (StringBuilder.) :cljs (StringBuffer.)))
-        ;; If we had combined this arity, `t/or`ing the `t/string?` means it wouldn't have been
-        ;; handled any differently than `t/char-seq?`
-#?(:clj ([x t/string?] (StringBuilder. x)))
-        ([x #?(:clj  (t/or t/char-seq? t/int?)
-               :cljs t/val?)]
-          #?(:clj (StringBuilder. x) :cljs (StringBuffer. x))))
-)
+                        (def ~'!str|__1|input0|types
+                          (*<> (t/isa? java.lang.String)))
+                        (def ~'!str|__1|0
+                          (reify* [Object>Object]
+                            (~(tag "java.lang.Object" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)]
+                              (let* [~(tag "java.lang.String" 'x) ~'x] ~'(StringBuilder. x)))))
+
+                        (def ~'!str|__2|input0|types
+                          (*<> (t/isa? java.lang.CharSequence)
+                               (t/isa? java.lang.Integer)))
+                        (def ~'!str|__2|0
+                          (reify* [Object>Object]
+                            (~(tag "java.lang.Object" 'invoke) [~'_2__ ~(tag "java.lang.Object" 'x)]
+                              (let* [~(tag "java.lang.CharSequence" 'x) ~'x]
+                                ~'(StringBuilder. x)))))
+                        (def ~'!str|__2|1
+                          (reify* [int>Object]
+                            (~(tag "java.lang.Object" 'invoke) [~'_3__ ~(tag "int" 'x)]
+                              ~'(StringBuilder. x))))
+
+                        (defn ~'!str
+                          {::t/type (t/fn ~'[                          :> (t/isa? StringBuilder)]
+                                          ~'[t/string?                 :> (t/isa? StringBuilder)]
+                                          ~'[(t/or t/char-seq? t/int?) :> (t/isa? StringBuilder)])}
+                          ([] (.invoke ~'!str|__0|0))
+                          ([~'x00__]
+                            (ifs
+                              ((Array/get ~'!str|__1|input0|types 0) ~'x00__)
+                                (.invoke !str|__1|0 ~'x00__)
+                              ((Array/get ~'!str|__2|input0|types 0) ~'x00__)
+                                (.invoke !str|__2|0 ~'x00__)
+                              ((Array/get ~'!str|__2|input0|types 1) ~'x00__)
+                                (.invoke !str|__2|1 ~'x00__)
+                              (unsupported! `!str [~'x00__] 0)))))))]
+    (testing "code equivalence" (is-code= actual expected))
+    (testing "functionality"
+      (eval actual)
+      (eval
+        '(do (is (instance? StringBuilder (!str)))
+             (is (instance? StringBuilder (!str "asd")))
+             (is (instance? StringBuilder (!str (int 123))))
+             (is (instance? StringBuilder (!str (.subSequence "abc" 0 1)))))))))
 
 ;; ----- expanded code ----- ;;
 
@@ -1209,20 +1257,23 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
+;; TODO handle inline
 (macroexpand '
-(defnt #_:inline str > t/string?
+(defnt #_:inline str|test > t/string?
            ([] "")
            ([x t/nil?] "")
            ;; could have inferred but there may be other objects who have overridden .toString
-  #?(:clj  ([x (t/isa? Object)] (.toString x))
+  #?(#_:clj  #_([x (t/isa? Object) > (* t/string?)] (.toString x))
            ;; Can't infer that it returns a string (without a pre-constructed list of built-in fns)
            ;; As such, must explicitly mark
      :cljs ([x t/any? > (t/assume t/string?)] (.join #js [x] "")))
            ;; TODO only one variadic arity allowed currently; theoretically could dispatch on at
            ;; least pre-variadic args, if not variadic
            ;; TODO should have automatic currying?
-           ([x (t/fn> str t/any?) & xs (? (t/seq-of t/any?)) #?@(:cljs [> (t/assume t/string?)])]
-             (let* [sb (-> x str !str)] ; determined to be StringBuilder
+           ;; TODO need to handle varargs
+           #_([x (t/fn> str|test t/any?) & xs (? (t/seq-of t/any?))
+            #?@(:cljs [> (t/assume t/string?)])]
+             (let* [sb (-> x str|test !str)] ; determined to be StringBuilder
                ;; TODO is `doseq` the right approach, or using reduction?
                (doseq [x' xs] (.append sb (str x')))
                (.toString sb))))
@@ -1309,7 +1360,7 @@
 ; TODO CLJS version will come after
 #?(:clj
 (macroexpand '
-(defnt seq
+(defnt seq|test
   "Taken from `clojure.lang.RT/seq`"
   > (t/? (t/isa? ISeq))
   ([xs t/nil?                 ] nil)
@@ -1317,8 +1368,8 @@
   ([xs (t/or (t/isa? LazySeq)
              (t/isa? Seqable))] (.seq xs))
   ([xs t/iterable?            ] (clojure.lang.RT/chunkIteratorSeq (.iterator xs)))
-  ([xs t/char-seq?            ] (StringSeq/create xs))
-  ([xs (t/isa? Map)           ] (seq (.entrySet xs)))
+  ([xs t/char-seq?            ] (clojure.lang.StringSeq/create xs))
+  ([xs (t/isa? java.util.Map) ] (seq|test (.entrySet xs)))
   ([xs t/array?               ] (ArraySeq/createFromObject xs))))
 )
 
