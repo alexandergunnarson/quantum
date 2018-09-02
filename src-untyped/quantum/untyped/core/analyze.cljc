@@ -433,44 +433,42 @@
   (dissoc
     (if (zero? args-ct)
         {:arg-nodes []
-         :out-type  (case caller-kind
-                      ;; We could do a little smarter analysis here but we'll keep it simple for now
-                      :fn  t/any?
-                      :fnt (-> caller|type (get args-ct) first :output-type))}
+         :out-type
+           (if (= :fnt caller-kind)
+               (-> caller|type (get args-ct) first :output-type)
+               ;; We could do a little smarter analysis here but we'll keep it simple for now
+               t/any?)}
         (->> body
              (c/map+ #(analyze* env %))
-             (reducei (fn [{:as ret :keys [satisfying-overloads-seq]}
-                           arg|analyzed i]
-                        ;; TODO review this part as it's passing back a nil out-type somehow
-                        (if (= :fnt caller-kind)
-                            (if-let [satisfying-overloads-seq'
-                                      (->> satisfying-overloads-seq
-                                           (c/lfilter
-                                             (fn [{:keys [input-types]}]
-                                               (t/<= (:type arg|analyzed)
-                                                     (get input-types i))))
-                                           seq)]
-                              (-> ret
-                                  (update :arg-nodes conj arg|analyzed)
-                                  (assoc :satisfying-overloads-seq satisfying-overloads-seq'
-                                         :out-type
-                                           (when (= i (dec args-ct))
-                                             (-> satisfying-overloads-seq'
-                                                 first
-                                                 :output-type))))
-                              (err! "No overloads satisfy the arguments"
-                                    {:caller caller|node
-                                     :args body}))
-                            (update ret :arg-nodes conj arg|analyzed)))
-                      {:arg-nodes []
-                       ;; We could do a little smarter analysis here but we'll keep it simple for
-                       ;; now
-                       :out-type (when-not (= :fnt caller-kind) t/any?)
-                       :satisfying-overloads-seq
-                         (when (= :fnt caller-kind)
-                           (-> caller|type
-                               utr/fn-type>arities
-                               (get args-ct)))})))
+             (reducei
+               (fn [{:as ret :keys [satisfying-overloads-seq]} arg|analyzed i]
+                 (if (= :fnt caller-kind)
+                     (if-let [satisfying-overloads-seq'
+                               (->> satisfying-overloads-seq
+                                    (c/lfilter
+                                      (fn [{:keys [input-types]}]
+                                        (t/<= (:type arg|analyzed) (get input-types i))))
+                                    seq)]
+                       (-> ret
+                           (update :arg-nodes conj arg|analyzed)
+                           (assoc :satisfying-overloads-seq satisfying-overloads-seq'
+                                  :out-type
+                                    (when-let [last-arg-to-check? (= i (dec args-ct))]
+                                      (-> satisfying-overloads-seq'
+                                          first
+                                          :output-type))))
+                       (err! "No overloads satisfy the arguments"
+                             {:caller caller|node
+                              :args body}))
+               (update ret :arg-nodes conj arg|analyzed)))
+                 {:arg-nodes []
+                  ;; We could do a little smarter analysis here but we'll keep it simple for now
+                  :out-type (when-not (= :fnt caller-kind) t/any?)
+                  :satisfying-overloads-seq
+                    (when (= :fnt caller-kind)
+                      (-> caller|type
+                          utr/fn-type>arities
+                          (get args-ct)))})))
     :satisfying-overloads-seq))
 
 (defns- analyze-seq*
