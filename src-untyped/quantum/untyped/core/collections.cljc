@@ -6,6 +6,8 @@
     [clojure.core                  :as core]
     [fast-zip.core                 :as zip]
     [quantum.untyped.core.core     :as ucore]
+    [quantum.untyped.core.data.array
+      :refer [array?]]
     [quantum.untyped.core.error    :as uerr
       :refer [err!]]
     [quantum.untyped.core.fn       :as ufn
@@ -17,7 +19,7 @@
     [quantum.untyped.core.reducers :as ur
       :refer [defeager def-transducer>eager transducer->transformer educe]]
     [quantum.untyped.core.type.predicates
-      :refer [array? val? transient?]]))
+      :refer [val? transient?]]))
 
 (ucore/log-this-ns)
 

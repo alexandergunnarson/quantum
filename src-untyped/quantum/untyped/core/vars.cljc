@@ -12,6 +12,8 @@
 
 (ucore/log-this-ns)
 
+#?(:clj (defn unbound? [x] (instance? clojure.lang.Var$Unbound x)))
+
 ;; ===== Metadata ===== ;;
 
 (def update-meta       ucore/update-meta)

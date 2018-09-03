@@ -628,7 +628,7 @@
              (t/value resolved)
            (var? resolved)
              (or (-> resolved meta ::t/type) (t/value @resolved))
-           (utpred/unbound? resolved)
+           (uvar/unbound? resolved)
              ;; Because the var could be anything and cannot have metadata (type or otherwise)
              t/any?
            (TODO "Unsure of what to do in this case" (kw-map env form resolved))))))

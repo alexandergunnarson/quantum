@@ -63,10 +63,7 @@
 
 (defn regex? [x] (instance? #?(:clj java.util.regex.Pattern :cljs js/RegExp) x))
 
-(defn array? [x]
-  #?(:clj  (-> x class .isArray) ; must be reflective
-     :cljs (core/array? x)))
-
+;; TODO this references data.array
 #?(:clj  (defn seqable?
            "Returns true if (seq x) will succeed, false otherwise."
            {:from "clojure.contrib.core"}
@@ -95,5 +92,3 @@
 (defn transient? [x]
   #?(:clj  (instance?  clojure.lang.ITransientCollection x)
      :cljs (satisfies? cljs.core/ITransientCollection    x)))
-
-#?(:clj (defn unbound? [x] (instance? clojure.lang.Var$Unbound x)))

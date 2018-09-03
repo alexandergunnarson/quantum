@@ -5,7 +5,9 @@
   (:require [clojure.core                 :as c]
     #?(:clj [quantum.core.ns              :as ns])
             [quantum.core.type            :as t
-              :refer [? defnt fnt]]
+              :refer [?]]
+            [quantum.untyped.core.defnt
+              :refer [defnt fnt]]
             [quantum.untyped.core.form.evaluate
               :refer [case-env]]
             [quantum.untyped.core.qualify :as qual]
@@ -16,7 +18,7 @@
 
 ;; ===== Meta ===== ;;
 
-(t/def meta? (? t/+map?))
+(def #_t/def meta? (? t/+map?))
 
 (defnt meta
   "Returns the metadata of `x`, returns nil if there is no metadata."
