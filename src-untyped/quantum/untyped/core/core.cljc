@@ -1,7 +1,9 @@
 (ns quantum.untyped.core.core
          (:require
- #?@(:clj [[environ.core :as env]])
-           [cuerdas.core :as str+])
+           [clojure.core              :as core]
+   #?(:clj [clojure.future            :as fcore])
+           [cuerdas.core              :as str+]
+ #?@(:clj [[environ.core              :as env]]))
 #?(:cljs (:require-macros
            [quantum.untyped.core.core :as this])))
 
@@ -33,7 +35,24 @@
 (defn >sentinel [] #?(:clj (Object.) :cljs #js {}))
 (def >object >sentinel)
 
-; ===== COLLECTIONS =====
+;; ===== Fundamental type predicates ===== ;;
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/any?)
+                               `fcore/any?
+                               `core/any?)))
+   :cljs (defalias core/any?))
+
+;; This is in here only because `protocol?` needs it
+(defn lookup? [x]
+  #?(:clj  (instance?  clojure.lang.ILookup x)
+     :cljs (satisfies? cljs.core/ILookup    x)))
+
+(defn protocol? [x]
+  #?(:clj  (and (lookup? x) (-> x (get :on-interface) class?))
+           ;; Unfortunately there's no better check in CLJS, at least as of 03/18/2018
+     :cljs (and (fn? x) (= (str x) "function (){}"))))
+
+;; ===== Collections ===== ;;
 
 (defn seq=
   ([a b] (seq= a b =))

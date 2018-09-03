@@ -2,20 +2,20 @@
   (:refer-clojure :exclude
     [memoize])
   (:require
-    [quantum.untyped.core.core            :as ucore]
-    [quantum.untyped.core.error           :as uerr
+    [quantum.untyped.core.core   :as ucore]
+    [quantum.untyped.core.error  :as uerr
       :refer [err!]]
-    [quantum.untyped.core.fn              :as ufn
+    [quantum.untyped.core.fn     :as ufn
       :refer [fn1]]
     [quantum.untyped.core.logic
       :refer [whenc1]]
-    [quantum.untyped.core.type.predicates :as utpred
+    [quantum.untyped.core.refs
       :refer [derefable?]]
     [quantum.untyped.core.vars
       :refer [defmacro-]])
 #?(:cljs
   (:require-macros
-    [quantum.untyped.core.cache           :as self
+    [quantum.untyped.core.cache  :as self
       :refer [memoize-form]]))
 #?(:clj
   (:import

@@ -152,7 +152,7 @@
 
 ;; ----- ProtocolType ----- ;;
 
-(defns- isa?|protocol [p utpred/protocol?]
+(defns- isa?|protocol [p ucore/protocol?]
   (ProtocolType. uhash/default uhash/default nil p nil))
 
 ;; ----- ClassType ----- ;;
@@ -198,7 +198,7 @@
   ([t0 utr/type?, t1 utr/type? & ts (us/seq-of utr/type?) > utr/type?] (reduce - (- t0 t1) ts)))
 
 (defn isa? [x]
-  (ifs (utpred/protocol? x)
+  (ifs (ucore/protocol? x)
        (isa?|protocol x)
 
        (#?(:clj c/class? :cljs c/fn?) x)
@@ -236,7 +236,7 @@
               (Expression. sym x))
           (c/nil? x)
             nil?
-          (utpred/protocol? x)
+          (ucore/protocol? x)
             (ProtocolType. uhash/default uhash/default nil x name-sym)
           (value x))
        :cljs nil)))
