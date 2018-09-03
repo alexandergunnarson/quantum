@@ -54,7 +54,6 @@
            [quantum.untyped.core.type.compare          :as utcomp]
            [quantum.untyped.core.type.core             :as utcore]
            [quantum.untyped.core.type.defs             :as utdef]
-           [quantum.untyped.core.type.predicates       :as utpred]
            [quantum.untyped.core.type.reifications     :as utr
              :refer [->AndType ->OrType PType
                      #?@(:cljs [UniversalSetType EmptySetType

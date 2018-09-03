@@ -30,7 +30,6 @@
     [quantum.untyped.core.spec              :as s]
     [quantum.untyped.core.type              :as t
       :refer [?]]
-    [quantum.untyped.core.type.predicates   :as utpred]
     [quantum.untyped.core.type.reifications :as utr]
     [quantum.untyped.core.vars              :as uvar
       :refer [update-meta]]))

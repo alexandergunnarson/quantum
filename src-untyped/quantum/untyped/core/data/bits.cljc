@@ -15,10 +15,6 @@
 
 (ucore/log-this-ns)
 
-;; ===== Valueness / nilness ===== ;;
-
-(def val? some?)
-
 ;; ===== Bit logic ===== ;;
 
 (defalias not       bit-not)

@@ -5,9 +5,7 @@
     [cljs.core]
     [clojure.core                        :as core]
     [quantum.untyped.core.data
-      :refer [kw-map]]
-    [quantum.untyped.core.data.bits
-      :refer [val?]]
+      :refer [kw-map val?]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env]]
     [quantum.untyped.core.form.generate  :as ufgen]

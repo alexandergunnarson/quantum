@@ -8,6 +8,8 @@
       [quantum.untyped.core.convert        :as uconv]
       [quantum.untyped.core.core
         :refer [any?]]
+      [quantum.untyped.core.data
+        :refer [seqable?]]
       [quantum.untyped.core.data.map
         :refer [om]]
       [quantum.untyped.core.form.evaluate  :as ufeval]
@@ -17,9 +19,7 @@
         :refer [reduce-2]]
       [quantum.untyped.core.reducers       :as ur]
       [quantum.untyped.core.spec           :as us]
-      [quantum.untyped.core.specs          :as uss]
-      [quantum.untyped.core.type.predicates
-        :refer [seqable?]])
+      [quantum.untyped.core.specs          :as uss])
 #?(:cljs
     (:require-macros
       [quantum.untyped.core.defnt :as this])))

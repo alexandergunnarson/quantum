@@ -46,7 +46,7 @@
       :refer [case-env]]
     [quantum.untyped.core.string
       :refer [istr]]
-    [quantum.untyped.core.type.predicates
+    [quantum.untyped.core.vars
       #?@(:cljs [:refer [defined?]])])
 #?(:cljs
   (:require-macros

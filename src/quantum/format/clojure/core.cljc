@@ -11,7 +11,7 @@
       :refer [fn-and fn-not fn-or whenf1]]
     [quantum.core.vars  :as var
       :refer [def-]]
-    [quantum.untyped.core.type.predicates
+    [quantum.untyped.core.string
       :refer [regex?]]))
 
 ;(java/load-deps '[rewrite-clj "0.4.12"])
@@ -321,4 +321,3 @@
   (-> (p/parse-string-all form-string)
       (reformat-form options)
       (n/string)))
-

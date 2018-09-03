@@ -4,6 +4,8 @@
   (:require
     [com.stuartsierra.component          :as component]
     [quantum.untyped.core.core           :as ucore]
+    [quantum.untyped.core.data
+      :refer [seqable?]]
     [quantum.untyped.core.error          :as uerr]
     [quantum.untyped.core.form
       :refer [$]]
@@ -13,8 +15,6 @@
     [quantum.untyped.core.identification :as uident]
     [quantum.untyped.core.meta.debug     :as udebug]
     [quantum.untyped.core.print          :as upr]
-    [quantum.untyped.core.type.predicates
-      :refer [seqable?]]
     [quantum.untyped.core.vars
       :refer [defalias]])
 #?(:cljs

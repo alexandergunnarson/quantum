@@ -25,8 +25,8 @@
     [quantum.core.type.core               :as tcore]
     [quantum.core.vars                    :as var
       :refer [defalias]]
-    [quantum.untyped.core.refs            :as uref]
-    [quantum.untyped.core.type.predicates :as utpred])
+    [quantum.untyped.core.data            :as udata]
+    [quantum.untyped.core.refs            :as uref])
 #?(:cljs
   (:require-macros
     [quantum.core.type            :as self
@@ -140,7 +140,7 @@
          (defnt sequential?    ([^sequential?    x] true) ([^default x] false))
          (defnt counted?       ([^counted?       x] true) ([^default x] false))
          (defnt transformer?   ([^transformer?   x] true) ([^default x] false))
-         (defalias seqable? utpred/seqable?)
+         (defalias seqable? udata/seqable?)
 
 #?(:clj  (defnt file?          ([^file?          x] true) ([^default x] false)))
          (defnt regex?         ([^regex?         x] true) ([^default x] false))

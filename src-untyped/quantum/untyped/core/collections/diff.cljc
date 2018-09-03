@@ -8,11 +8,9 @@
     [quantum.untyped.core.core :as ucore
       :refer [istr]]
     [quantum.untyped.core.data
-      :refer [kw-map]]
+      :refer [kw-map seqable?]]
     [quantum.untyped.core.error
-      :refer [err!]]
-    [quantum.untyped.core.type.predicates
-      :refer [seqable?]]))
+      :refer [err!]]))
 
 (ucore/log-this-ns)
 
@@ -43,5 +41,3 @@
                      :- (istr "At position ~{position}, remove this number of items:"))
                    x]))
               []))}))
-
-

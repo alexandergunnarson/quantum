@@ -1,4 +1,5 @@
 (ns quantum.untyped.core.collections
+  "Operations on collections."
   (:refer-clojure :exclude
     [#?(:cljs array?) assoc-in cat contains? count distinct distinct? first get group-by filter
      flatten last map map-indexed mapcat partition-all pmap remove reverse zipmap])
@@ -6,10 +7,12 @@
     [clojure.core                  :as core]
     [fast-zip.core                 :as zip]
     [quantum.untyped.core.core     :as ucore]
+    [quantum.untyped.core.data
+      :refer [transient?]]
+    [quantum.untyped.core.data
+      :refer [val?]]
     [quantum.untyped.core.data.array
       :refer [array?]]
-    [quantum.untyped.core.data.bits
-      :refer [val?]]
     [quantum.untyped.core.error    :as uerr
       :refer [err!]]
     [quantum.untyped.core.fn       :as ufn
@@ -19,9 +22,7 @@
     [quantum.untyped.core.loops
       :refer [reduce-2]]
     [quantum.untyped.core.reducers :as ur
-      :refer [defeager def-transducer>eager transducer->transformer educe]]
-    [quantum.untyped.core.type.predicates
-      :refer [transient?]]))
+      :refer [defeager def-transducer>eager transducer->transformer educe]]))
 
 (ucore/log-this-ns)
 

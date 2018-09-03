@@ -10,7 +10,7 @@
       :refer [react-class?]]
     [reagent.interop
       :refer [$ $!]]])
-    [quantum.untyped.core.data.bits
+    [quantum.untyped.core.data
       :refer [val?]]
     [quantum.untyped.core.log      :as log]
     [quantum.untyped.core.system   :as usys

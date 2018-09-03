@@ -5,7 +5,7 @@
   (:require
     [clojure.core              :as core]
     [clojure.set               :as set]
-    [quantum.untyped.core.data.bits
+    [quantum.untyped.core.data
       :refer [val?]]
     [quantum.untyped.core.fn
       :refer [fn1 fnl]]

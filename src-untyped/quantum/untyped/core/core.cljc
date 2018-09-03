@@ -36,13 +36,14 @@
 (def >object >sentinel)
 
 ;; ===== Fundamental type predicates ===== ;;
+;; TODO maybe move to `quantum.untyped.core.data`?
 
 #?(:clj  (eval `(defalias ~(if (resolve `fcore/any?)
                                `fcore/any?
                                `core/any?)))
    :cljs (defalias core/any?))
 
-;; This is in here only because `protocol?` needs it
+;; This is in here only because `protocol?` needs it; it's aliased later
 (defn lookup? [x]
   #?(:clj  (instance?  clojure.lang.ILookup x)
      :cljs (satisfies? cljs.core/ILookup    x)))

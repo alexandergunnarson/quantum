@@ -12,8 +12,7 @@
 
 (ucore/log-this-ns)
 
-#?(:clj (defn unbound? [x] (instance? clojure.lang.Var$Unbound x)))
-
+#?(:clj  (defn unbound? [x] (instance? clojure.lang.Var$Unbound x)))
 #?(:cljs (defn defined? [x] (not (undefined? x))))
 
 ;; ===== Metadata ===== ;;

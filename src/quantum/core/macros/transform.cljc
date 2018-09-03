@@ -19,10 +19,10 @@
       :refer [default-zipper]]
     [quantum.untyped.core.collections.tree   :as utree
       :refer [postwalk]]
+    [quantum.untyped.core.data
+      :refer [val?]]
     [quantum.untyped.core.reducers           :as ured
-      :refer [zip-reduce*]]
-    [quantum.untyped.core.type.predicates
-      :refer [val?]]))
+      :refer [zip-reduce*]]))
 
 ; TODO should move (some of) these functions to core.analyze.clojure/transform?
 

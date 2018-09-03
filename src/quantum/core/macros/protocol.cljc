@@ -12,9 +12,7 @@
     [quantum.untyped.core.collections        :as ucoll
       :refer [contains? update-first]]
     [quantum.untyped.core.data
-      :refer [kw-map]]
-    [quantum.untyped.core.type.predicates
-      :refer [val?]]))
+      :refer [kw-map val?]]))
 
 (defn with-protocol-arglist-type-hint
   [sym lang arglist-ct]

@@ -14,10 +14,10 @@
       :refer [defalias]]
     [quantum.untyped.core.data
       :refer [kw-map]]
+    [quantum.untyped.core.data.bits
+      :refer [val?]]
     [quantum.untyped.core.form.evaluate  :as ufeval]
-    [quantum.untyped.core.form.type-hint :as ufth]
-    [quantum.untyped.core.type.predicates
-      :refer [val?]])
+    [quantum.untyped.core.form.type-hint :as ufth])
 #?(:clj
   (:import
     (clojure.lang RT Compiler))))

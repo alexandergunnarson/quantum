@@ -38,7 +38,7 @@
     [quantum.untyped.core.convert               :as uconv
       :refer [>integer >name]]
     [quantum.untyped.core.data
-      :refer [kw-map]]
+      :refer [kw-map val?]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env case-env*]]
     [quantum.untyped.core.form.type-hint        :as ufth]
@@ -47,9 +47,7 @@
     [quantum.untyped.core.reducers
       :refer [reducei]                          :as ured]
     [quantum.untyped.core.string                :as ustr]
-    [quantum.untyped.core.type                  :as t]
-    [quantum.untyped.core.type.predicates
-      :refer [val?]]))
+    [quantum.untyped.core.type                  :as t]))
 
 (defonce warn-on-strict-inexact-matches? (atom false))
 (defonce warn-on-all-inexact-matches? (atom false))

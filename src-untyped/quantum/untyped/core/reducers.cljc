@@ -8,13 +8,13 @@
              :refer [== not==]]
            [quantum.untyped.core.core           :as ucore
              :refer [>sentinel]]
+           [quantum.untyped.core.data
+             :refer [seqable?]]
            [quantum.untyped.core.error
              :refer [err!]]
            [quantum.untyped.core.form.evaluate
              :refer [case-env]]
            [quantum.untyped.core.identification :as uident]
-           [quantum.untyped.core.type.predicates
-             :refer [seqable?]]
            [quantum.untyped.core.vars           :as uvar
              :refer [defalias]])
 #?(:cljs (:require-macros

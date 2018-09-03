@@ -1,7 +1,7 @@
 (ns quantum.untyped.ui.style.css.dom
   (:require
     [clojure.string            :as str]
-    [quantum.untyped.core.data.bits
+    [quantum.untyped.core.data
       :refer [val?]]
     [quantum.untyped.core.fn
       :refer [fn->]]
