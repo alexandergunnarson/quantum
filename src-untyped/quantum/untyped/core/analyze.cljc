@@ -351,7 +351,7 @@
               method-or-field args-forms))))))
 
 ;; TODO move this
-(defns truthy-node? [{:as ast t [:type _]} _ > t/boolean?]
+(defns truthy-node? [{:as ast t [:type _]} _ > (t/? t/boolean?)]
   (log/pr!)
   (ifs (or (t/= t t/nil?)
            (t/= t t/false?)) false
