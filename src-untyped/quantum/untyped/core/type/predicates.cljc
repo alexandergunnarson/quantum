@@ -61,8 +61,6 @@
            ;; Unfortunately there's no better check in CLJS, at least as of 03/18/2018
      :cljs (and (fn? x) (= (str x) "function (){}"))))
 
-(defn regex? [x] (instance? #?(:clj java.util.regex.Pattern :cljs js/RegExp) x))
-
 ;; TODO this references data.array
 #?(:clj  (defn seqable?
            "Returns true if (seq x) will succeed, false otherwise."
@@ -80,8 +78,6 @@
 (defn editable? [x]
   #?(:clj  (instance?  clojure.lang.IEditableCollection x)
      :cljs (satisfies? cljs.core.IEditableCollection    x)))
-
-(defaliases ucore metable? with-metable?)
 
 (defn derefable? [x]
   #?(:clj  (instance?  clojure.lang.IDeref x)

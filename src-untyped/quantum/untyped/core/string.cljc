@@ -10,6 +10,8 @@
 
 (ucore/log-this-ns)
 
+(defn regex? [x] (instance? #?(:clj java.util.regex.Pattern :cljs js/RegExp) x))
+
 (defn join-once
   "Like /clojure.string/join/ but ensures no double separators."
   {:attribution "taoensso.encore"}
