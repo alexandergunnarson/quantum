@@ -754,7 +754,7 @@
                       ;; dense integer values), not extensible
 
 #?(:clj
-(defns >array-nd-type [kind c/symbol?, n utpred/pos-int? > utr/class-type?]
+(defns >array-nd-type [kind c/symbol?, n unum/pos-int? > utr/class-type?]
   (let [prefix (apply str (repeat n \[))
         letter (case kind
                  boolean "Z"
@@ -769,7 +769,7 @@
     (isa? (Class/forName (str prefix letter))))))
 
 #?(:clj
-(defns >array-nd-types [n utpred/pos-int? > utr/type?]
+(defns >array-nd-types [n unum/pos-int? > utr/type?]
   (->> '[boolean byte char short int long float double object]
        (map #(>array-nd-type % n))
        (apply or))))

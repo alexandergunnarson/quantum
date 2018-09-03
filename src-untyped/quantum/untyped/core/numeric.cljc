@@ -1,10 +1,21 @@
 (ns quantum.untyped.core.numeric
-  (:require
-    [quantum.untyped.core.core  :as ucore]
-    [quantum.untyped.core.error :as err])
+          (:refer-clojure :exclude
+            [pos-int?])
+          (:require
+            [clojure.core               :as core]
+    #?(:clj [clojure.future            :as fcore])
+            [quantum.untyped.core.core  :as ucore]
+            [quantum.untyped.core.error :as err]
+            [quantum.untyped.core.vars
+            :refer [defalias]])
   #?(:clj (:import java.lang.Math java.math.BigDecimal)))
 
 (ucore/log-this-ns)
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/pos-int?)
+                               `fcore/pos-int?
+                               `core/pos-int?)))
+   :cljs (defalias core/pos-int?))
 
 (defn integer-value?
   {:adapted-from '#{com.google.common.math.DoubleMath/isMathematicalInteger

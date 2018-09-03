@@ -1,14 +1,16 @@
 (ns quantum.untyped.core.identification
   "Functions related to variable identification/naming (name, namespace, etc.) and
    qualification/unqualification of nameables."
-  (:refer-clojure :exclude
-    [ident? qualified-keyword? simple-symbol?])
-  (:require
-    [clojure.string            :as str]
-    [fipp.ednize]
-    [quantum.untyped.core.core :as ucore]
-    [quantum.untyped.core.ns   :as uns
-      #?@(:clj [:refer [namespace?]])]))
+      (:refer-clojure :exclude
+        [ident? qualified-keyword? simple-symbol?])
+      (:require
+        [clojure.core              :as core]
+#?(:clj [clojure.future            :as fcore])
+        [clojure.string            :as str]
+        [fipp.ednize]
+        [quantum.untyped.core.core :as ucore]
+        [quantum.untyped.core.ns   :as uns
+        #?@(:clj [:refer [namespace?]])]))
 
 (ucore/log-this-ns)
 
