@@ -1,15 +1,42 @@
 #_"
 
+Note that `;; TODO TYPED` is the annotation we're using
+
+- TODO implement the following:
+  - t/...
+    - t/assume
+    - expressions (`quantum.untyped.core.analyze.expr`)
+  - deft
+  - fnt
+  - declare-fnt (a way to do protocols/interfaces)
+  - defnt
+    - recursion by adding the function's name and type to the local bindings (env)
+    - handle varargs
+  - defmacrot
+  - dotyped
+- NOTE on namespace organization:
+  - [quantum.untyped.core.ns :refer [namespace?]]
+    instead of
+    [quantum.untyped.core.type.predicates :refer [namespace?]]
+    because not all predicates (type-related or otherwise) can be thought of ahead of time to be put
+    in one giant namespace
+  - Same with the `core.convert` namespace too
+    - Conversion functions belong in the namespace that their destination types belong in
+- TODO transition the quantum.core.* namespaces:
+  - List of semi-approximately topologically ordered namespaces to make typed:
+    - quantum.core.core
+    - quantum.core.type.core
+    - quantum.core.ns
+    - quantum.core.logic
+    - quantum.core.fn
+    - quantum.core.data.map
+    - quantum.core.type
+    - quantum.core.vars
+
+
+
+
 LEFT OFF LAST TIME (7/25/2018):
-- handle calling of other `fnt`s from `fnt`s
-  - `(defnt >long ...)` : enable to refer to `>long*` and have that analyzed
-  - finish `>long` example
-  - quantum.core.data.map
-- expressions (`quantum.untyped.core.analyze.expr`)
-- `t/fn`
-- handle `defnt` varargs
-
-
 
 - With `defnt`, protocols and interfaces aren't needed. You can just create `t/fn`s that you can
   then conform your fns to.
