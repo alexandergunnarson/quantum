@@ -87,8 +87,6 @@
   #?(:clj  (instance?  clojure.lang.IDeref x)
      :cljs (satisfies? cljs.core/IDeref    x)))
 
-#?(:cljs (defn defined? [x] (not (undefined? x))))
-
 (defn transient? [x]
   #?(:clj  (instance?  clojure.lang.ITransientCollection x)
      :cljs (satisfies? cljs.core/ITransientCollection    x)))

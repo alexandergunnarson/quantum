@@ -4,7 +4,7 @@
     [quantum.untyped.core.error
       :refer [err! TODO]]
     [quantum.untyped.core.system      :as usys]
-    [quantum.untyped.core.type.predicates
+    [quantum.untyped.core.vars
       #?@(:cljs [:refer [defined?]])]
     [quantum.untyped.ui.style.css     :as ucss]
     [quantum.untyped.ui.style.css.dom :as ucss-dom]))

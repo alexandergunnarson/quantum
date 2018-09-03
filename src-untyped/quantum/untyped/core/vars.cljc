@@ -14,6 +14,8 @@
 
 #?(:clj (defn unbound? [x] (instance? clojure.lang.Var$Unbound x)))
 
+#?(:cljs (defn defined? [x] (not (undefined? x))))
+
 ;; ===== Metadata ===== ;;
 
 (def update-meta       ucore/update-meta)

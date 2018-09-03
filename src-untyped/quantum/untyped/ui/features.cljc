@@ -6,7 +6,7 @@
     [quantum.untyped.core.logic
       :refer [whenc fn=]]
     [quantum.untyped.core.system :as usys]
-    [quantum.untyped.core.type.predicates
+    [quantum.untyped.core.vars
       #?@(:cljs [:refer [defined?]])]))
 
 (ucore/log-this-ns)
