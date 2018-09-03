@@ -2,7 +2,7 @@
   "For type predicates that are not yet turned into specs.
    TODO excise and place in `quantum.untyped.core.type`."
   (:refer-clojure :exclude
-    [any? array? boolean? double? ident? pos-int? qualified-keyword? seqable? simple-symbol?])
+    [any? pos-int? seqable?])
   (:require
         [clojure.core              :as core]
 #?(:clj [clojure.future            :as fcore])
@@ -20,29 +20,14 @@
                                `core/any?)))
    :cljs (defalias core/any?))
 
-#?(:clj  (eval `(defalias ~(if (resolve `fcore/ident?)
-                               `fcore/ident?
-                               `core/ident?)))
-   :cljs (defalias core/ident?))
-
 #?(:clj  (eval `(defalias ~(if (resolve `fcore/pos-int?)
                                `fcore/pos-int?
                                `core/pos-int?)))
    :cljs (defalias core/pos-int?))
 
-#?(:clj  (eval `(defalias ~(if (resolve `fcore/qualified-keyword?)
-                               `fcore/qualified-keyword?
-                               `core/qualified-keyword?)))
-   :cljs (defalias core/qualified-keyword?))
-
-#?(:clj  (eval `(defalias ~(if (resolve `fcore/simple-symbol?)
-                               `fcore/simple-symbol?
-                               `core/simple-symbol?)))
-   :cljs (defalias core/simple-symbol?))
-
 (defn lookup? [x]
-  #?(:clj  (instance? clojure.lang.ILookup x)
-     :cljs (satisfies? ILookup x)))
+  #?(:clj  (instance?  clojure.lang.ILookup x)
+     :cljs (satisfies? cljs.core/ILookup    x)))
 
 (defn protocol? [x]
   #?(:clj  (and (lookup? x) (-> x (get :on-interface) class?))
@@ -65,7 +50,7 @@
 
 (defn editable? [x]
   #?(:clj  (instance?  clojure.lang.IEditableCollection x)
-     :cljs (satisfies? cljs.core.IEditableCollection    x)))
+     :cljs (satisfies? cljs.core/IEditableCollection    x)))
 
 (defn derefable? [x]
   #?(:clj  (instance?  clojure.lang.IDeref x)

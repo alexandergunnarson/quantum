@@ -10,7 +10,6 @@
               :refer [defnt fnt]]
             [quantum.untyped.core.form.evaluate
               :refer [case-env]]
-            [quantum.untyped.core.qualify :as qual]
             [quantum.untyped.core.vars    :as u])
 #?(:cljs
   (:require-macros

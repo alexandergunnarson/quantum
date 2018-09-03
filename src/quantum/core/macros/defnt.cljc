@@ -42,8 +42,8 @@
     [quantum.untyped.core.form.evaluate
       :refer [case-env case-env*]]
     [quantum.untyped.core.form.type-hint        :as ufth]
+    [quantum.untyped.core.identification        :as uident]
     [quantum.untyped.core.numeric.combinatorics :as combo]
-    [quantum.untyped.core.qualify               :as qual]
     [quantum.untyped.core.reducers
       :refer [reducei]                          :as ured]
     [quantum.untyped.core.string                :as ustr]
@@ -206,7 +206,7 @@
           (-> sym name ustr/camelcase (str "Interface") munge symbol)
         ns-qualified-interface-name
           (-> genned-interface-name
-              #?(:clj (qual/qualify|dot (namespace-munge *ns*))))
+              #?(:clj (uident/qualify|dot (namespace-munge *ns*))))
         gen-interface-code-header
           (list 'gen-interface :name ns-qualified-interface-name :methods)
         gen-interface-code-body-unexpanded
@@ -837,4 +837,3 @@
   (let [lang :clj]
     (eval `(declare ~(th/with-sanitize-tag lang sym) ~(th/with-sanitize-tag lang (defnt-gen-protocol-name sym lang)))) ; To allow recursive analysis
     (defnt*-helper {:relaxed? true} lang *ns* sym nil nil nil body))))
-

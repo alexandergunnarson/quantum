@@ -46,7 +46,6 @@
              :refer [fn-and ifs whenp->]]
            [quantum.untyped.core.numeric               :as unum]
            [quantum.untyped.core.print                 :as upr]
-           [quantum.untyped.core.qualify               :as qual]
            [quantum.untyped.core.reducers              :as ur
              :refer [educe join]]
            [quantum.untyped.core.refs
@@ -252,7 +251,7 @@
 (defmacro define [sym t]
   `(~'def ~sym (let [t# ~t]
                  (assert (utr/type? t#) t#)
-                 #_(register-type! '~(qual/qualify sym) t#)
+                 #_(register-type! '~(uident/qualify sym) t#)
                  t#))))
 
 ;; TODO clean up

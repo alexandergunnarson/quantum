@@ -30,14 +30,13 @@
     [quantum.untyped.core.form.evaluate         :as ufeval]
     [quantum.untyped.core.form.generate         :as ufgen]
     [quantum.untyped.core.form.type-hint        :as ufth]
+    [quantum.untyped.core.identification        :as uident]
     [quantum.untyped.core.log                   :as ulog]
     [quantum.untyped.core.logic                 :as ul
       :refer [fn-or fn= ifs]]
     [quantum.untyped.core.loops
       :refer [reduce-2]]
     [quantum.untyped.core.numeric.combinatorics :as ucombo]
-    [quantum.untyped.core.qualify
-      :refer [qualify]]
     [quantum.untyped.core.reducers              :as r
       :refer [reducei educe]]
     [quantum.untyped.core.spec                  :as s]
@@ -562,7 +561,7 @@
   [fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?), i|arg t/index?, body _]
   (if (-> body count (= 1))
       (first body)
-      `(ifs ~@body (unsupported! (quote ~(qualify fn|name)) [~@arglist] ~i|arg))))
+      `(ifs ~@body (unsupported! (quote ~(uident/qualify fn|name)) [~@arglist] ~i|arg))))
 
 (defns >dynamic-dispatch|body-for-arity
   ([fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?)

@@ -2,21 +2,21 @@
   (:refer-clojure :exclude [+ * cat])
   (:require
  #?@(:clj
-    [[net.cgrand.seqexp                :as se]
-     [clojure.core.match               :as match]])
-     [quantum.core.fn                  :as fn
+    [[net.cgrand.seqexp                   :as se]
+     [clojure.core.match                  :as match]])
+     [quantum.core.fn                     :as fn
        :refer [<- fn-> fnl]]
-     [quantum.untyped.core.qualify     :as qual]
-     [quantum.core.vars                :as var
+     [quantum.core.vars                   :as var
        :refer [defalias]]
      [quantum.core.logic
        :refer [fn-not fn-and fn-or whenf1 condf1]]
-     [quantum.core.collections         :as coll
+     [quantum.core.collections            :as coll
        :refer [postwalk map-vals+ join]]
      [quantum.core.macros
        :refer [macroexpand-all]]
-     [quantum.core.collections.tree    :as tree]
-     [quantum.core.collections.zippers :as zip]))
+     [quantum.core.collections.tree       :as tree]
+     [quantum.core.collections.zippers    :as zip]
+     [quantum.untyped.core.identification :as uident]))
 
 ; Regex seq matching
 
@@ -47,7 +47,7 @@
 (def defs
   (let [defs-syms '#{#_& ? | + * ?= ?! _}]
     (->> (zipmap defs-syms
-                 (mapv (fnl qual/qualify 'quantum.core.match) defs-syms))
+                 (mapv (fnl uident/qualify 'quantum.core.match) defs-syms))
          (apply concat) vec)))
 
 #?(:clj

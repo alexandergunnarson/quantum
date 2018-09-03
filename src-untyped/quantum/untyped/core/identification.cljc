@@ -1,6 +1,8 @@
-(ns quantum.untyped.core.qualify
-  "Functions related to qualification (name, namespace, etc.) and unqualification
-   of nameables."
+(ns quantum.untyped.core.identification
+  "Functions related to variable identification/naming (name, namespace, etc.) and
+   qualification/unqualification of nameables."
+  (:refer-clojure :exclude
+    [ident? qualified-keyword? simple-symbol?])
   (:require
     [clojure.string            :as str]
     [fipp.ednize]
@@ -14,13 +16,28 @@
   #?(:clj  (instance?   clojure.lang.Named x)
      :cljs (implements? cljs.core/INamed   x)))
 
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/ident?)
+                               `fcore/ident?
+                               `core/ident?)))
+   :cljs (defalias core/ident?))
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/qualified-keyword?)
+                               `fcore/qualified-keyword?
+                               `core/qualified-keyword?)))
+   :cljs (defalias core/qualified-keyword?))
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/simple-symbol?)
+                               `fcore/simple-symbol?
+                               `core/simple-symbol?)))
+   :cljs (defalias core/simple-symbol?))
+
 (defn ?ns->name [?ns]
   (name #?(:clj (if (namespace? ?ns)
                     (ns-name ?ns)
                     ?ns)
            :cljs ?ns)))
 
-;; ===== QUALIFICATION ===== ;;
+;; ===== Qualification ===== ;;
 
 (defn qualify
   #?(:clj ([sym] (qualify *ns* sym)))
@@ -44,7 +61,7 @@
             (str alias- (when extra-slash? "/"))
             n)))      (name sym)))))
 
-;; ===== IDENTS ===== ;;
+;; ===== Idents ===== ;;
 
 (defrecord
   ^{:doc "A delimited identifier.

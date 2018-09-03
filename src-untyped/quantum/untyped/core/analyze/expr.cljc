@@ -18,8 +18,8 @@
       :refer [err! TODO]]
     [quantum.untyped.core.form                  :as uform
       :refer [>form]]
+    [quantum.untyped.core.identification        :as uident]
     [quantum.untyped.core.print                 :as upr]
-    [quantum.untyped.core.qualify               :as uqual]
     [quantum.untyped.core.reducers              :as ur
       :refer [join]]
     [quantum.untyped.core.vars
@@ -42,7 +42,7 @@
 
 #?(:clj
 (defmacro def [sym x]
-  `(def ~sym (NamedExpr. '~(uqual/qualify sym) ~x))))
+  `(def ~sym (NamedExpr. '~(uident/qualify sym) ~x))))
 
 #?(:clj (defalias -def def))
 

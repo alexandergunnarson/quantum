@@ -14,7 +14,7 @@
     [quantum.untyped.core.form.generate.definterface]
     [quantum.untyped.core.form.type-hint :as uth
       :refer [type-hint with-type-hint un-type-hint]]
-    [quantum.untyped.core.qualify        :as uqual]
+    [quantum.untyped.core.identification :as uident]
     [quantum.untyped.core.string         :as ustr]))
 
 (defn ?Associative   [lang] (case lang :clj 'clojure.lang.Associative           :cljs 'cljs.core/IAssociative))
@@ -309,7 +309,7 @@
       {:methods-spec methods-spec}
       (let [interface-sym
              (symbol (str "I" (name type-sym) "__GEN"))
-            qualified-interface-sym (uqual/qualify|class interface-sym)
+            qualified-interface-sym (uident/qualify|class interface-sym)
             methods
               (->> fields
                    (map (fn [field-sym]
@@ -336,7 +336,7 @@
             &env type-sym fields
             (apply concat (deftype-helper methods-spec lang)))] ; in order to help `deftype` recognize that there is an interface, when there is one
     `(do ~deftype-code
-         ~(when (= lang :clj) `(import (quote ~(uqual/qualify|class type-sym)))))))) ; TODO doesn't this already happen?
+         ~(when (= lang :clj) `(import (quote ~(uident/qualify|class type-sym)))))))) ; TODO doesn't this already happen?
 
 #?(:clj
 (defmacro deftype

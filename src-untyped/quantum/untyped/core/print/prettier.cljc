@@ -3,13 +3,13 @@
     [fipp.edn]
     [fipp.visit]
     [fipp.ednize]
-    [quantum.untyped.core.convert :as uconv]
-    [quantum.untyped.core.fn      :as fn
+    [quantum.untyped.core.convert]
+    [quantum.untyped.core.fn
       :refer [rcomp]]
-    [quantum.untyped.core.ns      :as ns]
-    [quantum.untyped.core.print   :as pr]
-    [quantum.untyped.core.qualify :as qual]
-    [quantum.untyped.core.vars    :as var]))
+    [quantum.untyped.core.ns]
+    [quantum.untyped.core.print]
+    [quantum.untyped.core.identification]
+    [quantum.untyped.core.vars]))
 
 #?(:clj
 (defmethod print-method fipp.ednize.IEdn [^fipp.ednize.IEdn v ^java.io.Writer w]
@@ -52,7 +52,7 @@
 (defn visit-symbol* [x]
   [:text (cond-> x
            quantum.untyped.core.print/*collapse-symbols?*
-             (quantum.untyped.core.qualify/collapse-symbol
+             (quantum.untyped.core.identification/collapse-symbol
                (not quantum.untyped.core.print/*print-as-code?*)))]))
 
 #?(:clj

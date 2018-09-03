@@ -2,24 +2,24 @@
   (:refer-clojure :exclude
     [pr seqable?])
   (:require
-    [com.stuartsierra.component         :as component]
-    [quantum.untyped.core.core          :as ucore]
-    [quantum.untyped.core.error         :as uerr]
+    [com.stuartsierra.component          :as component]
+    [quantum.untyped.core.core           :as ucore]
+    [quantum.untyped.core.error          :as uerr]
     [quantum.untyped.core.form
       :refer [$]]
     [quantum.untyped.core.form.evaluate
       :refer [compile-if]]
-    [quantum.untyped.core.form.generate :as ufgen]
-    [quantum.untyped.core.meta.debug    :as udebug]
-    [quantum.untyped.core.print         :as upr]
-    [quantum.untyped.core.qualify       :as uqual]
+    [quantum.untyped.core.form.generate  :as ufgen]
+    [quantum.untyped.core.identification :as uident]
+    [quantum.untyped.core.meta.debug     :as udebug]
+    [quantum.untyped.core.print          :as upr]
     [quantum.untyped.core.type.predicates
       :refer [seqable?]]
     [quantum.untyped.core.vars
       :refer [defalias]])
 #?(:cljs
   (:require-macros
-    [quantum.untyped.core.log           :as self
+    [quantum.untyped.core.log            :as self
       :refer [-gen-from-levels with-log-errors]])))
 
 (ucore/log-this-ns)
@@ -123,8 +123,8 @@
 
 #?(:clj
 (defmacro -def-with-always [sym & args]
-  (let [args-sym (gensym "args")
-        macro-sym (uqual/qualify sym)]
+  (let [args-sym  (gensym "args")
+        macro-sym (uident/qualify sym)]
     `(do (defmacro ~sym ~@args)
          (defmacro ~(symbol (str (name sym) "!")) [& ~args-sym]
           `(~'~macro-sym :always ~@~args-sym))))))

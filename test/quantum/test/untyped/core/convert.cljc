@@ -3,9 +3,9 @@
     [quantum.core.test            :as test
       :refer [deftest testing is is= throws]]
     [quantum.untyped.core.convert :as this]
-    [quantum.untyped.core.qualify
+    [quantum.untyped.core.identification
       #?@(:cljs [:refer [Ident]])])
-  #?(:clj (:import quantum.untyped.core.qualify.Ident)))
+  #?(:clj (:import quantum.untyped.core.identification.Ident)))
 
 (deftest test|>ident
   (is= (this/>ident "a|b|c|d")                    (Ident. ["a" "b" "c" "d"]))

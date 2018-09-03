@@ -1,14 +1,15 @@
+;; TODO break out these fns to their respective namespaces
 (ns quantum.untyped.core.convert
   (:require
     [clojure.string               :as str]
     [quantum.untyped.core.core    :as ucore]
     [quantum.untyped.core.error   :as uerr]
     [quantum.untyped.core.fn      :as ufn]
+    [quantum.untyped.core.identification
+      :refer [#?(:cljs DelimitedIdent) delim-ident? named?]]
     [quantum.untyped.core.ns
-      #?@(:clj [:refer [namespace?]])]
-    [quantum.untyped.core.qualify
-      :refer [#?(:cljs DelimitedIdent) delim-ident? named?]])
-  #?(:clj (:import quantum.untyped.core.qualify.DelimitedIdent)))
+      #?@(:clj [:refer [namespace?]])])
+  #?(:clj (:import quantum.untyped.core.identification.DelimitedIdent)))
 
 (ucore/log-this-ns)
 

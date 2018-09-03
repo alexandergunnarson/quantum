@@ -1,14 +1,14 @@
 (ns ^{:doc "Helper functions for macros which provide optimization."}
   quantum.core.macros.optimization
   (:require
-    [quantum.core.core            :as qcore]
-    [quantum.core.fn              :as fn
+    [quantum.core.core                   :as qcore]
+    [quantum.core.fn                     :as fn
       :refer [fn->]]
-    [quantum.core.log             :as log]
-    [quantum.core.logic           :as logic
+    [quantum.core.log                    :as log]
+    [quantum.core.logic                  :as logic
       :refer [fn-and]]
-    [quantum.untyped.core.qualify :as qual]
-    [quantum.core.vars            :as var]))
+    [quantum.core.vars                   :as var]
+    [quantum.untyped.core.identification :as uident]))
 
 ; ===== EXTERN =====
 
@@ -28,9 +28,9 @@
                                               " because of error: |" e# "|")))))]
             (if (symbol? quoted-obj)
                 quoted-obj
-                (do (intern ns- (qual/unqualify genned) obj-evaled)
-                    (log/pr :macro-expand quoted-obj "EXTERNED AS" (qual/unqualify genned))
-                    (qual/unqualify genned)))))
+                (do (intern ns- (uident/unqualify genned) obj-evaled)
+                    (log/pr :macro-expand quoted-obj "EXTERNED AS" (uident/unqualify genned))
+                    (uident/unqualify genned)))))
       quoted-obj)))
 
 #?(:clj

@@ -3,22 +3,21 @@
     [ident? string? keyword? set? number? any?
      assert keys merge + * cat and or constantly])
   (:require
-    [clojure.core            :as core]
-    [clojure.spec.alpha      :as s]
-    [clojure.spec.test.alpha :as test]
+    [clojure.core                        :as core]
+    [clojure.spec.alpha                  :as s]
+    [clojure.spec.test.alpha             :as test]
     [cljs.spec.alpha]
-    [clojure.spec.gen.alpha  :as gen]
+    [clojure.spec.gen.alpha              :as gen]
     [fipp.ednize]
-    [quantum.untyped.core.convert :as uconv]
-    [quantum.untyped.core.data :as udata]
+    [quantum.untyped.core.convert        :as uconv]
+    [quantum.untyped.core.data           :as udata]
     [quantum.untyped.core.error
       :refer [catch-all err! TODO]]
     [quantum.untyped.core.fn
       :refer [constantly with-do]]
-    [quantum.untyped.core.form.evaluate :as ufeval
+    [quantum.untyped.core.form.evaluate  :as ufeval
       :refer [case-env]]
-    [quantum.untyped.core.qualify :as uqual]
-    [quantum.untyped.core.type.predicates
+    [quantum.untyped.core.identification :as uident
       :refer [ident?]]
     [quantum.untyped.core.vars
       :refer [defalias defmalias]])
@@ -154,7 +153,7 @@
 #?(:clj
 (defmacro fdef! [sym & args]
   `(with-do (~(case-env :clj 'clojure.spec.alpha/fdef :cljs 'cljs.spec.alpha/fdef) ~sym ~@args)
-     (when (s/check-asserts?) (test/instrument '~(uqual/qualify *ns* sym))))))
+     (when (s/check-asserts?) (test/instrument '~(uident/qualify *ns* sym))))))
 
 #?(:clj
 (defmacro or-auto

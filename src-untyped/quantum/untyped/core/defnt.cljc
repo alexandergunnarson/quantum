@@ -1,20 +1,23 @@
 (ns quantum.untyped.core.defnt
     "Primarily for `(de)fns`."
-    (:refer-clojure :exclude [any? ident? qualified-keyword? seqable? simple-symbol?])
+    (:refer-clojure :exclude
+      [any? ident? qualified-keyword? seqable? simple-symbol?])
     (:require
-      [clojure.spec.alpha                 :as s]
-      [clojure.spec.gen.alpha             :as gen]
-      [quantum.untyped.core.convert       :as uconv]
+      [clojure.spec.alpha                  :as s]
+      [clojure.spec.gen.alpha              :as gen]
+      [quantum.untyped.core.convert        :as uconv]
       [quantum.untyped.core.data.map
         :refer [om]]
-      [quantum.untyped.core.form.evaluate :as ufeval]
+      [quantum.untyped.core.form.evaluate  :as ufeval]
+      [quantum.untyped.core.identification
+        :refer [ident? qualified-keyword? simple-symbol?]]
       [quantum.untyped.core.loops
         :refer [reduce-2]]
-      [quantum.untyped.core.reducers      :as ur]
-      [quantum.untyped.core.spec          :as us]
-      [quantum.untyped.core.specs         :as uss]
+      [quantum.untyped.core.reducers       :as ur]
+      [quantum.untyped.core.spec           :as us]
+      [quantum.untyped.core.specs          :as uss]
       [quantum.untyped.core.type.predicates
-        :refer [any? ident? qualified-keyword? seqable? simple-symbol?]])
+        :refer [any? seqable?]])
 #?(:cljs
     (:require-macros
       [quantum.untyped.core.defnt :as this])))

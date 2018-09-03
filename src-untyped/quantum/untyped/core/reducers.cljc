@@ -1,24 +1,24 @@
 (ns quantum.untyped.core.reducers
          (:refer-clojure :exclude [apply every? vec == for seqable?])
          (:require
-           [clojure.core                 :as core]
-           [clojure.core.reducers        :as r]
-           [fast-zip.core                :as zip]
-           [quantum.untyped.core.compare :as comp
+           [clojure.core                        :as core]
+           [clojure.core.reducers               :as r]
+           [fast-zip.core                       :as zip]
+           [quantum.untyped.core.compare        :as comp
              :refer [== not==]]
-           [quantum.untyped.core.core    :as ucore
+           [quantum.untyped.core.core           :as ucore
              :refer [>sentinel]]
            [quantum.untyped.core.error
              :refer [err!]]
            [quantum.untyped.core.form.evaluate
              :refer [case-env]]
-           [quantum.untyped.core.qualify :as qual]
+           [quantum.untyped.core.identification :as uident]
            [quantum.untyped.core.type.predicates
              :refer [seqable?]]
-           [quantum.untyped.core.vars    :as uvar
+           [quantum.untyped.core.vars           :as uvar
              :refer [defalias]])
 #?(:cljs (:require-macros
-           [quantum.untyped.core.reducers :as this])))
+           [quantum.untyped.core.reducers       :as this])))
 
 (ucore/log-this-ns)
 
@@ -134,7 +134,7 @@
 (defmacro defeager [sym plus-sym max-args & [lazy-sym]]
   `(do ~(when (and (not lazy-sym) (resolve (symbol "clojure.core" (name sym))))
           `(defalias ~(symbol (str "l" sym)) ~(symbol (case-env :cljs "cljs.core" "clojure.core") (name sym))))
-       (defalias ~(qual/unqualify plus-sym) ~plus-sym)
+       (defalias ~(uident/unqualify plus-sym) ~plus-sym)
        ~(>eager|code sym                        plus-sym `join   max-args
           (str "Like `core/" sym "`, but eager. Reduces into vector."))
        ~(>eager|code (symbol (str sym "'"))     plus-sym `join'  max-args

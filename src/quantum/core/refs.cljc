@@ -9,19 +9,19 @@
        set-error-mode!
      var-set])
   (:require
-    [clojure.core           :as core]
-    [clojure.string         :as str]
-    [quantum.core.error     :as err
+    [clojure.core                        :as core]
+    [clojure.string                      :as str]
+    [quantum.core.error                  :as err
       :refer [TODO]]
     [quantum.core.macros
       :refer [case-env defnt #?(:clj defnt') env-lang]]
-    [quantum.core.type      :as t
+    [quantum.core.type                   :as t
       :refer [val?]]
-    [quantum.core.type.defs :as tdefs]
-    [quantum.untyped.core.qualify :as qual]
+    [quantum.core.type.defs              :as tdefs]
+    [quantum.untyped.core.identification :as uident]
     [quantum.untyped.core.refs
       :refer [atom?]]
-    [quantum.core.vars      :as var
+    [quantum.core.vars                   :as var
       :refer [defalias]])
 #?(:clj
   (:import
@@ -77,7 +77,7 @@
           [~(with-meta 'x {:tag kind})] (new ~deftype-sym ~'x))
         (defmacro  ~(symbol (str "!" kind))
           ([ ]            `(new ~'~deftype-sym (~'~kind 0)))
-          ([~macro-param] `(~'~(qual/qualify *ns* defnt-sym) ~~macro-param))))))
+          ([~macro-param] `(~'~(uident/qualify *ns* defnt-sym) ~~macro-param))))))
 
 #?(:clj
 (defmacro gen-primitive-mutables []

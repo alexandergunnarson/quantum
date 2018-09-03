@@ -47,7 +47,6 @@
     [quantum.core.vars             :as var
       :refer [defalias def-]]
     [quantum.untyped.core.collections.logic :as ucoll&]
-    [quantum.untyped.core.qualify  :as qual]
     [quantum.untyped.core.reducers :as ur]
     [quantum.untyped.core.form.generate
       :refer [arity-builder max-positional-arity unify-gensyms]])
