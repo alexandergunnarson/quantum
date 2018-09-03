@@ -26,8 +26,6 @@
              :refer [seq-and seq-or]]
            [quantum.untyped.core.compare               :as ucomp
              :refer [== <ident =ident >ident ><ident <>ident]]
-           [quantum.untyped.core.convert
-             :refer [>symbol]]
            [quantum.untyped.core.core                  :as ucore]
            [quantum.untyped.core.data.bits             :as ubit]
            [quantum.untyped.core.data.hash             :as uhash]
@@ -42,6 +40,8 @@
            [quantum.untyped.core.fn                    :as ufn
              :refer [fn1 rcomp <- fn->]]
            [quantum.untyped.core.form.generate.deftype :as udt]
+           [quantum.untyped.core.identification
+             :refer [>symbol]]
            [quantum.untyped.core.logic
              :refer [fn-and ifs whenp->]]
            [quantum.untyped.core.numeric               :as unum]

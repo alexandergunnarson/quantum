@@ -4,9 +4,9 @@
   (:require
     [clojure.string                   :as str]
     [quantum.untyped.core.collections :as uc]
-    [quantum.untyped.core.convert
-      :refer [>?name]]
     [quantum.untyped.core.core        :as ucore]
+    [quantum.untyped.core.identification
+      :refer [>?name]]
     [quantum.untyped.core.system      :as usys]))
 
 (ucore/log-this-ns)

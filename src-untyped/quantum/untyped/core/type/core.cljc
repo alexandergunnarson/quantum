@@ -10,13 +10,13 @@
     [clojure.tools.analyzer.jvm.utils :as ana]]
     :cljs
    [[cljs.core.async.impl.channels]])
-    [quantum.untyped.core.convert     :as uconv
-      :refer [>name]]
     [quantum.untyped.core.core        :as ucore]
     [quantum.untyped.core.error
       :refer [>ex-info]]
     [quantum.untyped.core.fn
       :refer [<- fn->>]]
+    [quantum.untyped.core.identification
+      :refer [>name]]
     [quantum.untyped.core.vars
       :refer [defalias]]
     [quantum.untyped.core.type.defs   :as utdef]))

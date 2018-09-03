@@ -1,10 +1,10 @@
 (ns quantum.untyped.core.form.type-hint
   (:require
     [quantum.untyped.core.collections :as uc]
-    [quantum.untyped.core.convert
-      :refer [>name]]
     [quantum.untyped.core.error
       :refer [err!]]
+    [quantum.untyped.core.identification
+      :refer [>name]]
     [quantum.untyped.core.logic
       :refer [ifs]]
     [quantum.untyped.core.loops

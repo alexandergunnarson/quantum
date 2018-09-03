@@ -14,8 +14,6 @@
       :refer [defns defns- fns]]
     [quantum.untyped.core.collections           :as c
       :refer [>set >vec]]
-    [quantum.untyped.core.convert
-      :refer [>name >symbol]]
     [quantum.untyped.core.data
       :refer [kw-map]]
     [quantum.untyped.core.data.array            :as uarr]
@@ -30,7 +28,8 @@
     [quantum.untyped.core.form.evaluate         :as ufeval]
     [quantum.untyped.core.form.generate         :as ufgen]
     [quantum.untyped.core.form.type-hint        :as ufth]
-    [quantum.untyped.core.identification        :as uident]
+    [quantum.untyped.core.identification        :as uident
+      :refer [>name >symbol]]
     [quantum.untyped.core.log                   :as ulog]
     [quantum.untyped.core.logic                 :as ul
       :refer [fn-or fn= ifs]]

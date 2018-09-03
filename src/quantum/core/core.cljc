@@ -8,7 +8,7 @@
     #?(:clj [environ.core              :as env])
             ;; TODO TYPED move to quantum.core.type
           #_[quantum.core.type         :as t
-              :refer [defnt defmacrot defprotocolt deft]]
+              :refer [declare-fnt defnt defmacrot deft]]
             [quantum.untyped.core.core :as u]
             [quantum.untyped.core.defnt
               :refer [defnt]]
@@ -52,9 +52,8 @@
   (get [this])
   (set [this newv]))
 
-#_(defprotocolt IValue
-  (get [this _])
-  (set [this _, newv _]))
+#_(do (declare-fnt get [this _])
+      (declare-fnt set [this _, newv _]))
 
 ;; TODO TYPED
 ;; TODO move?

@@ -9,7 +9,6 @@
     [cljs.spec.alpha]
     [clojure.spec.gen.alpha              :as gen]
     [fipp.ednize]
-    [quantum.untyped.core.convert        :as uconv]
     [quantum.untyped.core.data           :as udata]
     [quantum.untyped.core.error
       :refer [catch-all err! TODO]]
@@ -18,7 +17,7 @@
     [quantum.untyped.core.form.evaluate  :as ufeval
       :refer [case-env]]
     [quantum.untyped.core.identification :as uident
-      :refer [ident?]]
+      :refer [>keyword ident?]]
     [quantum.untyped.core.vars
       :refer [defalias defmalias]])
 #?(:cljs
@@ -145,10 +144,12 @@
 (defalias s/with-gen)
 
 #?(:clj (quantum.untyped.core.vars/defmalias cat clojure.spec.alpha/cat cljs.spec.alpha/cat))
-#?(:clj (defmacro cat* "`or` :`or*` :: `cat` : `cat*`" [& args] `(cat ~@(udata/quote-map-base uconv/>keyword args true))))
+#?(:clj (defmacro cat* "`or` :`or*` :: `cat` : `cat*`" [& args]
+          `(cat ~@(udata/quote-map-base >keyword args true))))
 
 #?(:clj (quantum.untyped.core.vars/defmalias alt clojure.spec.alpha/alt cljs.spec.alpha/alt))
-#?(:clj (defmacro alt* "`or` :`or*` :: `alt` : `alt*`" [& args] `(alt ~@(udata/quote-map-base uconv/>keyword args true))))
+#?(:clj (defmacro alt* "`or` :`or*` :: `alt` : `alt*`" [& args]
+          `(alt ~@(udata/quote-map-base >keyword args true))))
 
 #?(:clj
 (defmacro fdef! [sym & args]

@@ -5,7 +5,6 @@
     (:require
       [clojure.spec.alpha                  :as s]
       [clojure.spec.gen.alpha              :as gen]
-      [quantum.untyped.core.convert        :as uconv]
       [quantum.untyped.core.core
         :refer [any?]]
       [quantum.untyped.core.data
@@ -14,7 +13,7 @@
         :refer [om]]
       [quantum.untyped.core.form.evaluate  :as ufeval]
       [quantum.untyped.core.identification
-        :refer [ident? qualified-keyword? simple-symbol?]]
+        :refer [>keyword ident? qualified-keyword? simple-symbol?]]
       [quantum.untyped.core.loops
         :refer [reduce-2]]
       [quantum.untyped.core.reducers       :as ur]
@@ -264,7 +263,7 @@
 
 (defn speced-binding>arg-ident
   [{[kind binding-] :binding-form} #_:quantum.core.defnt/speced-binding & [i|arg] #_(? nneg-integer?)]
-  (uconv/>keyword
+  (>keyword
     (case kind
       :sym binding-
       (:seq :map)
@@ -290,7 +289,7 @@
 
 (defn- keys||strs||syms>key-specs [kind #_#{:keys :strs :syms} speced-bindings]
   (let [binding-form>key
-          (case kind :keys uconv/>keyword :strs name :syms identity)]
+          (case kind :keys >keyword :strs name :syms identity)]
     (->> speced-bindings
          (filter (fn [{[spec-kind _] :spec}] (= spec-kind :spec)))
          (map (fn [{:keys [binding-form #_symbol?] [_ spec] :spec}]

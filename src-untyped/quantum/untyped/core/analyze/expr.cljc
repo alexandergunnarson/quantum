@@ -11,14 +11,13 @@
       :refer [seq-or]]
     [quantum.untyped.core.compare
       :refer [== not==]]
-    [quantum.untyped.core.convert               :as uconv
-      :refer [>symbol]]
     [quantum.untyped.core.core                  :as ucore]
     [quantum.untyped.core.error                 :as uerr
       :refer [err! TODO]]
     [quantum.untyped.core.form                  :as uform
       :refer [>form]]
-    [quantum.untyped.core.identification        :as uident]
+    [quantum.untyped.core.identification        :as uident
+      :refer [>symbol]]
     [quantum.untyped.core.print                 :as upr]
     [quantum.untyped.core.reducers              :as ur
       :refer [join]]

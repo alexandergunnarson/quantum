@@ -36,7 +36,7 @@
     [quantum.core.spec           :as s
       :refer [validate]]
     [quantum.core.type           :as t]
-    [quantum.untyped.core.convert
+    [quantum.untyped.core.identification
       :refer [>?name]])
 #?(:clj
     (:import

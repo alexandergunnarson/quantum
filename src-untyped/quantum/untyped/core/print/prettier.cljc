@@ -3,7 +3,6 @@
     [fipp.edn]
     [fipp.visit]
     [fipp.ednize]
-    [quantum.untyped.core.convert]
     [quantum.untyped.core.fn
       :refer [rcomp]]
     [quantum.untyped.core.ns]
@@ -57,7 +56,7 @@
 
 #?(:clj
 (defn visit-fn [visitor x]
-  [:group "#" "fn" " " (-> x quantum.untyped.core.convert/>symbol visit-symbol*)]))
+  [:group "#" "fn" " " (-> x quantum.untyped.core.identification/>symbol visit-symbol*)]))
 
 #?(:clj
 (defn visit*

@@ -12,8 +12,9 @@
 #?@(:clj
    [[clojure.data.int-map          :as imap]
     [seqspert.hash-map]])
-    [quantum.untyped.core.convert  :as uconv]
     [quantum.untyped.core.data     :as udata]
+    [quantum.untyped.core.identification
+      :refer [>keyword]]
     [quantum.untyped.core.reducers :as ur
       :refer [reduce-pair]]
     [quantum.untyped.core.vars
@@ -326,7 +327,7 @@
 (defmacro kw-omap
   "Like `kw-map`, but preserves insertion order."
   [& ks]
-  (list* `om (udata/quote-map-base uconv/>keyword ks))))
+  (list* `om (udata/quote-map-base >keyword ks))))
 
 ;; TODO generate these functions via macros
 (defn #?(:clj ^LinkedHashMap !ordered-map :cljs !ordered-map)

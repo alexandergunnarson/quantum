@@ -1,48 +1,48 @@
 (ns quantum.core.convert ; perhaps coerce?
   (:require
-    [clojure.core                       :as core]
-    [cognitect.transit                  :as t]
+    [clojure.core                        :as core]
+    [cognitect.transit                   :as t]
  #?@(:clj
    [[clojure.tools.emitter.jvm]
-    [clojure.java.io                    :as io]
-    [manifold.stream                    :as s]
-    [manifold.deferred                  :as d]
-    [byte-streams                       :as streams]
-    [byte-streams.graph                 :as g]
-    [byte-streams.protocols             :as proto]
-    [byte-streams.pushback-stream       :as ps]
-    [byte-streams.char-sequence         :as cs]]
+    [clojure.java.io                     :as io]
+    [manifold.stream                     :as s]
+    [manifold.deferred                   :as d]
+    [byte-streams                        :as streams]
+    [byte-streams.graph                  :as g]
+    [byte-streams.protocols              :as proto]
+    [byte-streams.pushback-stream        :as ps]
+    [byte-streams.char-sequence          :as cs]]
      :cljs
-   [[cljs.reader                        :as core-r]
-    [goog.crypt.base64                  :as base64]])
-    [clojure.tools.reader               :as r]
-    [clojure.tools.reader.edn           :as r-edn]
-    [clojure.core.async                 :as async]
-    [datascript.transit                 :as dt]
+   [[cljs.reader                         :as core-r]
+    [goog.crypt.base64                   :as base64]])
+    [clojure.tools.reader                :as r]
+    [clojure.tools.reader.edn            :as r-edn]
+    [clojure.core.async                  :as async]
+    [datascript.transit                  :as dt]
     ; CompilerException java.lang.NoClassDefFoundError: IllegalName: compile__stub.gloss.data.bytes.core.gloss.data.bytes.core/MultiBufferSequence, compiling:(gloss/data/bytes/core.clj:78:1)
   ; [gloss.core.formats                 :as gforms]
-    [quantum.core.data.array            :as arr]
-    [quantum.core.error                 :as err
+    [quantum.core.data.array             :as arr]
+    [quantum.core.error                  :as err
       :refer [TODO]]
-    [quantum.core.numeric               :as num]
-    [quantum.core.string                :as str]
+    [quantum.core.numeric                :as num]
+    [quantum.core.string                 :as str]
     [quantum.core.collections.core
       :refer [lasti]]
-    [quantum.core.convert.core          :as conv]
-    [quantum.core.convert.primitive     :as pconv]
-    [quantum.core.data.complex.json     :as json]
-    [quantum.core.macros                :as macros
+    [quantum.core.convert.core           :as conv]
+    [quantum.core.convert.primitive      :as pconv]
+    [quantum.core.data.complex.json      :as json]
+    [quantum.core.macros                 :as macros
       :refer [defnt #?(:clj defnt')]]
-    [quantum.core.paths                 :as path]
-    [quantum.core.fn                    :as fn]
-    [quantum.core.vars                  :as var
+    [quantum.core.paths                  :as path]
+    [quantum.core.fn                     :as fn]
+    [quantum.core.vars                   :as var
       :refer [defalias defaliases]]
-    [quantum.core.log                   :as log]
-    [quantum.untyped.core.convert       :as u]
+    [quantum.core.log                    :as log]
     [quantum.untyped.core.form.evaluate
       :refer [case-env]]
     [quantum.untyped.core.form.type-hint
-      :refer [static-cast]])
+      :refer [static-cast]]
+    [quantum.untyped.core.identification :as uident])
 #?(:cljs
   (:require-macros
     [quantum.core.convert :as self]))
@@ -291,7 +291,7 @@
             in protocol __GT_uuidProtocol must take at least one arg'"
   [& args]
   (if (empty? args)
-      `(u/>uuid)
+      `(uident/>uuid)
       `(->uuid* ~@args))))
 
 #?(:clj (defalias ->file path/->file))

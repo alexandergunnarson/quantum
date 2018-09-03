@@ -3,9 +3,9 @@
             [pos-int?])
           (:require
             [clojure.core               :as core]
-    #?(:clj [clojure.future            :as fcore])
+    #?(:clj [clojure.future             :as fcore])
             [quantum.untyped.core.core  :as ucore]
-            [quantum.untyped.core.error :as err]
+            [quantum.untyped.core.error :as uerr]
             [quantum.untyped.core.vars
             :refer [defalias]])
   #?(:clj (:import java.lang.Math java.math.BigDecimal)))
@@ -35,7 +35,13 @@
                      false]
             :cljs [(number? x)
                      (js/Number.isInteger x)])
-        :else (err/not-supported! `integer-value? x)))
+        :else (uerr/not-supported! `integer-value? x)))
+
+(defn >integer [x]
+  (cond (integer? x) x
+        (string?  x) #?(:clj  (Long/parseLong ^String x)
+                        :cljs (js/parseInt            x))
+        :else        (uerr/not-supported! `>integer x)))
 
 (defn signum|long
   [^long x]

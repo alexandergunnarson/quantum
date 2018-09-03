@@ -35,14 +35,15 @@
     [quantum.untyped.core.collections           :as ucoll
       :refer [contains? merge-call update-first update-val]]
     [quantum.untyped.core.collections.tree      :as utree]
-    [quantum.untyped.core.convert               :as uconv
-      :refer [>integer >name]]
     [quantum.untyped.core.data
       :refer [kw-map val?]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env case-env*]]
     [quantum.untyped.core.form.type-hint        :as ufth]
-    [quantum.untyped.core.identification        :as uident]
+    [quantum.untyped.core.identification        :as uident
+      :refer [>name]]
+    [quantum.untyped.core.numeric
+      :refer [>integer]]
     [quantum.untyped.core.numeric.combinatorics :as combo]
     [quantum.untyped.core.reducers
       :refer [reducei]                          :as ured]

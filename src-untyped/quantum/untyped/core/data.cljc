@@ -2,10 +2,10 @@
   (:refer-clojure :exclude
     [seqable?])
   (:require
-    [quantum.untyped.core.convert    :as uconv
-      :refer [>keyword]]
     [quantum.untyped.core.core       :as ucore]
     [quantum.untyped.core.data.array :as uarr]
+    [quantum.untyped.core.identification
+      :refer [>keyword]]
     [quantum.untyped.core.vars
       :refer [defalias]]))
 
