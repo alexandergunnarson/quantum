@@ -1,10 +1,13 @@
 (ns quantum.untyped.core.form
   (:require
+    [quantum.untyped.core.collections
+      :refer [seq=]]
     [quantum.untyped.core.core          :as ucore
       :refer [defalias]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env*]]
-    [quantum.untyped.core.form.generate :as ufgen]))
+    [quantum.untyped.core.form.generate :as ufgen]
+    [quantum.untyped.core.vars          :as uvar]))
 
 (ucore/log-this-ns)
 
@@ -90,3 +93,31 @@
   "Reproducibly, unifiedly syntax quote without messing up the format as a literal
    syntax quote might do."
   [body] `(ufgen/unify-gensyms (syntax-quote ~body) true)))
+
+(defn code=
+  "Ensures that two pieces of code are equivalent.
+   This means ensuring that seqs, vectors, and maps are only allowed to be compared with
+   each other, and that metadata (minus line and column metadata) is equivalent."
+  ([code0 code1]
+    (if (uvar/metable? code0)
+        (and (uvar/metable? code1)
+             (= (-> code0 meta (dissoc :line :column))
+                (-> code1 meta (dissoc :line :column)))
+             (let [similar-class?
+                     (cond (seq?    code0) (seq?    code1)
+                           (seq?    code1) (seq?    code0)
+                           (vector? code0) (vector? code1)
+                           (vector? code1) (vector? code0)
+                           (map?    code0) (map?    code1)
+                           (map?    code1) (map?    code0)
+                           :else           ::not-applicable)]
+               (if (= similar-class? ::not-applicable)
+                   (= code0 code1)
+                   (and similar-class? (seq= (seq code0) (seq code1) code=))))
+             (cond (seq?    code0) (and (seq?    code1) (seq=      code0       code1  code=))
+                   (vector? code0) (and (vector? code1) (seq= (seq code0) (seq code1) code=))
+                   (map?    code0) (and (map?    code1) (seq= (seq code0) (seq code1) code=))
+                   :else           (= code0 code1)))
+        (and (not (uvar/metable? code1))
+             (= code0 code1))))
+  ([code0 code1 & codes] (and (code= code0 code1) (every? #(code= code0 %) codes))))

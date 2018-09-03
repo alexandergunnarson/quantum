@@ -383,3 +383,14 @@
   (lazy-seq
     (when (seq s)
       (cons (first s) (unchunk (rest s))))))
+
+(defn seq=
+  ([a b] (seq= a b =))
+  ([a b eq-f]
+    (boolean
+      (loop [a (seq a) b (seq b)]
+        (let [a-nil? (nil? a)]
+          (and (identical? a-nil? (nil? b))
+               (or a-nil?
+                   (and (eq-f (first a) (first b))
+                        (recur (next a) (next b))))))))))

@@ -4,10 +4,10 @@
   quantum.core.data.finger-tree
   (:refer-clojure :exclude [macroexpand-1])
   (:require
-    [quantum.core.data.map    :as map
+    [quantum.core.data.map       :as map
       :refer [map-entry]]
     [quantum.core.macros.deftype :as deftype]
-    [quantum.core.core
+    [quantum.untyped.core.collections
       :refer [seq=]]
 #?@(:clj
    [[quantum.core.data.finger-tree.macros

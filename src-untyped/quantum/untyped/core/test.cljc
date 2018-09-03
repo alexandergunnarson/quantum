@@ -4,6 +4,8 @@
     [clojure.spec.test.alpha    :as stest]
     [clojure.string             :as str]
     [clojure.test               :as test]
+    [quantum.untyped.core.collections
+      :refer [seq=]]
     [quantum.untyped.core.core  :as ucore]
     [quantum.untyped.core.error :as uerr]
     [quantum.untyped.core.log
@@ -47,8 +49,8 @@
                        (pr! "FAIL: should be `(= code0 code1)`" (pr-str code0) (pr-str code1)))
                    (and (or similar-class?
                             (pr! "FAIL: should be similar class" (pr-str code0) (pr-str code1)))
-                        (or (ucore/seq= (seq code0) (seq code1) code=)
-                            (pr! "FAIL: `(ucore/seq= code0 code1 code=)`"
+                        (or (seq= (seq code0) (seq code1) code=)
+                            (pr! "FAIL: `(seq= code0 code1 code=)`"
                                  (pr-str code0) (pr-str code1)))))))
         (and (not (metable? code1))
              (or (= code0 code1)

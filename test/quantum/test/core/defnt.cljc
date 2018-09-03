@@ -12,10 +12,8 @@
     [quantum.core.type.defs    :as tdef]
     [quantum.untyped.core.analyze.ast  :as ast]
     [quantum.untyped.core.analyze.expr :as xp]
-    [quantum.untyped.core.core
-      :refer [code=]]
     [quantum.untyped.core.form
-      :refer [$]]
+      :refer [$ code=]]
     [quantum.untyped.core.form.type-hint
       :refer [tag]]
     [quantum.untyped.core.spec         :as s]

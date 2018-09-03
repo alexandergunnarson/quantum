@@ -35,65 +35,6 @@
 (defn >sentinel [] #?(:clj (Object.) :cljs #js {}))
 (def >object >sentinel)
 
-;; ===== Fundamental type predicates ===== ;;
-;; TODO maybe move to `quantum.untyped.core.data`?
-
-#?(:clj  (eval `(defalias ~(if (resolve `fcore/any?)
-                               `fcore/any?
-                               `core/any?)))
-   :cljs (defalias core/any?))
-
-;; This is in here only because `protocol?` needs it; it's aliased later
-(defn lookup? [x]
-  #?(:clj  (instance?  clojure.lang.ILookup x)
-     :cljs (satisfies? cljs.core/ILookup    x)))
-
-(defn protocol? [x]
-  #?(:clj  (and (lookup? x) (-> x (get :on-interface) class?))
-           ;; Unfortunately there's no better check in CLJS, at least as of 03/18/2018
-     :cljs (and (fn? x) (= (str x) "function (){}"))))
-
-;; ===== Collections ===== ;;
-
-(defn seq=
-  ([a b] (seq= a b =))
-  ([a b eq-f]
-    (boolean
-      (loop [a (seq a) b (seq b)]
-        (let [a-nil? (nil? a)]
-          (and (identical? a-nil? (nil? b))
-               (or a-nil?
-                   (and (eq-f (first a) (first b))
-                        (recur (next a) (next b))))))))))
-
-(defn code=
-  "Ensures that two pieces of code are equivalent.
-   This means ensuring that seqs, vectors, and maps are only allowed to be compared with
-   each other, and that metadata (minus line and column metadata) is equivalent."
-  ([code0 code1]
-    (if (metable? code0)
-        (and (metable? code1)
-             (= (-> code0 meta (dissoc :line :column))
-                (-> code1 meta (dissoc :line :column)))
-             (let [similar-class?
-                     (cond (seq?    code0) (seq?    code1)
-                           (seq?    code1) (seq?    code0)
-                           (vector? code0) (vector? code1)
-                           (vector? code1) (vector? code0)
-                           (map?    code0) (map?    code1)
-                           (map?    code1) (map?    code0)
-                           :else           ::not-applicable)]
-               (if (= similar-class? ::not-applicable)
-                   (= code0 code1)
-                   (and similar-class? (seq= (seq code0) (seq code1) code=))))
-             (cond (seq?    code0) (and (seq?    code1) (seq=      code0       code1  code=))
-                   (vector? code0) (and (vector? code1) (seq= (seq code0) (seq code1) code=))
-                   (map?    code0) (and (map?    code1) (seq= (seq code0) (seq code1) code=))
-                   :else           (= code0 code1)))
-        (and (not (metable? code1))
-             (= code0 code1))))
-  ([code0 code1 & codes] (and (code= code0 code1) (every? #(code= code0 %) codes))))
-
 ;; From `quantum.untyped.core.form.evaluate` — used below in `defalias`
 
 (defn cljs-env?
@@ -183,6 +124,25 @@
                  (ns-name resolved)
                  alias-)]
     `(defaliases' ~ns-sym ~@names))))
+
+;; ===== Fundamental type predicates ===== ;;
+;; TODO maybe move to `quantum.untyped.core.data`?
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/any?)
+                               `fcore/any?
+                               `core/any?)))
+   :cljs (defalias core/any?))
+
+;; This is in here only because `protocol?` needs it; it's aliased later
+(defn lookup? [x]
+  #?(:clj  (instance?  clojure.lang.ILookup x)
+     :cljs (satisfies? cljs.core/ILookup    x)))
+
+(defn protocol? [x]
+  #?(:clj  (and (lookup? x) (-> x (get :on-interface) class?))
+           ;; Unfortunately there's no better check in CLJS, at least as of 03/18/2018
+     :cljs (and (fn? x) (= (str x) "function (){}"))))
+
 
 ;; From `quantum.untyped.core.collections.tree` — used in `quantum.untyped.core.macros`
 

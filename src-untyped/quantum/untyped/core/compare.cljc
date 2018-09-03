@@ -1,4 +1,5 @@
 (ns quantum.untyped.core.compare
+  "General comparison operators and constants"
   (:refer-clojure :exclude [==])
   (:require
     [quantum.untyped.core.core :as ucore
@@ -57,5 +58,3 @@
   {#?@(:clj
         [Class (fn [^Class a ^Class b]
                  (.compareTo (.getName a) (.getName b)))])})
-
-(defaliases ucore seq= code=)

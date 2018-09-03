@@ -6,12 +6,10 @@
   (:require
     [quantum.untyped.core.type.defnt
       :refer [defnt fnt unsupported!]]
-    [quantum.untyped.core.core              :as ucore
-      :refer [code=]]
     [quantum.untyped.core.data.array
       :refer [*<>]]
     [quantum.untyped.core.form
-      :refer [$]]
+      :refer [$ code=]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env env-lang macroexpand-all]]
     [quantum.untyped.core.form.type-hint
