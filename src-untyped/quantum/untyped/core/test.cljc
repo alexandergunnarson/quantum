@@ -11,7 +11,7 @@
     [quantum.untyped.core.print
       :refer [ppr-meta]]
     [quantum.untyped.core.vars
-      :refer [defalias defmalias]]))
+      :refer [defalias defmalias metable?]]))
 
 #?(:clj (defmalias is      clojure.test/is      cljs.test/is     ))
 #?(:clj (defmalias deftest clojure.test/deftest cljs.test/deftest))
@@ -27,8 +27,8 @@
 (defn code=
   "`code=` but with helpful test-related logging"
   ([code0 code1]
-    (if (ucore/metable? code0)
-        (and (ucore/metable? code1)
+    (if (metable? code0)
+        (and (metable? code1)
              (let [meta0 (-> code0 meta (dissoc :line :column))
                    meta1 (-> code1 meta (dissoc :line :column))]
                (or (= meta0 meta1)
@@ -50,7 +50,7 @@
                         (or (ucore/seq= (seq code0) (seq code1) code=)
                             (pr! "FAIL: `(ucore/seq= code0 code1 code=)`"
                                  (pr-str code0) (pr-str code1)))))))
-        (and (not (ucore/metable? code1))
+        (and (not (metable? code1))
              (or (= code0 code1)
                  (println "FAIL: should be `(= code0 code1)`" (pr-str code0) (pr-str code1))))))
   ([code0 code1 & codes] (and (code= code0 code1) (every? #(code= code0 %) codes))))

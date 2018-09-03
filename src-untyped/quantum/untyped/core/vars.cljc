@@ -18,6 +18,14 @@
 
 ;; ===== Metadata ===== ;;
 
+(defn metable? [x]
+  #?(:clj  (instance?  clojure.lang.IMeta x)
+     :cljs (satisfies? cljs.core/IMeta    x)))
+
+(defn with-metable? [x]
+  #?(:clj  (instance?  clojure.lang.IObj   x)
+     :cljs (satisfies? cljs.core/IWithMeta x)))
+
 (def update-meta       ucore/update-meta)
 (def merge-meta-from   ucore/merge-meta-from)
 (def replace-meta-from ucore/replace-meta-from)
