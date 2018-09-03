@@ -1,7 +1,8 @@
 (ns quantum.untyped.core.loops
+  (:refer-clojure :exclude
+    [doseq])
   (:require
-    [quantum.untyped.core.core     :as ucore]
-    [quantum.untyped.core.reducers :as r]))
+    [quantum.untyped.core.core :as ucore]))
 
 (ucore/log-this-ns)
 
@@ -23,3 +24,37 @@
             :else (recur (f ret (first xs0') (first xs1'))
                          (next xs0')
                          (next xs1'))))))
+
+
+;; TODO incorporate into `quantum.core.loops`
+#?(:clj
+(defmacro doseq
+  "Like `doseq` but:
+   - Indexed
+   - Returns the result
+   - Does not have `:let`, `:while` or `:when` semantics
+   - Much smaller code footprint"
+  [[x xs i] & body]
+  `(loop [xs#  (seq ~xs)
+          ret# nil]
+     (if xs#
+         (let [~x (first xs#)]
+           (recur (next xs#) (do ~@body)))
+         ret#))))
+
+;; TODO incorporate into `quantum.core.loops`
+#?(:clj
+(defmacro doseqi
+  "Like `doseq` but:
+   - Indexed
+   - Returns the result
+   - Does not have `:let`, `:while` or `:when` semantics
+   - Much smaller code footprint"
+  [[x xs i] & body]
+  `(loop [xs#  (seq ~xs)
+          ~i   0
+          ret# nil]
+     (if xs#
+         (let [~x (first xs#)]
+           (recur (next xs#) (inc ~i) (do ~@body)))
+         ret#))))

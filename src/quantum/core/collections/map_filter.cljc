@@ -50,7 +50,7 @@
     [quantum.core.reducers         :as red
       :refer[indexed+ join' reduce defeager]]
     [quantum.core.type             :as type]
-    [quantum.core.loops            :as loops
+    [quantum.core.loops            :as loop
       :refer [reducei doseqi lfor]]
     [quantum.core.vars             :as var
       :refer [defalias defaliases]]))
@@ -100,7 +100,7 @@
     (->> xs rseq (ffilteri pred)
          (<- (update 0 (partial - (lasti xs))))))
   ([xs pred]
-    (loops/reducei
+    (loop/reducei
       (fn [ret elem-n index-n]
         (if (pred elem-n)
             (map-entry index-n elem-n)

@@ -91,7 +91,7 @@
               boolean? should-transientize?
               class]]
     [quantum.core.analyze.clojure.predicates :as anap]
-    [quantum.core.loops                      :as loops]
+    [quantum.core.loops                      :as loop]
     [quantum.core.vars                       :as var
       :refer [defalias defaliases]]
     [quantum.untyped.core.data               :as udata])
@@ -260,7 +260,7 @@
 
         (defnt into! ; TODO delete
           "Like into, but for mutable collections"
-          [^transient? x coll] (loops/doseq [elem coll] (conj! x elem)) x)
+          [^transient? x coll] (loop/doseq [elem coll] (conj! x elem)) x)
 
         ; `take` <~> `lodash/take`
         (defalias take                diff/takel              )
@@ -356,48 +356,48 @@
 ; _______________________________________________________________
 ; ============================ LOOPS ============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-#?(:clj (defalias dotimes           loops/dotimes          ))
-#?(:clj (defalias fortimes          loops/fortimes         ))
-#?(:clj (defalias fortimes:objects  loops/fortimes:objects ))
-#?(:clj (defalias fortimes:objects2 loops/fortimes:objects2))
-#?(:clj (defalias fortimes:doubles  loops/fortimes:doubles ))
-#?(:clj (defalias fortimes:doubles2 loops/fortimes:doubles2))
-#?(:clj (defalias fortimes:doubles3 loops/fortimes:doubles3))
+#?(:clj (defalias dotimes           loop/dotimes          ))
+#?(:clj (defalias fortimes          loop/fortimes         ))
+#?(:clj (defalias fortimes:objects  loop/fortimes:objects ))
+#?(:clj (defalias fortimes:objects2 loop/fortimes:objects2))
+#?(:clj (defalias fortimes:doubles  loop/fortimes:doubles ))
+#?(:clj (defalias fortimes:doubles2 loop/fortimes:doubles2))
+#?(:clj (defalias fortimes:doubles3 loop/fortimes:doubles3))
 #?(:clj (defalias transduce    red/transduce ))
-#?(:clj (defalias reduce       loops/reduce  ))
-#?(:clj (defalias reducei      loops/reducei ))
-#?(:clj (defalias reduce*      loops/reduce* ))
-#?(:clj (defalias reduce-multi loops/reduce-multi))
-#?(:clj (defalias red-for      loops/red-for ))
-#?(:clj (defalias red-fori     loops/red-fori))
-        (defalias reduce-pair  loops/reduce-pair)
-        (defalias reduce-2     loops/reduce-2 )
-        (defalias reducei-2    loops/reducei-2)
-#?(:clj (defalias reduce-2:indexed loops/reduce-2:indexed))
-#?(:clj (defalias ifor         loops/ifor    ))
-#?(:clj (defalias ifori        loops/ifori   ))
+#?(:clj (defalias reduce       loop/reduce  ))
+#?(:clj (defalias reducei      loop/reducei ))
+#?(:clj (defalias reduce*      loop/reduce* ))
+#?(:clj (defalias reduce-multi loop/reduce-multi))
+#?(:clj (defalias red-for      loop/red-for ))
+#?(:clj (defalias red-fori     loop/red-fori))
+        (defalias reduce-pair  loop/reduce-pair)
+        (defalias reduce-2     loop/reduce-2 )
+        (defalias reducei-2    loop/reducei-2)
+#?(:clj (defalias reduce-2:indexed loop/reduce-2:indexed))
+#?(:clj (defalias ifor         loop/ifor    ))
+#?(:clj (defalias ifori        loop/ifori   ))
 ; ===== COLLECTION COMPREHENSION ===== ;
-#?(:clj (defalias for-join     loops/for-join  ))
-#?(:clj (defalias for-join!    loops/for-join! ))
-#?(:clj (defalias for          loops/for       )) #?(:clj (alter-meta! (var for) c/assoc :macro true))
-#?(:clj (defalias for'         loops/for'      ))
+#?(:clj (defalias for-join     loop/for-join  ))
+#?(:clj (defalias for-join!    loop/for-join! ))
+#?(:clj (defalias for          loop/for       )) #?(:clj (alter-meta! (var for) c/assoc :macro true))
+#?(:clj (defalias for'         loop/for'      ))
 #?(:clj (defalias for+         red/for+        ))
-#?(:clj (defalias fori         loops/fori      ))
-#?(:clj (defalias fori'        loops/fori'     ))
+#?(:clj (defalias fori         loop/fori      ))
+#?(:clj (defalias fori'        loop/fori'     ))
 #?(:clj (defalias fori+        red/fori+       ))
-#?(:clj (defalias fori-join    loops/fori-join ))
-#?(:clj (defalias fori-join!   loops/fori-join!))
-#?(:clj (defmacro lfor [& args] `(loops/lfor   ~@args)))
+#?(:clj (defalias fori-join    loop/fori-join ))
+#?(:clj (defalias fori-join!   loop/fori-join!))
+#?(:clj (defmacro lfor [& args] `(loop/lfor   ~@args)))
 
-#?(:clj (defmacro doseq  [& args] `(loops/doseq  ~@args)))
-#?(:clj (defmacro doseqi [& args] `(loops/doseqi ~@args)))
-#?(:clj (defalias until     loops/until   ))
-#?(:clj (defalias while-let loops/while-let))
-#?(:clj (defalias doeach    loops/doeach))
-#?(:clj (defalias each      loops/each))
-#?(:clj (defalias eachi     loops/eachi))
-#?(:clj (defalias doreduce  loops/doreduce))
-        (defalias mapfn     loops/mapfn)
+#?(:clj (defmacro doseq  [& args] `(loop/doseq  ~@args)))
+#?(:clj (defmacro doseqi [& args] `(loop/doseqi ~@args)))
+#?(:clj (defalias until     loop/until   ))
+#?(:clj (defalias while-let loop/while-let))
+#?(:clj (defalias doeach    loop/doeach))
+#?(:clj (defalias each      loop/each))
+#?(:clj (defalias eachi     loop/eachi))
+#?(:clj (defalias doreduce  loop/doreduce))
+        (defalias mapfn     loop/mapfn)
         (defalias break     reduced)
 ; _______________________________________________________________
 ; ========================= GENERATIVE ==========================
@@ -752,14 +752,14 @@
   [coll elem-0]
   (if (should-transientize? coll)
       (persistent!
-        (loops/reducei
+        (loop/reducei
           (fn [ret elem-n n]
             (if (= elem-0 elem-n)
                 (conj! ret n)
                 ret))
           (transient [])
           coll))
-      (loops/reducei
+      (loop/reducei
         (fn [ret elem-n n]
           (if (= elem-0 elem-n)
               (conj ret n)
@@ -892,7 +892,7 @@
   {:todo ["Rename this function."
           "Possibly belongs in a different namespace"]}
   [coll compare-fn]
-  (loops/reducei
+  (loop/reducei
     (fn [ret elem n]
       (if (= n 0) elem (compare-fn ret elem)))
     nil
@@ -951,7 +951,7 @@
     (-> m (dissoc k))))
 
 (defn rename-keys [m-0 rename-m]
-  (loops/reduce
+  (loop/reduce
     (fn [ret k-0 k-f]
       (-> ret
           (assoc  k-f (get ret k-0))
@@ -1017,8 +1017,8 @@
           merge2
             (fn ([] {})
                 ([m1 m2]
-                 (loops/reduce merge-entry (or m1 {}) (seq m2))))]
-      (loops/reduce merge2 maps))))
+                 (loop/reduce merge-entry (or m1 {}) (seq m2))))]
+      (loop/reduce merge2 maps))))
 
 (defn merge-vals-left
   "Merges into the left map all elements of the right map whose
@@ -1035,7 +1035,7 @@
           :b {:aa 3}}}
   [left right f]
   (persistent!
-    (loops/reduce
+    (loop/reduce
       (fn [left-f k-right v-right]
        ;(if ((fn-not contains?) left-f k-right) ; can't call |contains?| on a transient, apparently...
        ;    left-f)
@@ -1067,7 +1067,7 @@
    :attribution "alexandergunnarson"
    :out 'Map}
   ([coll kfs]
-    (->> (loops/reduce
+    (->> (loop/reduce
            (fn [ret k f]
              (assoc ret k (f coll)))
            {}
@@ -1192,7 +1192,7 @@
          (fn [grouped-elems]
            (if (single? grouped-elems)
                grouped-elems
-               (loops/reduce
+               (loop/reduce
                  (fn [ret elem]
                    (merge-with-k merge-with-f ret elem))
                  (first grouped-elems)

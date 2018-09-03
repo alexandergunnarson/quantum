@@ -1374,26 +1374,8 @@
   ([xs t/char-seq?] (clojure.lang.StringSeq/create xs))
   ;; TODO recursion
   #_([xs (t/isa? java.util.Map)] (seq (.entrySet xs)))
-  ;; TODO for these, use `count` not `clojure.lang.RT/alength`
-  ([xs t/booleans?] (when-not (zero? (clojure.lang.RT/alength xs))
-                      (clojure.lang.ArraySeq$ArraySeq_boolean. nil xs 0)))
-  ([xs t/bytes?]    (when-not (zero? (clojure.lang.RT/alength xs))
-                      (clojure.lang.ArraySeq$ArraySeq_byte.    nil xs 0)))
-  ([xs t/chars?]    (when-not (zero? (clojure.lang.RT/alength xs))
-                      (clojure.lang.ArraySeq$ArraySeq_char.    nil xs 0)))
-  ([xs t/shorts?]   (when-not (zero? (clojure.lang.RT/alength xs))
-                      (clojure.lang.ArraySeq$ArraySeq_short.   nil xs 0)))
-  ([xs t/ints?]     (when-not (zero? (clojure.lang.RT/alength xs))
-                      (clojure.lang.ArraySeq$ArraySeq_int.     nil xs 0)))
-  ([xs t/longs?]    (when-not (zero? (clojure.lang.RT/alength xs))
-                      (clojure.lang.ArraySeq$ArraySeq_long.    nil xs 0)))
-  ([xs t/floats?]   (when-not (zero? (clojure.lang.RT/alength xs))
-                      (clojure.lang.ArraySeq$ArraySeq_float.   nil xs 0)))
-  ([xs t/doubles?]  (when-not (zero? (clojure.lang.RT/alength xs))
-                      (clojure.lang.ArraySeq$ArraySeq_double.  nil xs 0)))
-  ;; TODO fix
-  #_([xs t/array?]    (when-not (zero? (clojure.lang.RT/alength xs))
-                      (clojure.lang.ArraySeq. xs 0)))
+  ([xs t/array?] (when-not (zero? (Array/count xs)) ; TODO use `count`
+                   (clojure.lang.ArraySeq. ^Object xs 0)))
   ))
 )
 
