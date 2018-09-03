@@ -125,16 +125,8 @@
     (fn [fn-form]
       (-> fn-form
           (update :quantum.core.defnt/overloads
-            #(mapv (fn [overload]
-                     (let [overload' (update overload :body :body)]
-                       (if-let [output-spec (-> fn-form :quantum.core.defnt/output-spec :spec)]
-                         (update-in overload' [:arglist :post]
-                           (fn [{overload-output-spec :spec}]
-                             (if (some? overload-output-spec)
-                                 (list `us/and overload-output-spec output-spec)
-                                 output-spec)))
-                         overload'))) %))
-          (dissoc :quantum.core.defnt/output-spec)))))
+            #(mapv (fn [overload] (update overload :body :body)) %))
+          (update :quantum.core.defnt/output-spec :spec)))))
 
 (s/def :quantum.core.defnt/fnt
   (s/and (s/spec
@@ -340,9 +332,11 @@
   (when (= kind :fn) (println "WARNING: `fn` will ignore spec validation"))
   (let [{:keys [:quantum.core.specs/fn|name
                 :quantum.core.defnt/overloads
+                :quantum.core.defnt/output-spec
                 :quantum.core.specs/meta] :as args'}
           (us/assert-conform (case kind (:defn :defn-) :quantum.core.defnt/defns|code
                                         :fn            :quantum.core.defnt/fns|code) args)
+        [_ output-spec] output-spec
         ret-sym (gensym "ret") arity-kind-sym (gensym "arity-kind") args-sym (gensym "args")
         {:keys [overload-forms spec-form|args spec-form|fn]}
           (reduce
@@ -368,8 +362,10 @@
                                           spec-form|arglist)
                     spec-form|fn*     (if (contains? arglist :post)
                                           `(let [~kw-args ~args-sym]
-                                             (us/spec ~post))
-                                          `(us/spec any?))]
+                                             (us/spec ~(if output-spec
+                                                           `(us/and ~post ~output-spec)
+                                                           post)))
+                                          (list `us/spec (or output-spec `any?)))]
                 (-> ret
                     (update :overload-forms conj overload-form)
                     (update :spec-form|args conj arity-ident spec-form|args*)

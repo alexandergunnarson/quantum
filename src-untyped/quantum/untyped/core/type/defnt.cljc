@@ -243,6 +243,7 @@
         ;; TODO this becomes an issue when `post-type|form` references local bindings
         post-type (eval post-type|form)
         post-type|runtime? (-> post-type meta :runtime?)
+        _ (println "POST TYPE" post-type|runtime? post-type)
         out-type (if post-type
                      (if post-type|runtime?
                          (case (t/compare post-type (:type analyzed))
