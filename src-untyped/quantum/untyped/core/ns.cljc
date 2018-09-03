@@ -14,6 +14,8 @@
     [quantum.untyped.core.vars :as uvar
       :refer [defalias defaliases]]))
 
+#?(:clj (defn namespace? [x] (instance? clojure.lang.Namespace x)))
+
 #?(:clj (do
 (defaliases core ns the-ns find-ns ns-name ns-map)
 (defalias core/ns-unmap               )

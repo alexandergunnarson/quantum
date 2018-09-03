@@ -1,7 +1,8 @@
 ;; See https://jsperf.com/js-property-access-comparison — all property accesses (at least of length 1) seem to be equal
 
 (ns quantum.core.test.defnt-equivalences
-  (:refer-clojure :exclude [* zero? count])
+  (:refer-clojure :exclude
+    [* count get seq zero?])
   (:require
     [quantum.untyped.core.type.defnt
       :refer [defnt fnt unsupported!]]
@@ -1058,7 +1059,7 @@
                         #_(def ~'>long|__9|input-types
                           (*<> t/ratio?))
                         #_(def ~'>long|__9|conditions
-                          (*<> (-> long|__8|input-types (get 0) utr/and-type>args (get 1))))
+                          (*<> (-> long|__8|input-types (core/get 0) utr/and-type>args (core/get 1))))
                         (def ~'>long|__9
                           (reify Object>long
                             (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
@@ -1364,17 +1365,17 @@
 ; TODO CLJS version will come after
 #?(:clj
 (macroexpand '
-(defnt seq|test
+(defnt seq
   "Taken from `clojure.lang.RT/seq`"
   > (t/? (t/isa? ISeq))
-  ([xs t/nil?                 ] nil)
-  ([xs (t/isa? ASeq)          ] xs)
+  ([xs t/nil?] nil)
+  ([xs (t/isa? ASeq)] xs)
   ([xs (t/or (t/isa? LazySeq)
              (t/isa? Seqable))] (.seq xs))
   ([xs t/iterable?] (clojure.lang.RT/chunkIteratorSeq (.iterator xs)))
   ([xs t/char-seq?] (clojure.lang.StringSeq/create xs))
   ;; TODO recursion
-  #_([xs (t/isa? java.util.Map)] (seq|test (.entrySet xs)))
+  #_([xs (t/isa? java.util.Map)] (seq (.entrySet xs)))
   ;; TODO for these, use `count` not `clojure.lang.RT/alength`
   ([xs t/booleans?] (when-not (zero? (clojure.lang.RT/alength xs))
                       (clojure.lang.ArraySeq$ArraySeq_boolean. nil xs 0)))

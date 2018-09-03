@@ -5,8 +5,7 @@
     [clojure.string            :as str]
     [fipp.ednize]
     [quantum.untyped.core.core :as ucore]
-    [quantum.untyped.core.ns   :as uns]
-    [quantum.untyped.core.type.predicates
+    [quantum.untyped.core.ns   :as uns
       #?@(:clj [:refer [namespace?]])]))
 
 (ucore/log-this-ns)

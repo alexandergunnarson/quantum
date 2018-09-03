@@ -475,9 +475,8 @@
     :direct  (-> dispatchable-overloads-seq first :output-type)
     :dynamic (->> dispatchable-overloads-seq
                   (c/lmap :output-type)
-                  ;; Technically we could do a complex
-                  ;; conditional instead of a simple `t/or`
-                  ;; but no need
+                  ;; Technically we could do a complex conditional instead of a simple `t/or` but
+                  ;; no need
                   (apply t/or))))
 
 (defns- call>input-nodes+out-type
@@ -510,9 +509,9 @@
                                        (>dispatch|out-type
                                          dispatch-type dispatchable-overloads-seq)))))
                      (update ret :input-nodes conj input|analyzed)))
-                 {:input-nodes []
+                 {:input-nodes   []
                   ;; We could do a little smarter analysis here but we'll keep it simple for now
-                  :out-type  (when-not (= :fnt caller-kind) t/any?)
+                  :out-type      (when-not (= :fnt caller-kind) t/any?)
                   :dispatch-type :direct
                   :dispatchable-overloads-seq
                     (when (= :fnt caller-kind)

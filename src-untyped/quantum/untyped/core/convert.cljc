@@ -4,10 +4,10 @@
     [quantum.untyped.core.core    :as ucore]
     [quantum.untyped.core.error   :as uerr]
     [quantum.untyped.core.fn      :as ufn]
+    [quantum.untyped.core.ns
+      #?@(:clj [:refer [namespace?]])]
     [quantum.untyped.core.qualify
-      :refer [#?(:cljs DelimitedIdent) delim-ident? named?]]
-    [quantum.untyped.core.type.predicates
-      :refer [namespace?]])
+      :refer [#?(:cljs DelimitedIdent) delim-ident? named?]])
   #?(:clj (:import quantum.untyped.core.qualify.DelimitedIdent)))
 
 (ucore/log-this-ns)

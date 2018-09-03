@@ -1,16 +1,17 @@
 (ns quantum.core.core
-  (:refer-clojure :exclude [get set])
+  (:refer-clojure :exclude
+    [get set])
   (:require [clojure.core              :as core]
             [clojure.spec.alpha        :as s]
     #?(:clj [clojure.core.specs.alpha  :as ss])
             [cuerdas.core              :as str+]
     #?(:clj [environ.core              :as env])
             ;; TODO TYPED move to quantum.core.type
-            [quantum.core.defnt
-              :refer [defnt]]
-            #_[quantum.core.type         :as t
+          #_[quantum.core.type         :as t
               :refer [defnt defmacrot defprotocolt deft]]
             [quantum.untyped.core.core :as u]
+            [quantum.untyped.core.defnt
+              :refer [defnt]]
             ;; TODO TYPED move to quantum.core.type
             [quantum.untyped.core.type :as t
               :refer [?]]

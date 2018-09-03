@@ -4,12 +4,11 @@
   (:refer-clojure :exclude
     [any? array? boolean? double? ident? pos-int? qualified-keyword? seqable? simple-symbol?])
   (:require
-    [clojure.core   :as core]
-#?(:clj
-    [clojure.future :as fcore])
-    [quantum.untyped.core.core :as ucore]
-    [quantum.untyped.core.vars
-      :refer [defalias defaliases]]))
+        [clojure.core              :as core]
+#?(:clj [clojure.future            :as fcore])
+        [quantum.untyped.core.core :as ucore]
+        [quantum.untyped.core.vars
+          :refer [defalias defaliases]]))
 
 (ucore/log-this-ns)
 
@@ -51,8 +50,6 @@
                                `core/simple-symbol?)))
    :cljs (defalias core/simple-symbol?))
 
-#?(:clj (defn namespace? [x] (instance? clojure.lang.Namespace x)))
-
 (def val? some?)
 
 (defn lookup? [x]
@@ -66,6 +63,10 @@
 
 (defn regex? [x] (instance? #?(:clj java.util.regex.Pattern :cljs js/RegExp) x))
 
+(defn array? [x]
+  #?(:clj  (-> x class .isArray) ; must be reflective
+     :cljs (core/array? x)))
+
 #?(:clj  (defn seqable?
            "Returns true if (seq x) will succeed, false otherwise."
            {:from "clojure.contrib.core"}
@@ -74,16 +75,14 @@
                (instance? clojure.lang.Seqable x)
                (nil? x)
                (instance? Iterable x)
-               (-> x class .isArray)
+               (array? x)
                (string? x)
                (instance? java.util.Map x)))
    :cljs (def seqable? core/seqable?))
 
-(defn editable? [coll]
-  #?(:clj  (instance?  clojure.lang.IEditableCollection coll)
-     :cljs (satisfies? cljs.core.IEditableCollection    coll)))
-
-#?(:clj (defn namespace? [x] (instance? clojure.lang.Namespace x)))
+(defn editable? [x]
+  #?(:clj  (instance?  clojure.lang.IEditableCollection x)
+     :cljs (satisfies? cljs.core.IEditableCollection    x)))
 
 (defaliases ucore metable? with-metable?)
 
@@ -92,11 +91,6 @@
      :cljs (satisfies? cljs.core/IDeref    x)))
 
 #?(:cljs (defn defined? [x] (not (undefined? x))))
-
-;; TODO move to type predicates
-(defn array? [x]
-  #?(:clj  (-> x class .isArray) ; must be reflective
-     :cljs (core/array? x)))
 
 (defn transient? [x]
   #?(:clj  (instance?  clojure.lang.ITransientCollection x)
