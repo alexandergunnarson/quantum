@@ -154,12 +154,14 @@
          :non-primitivized ::expanded-overload
          :primitivized     (s/nilable (s/seq-of ::expanded-overload))}))
 
-(s/def ::expanded-overload-groups|arg-types|split (s/vec-of (s/vec-of t/type?)))
-(s/def ::expanded-overload-groups|pre-type|form   t/any?)
-(s/def ::expanded-overload-groups|post-type|form  t/any?)
+(s/def ::expanded-overload-groups|arg-types|split  (s/vec-of (s/vec-of t/type?)))
+(s/def ::expanded-overload-groups|output-type      t/any?)
+(s/def ::expanded-overload-groups|pre-type|form    t/any?)
+(s/def ::expanded-overload-groups|post-type|form   t/any?)
 
 (s/def ::expanded-overload-groups
   (s/kv {:arg-types|pre-split|form    ::expanded-overload-group|arg-types|form
+         :fnt-output-type             ::expanded-overload-groups|fnt-output-type
          :pre-type|form               ::expanded-overload-groups|pre-type|form
          :post-type|form              ::expanded-overload-groups|post-type|form
          :arg-types|split             ::expanded-overload-groups|arg-types|split
@@ -224,7 +226,7 @@
    using (in part) these pieces of data, but does not use the possibly-updated `arg-types` as
    computed in the analysis. As a result, does not yet support type inference."
   [{:keys [arg-bindings _, arg-classes ::expanded-overload|arg-classes
-           post-type|form _
+           fnt-output-type _, post-type|form _
            arg-types ::expanded-overload|arg-types, body-codelist|pre-analyze _, lang ::lang
            varargs _, varargs-binding _]} _
    > ::expanded-overload]
@@ -241,9 +243,13 @@
                           (c/count arg-bindings)
                           varargs)))
         ;; TODO this becomes an issue when `post-type|form` references local bindings
-        post-type (eval post-type|form)
+        overload-specific-post-type (some-> post-type|form eval)
+        _ (when (and overload-specific-post-type
+                     (not (t/<= overload-specific-post-type fnt-output-type)))
+            (err! (str "Overload's specified output type does not satisfy function's overall "
+                       "specified output type")))
+        post-type (or overload-specific-post-type fnt-output-type)
         post-type|runtime? (-> post-type meta :runtime?)
-        _ (println "POST TYPE" post-type|runtime? post-type)
         out-type (if post-type
                      (if post-type|runtime?
                          (case (t/compare post-type (:type analyzed))
@@ -314,7 +320,7 @@
             pre-type|form [:pre _]
             [_ _, post-type|form _] [:post _]} [:arglist _]
             body-codelist|pre-analyze [:body _]} _
-   {:as opts :keys [::lang ::lang, symbolic-analysis? t/boolean?]} _
+   {:as opts :keys [::lang ::lang, symbolic-analysis? t/boolean?, fnt-output-type _]} _
    > ::expanded-overload-groups]
   (if symbolic-analysis?
       (err! "Symbolic analysis not supported yet")
@@ -350,8 +356,8 @@
                            (>expanded-overload-group
                              (kw-map arg-bindings arg-types body-codelist|pre-analyze lang
                                      arg-types|pre-split|form pre-type|form post-type|form
-                                     varargs varargs-binding)))))]
-        (kw-map arg-types|pre-split|form pre-type|form post-type|form
+                                     fnt-output-type varargs varargs-binding)))))]
+        (kw-map arg-types|pre-split|form pre-type|form post-type|form fnt-output-type
                 arg-types|split arg-types|recombined
                 expanded-overload-group-seq)))))
 
@@ -615,10 +621,12 @@
 (defns fnt|code [kind #{:fn :defn}, lang ::lang, args _]
   (let [{:keys [:quantum.core.specs/fn|name
                 :quantum.core.defnt/overloads
+                :quantum.core.defnt/output-spec
                 :quantum.core.specs/meta] :as args'}
           (s/validate args (case kind :defn :quantum.core.defnt/defnt
                                       :fn   :quantum.core.defnt/fnt))
         symbolic-analysis? false ; TODO parameterize this
+        fnt-output-type (or (some-> output-spec second eval) t/any?)
         gen-gensym-base (ufgen/>reproducible-gensym|generator)
         gen-gensym (fn [x] (symbol (str (gen-gensym-base x) "__")))
         inline? (s/validate (-> fn|name core/meta :inline) (t/? t/boolean?))
@@ -628,7 +636,8 @@
                     fn|name)
         expanded-overload-groups-by-fnt-overload
           (->> overloads (mapv #(fnt|overload-data>expanded-overload-groups %
-                                  {::lang lang :symbolic-analysis? symbolic-analysis?})))
+                                  {::lang lang :symbolic-analysis? symbolic-analysis?
+                                   :fnt-output-type fnt-output-type})))
         args (assoc (kw-map expanded-overload-groups-by-fnt-overload gen-gensym lang)
                     ::uss/fn|name fn|name)
         {:as direct-dispatch :keys [i-overload->direct-dispatch-data]} (>direct-dispatch args)
