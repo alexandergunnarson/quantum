@@ -8,8 +8,6 @@
               :refer [?]]
             [quantum.untyped.core.defnt
               :refer [defnt fnt]]
-            [quantum.untyped.core.form.evaluate
-              :refer [case-env]]
             [quantum.untyped.core.vars    :as u])
 #?(:cljs
   (:require-macros

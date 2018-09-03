@@ -228,7 +228,7 @@
 
 (udt/deftype FnType
   [name arities-form
-   arities #_(s/map-of non-zero-int? (s/seq-of ::t/fn-type|arity))]
+   arities #_(s/map-of non-zero-int? (s/seq-of :quantum.untyped.core.type/fn-type|arity))]
   {PType nil
    ;; Outputs whether the args match any input spec
    ?Fn {invoke ([this args] (TODO))}

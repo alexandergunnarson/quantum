@@ -1,4 +1,6 @@
 (ns quantum.untyped.core.core
+         (:refer-clojure :exclude
+           [any?])
          (:require
            [clojure.core              :as core]
    #?(:clj [clojure.future            :as fcore])

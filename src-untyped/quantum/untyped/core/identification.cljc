@@ -10,7 +10,9 @@
         [fipp.ednize]
         [quantum.untyped.core.core :as ucore]
         [quantum.untyped.core.ns   :as uns
-        #?@(:clj [:refer [namespace?]])]))
+ #?@(:clj [:refer [namespace?]])]
+        [quantum.untyped.core.vars
+          :refer [defalias]]))
 
 (ucore/log-this-ns)
 

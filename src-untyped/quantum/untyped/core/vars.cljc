@@ -3,7 +3,6 @@
          (:require
            [clojure.core                       :as core]
            [quantum.untyped.core.core          :as ucore]
-           [quantum.untyped.core.form          :as uform]
            [quantum.untyped.core.form.evaluate
              :refer [case-env case-env*]]
            [quantum.untyped.core.form.generate :as ufgen])
