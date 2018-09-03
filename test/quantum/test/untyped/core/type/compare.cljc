@@ -147,9 +147,11 @@
   "To generate all commutative possibilities for a given type."
   [t t/type? > (s/seq-of t/type?)]
   (ifs (t/and-type? t) (->> t utr/and-type>args ucombo/permutations
-                              (map #(utr/->AndType uhash/default uhash/default (vec %) (atom nil))))
+                              (map #(utr/->AndType uhash/default uhash/default nil (vec %)
+                                      (atom nil))))
        (t/or-type?  t) (->> t utr/or-type>args  ucombo/permutations
-                              (map #(utr/->OrType  uhash/default uhash/default (vec %) (atom nil))))
+                              (map #(utr/->OrType  uhash/default uhash/default nil (vec %)
+                                      (atom nil))))
        [t]))
 
 #?(:clj

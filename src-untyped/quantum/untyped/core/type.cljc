@@ -435,7 +435,7 @@
         (assert (-> simplified count (c/>= 1))) ; for internal implementation correctness
         (if (-> simplified count (c/= 1))
             (first simplified)
-            (construct-fn uhash/default uhash/default simplified (atom nil))))))
+            (construct-fn uhash/default uhash/default nil simplified (atom nil))))))
 
 ;; TODO do this?
 #_(udt/deftype SequentialType)

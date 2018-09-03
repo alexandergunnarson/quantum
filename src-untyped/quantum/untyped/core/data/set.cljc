@@ -1,5 +1,5 @@
 (ns quantum.untyped.core.data.set
-  (:refer-clojure :exclude [- +, not < <= >= >])
+  (:refer-clojure :exclude [- +, not, compare < <= >= >])
   (:require
 #?@(:clj
    [[seqspert.hash-set]])

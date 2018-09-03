@@ -128,8 +128,11 @@
             #(mapv (fn [overload]
                      (let [overload' (update overload :body :body)]
                        (if-let [output-spec (-> fn-form :quantum.core.defnt/output-spec :spec)]
-                         (do (us/assert-conform nil? (-> overload' :arglist :post))
-                             (assoc-in overload' [:arglist :post] output-spec))
+                         (update-in overload' [:arglist :post]
+                           (fn [{overload-output-spec :spec}]
+                             (if (some? overload-output-spec)
+                                 (list `us/and overload-output-spec output-spec)
+                                 output-spec)))
                          overload'))) %))
           (dissoc :quantum.core.defnt/output-spec)))))
 

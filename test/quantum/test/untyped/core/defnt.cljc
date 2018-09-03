@@ -56,6 +56,12 @@
 
 (defspec-test test|gen|seq|1 `gen|seq|1)
 
+(this/defns fn-wide-and-overload-specific-post
+  > number?
+  [> integer?] 123)
+
+(defspec-test test|fn-wide-and-overload-specific-post `fn-wide-and-overload-specific-post)
+
 ;; TODO assert that the below 2 things are equivalent
 
 #_(this/defns abcde "Documentation" {:metadata "abc"}
