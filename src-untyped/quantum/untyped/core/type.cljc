@@ -119,7 +119,7 @@
        (utr/or-type?  t)   (->> t utr/or-type>args  (uc/lmap not) (apply and))
        ;; DeMorgan's Law
        (utr/and-type? t)   (->> t utr/and-type>args (uc/lmap not) (apply or ))
-       (NotType. uhash/default uhash/default t)))
+       (NotType. uhash/default uhash/default nil t)))
 
 (uvar/defalias ! not)
 
@@ -163,7 +163,7 @@
 
 (defns value
   "Creates a type whose extension is the singleton set containing only the value `v`."
-  [v _] (ValueType. uhash/default uhash/default v))
+  [v _] (ValueType. uhash/default uhash/default nil v))
 
 ;; ----- General ----- ;;
 
@@ -185,15 +185,18 @@
             (condp == c0
               NotType (condp == (-> t0 utr/not-type>inner-type c/type)
                         ClassType (condp == c1
-                                    ClassType (AndType. uhash/default uhash/default [t0 (not t1)] (atom nil)))
+                                    ClassType (AndType. uhash/default uhash/default nil
+                                                [t0 (not t1)] (atom nil)))
                         ValueType (condp == c1
-                                    ValueType (AndType. uhash/default uhash/default [t0 (not t1)] (atom nil))))
+                                    ValueType (AndType. uhash/default uhash/default nil
+                                                [t0 (not t1)] (atom nil))))
               OrType  (condp == c1
                         ClassType (let [args (->> t0 utr/or-type>args (uc/remove (fn1 = t1)))]
                                     (case (count args)
                                       0 empty-set
                                       1 (first args)
-                                      (OrType. uhash/default uhash/default args (atom nil))))))))))
+                                      (OrType. uhash/default uhash/default nil args
+                                        (atom nil))))))))))
   ([t0 utr/type?, t1 utr/type? & ts (us/seq-of utr/type?) > utr/type?] (reduce - (- t0 t1) ts)))
 
 (defn isa? [x]
@@ -447,7 +450,7 @@
         arities (->> arities-form
                      (uc/map+ #(us/conform ::fn-type|arity %))
                      (uc/group-by #(-> % :input-types count)))]
-    (FnType. name- arities-form arities)))
+    (FnType. nil name- arities-form arities)))
 
 (defns compare|in [x0 utr/fn-type?, x1 utr/fn-type? > ucomp/comparison?]
   (let [ct->overloads|x0 (utr/fn-type>arities x0)

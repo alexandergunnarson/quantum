@@ -73,9 +73,12 @@
 (udt/deftype NotType
   [^int ^:unsynchronized-mutable hash
    ^int ^:unsynchronized-mutable hash-code
+   meta #_(t/? ::meta)
    t #_t/type?]
   {PType          nil
    ?Fn            {invoke    ([_ x] (not (t x)))}
+   ?Meta          {meta      ([this] meta)
+                   with-meta ([this meta'] (NotType. hash hash-code meta' t))}
    ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      NotType t))}
    ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code NotType t))
                    equals    ([this that]
@@ -95,6 +98,7 @@
 (udt/deftype OrType
   [^int ^:unsynchronized-mutable hash
    ^int ^:unsynchronized-mutable hash-code
+   meta #_(t/? ::meta)
    args #_(t/and t/indexed? (t/seq t/type?))
    *logical-complement]
   {PType          nil
@@ -104,6 +108,8 @@
                                           (and satisfies-type? (reduced satisfies-type?))))
                                       true ; vacuously
                                       args))}
+   ?Meta          {meta      ([this] meta)
+                   with-meta ([this meta'] (OrType. hash hash-code meta' args *logical-complement))}
    ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      OrType args))}
    ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code OrType args))
                    equals    ([this that]
@@ -123,12 +129,16 @@
 (udt/deftype AndType
   [^int ^:unsynchronized-mutable hash
    ^int ^:unsynchronized-mutable hash-code
+   meta #_(t/? ::meta)
    args #_(t/and t/indexed? (t/seq t/type?))
    *logical-complement]
   {PType          nil
    ?Fn            {invoke    ([_ x] (reduce (fn [_ t] (or (t x) (reduced false)))
                                       true ; vacuously
                                       args))}
+   ?Meta          {meta      ([this] meta)
+                   with-meta ([this meta'] (AndType. hash hash-code meta' args
+                                             *logical-complement))}
    ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      AndType args))}
    ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code AndType args))
                    equals    ([this that]
@@ -180,9 +190,9 @@
 (udt/deftype ClassType
   [^int ^:unsynchronized-mutable hash
    ^int ^:unsynchronized-mutable hash-code
-          meta #_(t/? ::meta)
-   ^Class c    #_t/class?
-          name #_(t/? t/symbol?)]
+   meta     #_(t/? ::meta)
+   ^Class c #_t/class?
+   name     #_(t/? t/symbol?)]
   {PType          nil
    ?Fn            {invoke    ([_ x] (instance? c x))}
    ?Meta          {meta      ([this] meta)
@@ -207,9 +217,12 @@
 (udt/deftype ValueType
   [^int ^:unsynchronized-mutable hash
    ^int ^:unsynchronized-mutable hash-code
+   meta #_(t/? ::meta)
    v #_any?]
   {PType          nil
    ?Fn            {invoke    ([_ x] (= x v))}
+   ?Meta          {meta      ([this] meta)
+                   with-meta ([this meta'] (ValueType. hash hash-code meta' v))}
    ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      ValueType v))}
    ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code ValueType v))
                    equals    ([this that #_any?]
@@ -227,13 +240,16 @@
 ;; ----- FnType ----- ;;
 
 (udt/deftype FnType
-  [name arities-form
+  [meta #_(t/? ::meta)
+   name arities-form
    arities #_(s/map-of non-zero-int? (s/seq-of :quantum.untyped.core.type/fn-type|arity))]
-  {PType nil
+  {PType                 nil
    ;; Outputs whether the args match any input spec
-   ?Fn {invoke ([this args] (TODO))}
+   ?Fn                   {invoke    ([this args] (TODO))}
+   ?Meta                 {meta      ([this] meta)
+                          with-meta ([this meta'] (FnType. meta' name arities-form arities))}
    fipp.ednize/IOverride nil
-   fipp.ednize/IEdn {-edn ([this] (list 'quantum.untyped.core.type/fn arities-form))}})
+   fipp.ednize/IEdn      {-edn      ([this] (list 'quantum.untyped.core.type/fn arities-form))}})
 
 (defns fn-type? [x _ > boolean?] (instance? FnType x))
 

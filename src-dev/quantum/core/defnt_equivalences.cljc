@@ -1374,9 +1374,11 @@
   ([xs t/char-seq?] (clojure.lang.StringSeq/create xs))
   ;; TODO recursion
   #_([xs (t/isa? java.util.Map)] (seq (.entrySet xs)))
-  ([xs t/array?] (when-not (zero? (Array/count xs)) ; TODO use `count`
-                   (clojure.lang.ArraySeq. ^Object xs 0)))
-  ))
+  ;; TODO use `t/assume`
+  ([xs t/array? > (t/* #_t/assume (t/? (t/isa? ISeq)))]
+    ;; We do this only because `clojure.lang.ArraySeq/createFromObject` is private but
+    ;; perhaps it would be wise from a performance perspective to fix that
+    (clojure.core/seq xs))))
 )
 
 ;; ----- expanded code ----- ;;
