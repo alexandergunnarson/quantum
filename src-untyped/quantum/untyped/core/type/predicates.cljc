@@ -20,16 +20,6 @@
                                `core/any?)))
    :cljs (defalias core/any?))
 
-#?(:clj  (eval `(defalias ~(if (resolve `fcore/boolean?)
-                               `fcore/boolean?
-                               `core/boolean?)))
-   :cljs (defalias core/boolean?))
-
-#?(:clj  (eval `(defalias ~(if (resolve `fcore/double?)
-                               `fcore/double?
-                               `core/double?)))
-   :cljs (defalias core/double?))
-
 #?(:clj  (eval `(defalias ~(if (resolve `fcore/ident?)
                                `fcore/ident?
                                `core/ident?)))
@@ -49,8 +39,6 @@
                                `fcore/simple-symbol?
                                `core/simple-symbol?)))
    :cljs (defalias core/simple-symbol?))
-
-(def val? some?)
 
 (defn lookup? [x]
   #?(:clj  (instance? clojure.lang.ILookup x)

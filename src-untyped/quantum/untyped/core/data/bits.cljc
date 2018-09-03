@@ -1,15 +1,25 @@
 (ns
-  ^{:doc "Useful bit/binary operations."
+  ^{:doc "Useful bit/binary operations, at the primitive (boolean, byte, long, etc.) and
+          pre-primitive level."
     :attribution "alexandergunnarson"}
   quantum.untyped.core.data.bits
-  (:refer-clojure :exclude [not and or reverse contains? empty conj disj])
-  (:require
-    [quantum.untyped.core.core :as ucore]
-    [quantum.untyped.core.vars
-      :refer [defalias]])
-  #?(:clj (:import quantum.core.Numeric)))
+        (:refer-clojure :exclude
+          [and not or, conj contains? disj empty reverse])
+        (:require
+          [clojure.core              :as core]
+  #?(:clj [clojure.future            :as fcore])
+          [quantum.untyped.core.core :as ucore]
+          [quantum.untyped.core.vars
+            :refer [defalias]])
+#?(:clj (:import quantum.core.Numeric)))
 
 (ucore/log-this-ns)
+
+;; ===== Valueness / nilness ===== ;;
+
+(def val? some?)
+
+;; ===== Bit logic ===== ;;
 
 (defalias not       bit-not)
 (defalias and       bit-and)
@@ -17,6 +27,9 @@
 (defalias or        bit-or)
 (defalias xor       bit-xor)
 (defalias not!      bit-flip)
+
+;; ===== Bit set operations ===== ;;
+
 (defalias disj      bit-clear)
 
 (def ^:const empty 0)
@@ -29,13 +42,13 @@
 
 (defalias contains? bit-test)
 
-;; ===== SHIFTS ===== ;;
+;; ===== Shifts ===== ;;
 
 (defalias <<  bit-shift-left)
 (defalias >>  bit-shift-right)
 (defalias >>> unsigned-bit-shift-right)
 
-;; ===== ROTATIONS ===== ;;
+;; ===== Rotations ===== ;;
 
 (defn rotate-left|long
   {:adapted-from "http://hg.openjdk.java.net/jdk7u/jdk7u6/jdk/file/8c2c5d63a17e/src/share/classes/java/lang/Integer.java"}
@@ -63,7 +76,7 @@
 
 (declare bits)
 
-; ===== BULK BIT OPERATIONS ===== ;
+;; ===== Bulk bit operations ===== ;;
 
 (defn ?-coll
   "Returns true or false for the bit at the given index of the collection."
@@ -83,8 +96,20 @@
    #?(:clj ^long n :cljs n)]
   (and x (unchecked-dec (<< 1 n))))
 
-; ====== ENDIANNESS REVERSAL =======
+;; ===== Endianness reversal ===== ;;
 
 #?(:clj (defn reverse|short [x]       (Numeric/reverseShort (short x))))
 #?(:clj (defn reverse|int   [x]       (Numeric/reverseInt   (int   x))))
 #?(:clj (defn reverse|long  [^long x] (Numeric/reverseLong  x)))
+
+;; ===== Primitives ===== ;;
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/boolean?)
+                               `fcore/boolean?
+                               `core/boolean?)))
+   :cljs (defalias core/boolean?))
+
+#?(:clj  (eval `(defalias ~(if (resolve `fcore/double?)
+                               `fcore/double?
+                               `core/double?)))
+   :cljs (defalias core/double?))

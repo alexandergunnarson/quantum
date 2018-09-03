@@ -6,6 +6,8 @@
     [clojure.core                        :as core]
     [quantum.untyped.core.data
       :refer [kw-map]]
+    [quantum.untyped.core.data.bits
+      :refer [val?]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env]]
     [quantum.untyped.core.form.generate  :as ufgen]
@@ -13,9 +15,7 @@
     [quantum.untyped.core.form.type-hint :as uth
       :refer [type-hint with-type-hint un-type-hint]]
     [quantum.untyped.core.qualify        :as uqual]
-    [quantum.untyped.core.string         :as ustr]
-    [quantum.untyped.core.type.predicates
-      :refer [val?]]))
+    [quantum.untyped.core.string         :as ustr]))
 
 (defn ?Associative   [lang] (case lang :clj 'clojure.lang.Associative           :cljs 'cljs.core/IAssociative))
 (defn ?Collection    [lang] (case lang :clj 'clojure.lang.IPersistentCollection :cljs 'cljs.core/ICollection ))

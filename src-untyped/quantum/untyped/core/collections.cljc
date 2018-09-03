@@ -8,6 +8,8 @@
     [quantum.untyped.core.core     :as ucore]
     [quantum.untyped.core.data.array
       :refer [array?]]
+    [quantum.untyped.core.data.bits
+      :refer [val?]]
     [quantum.untyped.core.error    :as uerr
       :refer [err!]]
     [quantum.untyped.core.fn       :as ufn
@@ -19,7 +21,7 @@
     [quantum.untyped.core.reducers :as ur
       :refer [defeager def-transducer>eager transducer->transformer educe]]
     [quantum.untyped.core.type.predicates
-      :refer [val? transient?]]))
+      :refer [transient?]]))
 
 (ucore/log-this-ns)
 

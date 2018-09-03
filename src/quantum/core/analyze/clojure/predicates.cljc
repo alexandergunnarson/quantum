@@ -16,7 +16,8 @@
     [quantum.core.type.core               :as tcore]
     [quantum.core.vars                    :as var
       :refer [defalias]]
-    [quantum.untyped.core.type.predicates :as utpred]))
+    [quantum.untyped.core.data.bits       :as ubit]
+    [quantum.untyped.core.string          :as ustr]))
 
 (defn safe-mapcat
   "Like |mapcat|, but works if the returned values aren't sequences."
@@ -49,7 +50,8 @@
 (def possible-type-predicate? (fn-or keyword?
                                      (fn-and symbol? (fn-or (fn= 'default)
                                                             (fn-> name (str-index-of "?") (not= -1))))))
-(def hinted-literal?          (fn-or #?(:clj char?) number? string? vector? map? nil? keyword? utpred/boolean? utpred/regex?))
+(def hinted-literal?
+  (fn-or #?(:clj char?) number? string? vector? map? nil? keyword? ubit/boolean? ustr/regex?))
 
 ;  ===== SCOPE =====
 (defn shadows-var? [bindings v]

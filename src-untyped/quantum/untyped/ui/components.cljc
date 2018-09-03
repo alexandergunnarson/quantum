@@ -10,11 +10,11 @@
       :refer [react-class?]]
     [reagent.interop
       :refer [$ $!]]])
+    [quantum.untyped.core.data.bits
+      :refer [val?]]
     [quantum.untyped.core.log      :as log]
     [quantum.untyped.core.system   :as usys
       :refer  [#?@(:cljs [react-native])]]
-    [quantum.untyped.core.type.predicates
-      :refer [val?]]
     [quantum.untyped.reactive.core :as re]))
 
 (def id :testID) ; because camelCase is a little ugly in Clojure :)

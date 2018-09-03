@@ -1,11 +1,11 @@
 (ns quantum.untyped.ui.style.css.dom
   (:require
     [clojure.string            :as str]
+    [quantum.untyped.core.data.bits
+      :refer [val?]]
     [quantum.untyped.core.fn
       :refer [fn->]]
     [quantum.untyped.core.spec :as us]
-    [quantum.untyped.core.type.predicates
-      :refer [val?]]
     [quantum.untyped.ui.dom    :as udom]))
 
 #?(:cljs

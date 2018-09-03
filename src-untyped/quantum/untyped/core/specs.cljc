@@ -5,11 +5,11 @@
   (:require
     [clojure.core              :as core]
     [clojure.set               :as set]
+    [quantum.untyped.core.data.bits
+      :refer [val?]]
     [quantum.untyped.core.fn
       :refer [fn1 fnl]]
-    [quantum.untyped.core.spec :as s]
-    [quantum.untyped.core.type.predicates
-      :refer [val?]])
+    [quantum.untyped.core.spec :as s])
 #?(:cljs
   (:require-macros
     [quantum.untyped.core.specs :as this
