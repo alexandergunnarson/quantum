@@ -224,14 +224,16 @@
   "Is given `arg-classes` and `arg-types`. In order to determine the out-type, performs an analysis
    using (in part) these pieces of data, but does not use the possibly-updated `arg-types` as
    computed in the analysis. As a result, does not yet support type inference."
-  [{:keys [arg-bindings _, arg-classes ::expanded-overload|arg-classes
-           fnt-output-type _, post-type|form _
+  [{:keys [fn|name _, arg-bindings _, arg-classes ::expanded-overload|arg-classes
+           fnt|output-type _, post-type|form _
            arg-types ::expanded-overload|arg-types, body-codelist|pre-analyze _, lang ::lang
            varargs _, varargs-binding _]} _
    > ::expanded-overload]
   (let [env         (->> (zipmap arg-bindings arg-types)
                          (c/map' (fn [[arg-binding arg-type]]
-                                   [arg-binding (uast/unbound nil arg-binding arg-type)])))
+                                   [arg-binding (uast/unbound nil arg-binding arg-type)]))
+                         ;; To support recursion
+                         (<- (assoc fn|name fnt|type)))
         analyzed    (uana/analyze env (ufgen/?wrap-do body-codelist|pre-analyze))
         arg-classes|simplest (->> arg-classes (c/map class>simplest-class))
         hint-arg|fn (fn [i arg-binding]
@@ -244,10 +246,10 @@
         ;; TODO this becomes an issue when `post-type|form` references local bindings
         overload-specific-post-type (some-> post-type|form eval)
         _ (when (and overload-specific-post-type
-                     (not (t/<= overload-specific-post-type fnt-output-type)))
+                     (not (t/<= overload-specific-post-type fnt|output-type)))
             (err! (str "Overload's specified output type does not satisfy function's overall "
                        "specified output type")))
-        post-type (or overload-specific-post-type fnt-output-type)
+        post-type (or overload-specific-post-type fnt|output-type)
         post-type|runtime? (-> post-type meta :runtime?)
         out-type (if post-type
                      (if post-type|runtime?
@@ -319,7 +321,8 @@
             pre-type|form [:pre _]
             [_ _, post-type|form _] [:post _]} [:arglist _]
             body-codelist|pre-analyze [:body _]} _
-   {:as opts :keys [::lang ::lang, symbolic-analysis? t/boolean?, fnt-output-type _]} _
+   fn|name _, fnt|output-type _
+   {:as opts :keys [::lang ::lang, symbolic-analysis? t/boolean?]} _
    > ::expanded-overload-groups]
   (if symbolic-analysis?
       (err! "Symbolic analysis not supported yet")
@@ -353,10 +356,10 @@
               (->> arg-types|recombined
                    (mapv (fn [arg-types]
                            (>expanded-overload-group
-                             (kw-map arg-bindings arg-types body-codelist|pre-analyze lang
+                             (kw-map fn|name arg-bindings arg-types body-codelist|pre-analyze lang
                                      arg-types|pre-split|form pre-type|form post-type|form
-                                     fnt-output-type varargs varargs-binding)))))]
-        (kw-map arg-types|pre-split|form pre-type|form post-type|form fnt-output-type
+                                     fnt|output-type varargs varargs-binding)))))]
+        (kw-map arg-types|pre-split|form pre-type|form post-type|form fnt|output-type
                 arg-types|split arg-types|recombined
                 expanded-overload-group-seq)))))
 
@@ -635,8 +638,9 @@
                     fn|name)
         expanded-overload-groups-by-fnt-overload
           (->> overloads (mapv #(fnt|overload-data>expanded-overload-groups %
-                                  {::lang lang :symbolic-analysis? symbolic-analysis?
-                                   :fnt-output-type fnt-output-type})))
+                                  fn|name
+                                  fnt-output-type
+                                  {::lang lang :symbolic-analysis? symbolic-analysis?})))
         args (assoc (kw-map expanded-overload-groups-by-fnt-overload gen-gensym lang)
                     ::uss/fn|name fn|name)
         {:as direct-dispatch :keys [i-overload->direct-dispatch-data]} (>direct-dispatch args)
