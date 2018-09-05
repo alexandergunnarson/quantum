@@ -99,7 +99,8 @@
                                        :spec           (s/or :any-spec #{'_} :spec any?)))
                   :post    :quantum.core.defnt/output-spec))
          (s/conformer
-           #(cond-> % (contains? % :varargs) (update :varargs :speced-binding)
+           #(cond-> % (nil? (:args %))       (assoc  :args    [])
+                      (contains? % :varargs) (update :varargs :speced-binding)
                       (contains? % :pre    ) (update :pre     :spec)
                       (contains? % :post   ) (update :post    :spec)))
          (fn [{:keys [args varargs]}]

@@ -46,7 +46,7 @@
                        ~'(->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
                               (.getName)))))
                  (defn ~'pid|test
-                   {::t/type (t/fn ~'[:> (? t/string?)])}
+                   {::t/type (t/fn t/any? ~'[:> (? t/string?)])}
                    ([] (.invoke ~(tag (str `>Object)
                                 'pid|test|__0|0))))))]
     (testing "code equivalence" (is-code= actual expected))

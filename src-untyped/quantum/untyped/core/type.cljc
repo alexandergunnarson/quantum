@@ -444,13 +444,13 @@
   "Creates a type that ... TODO"
   [pred (<= iterable?), t utr/type?] (TODO))
 
-(defn fn [arity & arities] ; TODO fix — & args should have been sufficient but `defnt` has a bug that way
+(defn fn [out-type arity & arities]
   (let [name- nil
         arities-form (cons arity arities)
         arities (->> arities-form
                      (uc/map+ #(us/conform ::fn-type|arity %))
                      (uc/group-by #(-> % :input-types count)))]
-    (FnType. nil name- arities-form arities)))
+    (FnType. nil name- out-type arities-form arities)))
 
 (defns compare|in [x0 utr/fn-type?, x1 utr/fn-type? > ucomp/comparison?]
   (let [ct->overloads|x0 (utr/fn-type>arities x0)

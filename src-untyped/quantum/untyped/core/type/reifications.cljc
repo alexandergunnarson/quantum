@@ -241,19 +241,23 @@
 
 (udt/deftype FnType
   [meta #_(t/? ::meta)
-   name arities-form
+   name
+   out-type #_t/type?
+   arities-form
    arities #_(s/map-of non-zero-int? (s/seq-of :quantum.untyped.core.type/fn-type|arity))]
-  {PType                 nil
+  {PType          nil
    ;; Outputs whether the args match any input spec
-   ?Fn                   {invoke    ([this args] (TODO))}
-   ?Meta                 {meta      ([this] meta)
-                          with-meta ([this meta'] (FnType. meta' name arities-form arities))}
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn      {-edn      ([this] (list 'quantum.untyped.core.type/fn arities-form))}})
+   ?Fn            {invoke    ([this args] (TODO))}
+   ?Meta          {meta      ([this] meta)
+                   with-meta ([this meta'] (FnType. meta' name out-type arities-form arities))}
+   fedn/IOverride nil
+   fedn/IEdn      {-edn      ([this] (list 'quantum.untyped.core.type/fn out-type arities-form))}})
 
 (defns fn-type? [x _ > boolean?] (instance? FnType x))
 
 (defns fn-type>arities [^FnType x fn-type?] (.-arities x))
+
+(defns fn-type>out-type [^FnType x fn-type?] (.-out-type x))
 
 (us/def :quantum.untyped.core.type/fn-type|arity
   (us/and

@@ -22,7 +22,7 @@
     [quantum.untyped.core.error                 :as err
       :refer [TODO err!]]
     [quantum.untyped.core.fn
-      :refer [aritoid fn-> with-do]]
+      :refer [<- aritoid fn-> with-do]]
     [quantum.untyped.core.form                  :as uform
       :refer [>form]]
     [quantum.untyped.core.form.evaluate         :as ufeval]
@@ -131,6 +131,27 @@
 
 (s/def ::lang #{:clj :cljs})
 
+;; "global" because they apply to the whole fnt
+(s/def ::fnt-globals
+  (s/kv {:fn|name  ::uss/fn|name
+         :fnt|type t/type?}))
+
+(s/def ::opts
+  (s/kv {:gen-gensym         t/fn?
+         :lang               ::lang
+         :symbolic-analysis? t/boolean?}))
+
+(s/def ::overload-data
+  (s/kv {:args                      (s/vec-of t/any?)
+         :varargs                   t/any?
+         :body-codelist|pre-analyze t/any?
+         :arg-types|form            t/any?
+         :arg-types                 (s/vec-of t/type?)
+         :pre-type|form             t/any?
+         :pre-type                  (? t/type?)
+         :post-type|form            t/any?
+         :post-type                 t/type?}))
+
 (s/def ::input-types-decl
   (s/kv {:form           t/any?
          :name           simple-symbol?
@@ -146,26 +167,18 @@
   (s/kv {:form                             t/any?
          :i-overload->direct-dispatch-data ::i-overload->direct-dispatch-data}))
 
-(s/def ::expanded-overload-group|arg-types|form (s/vec-of t/any?))
-
 (s/def ::expanded-overload-group
-  (s/kv {:arg-types|form   ::expanded-overload-group|arg-types|form
-         :non-primitivized ::expanded-overload
-         :primitivized     (s/nilable (s/seq-of ::expanded-overload))}))
+  (s/kv {:arg-types|form|expanded (s/vec-of t/any?)
+         :non-primitivized        ::expanded-overload
+         :primitivized            (s/nilable (s/seq-of ::expanded-overload))}))
 
-(s/def ::expanded-overload-groups|arg-types|split  (s/vec-of (s/vec-of t/type?)))
-(s/def ::expanded-overload-groups|output-type      t/any?)
-(s/def ::expanded-overload-groups|pre-type|form    t/any?)
-(s/def ::expanded-overload-groups|post-type|form   t/any?)
+(s/def ::expanded-overload-groups|arg-types|split (s/vec-of (s/vec-of t/type?)))
 
 (s/def ::expanded-overload-groups
-  (s/kv {:arg-types|pre-split|form    ::expanded-overload-group|arg-types|form
-         :fnt-output-type             ::expanded-overload-groups|fnt-output-type
-         :pre-type|form               ::expanded-overload-groups|pre-type|form
-         :post-type|form              ::expanded-overload-groups|post-type|form
+  (s/kv {:arg-types|recombined        (s/vec-of (s/vec-of t/type?))
          :arg-types|split             ::expanded-overload-groups|arg-types|split
-         :arg-types|recombined        (s/vec-of (s/vec-of t/type?))
-         :expanded-overload-group-seq (s/seq-of ::expanded-overload-group)}))
+         :expanded-overload-group-seq (s/seq-of ::expanded-overload-group)
+         :overload-data               ::overload-data}))
 
 #_(:clj
 (defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
@@ -218,18 +231,17 @@
        (apply ucombo/cartesian-product)
        (c/lmap >vec))))
 
-;; TODO spec args
 #?(:clj
 (defns- >expanded-overload
-  "Is given `arg-classes` and `arg-types`. In order to determine the out-type, performs an analysis
-   using (in part) these pieces of data, but does not use the possibly-updated `arg-types` as
-   computed in the analysis. As a result, does not yet support type inference."
-  [{:keys [fn|name _, arg-bindings _, arg-classes ::expanded-overload|arg-classes
-           fnt|output-type _, post-type|form _
-           arg-types ::expanded-overload|arg-types, body-codelist|pre-analyze _, lang ::lang
-           varargs _, varargs-binding _]} _
+  [{:keys [varargs _, post-type|form _, post-type _, body-codelist|pre-analyze _]} ::overload-data
+   {:as fnt-globals :keys [fn|name _, fnt|type _]} ::fnt-globals
+   {:as opts        :keys [lang _]} ::opts
+   arg-bindings _
+   arg-types|satisfying-primitivization (s/vec-of t/type?)
+   arg-classes (s/vec-of t/class?)
+   varargs-binding _
    > ::expanded-overload]
-  (let [env         (->> (zipmap arg-bindings arg-types)
+  (let [env         (->> (zipmap arg-bindings arg-types|satisfying-primitivization)
                          (c/map' (fn [[arg-binding arg-type]]
                                    [arg-binding (uast/unbound nil arg-binding arg-type)]))
                          ;; To support recursion
@@ -243,13 +255,6 @@
                           lang
                           (c/count arg-bindings)
                           varargs)))
-        ;; TODO this becomes an issue when `post-type|form` references local bindings
-        overload-specific-post-type (some-> post-type|form eval)
-        _ (when (and overload-specific-post-type
-                     (not (t/<= overload-specific-post-type fnt|output-type)))
-            (err! (str "Overload's specified output type does not satisfy function's overall "
-                       "specified output type")))
-        post-type (or overload-specific-post-type fnt|output-type)
         post-type|runtime? (-> post-type meta :runtime?)
         out-type (if post-type
                      (if post-type|runtime?
@@ -261,7 +266,7 @@
                                         {:body analyzed :output-type post-type}))
                          (if (t/<= (:type analyzed) post-type)
                              (:type analyzed)
-                             (err! "Body does not match output type"
+                             (err! "Body type does not match declared output type"
                                    {:body analyzed :output-type post-type})))
                      (:type analyzed))
         body-form
@@ -271,9 +276,9 @@
                 (->> (c/zipmap-into (umap/om) arg-bindings arg-classes)
                      (c/remove-vals' (fn-or nil? (fn= java.lang.Object) t/primitive-class?)))))]
       {:arg-classes                 arg-classes|simplest
-       :arg-types                   arg-types
+       :arg-types                   arg-types|satisfying-primitivization
        :arglist-code|fn|hinted      (cond-> (->> arg-bindings (c/map-indexed hint-arg|fn))
-                                            varargs-binding (conj '& varargs-binding)) ; TODO use ``
+                                      varargs-binding (conj '& varargs-binding)) ; TODO use ``
        :arglist-code|reify|unhinted (cond-> arg-bindings varargs-binding (conj varargs-binding))
        :body-form                   body-form
        :positional-args-ct          (count arg-bindings)
@@ -282,9 +287,11 @@
        :variadic?                   (boolean varargs)})))
 
 (defns >expanded-overload-group
-  [{:as in :keys [arg-types ::expanded-overload-group|arg-types|form]} _
+  [{:as overload-data :keys [arg-types _]} ::overload-data
+   fnt-globals ::fnt-globals, opts ::opts, arg-bindings _, varargs-binding _
    > ::expanded-overload-group]
-  (let [arg-types|form (mapv >form arg-types)
+  (let [;; After `t/or`s etc. are expanded and simplified
+        arg-types|form|expanded (mapv >form arg-types)
         ;; `non-primitivized` is first because of class sorting
         [non-primitivized & primitivized :as overloads]
           (->> arg-types
@@ -295,12 +302,11 @@
                                  (fn [_ s #_t/type? c #_t/class?]
                                    (cond-> s (t/primitive-class? c) (t/and c)))
                                  arg-types arg-classes)]
-                         (>expanded-overload
-                           (assoc in :arg-classes arg-classes
-                                     :arg-types   arg-types|satisfying-primitivization))))))]
-    (kw-map arg-types|form non-primitivized primitivized)))
+                         (>expanded-overload overload-data fnt-globals opts
+                           arg-bindings arg-types|satisfying-primitivization arg-classes
+                           varargs-binding)))))]
+    (kw-map arg-types|form|expanded non-primitivized primitivized)))
 
-;; TODO spec
 #?(:clj ; really, reserve for metalanguage
 (defns fnt|overload-data>expanded-overload-groups
   "Given an `fnt` overload, computes a seq of 'expanded-overload groups'. Each expanded-overload
@@ -317,18 +323,15 @@
    we decide instead to evaluate types in languages in which the metalanguage (compiler language)
    is the same as the object language (e.g. Clojure), and symbolically analyze types in the rest
    (e.g. vanilla ClojureScript), deferring code analyzed as functions to be enforced at runtime."
-  [{:as in {:keys [args _, varargs _]
-            pre-type|form [:pre _]
-            [_ _, post-type|form _] [:post _]} [:arglist _]
-            body-codelist|pre-analyze [:body _]} _
-   fn|name _, fnt|output-type _
-   {:as opts :keys [::lang ::lang, symbolic-analysis? t/boolean?]} _
+  [{:as   overload-data
+    :keys [args _, varargs _
+           arg-types|form _, arg-types _, pre-type|form _, post-type|form _]} ::overload-data
+   {:as fnt-globals :keys [fn|name _, fnt|type _]} ::fnt-globals
+   {:as opts        :keys [lang _, symbolic-analysis? _]} ::opts
    > ::expanded-overload-groups]
   (if symbolic-analysis?
       (err! "Symbolic analysis not supported yet")
-      (let [_ (when pre-type|form (TODO "Need to handle pre"))
-            _ (when varargs (TODO "Need to handle varargs"))
-            post-type|form (if (= post-type|form '_) `t/any? post-type|form)
+      (let [;; TODO support varargs
             varargs-binding (when varargs
                               ;; TODO this assertion is purely temporary until destructuring is
                               ;; supported
@@ -340,14 +343,9 @@
                            ;; supported
                            (assert kind :sym)
                            binding-)))
-            arg-types|pre-split|form
-              (->> args
-                   (mapv (fn [{[kind #_#{:any :spec}, t #_t/form?] :spec}]
-                           (case kind :any `t/any? :spec t))))
-            arg-types|pre-split (->> arg-types|pre-split|form (mapv (fn-> eval t/>type)))
             arg-types|split
               ;; NOTE Only `t/or`s are splittable for now
-              (->> arg-types|pre-split
+              (->> arg-types
                    (c/map (fn [t] (if (utr/or-type? t) (utr/or-type>args t) [t]))))
             arg-types|recombined (->> arg-types|split
                                       (apply ucombo/cartesian-product)
@@ -355,13 +353,9 @@
             expanded-overload-group-seq
               (->> arg-types|recombined
                    (mapv (fn [arg-types]
-                           (>expanded-overload-group
-                             (kw-map fn|name arg-bindings arg-types body-codelist|pre-analyze lang
-                                     arg-types|pre-split|form pre-type|form post-type|form
-                                     fnt|output-type varargs varargs-binding)))))]
-        (kw-map arg-types|pre-split|form pre-type|form post-type|form fnt|output-type
-                arg-types|split arg-types|recombined
-                expanded-overload-group-seq)))))
+                           (>expanded-overload-group overload-data fnt-globals opts
+                             arg-bindings varargs-binding))))]
+        (kw-map arg-types|recombined arg-types|split expanded-overload-group-seq overload-data)))))
 
 (def fnt-method-sym 'invoke)
 
@@ -393,7 +387,7 @@
   [{:as overload
     :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, out-class t/class?]}
    ::expanded-overload
-   gen-gensym fn?
+   {:as opts :keys [gen-gensym _]} ::opts
    > ::reify|overload]
   (let [interface-k {:out out-class :in arg-classes}
         interface
@@ -424,10 +418,11 @@
   [{:as   in
     :keys [::uss/fn|name ::uss/fn|name, i|fnt-overload t/index?, i|expanded-overload-group t/index?
            expanded-overload-group ::expanded-overload-group]} _
-   gen-gensym fn? > ::reify]
+   {:as opts :keys [gen-gensym _]} ::opts
+   > ::reify]
   (let [reify-overloads (->> (concat [(:non-primitivized expanded-overload-group)]
                                      (:primitivized expanded-overload-group))
-                             (c/map #(expanded-overload>reify-overload % gen-gensym)))
+                             (c/map #(expanded-overload>reify-overload % opts)))
         reify-name (>reify|name in)
         form `(~'def ~reify-name
                 ~(list* `reify*
@@ -450,10 +445,8 @@
 (defns >i-arg->input-types-decl
   "The evaluated `form` of each input-types-decl is an array of non-primitivized types that the
    dynamic dispatch uses to dispatch off input types."
-  [{:as   in
-    :keys [arg-types|split ::expanded-overload-groups|arg-types|split
-           fn|name         ::uss/fn|name
-           i|fnt-overload  t/index?]} _
+  [{:keys [fn|name _]} ::fnt-globals
+   arg-types|split ::expanded-overload-groups|arg-types|split, i|fnt-overload t/index?
    > (s/vec-of ::input-types-decl)]
   (->> arg-types|split
        (c/map-indexed
@@ -518,10 +511,9 @@
   (TODO))
 
 (defns >direct-dispatch
-  [{:keys [::uss/fn|name                            ::uss/fn|name
-           expanded-overload-groups-by-fnt-overload (s/vec-of ::expanded-overload-groups)
-           gen-gensym                               fn?
-           lang                                     ::lang]} _
+  [{:as fnt-globals :keys [fn|name _]} ::fnt-globals
+   {:as opts        :keys [gen-gensym _, lang _]} ::opts
+   expanded-overload-groups-by-fnt-overload (s/vec-of ::expanded-overload-groups)
    > ::direct-dispatch]
   (case lang
     :clj
@@ -530,7 +522,7 @@
                    (c/map-indexed
                      (fn [i|fnt-overload {:keys [arg-types|split expanded-overload-group-seq]}]
                        {:i-arg->input-types-decl
-                          (>i-arg->input-types-decl (kw-map arg-types|split fn|name i|fnt-overload))
+                          (>i-arg->input-types-decl fnt-globals arg-types|split i|fnt-overload)
                         :reify-seq
                           (->> expanded-overload-group-seq
                                (c/map-indexed
@@ -540,7 +532,7 @@
                                                            i|expanded-overload-group
                                                            expanded-overload-group)
                                               ::uss/fn|name fn|name)]
-                                     (expanded-overload-group>reify in gen-gensym)))))})))
+                                     (expanded-overload-group>reify in opts)))))})))
             form (->> i-overload->direct-dispatch-data
                       (c/map (fn [{:keys [i-arg->input-types-decl reify-seq]}]
                               (concat (c/lmap :form i-arg->input-types-decl)
@@ -550,13 +542,15 @@
     :cljs (TODO)))
 
 (defns >dynamic-dispatch-fn|type-decl
-  [expanded-overload-groups-by-fnt-overload (s/vec-of ::expanded-overload-groups)]
-  (list* `t/fn (->> expanded-overload-groups-by-fnt-overload
-                    (map (fn [{:keys [arg-types|pre-split|form
-                                      pre-type|form post-type|form]}]
-                           (cond-> (or arg-types|pre-split|form [])
-                             pre-type|form  (conj :| pre-type|form)
-                             post-type|form (conj :> post-type|form)))))))
+  [{:keys [fnt|type _]} ::fnt-globals
+   expanded-overload-groups-by-fnt-overload (s/vec-of ::expanded-overload-groups)]
+  (list* `t/fn
+    (-> fnt|type utr/fn-type>out-type >form)
+    (->> expanded-overload-groups-by-fnt-overload
+         (map (fn [{{:keys [arg-types|form pre-type|form post-type|form]} :overload-data}]
+                (cond-> (or arg-types|form [])
+                  pre-type|form  (conj :| pre-type|form)
+                  post-type|form (conj :> post-type|form)))))))
 
 (defns >dynamic-dispatch|reify-call [reify- ::reify, arglist (s/vec-of simple-symbol?)]
   (let [dotted-reify-method-sym
@@ -605,13 +599,13 @@
            c/lcat))))
 
 (defns >dynamic-dispatch-fn|form
-  [{:keys [::uss/fn|name                            ::uss/fn|name
-           expanded-overload-groups-by-fnt-overload (s/vec-of ::expanded-overload-groups)
-           gen-gensym                               fn?
-           lang                                     ::lang
-           i-overload->direct-dispatch-data         ::i-overload->direct-dispatch-data]} _]
+  [{:as fnt-globals :keys [fn|name _]} ::fnt-globals
+   {:as opts        :keys [gen-gensym _, lang _]} ::opts
+   expanded-overload-groups-by-fnt-overload (s/vec-of ::expanded-overload-groups)
+   i-overload->direct-dispatch-data         ::i-overload->direct-dispatch-data]
  `(defn ~fn|name
-    {::t/type ~(>dynamic-dispatch-fn|type-decl expanded-overload-groups-by-fnt-overload)}
+    {::t/type ~(>dynamic-dispatch-fn|type-decl fnt-globals
+                 expanded-overload-groups-by-fnt-overload)}
     ~@(->> i-overload->direct-dispatch-data
            (group-by (fn-> :i-arg->input-types-decl count))
            (map (fn [[arg-ct direct-dispatch-data-for-arity]]
@@ -619,6 +613,40 @@
                         body    (>dynamic-dispatch|body-for-arity
                                   fn|name arglist direct-dispatch-data-for-arity)]
                     (list arglist body)))))))
+
+(defns fnt|overloads-data>type
+  [overloads-data (s/vec-of ::overload-data), fnt|output-type t/type? > t/type?]
+  (->> overloads-data
+       (c/lmap (fn [{:keys [arg-types pre-type post-type]}]
+                 (cond-> arg-types
+                   pre-type  (conj :| pre-type)
+                   post-type (conj :> post-type))))
+       (apply t/fn fnt|output-type)))
+
+(defns fnt|parsed-overload>overload-data
+  [{:as in {:keys [args _, varargs _]
+            pre-type|form [:pre _]
+            [_ _, post-type|form _] [:post _]} [:arglist _]
+            body-codelist|pre-analyze [:body _]} _
+   fnt|output-type t/type?
+   > ::overload-data]
+  (when pre-type|form (TODO "Need to handle pre"))
+  (when varargs (TODO "Need to handle varargs"))
+  (let [arg-types|form (->> args
+                            (mapv (fn [{[kind #_#{:any :spec}, t #_t/form?] :spec}]
+                                    (case kind :any `t/any? :spec t))))
+        arg-types      (->> arg-types|form (mapv (fn-> eval t/>type)))
+        pre-type       nil ; TODO fix
+        post-type|form (if (= post-type|form '_) `t/any? post-type|form)
+        ;; TODO this becomes an issue when `post-type|form` references local bindings
+        post-type|overload-specific (some-> post-type|form eval)
+        _ (when (and post-type|overload-specific
+                     (not (t/<= post-type|overload-specific fnt|output-type)))
+            (err! (str "Overload's declared output type does not satisfy function's overall "
+                       "declared output type")))
+        post-type      (or post-type|overload-specific fnt|output-type)]
+    (kw-map args varargs body-codelist|pre-analyze
+            arg-types|form arg-types, pre-type|form pre-type, post-type|form post-type)))
 
 (defns fnt|code [kind #{:fn :defn}, lang ::lang, args _]
   (let [{:keys [:quantum.core.specs/fn|name
@@ -628,7 +656,7 @@
           (s/validate args (case kind :defn :quantum.core.defnt/defnt
                                       :fn   :quantum.core.defnt/fnt))
         symbolic-analysis? false ; TODO parameterize this
-        fnt-output-type (or (some-> output-spec second eval) t/any?)
+        fnt|output-type (or (some-> output-spec second eval) t/any?)
         gen-gensym-base (ufgen/>reproducible-gensym|generator)
         gen-gensym (fn [x] (symbol (str (gen-gensym-base x) "__")))
         inline? (s/validate (-> fn|name core/meta :inline) (t/? t/boolean?))
@@ -636,19 +664,21 @@
                     (do (ulog/pr :warn "requested `:inline`; ignoring until feature is implemented")
                         (update-meta fn|name dissoc :inline))
                     fn|name)
+        overloads-data (->> overloads (mapv #(fnt|parsed-overload>overload-data % fnt|output-type)))
+        fnt|type (fnt|overloads-data>type overloads-data fnt|output-type)
+        fnt-globals (kw-map fn|name fnt|type)
+        opts (kw-map gen-gensym lang symbolic-analysis?)
         expanded-overload-groups-by-fnt-overload
-          (->> overloads (mapv #(fnt|overload-data>expanded-overload-groups %
-                                  fn|name
-                                  fnt-output-type
-                                  {::lang lang :symbolic-analysis? symbolic-analysis?})))
-        args (assoc (kw-map expanded-overload-groups-by-fnt-overload gen-gensym lang)
-                    ::uss/fn|name fn|name)
-        {:as direct-dispatch :keys [i-overload->direct-dispatch-data]} (>direct-dispatch args)
+          (->> overloads-data
+               (mapv #(fnt|overload-data>expanded-overload-groups % fnt-globals opts)))
+        {:as direct-dispatch :keys [i-overload->direct-dispatch-data]}
+          (>direct-dispatch fnt-globals opts expanded-overload-groups-by-fnt-overload)
         fn-codelist
           (case lang
             :clj  (->> `[~@(:form direct-dispatch)
-                         ~(>dynamic-dispatch-fn|form
-                            (merge args (kw-map i-overload->direct-dispatch-data)))]
+                         ~(>dynamic-dispatch-fn|form fnt-globals opts
+                            expanded-overload-groups-by-fnt-overload
+                            i-overload->direct-dispatch-data)]
                         (remove nil?))
             :cljs (TODO))
         code (case kind
