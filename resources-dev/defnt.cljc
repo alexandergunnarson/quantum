@@ -1,17 +1,23 @@
 #_"
+LEFT OFF LAST TIME (9/3/2018):
 
 Note that `;; TODO TYPED` is the annotation we're using
 
 - TODO implement the following:
   - t/...
     - t/assume
+    - t/numerically
     - expressions (`quantum.untyped.core.analyze.expr`)
   - deft
   - fnt
   - declare-fnt (a way to do protocols/interfaces)
+    - extend-fnt!
   - defnt
     - recursion by adding the function's name and type to the local bindings (env)
     - handle varargs
+    - do the defnt-equivalences
+    - a linting warning that you can narrow the type to whatever the deduced type is from whatever
+      wider declared type there is
   - defmacrot
   - dotyped
 - NOTE on namespace organization:
@@ -33,11 +39,6 @@ Note that `;; TODO TYPED` is the annotation we're using
     - quantum.core.type
     - quantum.core.vars
 
-
-
-
-LEFT OFF LAST TIME (7/25/2018):
-
 - With `defnt`, protocols and interfaces aren't needed. You can just create `t/fn`s that you can
   then conform your fns to.
 - `dotyped`, `defnt`, and `fnt` create typed contexts in which their internal forms are analyzed
@@ -46,11 +47,11 @@ LEFT OFF LAST TIME (7/25/2018):
   types will very often have to be validated at runtime.
 
 [ ] Compile-Time (Direct) Dispatch
-    - Any argument, if it requires a non-nilable primitive-like value, will be marked as a
-      primitive.
-    - If nilable, there will be one overload for nil and one for primitive.
-    - When a `fnt` with type overloads is referenced outside of a typed context, then the overload
-      resolution will be done via Runtime Dispatch.
+    [x] Any argument, if it requires a non-nilable primitive-like value, will be marked as a
+        primitive.
+    [x] If nilable, there will be one overload for nil and one for primitive.
+    [x] When a `fnt` with type overloads is referenced outside of a typed context, then the overload
+        resolution will be done via Runtime Dispatch.
     - TODO Should we take into account 'actual' types (not just 'declared' types) when performing
       dispatch / overload resolution?
       - Let's take the example of `(defnt abcde [] (f (rand/int-between -10 -2)))`.
@@ -99,10 +100,10 @@ LEFT OFF LAST TIME (7/25/2018):
         - For now we won't do it because we can very often find the correct overload at compile
           time. We will resort to using the `fn`.
         - It will be left as an optimization.
-    [ ] `fn` generation
+    [x] `fn` generation
         - Performs a worst-case linear check of the typedefs, `cond`-style.
-[ ] Interface generation
-    - Even if the `defnt` is redefined, you won't have interface problems.
+[x] Interface generation
+    [x] Even if the `defnt` is redefined, you won't have interface problems.
 [ ] `reify` generation
     - Which `reify`s get generated is mainly up to the inputs but partially up to the fn body —
       If any typed fns are called in the fn body then this can change what gets generated.
@@ -128,6 +129,4 @@ LEFT OFF LAST TIME (7/25/2018):
 [—] Support for compilers in which the metalanguage differs from the object language (i.e. 'normal'
     non-CLJS-in-CLJS CLJS)
     - This will have to be approached later. We'll figure it out; maybe just not yet.
-[—] `extend-defnt!`
-    - Not yet; probably complicated and we don't need it right now
 "
