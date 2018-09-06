@@ -1395,7 +1395,6 @@
              (t/isa? Seqable))] (.seq xs))
   ([xs t/iterable?] (clojure.lang.RT/chunkIteratorSeq (.iterator xs)))
   ([xs t/char-seq?] (clojure.lang.StringSeq/create xs))
-  ;; TODO recursion
   ([xs (t/isa? java.util.Map)] (seq (.entrySet xs)))
   ;; TODO use `t/assume`
   ([xs t/array? > (t/* (t/? (t/isa? ISeq)))]
@@ -1404,6 +1403,8 @@
     ;; version of reflection
     (clojure.core/seq xs))))
 )
+
+(seq (quantum.untyped.core.data.map/!hash-map 1 2))
 
 ;; ----- expanded code ----- ;;
 

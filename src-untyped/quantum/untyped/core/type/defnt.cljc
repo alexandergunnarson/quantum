@@ -243,11 +243,13 @@
    arg-classes (s/vec-of t/class?)
    varargs-binding _
    > ::expanded-overload]
-  (let [env         (->> (zipmap arg-bindings arg-types|satisfying-primitivization)
+  (let [;; Not sure if `nil` is the right approach for the value
+        recursive-ast-node-reference (uast/symbol {} fn|name nil fnt|type)
+        env         (->> (zipmap arg-bindings arg-types|satisfying-primitivization)
                          (c/map' (fn [[arg-binding arg-type]]
                                    [arg-binding (uast/unbound nil arg-binding arg-type)]))
                          ;; To support recursion
-                         (<- (assoc fn|name fnt|type)))
+                         (<- (assoc fn|name recursive-ast-node-reference)))
         analyzed    (uana/analyze env (ufgen/?wrap-do body-codelist|pre-analyze))
         arg-classes|simplest (->> arg-classes (c/map class>simplest-class))
         hint-arg|fn (fn [i arg-binding]
