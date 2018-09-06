@@ -1,22 +1,31 @@
 #_"
 LEFT OFF LAST TIME (9/3/2018):
 
-Note that `;; TODO TYPED` is the annotation we're using
+Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
   - t/...
     - t/assume
     - t/numerically
+    - t/of
+      - (t/of t/+map? t/symbol? t/string?)
+      - (t/of t/seq? namespace?)
+      - t/map-of
+      - t/seq-of
+    - t/unqualified-symbol?
     - expressions (`quantum.untyped.core.analyze.expr`)
   - deft
   - fnt
+  - declaret
   - declare-fnt (a way to do protocols/interfaces)
     - extend-fnt!
   - defnt
     - handle varargs
+      - [& args _] shouldn't result in `t/any?` but rather like `t/seqable?` or whatever
     - do the defnt-equivalences
     - a linting warning that you can narrow the type to whatever the deduced type is from whatever
       wider declared type there is
+    - the option of creating a `defnt` that isn't extensible?
   - defmacrot
   - dotyped
 - NOTE on namespace organization:
@@ -30,6 +39,7 @@ Note that `;; TODO TYPED` is the annotation we're using
 - TODO transition the quantum.core.* namespaces:
   - List of semi-approximately topologically ordered namespaces to make typed:
     - quantum.core.core
+      - TODO delete this namespace?
     - quantum.core.type.core
     - quantum.core.ns
     - quantum.core.logic
@@ -37,6 +47,13 @@ Note that `;; TODO TYPED` is the annotation we're using
     - quantum.core.data.map
     - quantum.core.type-old
     - quantum.core.vars
+  - List of corresponding untyped namespaces to incorporate:
+    - quantum.untyped.core.core
+    - quantum.untyped.core.vars
+  - Standard metadata
+    - e.g. `{:alternate-implementations #{'cljs.tools.reader/merge-meta}}`
+  - Instead of e.g. `ns-` or `var-` we can do `ns-val` and `var-val`
+  - Should we type `when`, `let`?
 
 - With `defnt`, protocols and interfaces aren't needed. You can just create `t/fn`s that you can
   then conform your fns to.
