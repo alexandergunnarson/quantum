@@ -13,6 +13,7 @@
             array? associative? coll? counted? indexed? iterable? list? map? map-entry? record?
             seq? seqable? sequential? set? sorted? vector?
             fn? ifn?
+            var?
             meta
             ref volatile?
             fn])
@@ -730,6 +731,7 @@
 
 ;; ===== Sequences ===== ;; Sequential (generally not efficient Lookup / RandomAccess)
 
+         (-def seq?             (isa? #?(:clj clojure.lang.ISeq    :cljs cljs.core/ISeq)))
          (-def cons?            (isa? #?(:clj clojure.lang.Cons    :cljs cljs.core/Cons)))
          (-def lseq?            (isa? #?(:clj clojure.lang.LazySeq :cljs cljs.core/LazySeq)))
          (-def misc-seq?        (or (isa? #?(:clj clojure.lang.APersistentMap$KeySeq       :cljs cljs.core/KeySeq))
@@ -1697,8 +1699,8 @@
 
          (-def multimethod? (isa? #?(:clj clojure.lang.MultiFn :cljs cljs.core/IMultiFn)))
 
-         ;; I.e., can you call/invoke it by being in functor position (first element of an unquoted list)
-         ;; within a typed context?
+         ;; I.e., can you call/invoke it by being in functor position (first element of an unquoted
+         ;; list) within a typed context?
          ;; TODO should we allow java.lang.Runnable, java.util.concurrent.Callable, and other
          ;; functional interfaces to be `callable?`?
          (-def callable?    (or ifn? fnt?))
@@ -1747,6 +1749,10 @@
 
          (-def keyword?      (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
          (-def symbol?       (isa? #?(:clj clojure.lang.Symbol  :cljs cljs.core/Symbol)))
+
+#?(:clj  (-def namespace?    (isa? clojure.lang.Namespace)))
+
+#?(:clj  (-def var?          (isa? clojure.lang.Var)))
 
          ;; `js/File` isn't always available! Use an abstraction
 #?(:clj  (-def file?         (isa? java.io.File)))
