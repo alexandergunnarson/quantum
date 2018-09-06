@@ -627,7 +627,7 @@
            (or (t/literal? resolved) (t/class? resolved))
              (t/value resolved)
            (var? resolved)
-             (or (-> resolved meta ::t/type) (t/value @resolved))
+             (or (-> resolved meta :quantum.core.type/type) (t/value @resolved))
            (uvar/unbound? resolved)
              ;; Because the var could be anything and cannot have metadata (type or otherwise)
              t/any?
