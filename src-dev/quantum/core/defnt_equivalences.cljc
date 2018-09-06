@@ -949,10 +949,10 @@
         expected
           (case (env-lang)
             :clj ($ (do (def ~'defnt-reference|__0|0
-                          (reify* [>long] (~'invoke [~'_0__] ~'(>long* 1))))
+                          (reify* [>long] (~(tag "long" 'invoke) [~'_0__] ~'(>long* 1))))
                         (defn ~'defnt-reference
                           {::t/type (t/fn t/any? [])}
-                          ([] (.invoke ~'defnt-reference|__0|0))))))]
+                          ([] (.invoke ~(tag (str `>long) 'defnt-reference|__0|0)))))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
