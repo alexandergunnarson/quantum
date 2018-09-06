@@ -28,34 +28,36 @@
 
 (defn code=
   "`code=` but with helpful test-related logging"
-  ([code0 code1]
-    (if (metable? code0)
-        (and (metable? code1)
-             (let [meta0 (-> code0 meta (dissoc :line :column))
-                   meta1 (-> code1 meta (dissoc :line :column))]
+  ([c0 c1]
+    (if (metable? c0)
+        (and (metable? c1)
+             (let [meta0 (-> c0 meta (dissoc :line :column))
+                   meta1 (-> c1 meta (dissoc :line :column))]
                (or (= meta0 meta1)
-                   (pr! "FAIL: meta should be match for" (pr-str meta0) (pr-str meta1)
-                                               "on code" (pr-str code0) (pr-str code1))))
+                   (do (pr! "FAIL: meta should be match for" (pr-str meta0) (pr-str meta1)
+                                                   "on code" (pr-str c0)    (pr-str c1))
+                       false)))
              (let [similar-class?
-                     (cond (seq?    code0) (seq?    code1)
-                           (seq?    code1) (seq?    code0)
-                           (vector? code0) (vector? code1)
-                           (vector? code1) (vector? code0)
-                           (map?    code0) (map?    code1)
-                           (map?    code1) (map?    code0)
+                     (cond (seq?    c0) (seq?    c1)
+                           (seq?    c1) (seq?    c0)
+                           (vector? c0) (vector? c1)
+                           (vector? c1) (vector? c0)
+                           (map?    c0) (map?    c1)
+                           (map?    c1) (map?    c0)
                            :else           ::not-applicable)]
                (if (= similar-class? ::not-applicable)
-                   (or (= code0 code1)
-                       (pr! "FAIL: should be `(= code0 code1)`" (pr-str code0) (pr-str code1)))
+                   (or (= c0 c1)
+                       (do (pr! "FAIL: should be `(= code0 code1)`" (pr-str c0) (pr-str c1)) false))
                    (and (or similar-class?
-                            (pr! "FAIL: should be similar class" (pr-str code0) (pr-str code1)))
-                        (or (seq= (seq code0) (seq code1) code=)
-                            (pr! "FAIL: `(seq= code0 code1 code=)`"
-                                 (pr-str code0) (pr-str code1)))))))
-        (and (not (metable? code1))
-             (or (= code0 code1)
-                 (println "FAIL: should be `(= code0 code1)`" (pr-str code0) (pr-str code1))))))
-  ([code0 code1 & codes] (and (code= code0 code1) (every? #(code= code0 %) codes))))
+                            (do (pr! "FAIL: should be similar class" (pr-str c0) (pr-str c1))
+                                false))
+                        (or (seq= (seq c0) (seq c1) code=)
+                            (do (pr! "FAIL: `(seq= code0 code1 code=)`" (pr-str c0) (pr-str c1))
+                                false))))))
+        (and (not (metable? c1))
+             (or (= c0 c1)
+                 (println "FAIL: should be `(= code0 code1)`" (pr-str c0) (pr-str c1))))))
+  ([c0 c1 & codes] (and (code= c0 c1) (every? #(code= c0 %) codes))))
 
 (defn is-code= [& args] (is (apply code= args)))
 

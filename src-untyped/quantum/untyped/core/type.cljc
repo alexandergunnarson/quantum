@@ -448,7 +448,9 @@
   (let [name- nil
         arities-form (cons arity arities)
         arities (->> arities-form
-                     (uc/map+ #(us/conform ::fn-type|arity %))
+                     (uc/map+ (c/fn [arity-form]
+                                (-> (us/conform ::fn-type|arity arity-form)
+                                    (update :output-type #(c/or % out-type universal-set)))))
                      (uc/group-by #(-> % :input-types count)))]
     (FnType. nil name- out-type arities-form arities)))
 

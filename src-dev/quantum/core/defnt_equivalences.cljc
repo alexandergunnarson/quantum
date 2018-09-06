@@ -17,7 +17,7 @@
     [quantum.untyped.core.logic
       :refer [ifs]]
     [quantum.untyped.core.spec              :as s]
-    [quantum.untyped.core.test              :as test
+    [quantum.untyped.core.test              :as utest
       :refer [deftest is is= is-code= testing throws]]
     [quantum.untyped.core.type              :as t
       :refer [? *]]
@@ -92,14 +92,14 @@
                            [~'_8__ ~(tag "double"           'x)] ~'x)))
 
                      (defn ~'identity|uninlined
-                       {::t/type (t/fn ~'[t/any?])}
+                       {::t/type (t/fn t/any? ~'[t/any?])}
                        ([~'x00__]
                          ;; TODO elide check because `t/any?` doesn't require a check
                          ;; and all args are `t/=` `t/any?`
                          (ifs ((Array/get ~'identity|uninlined|__0|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `Object>Object)
                                                'identity|uninlined|__0|0) ~'x00__)
-                              (unsupported! `name|test [~'x00__] 0))))))
+                              (unsupported! `identity|uninlined [~'x00__] 0))))))
             :cljs
               ;; Direct dispatch will be simple functions, not `reify`s
               ($ (do (defn ~'identity|uninlined [~'x] ~'x))))]
@@ -144,7 +144,8 @@
 
                      (defn ~'name|test
                        {::t/type
-                         (t/fn ~'[t/string?      :> t/string?]
+                         (t/fn t/any?
+                               ~'[t/string?      :> t/string?]
                                ~'[(t/isa? Named) :> (* t/string?)])}
                        ([~'x00__]
                          (ifs ((Array/get ~'name|test|__0|input0|types 0) ~'x00__)
@@ -208,7 +209,8 @@
                          (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] true)))
 
                      (defn ~'some?|test
-                       {::t/type (t/fn ~'[t/nil?]
+                       {::t/type (t/fn t/any?
+                                       ~'[t/nil?]
                                        ~'[t/any?])}
                        ([~'x00__]
                          (ifs ((Array/get ~'some?|test|__0|input0|types 0) ~'x00__)
@@ -268,7 +270,8 @@
                          (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] false)))
 
                      (defn ~'reduced?|test
-                       {::t/type (t/fn ~'[(t/isa? Reduced)]
+                       {::t/type (t/fn t/any?
+                                       ~'[(t/isa? Reduced)]
                                        ~'[t/any?])}
                        ([~'x00__]
                          (ifs ((Array/get ~'reduced?|test|__0|input0|types 0) ~'x00__)
@@ -337,7 +340,8 @@
                          (~(tag "boolean" 'invoke) [~'_10__ ~(tag "double"           'x)] true)))
 
                      (defn ~'>boolean
-                       {::t/type (t/fn ~'[t/boolean?]
+                       {::t/type (t/fn t/any?
+                                       ~'[t/boolean?]
                                        ~'[t/nil?]
                                        ~'[t/any?])}
                        ([~'x00__]
@@ -432,8 +436,9 @@
                            (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(.intValue x)))))
 
                      (defn ~'>int*
-                       {::t/type (t/fn ~'[(t/- t/primitive? t/boolean?) :> t/int?]
-                                       ~'[(t/ref (t/isa? Number)) :> t/int?])}
+                       {::t/type (t/fn ~'t/int?
+                                       ~'[(t/- t/primitive? t/boolean?)]
+                                       ~'[(t/ref (t/isa? Number))])}
                        ([~'x00__]
                          (ifs ((Array/get ~'>int*|__0|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `byte>int)   '>int*|__0|0) ~'x00__)
@@ -698,7 +703,8 @@
            ;; Unindented for greater vertical brevity
            (defn ~'>|test
              {::t/type
-               (t/fn #?(:clj  ~'[t/comparable-primitive? t/comparable-primitive?
+               (t/fn t/any?
+                     #?(:clj  ~'[t/comparable-primitive? t/comparable-primitive?
                                  :> t/boolean?]
                         :cljs ~'[t/double?               t/double?
                                  :> (t/assume t/boolean?)]))}
@@ -864,12 +870,12 @@
                             (~(tag "long" 'invoke) [~'_0__ ~(tag "byte"             'x)]
                               ~'(Primitive/uncheckedLongCast x))))
                         (def ~'>long*|__0|1
-                          (reify* [char>long]
-                            (~(tag "long" 'invoke) [~'_1__ ~(tag "char"             'x)]
+                          (reify* [short>long]
+                            (~(tag "long" 'invoke) [~'_1__ ~(tag "short"            'x)]
                               ~'(Primitive/uncheckedLongCast x))))
                         (def ~'>long*|__0|2
-                          (reify* [short>long]
-                            (~(tag "long" 'invoke) [~'_2__ ~(tag "short"            'x)]
+                          (reify* [char>long]
+                            (~(tag "long" 'invoke) [~'_2__ ~(tag "char"             'x)]
                               ~'(Primitive/uncheckedLongCast x))))
                         (def ~'>long*|__0|3
                           (reify* [int>long]
@@ -898,8 +904,10 @@
                               (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(.longValue x)))))
 
                         (defn ~'>long*
-                          {::t/type (t/fn ~'[(t/- t/primitive? t/boolean?) :> t/long?]
-                                          ~'[(t/ref (t/isa? Number))       :> t/long?])}
+                          {:source "clojure.lang.RT.uncheckedLongCast"
+                           ::t/type (t/fn ~'t/long?
+                                          ~'[(t/- t/primitive? t/boolean?)]
+                                          ~'[(t/ref (t/isa? Number))])}
                           ([~'x00__]
                             (ifs
                               ((Array/get ~'>long*|__0|input0|types 0) x00__)
@@ -934,11 +942,22 @@
              (is (identical? (>long* -1.1)     (clojure.lang.RT/uncheckedLongCast -1.1)))
              (is (identical? (>long* (byte 1)) (clojure.lang.RT/uncheckedLongCast (byte 1)))))))))
 
-
 (deftest defnt-reference-test
-  (defnt defnt-reference
-    ([] (>long* 1)))
-  (is (identical? (defnt-reference) 1)))
+  (let [actual
+          (macroexpand '
+            (defnt defnt-reference
+              ([] (>long* 1))))
+        expected
+          (case (env-lang)
+            :clj ($ (do (def ~'defnt-reference|__0|0
+                          (reify* [>long] (~'invoke [~'_0__] ~'(>long* 1))))
+                        (defn ~'defnt-reference
+                          {::t/type (t/fn t/any? [])}
+                          ([] (.invoke ~'defnt-reference|__0|0))))))]
+    (testing "code equivalence" (is-code= actual expected))
+    (testing "functionality"
+      (eval actual)
+      (eval '(do (is (identical? (defnt-reference) 1)))))))
 
 ;; NOTE would use `>long` but that's already an interface
 (deftest test|>long-checked
@@ -1175,14 +1194,14 @@
                             (~(tag "java.lang.Object" 'invoke) [~'_0__]
                               ~'(StringBuilder.))))
 
-                        (def ~'!str|__1|input0|types
+                        (def ~(tag "[Ljava.lang.Object;" '!str|__1|input0|types)
                           (*<> (t/isa? java.lang.String)))
                         (def ~'!str|__1|0
                           (reify* [Object>Object]
                             (~(tag "java.lang.Object" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)]
                               (let* [~(tag "java.lang.String" 'x) ~'x] ~'(StringBuilder. x)))))
 
-                        (def ~'!str|__2|input0|types
+                        (def ~(tag "[Ljava.lang.Object;" '!str|__2|input0|types)
                           (*<> (t/isa? java.lang.CharSequence)
                                (t/isa? java.lang.Integer)))
                         (def ~'!str|__2|0
@@ -1196,18 +1215,23 @@
                               ~'(StringBuilder. x))))
 
                         (defn ~'!str
-                          {::t/type (t/fn ~'[                          :> (t/isa? StringBuilder)]
-                                          ~'[t/string?                 :> (t/isa? StringBuilder)]
-                                          ~'[(t/or t/char-seq? t/int?) :> (t/isa? StringBuilder)])}
-                          ([] (.invoke ~'!str|__0|0))
+                          {::t/type (t/fn ~'(t/isa? StringBuilder)
+                                          ~'[]
+                                          ~'[t/string?]
+                                          ~'[(t/or t/char-seq? t/int?)])}
+                          ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.>Object"
+                                             '!str|__0|0)))
                           ([~'x00__]
                             (ifs
                               ((Array/get ~'!str|__1|input0|types 0) ~'x00__)
-                                (.invoke !str|__1|0 ~'x00__)
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
+                                               '!str|__1|0) ~'x00__)
                               ((Array/get ~'!str|__2|input0|types 0) ~'x00__)
-                                (.invoke !str|__2|0 ~'x00__)
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
+                                               '!str|__2|0) ~'x00__)
                               ((Array/get ~'!str|__2|input0|types 1) ~'x00__)
-                                (.invoke !str|__2|1 ~'x00__)
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.int>Object"
+                                               '!str|__2|1) ~'x00__)
                               (unsupported! `!str [~'x00__] 0)))))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"

@@ -265,6 +265,6 @@
       :input-types      (us/* type?)
       :output-type-pair (us/? (us/cat :ident #{:>} :type type?)))
     (us/conformer
-      (fn [x] (-> x (update :output-type-pair #(or (:type %) universal-set))
+      (fn [x] (-> x (update :output-type-pair :type)
                     (update :input-types vec)
                     (set/rename-keys {:output-type-pair :output-type}))))))

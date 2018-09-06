@@ -113,11 +113,7 @@
                            :else           ::not-applicable)]
                (if (= similar-class? ::not-applicable)
                    (= code0 code1)
-                   (and similar-class? (seq= (seq code0) (seq code1) code=))))
-             (cond (seq?    code0) (and (seq?    code1) (seq=      code0       code1  code=))
-                   (vector? code0) (and (vector? code1) (seq= (seq code0) (seq code1) code=))
-                   (map?    code0) (and (map?    code1) (seq= (seq code0) (seq code1) code=))
-                   :else           (= code0 code1)))
+                   (and similar-class? (seq= (seq code0) (seq code1) code=)))))
         (and (not (uvar/metable? code1))
              (= code0 code1))))
   ([code0 code1 & codes] (and (code= code0 code1) (every? #(code= code0 %) codes))))

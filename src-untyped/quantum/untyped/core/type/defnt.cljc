@@ -133,8 +133,9 @@
 
 ;; "global" because they apply to the whole fnt
 (s/def ::fnt-globals
-  (s/kv {:fn|name  ::uss/fn|name
-         :fnt|type t/type?}))
+  (s/kv {:fn|name              ::uss/fn|name
+         :fnt|output-type|form t/any?
+         :fnt|type             t/type?}))
 
 (s/def ::opts
   (s/kv {:gen-gensym         t/fn?
@@ -175,7 +176,7 @@
 (s/def ::expanded-overload-groups|arg-types|split (s/vec-of (s/vec-of t/type?)))
 
 (s/def ::expanded-overload-groups
-  (s/kv {:arg-types|recombined        (s/vec-of (s/vec-of t/type?))
+  (s/kv {:arg-types|expanded-seq      (s/vec-of (s/vec-of t/type?))
          :arg-types|split             ::expanded-overload-groups|arg-types|split
          :expanded-overload-group-seq (s/seq-of ::expanded-overload-group)
          :overload-data               ::overload-data}))
@@ -287,21 +288,20 @@
        :variadic?                   (boolean varargs)})))
 
 (defns >expanded-overload-group
-  [{:as overload-data :keys [arg-types _]} ::overload-data
-   fnt-globals ::fnt-globals, opts ::opts, arg-bindings _, varargs-binding _
+  [overload-data ::overload-data
+   fnt-globals ::fnt-globals, opts ::opts, arg-bindings _, varargs-binding _, arg-types|expanded _
    > ::expanded-overload-group]
-  (let [;; After `t/or`s etc. are expanded and simplified
-        arg-types|form|expanded (mapv >form arg-types)
+  (let [arg-types|form|expanded (mapv >form arg-types|expanded)
         ;; `non-primitivized` is first because of class sorting
         [non-primitivized & primitivized :as overloads]
-          (->> arg-types
+          (->> arg-types|expanded
                arg-types>arg-classes-seq|primitivized
                (mapv (fn [arg-classes #_::expanded-overload|arg-classes]
                        (let [arg-types|satisfying-primitivization
                                (c/mergev-with
                                  (fn [_ s #_t/type? c #_t/class?]
                                    (cond-> s (t/primitive-class? c) (t/and c)))
-                                 arg-types arg-classes)]
+                                 arg-types|expanded arg-classes)]
                          (>expanded-overload overload-data fnt-globals opts
                            arg-bindings arg-types|satisfying-primitivization arg-classes
                            varargs-binding)))))]
@@ -347,15 +347,16 @@
               ;; NOTE Only `t/or`s are splittable for now
               (->> arg-types
                    (c/map (fn [t] (if (utr/or-type? t) (utr/or-type>args t) [t]))))
-            arg-types|recombined (->> arg-types|split
-                                      (apply ucombo/cartesian-product)
-                                      (c/map vec))
+            arg-types|expanded-seq (->> arg-types|split
+                                        (apply ucombo/cartesian-product)
+                                        (c/map vec))
             expanded-overload-group-seq
-              (->> arg-types|recombined
-                   (mapv (fn [arg-types]
+              (->> arg-types|expanded-seq
+                   (mapv (fn [arg-types|expanded] ; TODO use this
                            (>expanded-overload-group overload-data fnt-globals opts
-                             arg-bindings varargs-binding))))]
-        (kw-map arg-types|recombined arg-types|split expanded-overload-group-seq overload-data)))))
+                             arg-bindings varargs-binding arg-types|expanded))))]
+        (kw-map arg-types|expanded-seq arg-types|split expanded-overload-group-seq
+                overload-data)))))
 
 (def fnt-method-sym 'invoke)
 
@@ -542,10 +543,9 @@
     :cljs (TODO)))
 
 (defns >dynamic-dispatch-fn|type-decl
-  [{:keys [fnt|type _]} ::fnt-globals
+  [{:keys [fnt|output-type|form _, fnt|type _]} ::fnt-globals
    expanded-overload-groups-by-fnt-overload (s/vec-of ::expanded-overload-groups)]
-  (list* `t/fn
-    (-> fnt|type utr/fn-type>out-type >form)
+  (list* `t/fn fnt|output-type|form
     (->> expanded-overload-groups-by-fnt-overload
          (map (fn [{{:keys [arg-types|form pre-type|form post-type|form]} :overload-data}]
                 (cond-> (or arg-types|form [])
@@ -656,7 +656,8 @@
           (s/validate args (case kind :defn :quantum.core.defnt/defnt
                                       :fn   :quantum.core.defnt/fnt))
         symbolic-analysis? false ; TODO parameterize this
-        fnt|output-type (or (some-> output-spec second eval) t/any?)
+        fnt|output-type|form (or (second output-spec) `t/any?)
+        fnt|output-type      (eval fnt|output-type|form)
         gen-gensym-base (ufgen/>reproducible-gensym|generator)
         gen-gensym (fn [x] (symbol (str (gen-gensym-base x) "__")))
         inline? (s/validate (-> fn|name core/meta :inline) (t/? t/boolean?))
@@ -666,7 +667,7 @@
                     fn|name)
         overloads-data (->> overloads (mapv #(fnt|parsed-overload>overload-data % fnt|output-type)))
         fnt|type (fnt|overloads-data>type overloads-data fnt|output-type)
-        fnt-globals (kw-map fn|name fnt|type)
+        fnt-globals (kw-map fn|name fnt|output-type|form fnt|type)
         opts (kw-map gen-gensym lang symbolic-analysis?)
         expanded-overload-groups-by-fnt-overload
           (->> overloads-data
