@@ -451,8 +451,9 @@
         (if (or (empty? dispatchable-overloads-seq')
                 (c/contains? non-dispatchable-or-types))
             (err! "No overloads satisfy the inputs, whether direct or dynamic"
-                  {:caller caller|node
-                   :inputs body})
+                  {:caller caller|node :inputs body
+                   :failing-input-form (:form input|analyzed)
+                   :failing-input-type (:type input|analyzed)})
             (assoc ret :dispatchable-overloads-seq dispatchable-overloads-seq'
                        :dispatch-type              :dynamic)))
       (err! "Cannot currently do a dynamic dispatch on a non-`t/or` input type"

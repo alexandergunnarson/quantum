@@ -13,7 +13,6 @@ Note that `;; TODO TYPED` is the annotation we're using
   - declare-fnt (a way to do protocols/interfaces)
     - extend-fnt!
   - defnt
-    - recursion by adding the function's name and type to the local bindings (env)
     - handle varargs
     - do the defnt-equivalences
     - a linting warning that you can narrow the type to whatever the deduced type is from whatever

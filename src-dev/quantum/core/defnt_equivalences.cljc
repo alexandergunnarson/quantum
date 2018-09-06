@@ -112,8 +112,8 @@
 (deftest test|name
   (let [actual
           (macroexpand '
-            (defnt #_:inline name|test
-                       ([x t/string?       > t/string?]     x)
+            (defnt #_:inline name|test > t/string?
+                       ([x t/string?] x)
               #?(:clj  ([x (t/isa? Named)  > (* t/string?)] (.getName x))
                  :cljs ([x (t/isa? INamed) > (* t/string?)] (-name x)))))
         expected
@@ -144,8 +144,8 @@
 
                      (defn ~'name|test
                        {::t/type
-                         (t/fn t/any?
-                               ~'[t/string?      :> t/string?]
+                         (t/fn ~'t/string?
+                               ~'[t/string?]
                                ~'[(t/isa? Named) :> (* t/string?)])}
                        ([~'x00__]
                          (ifs ((Array/get ~'name|test|__0|input0|types 0) ~'x00__)
@@ -958,6 +958,9 @@
       (eval actual)
       (eval '(do (is (identical? (defnt-reference) 1)))))))
 
+(defnt >big-integer > (t/isa? java.math.BigInteger)
+  ([x t/ratio? > (* (t/isa? java.math.BigInteger))] (.bigIntegerValue x)))
+
 ;; NOTE would use `>long` but that's already an interface
 (deftest test|>long-checked
   (let [actual
@@ -979,8 +982,7 @@
                          ;; TODO add this back in
                          #_(fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
                 (.longValue x))
-              ;; TODO support recursion
-              #_([x t/ratio?] (>long-checked (.bigIntegerValue x)))
+              ([x t/ratio?] (-> x >big-integer >long-checked))
               ([x (t/value true)]  1)
               ([x (t/value false)] 0)
               ([x t/string?] (Long/parseLong x))
@@ -1364,8 +1366,9 @@
 
 (macroexpand '
 (defnt #_:inline get
-  ([xs t/array? , k (t/numerically t/int?)] (#?(:clj Array/get :cljs aget) xs k))
-  ([xs t/string?, k (t/numerically t/int?)] (.charAt xs k))
+  ;; TODO `t/numerically
+  ([xs t/array? , k #_(t/numerically t/int?)] (#?(:clj Array/get :cljs aget) xs k))
+  ([xs t/string?, k #_(t/numerically t/int?)] (.charAt xs k))
   ([xs !+vector?, k t/any?] #?(:clj (.valAt xs k) :cljs (TODO))))
 )
 ;; ----- expanded code ----- ;;
@@ -1391,12 +1394,10 @@
   > (t/? (t/isa? ISeq))
   ([xs t/nil?] nil)
   ([xs (t/isa? ASeq)] xs)
-  ([xs (t/or (t/isa? LazySeq)
-             (t/isa? Seqable))] (.seq xs))
+  ([xs (t/or (t/isa? LazySeq) (t/isa? Seqable))] (.seq xs))
   ([xs t/iterable?] (clojure.lang.RT/chunkIteratorSeq (.iterator xs)))
   ([xs t/char-seq?] (clojure.lang.StringSeq/create xs))
   ([xs (t/isa? java.util.Map)] (seq (.entrySet xs)))
-  ;; TODO use `t/assume`
   ([xs t/array? > (t/* (t/? (t/isa? ISeq)))]
     ;; We do this only because `clojure.lang.ArraySeq/createFromObject` is private but
     ;; perhaps it would be wise from a performance perspective to bypass that with e.g. a fast
@@ -1404,6 +1405,7 @@
     (clojure.core/seq xs))))
 )
 
+;; Works!
 (seq (quantum.untyped.core.data.map/!hash-map 1 2))
 
 ;; ----- expanded code ----- ;;
