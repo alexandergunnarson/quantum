@@ -330,10 +330,11 @@
 (defn fns|code [kind lang args]
   (assert (= lang #?(:clj :clj :cljs :cljs)) lang)
   (when (= kind :fn) (println "WARNING: `fn` will ignore spec validation"))
-  (let [{:keys [:quantum.core.specs/fn|name
+  (let [{:as args'
+         :keys [:quantum.core.specs/fn|name
                 :quantum.core.defnt/overloads
-                :quantum.core.defnt/output-spec
-                :quantum.core.specs/meta] :as args'}
+                :quantum.core.defnt/output-spec]
+         fn|meta :quantum.core.specs/meta}
           (us/assert-conform (case kind (:defn :defn-) :quantum.core.defnt/defns|code
                                         :fn            :quantum.core.defnt/fns|code) args)
         [_ output-spec] output-spec
@@ -380,12 +381,13 @@
                        :fn (us/with-gen-spec (fn [{~ret-sym :ret}] ~ret-sym)
                              (fn [{[~arity-kind-sym ~args-sym] :args}]
                                (case ~arity-kind-sym ~@spec-form|fn)))))
+        fn|name|with-meta (with-meta fn|name fn|meta)
         fn-form (case kind
                   :fn    (list* 'fn (concat (when (contains? args' :quantum.core.specs/fn|name)
-                                              [fn|name])
+                                              [fn|name|with-meta])
                                             overload-forms))
-                  :defn  (list* 'defn fn|name overload-forms)
-                  :defn- (list* 'defn- fn|name overload-forms))
+                  :defn  (list* 'defn fn|name|with-meta overload-forms)
+                  :defn- (list* 'defn- fn|name|with-meta overload-forms))
         code `(do ~spec-form ~fn-form)]
     code))
 

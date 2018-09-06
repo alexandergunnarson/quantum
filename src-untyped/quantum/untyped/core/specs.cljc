@@ -136,10 +136,11 @@
           (dissoc :quantum.core.specs/docstring
                   :quantum.core.specs/pre-meta
                   :quantum.core.specs/post-meta)
-          (cond-> fn|name
-            (update :quantum.core.specs/fn|name with-meta
-              (-> (merge (meta fn|name) pre-meta post-meta) ; TODO use `merge-unique` instead of `:quantum.core.specs/defn|unique-meta`
-                  (cond-> docstring (assoc :doc docstring)))))))))
+          (update :quantum.core.specs/fn|name with-meta nil)
+          (assoc :quantum.core.specs/meta
+            (-> ;; TODO use `merge-unique` instead of `:quantum.core.specs/fn|unique-meta`
+                (merge (meta fn|name) pre-meta post-meta)
+                (cond-> docstring (assoc :doc docstring))))))))
 
 (defn fn-like|postchecks|gen [overloads-ident]
   (s/and (s/conformer

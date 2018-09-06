@@ -346,13 +346,12 @@
                                        ~'[t/any?])}
                        ([~'x00__]
                          (ifs ((Array/get ~'>boolean|__0|input0|types 0) ~'x00__)
-                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.boolean>boolean"
-                                               '>boolean|__0|0) ~'x00__)
+                                (.invoke ~(tag (str `boolean>boolean) '>boolean|__0|0) ~'x00__)
                               ((Array/get ~'>boolean|__1|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (str `Object>boolean) '>boolean|__1|0) ~'x00__)
+                                (.invoke ~(tag (str `Object>boolean)  '>boolean|__1|0) ~'x00__)
                               ;; TODO eliminate this check because it's not needed (`t/any?`)
                               ((Array/get ~'>boolean|__2|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (str `Object>boolean) '>boolean|__2|0) ~'x00__)
+                                (.invoke ~(tag (str `Object>boolean)  '>boolean|__2|0) ~'x00__)
                               (unsupported! `>boolean [~'x00__] 0))))))
             :cljs
               ($ (do (defn ~'>boolean [~'x]
@@ -910,22 +909,22 @@
                                           ~'[(t/ref (t/isa? Number))])}
                           ([~'x00__]
                             (ifs
-                              ((Array/get ~'>long*|__0|input0|types 0) x00__)
-                                (.invoke >long*|__0|0 x00__)
-                              ((Array/get ~'>long*|__0|input0|types 1) x00__)
-                                (.invoke >long*|__0|1 x00__)
-                              ((Array/get ~'>long*|__0|input0|types 2) x00__)
-                                (.invoke >long*|__0|2 x00__)
-                              ((Array/get ~'>long*|__0|input0|types 3) x00__)
-                                (.invoke >long*|__0|3 x00__)
-                              ((Array/get ~'>long*|__0|input0|types 4) x00__)
-                                (.invoke >long*|__0|4 x00__)
-                              ((Array/get ~'>long*|__0|input0|types 5) x00__)
-                                (.invoke >long*|__0|5 x00__)
-                              ((Array/get ~'>long*|__0|input0|types 6) x00__)
-                                (.invoke >long*|__0|6 x00__)
-                              ((Array/get ~'>long*|__1|input0|types 0) x00__)
-                                (.invoke >long*|__1|0 x00__)
+                              ((Array/get ~'>long*|__0|input0|types 0) ~'x00__)
+                                (.invoke ~(tag (str `byte>long)   '>long*|__0|0) ~'x00__)
+                              ((Array/get ~'>long*|__0|input0|types 1) ~'x00__)
+                                (.invoke ~(tag (str `short>long)  '>long*|__0|1) ~'x00__)
+                              ((Array/get ~'>long*|__0|input0|types 2) ~'x00__)
+                                (.invoke ~(tag (str `char>long)   '>long*|__0|2) ~'x00__)
+                              ((Array/get ~'>long*|__0|input0|types 3) ~'x00__)
+                                (.invoke ~(tag (str `int>long)    '>long*|__0|3) ~'x00__)
+                              ((Array/get ~'>long*|__0|input0|types 4) ~'x00__)
+                                (.invoke ~(tag (str `long>long)   '>long*|__0|4) ~'x00__)
+                              ((Array/get ~'>long*|__0|input0|types 5) ~'x00__)
+                                (.invoke ~(tag (str `float>long)  '>long*|__0|5) ~'x00__)
+                              ((Array/get ~'>long*|__0|input0|types 6) ~'x00__)
+                                (.invoke ~(tag (str `double>long) '>long*|__0|6) ~'x00__)
+                              ((Array/get ~'>long*|__1|input0|types 0) ~'x00__)
+                                (.invoke ~(tag (str `Object>long) '>long*|__1|0) ~'x00__)
                               (unsupported! `>long* [~'x00__] 0)))))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"

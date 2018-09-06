@@ -133,7 +133,8 @@
 
 ;; "global" because they apply to the whole fnt
 (s/def ::fnt-globals
-  (s/kv {:fn|name              ::uss/fn|name
+  (s/kv {:fn|meta              ::uss/meta
+         :fn|name              ::uss/fn|name
          :fnt|output-type|form t/any?
          :fnt|type             t/type?}))
 
@@ -599,13 +600,13 @@
            c/lcat))))
 
 (defns >dynamic-dispatch-fn|form
-  [{:as fnt-globals :keys [fn|name _]} ::fnt-globals
+  [{:as fnt-globals :keys [fn|meta _, fn|name _]} ::fnt-globals
    {:as opts        :keys [gen-gensym _, lang _]} ::opts
    expanded-overload-groups-by-fnt-overload (s/vec-of ::expanded-overload-groups)
    i-overload->direct-dispatch-data         ::i-overload->direct-dispatch-data]
  `(defn ~fn|name
-    {::t/type ~(>dynamic-dispatch-fn|type-decl fnt-globals
-                 expanded-overload-groups-by-fnt-overload)}
+    ~(assoc fn|meta ::t/type
+       (>dynamic-dispatch-fn|type-decl fnt-globals expanded-overload-groups-by-fnt-overload))
     ~@(->> i-overload->direct-dispatch-data
            (group-by (fn-> :i-arg->input-types-decl count))
            (map (fn [[arg-ct direct-dispatch-data-for-arity]]
@@ -649,10 +650,11 @@
             arg-types|form arg-types, pre-type|form pre-type, post-type|form post-type)))
 
 (defns fnt|code [kind #{:fn :defn}, lang ::lang, args _]
-  (let [{:keys [:quantum.core.specs/fn|name
+  (let [{:as args'
+         :keys [:quantum.core.specs/fn|name
                 :quantum.core.defnt/overloads
-                :quantum.core.defnt/output-spec
-                :quantum.core.specs/meta] :as args'}
+                :quantum.core.defnt/output-spec]
+         fn|meta :quantum.core.specs/meta}
           (s/validate args (case kind :defn :quantum.core.defnt/defnt
                                       :fn   :quantum.core.defnt/fnt))
         symbolic-analysis? false ; TODO parameterize this
@@ -660,14 +662,14 @@
         fnt|output-type      (eval fnt|output-type|form)
         gen-gensym-base (ufgen/>reproducible-gensym|generator)
         gen-gensym (fn [x] (symbol (str (gen-gensym-base x) "__")))
-        inline? (s/validate (-> fn|name core/meta :inline) (t/? t/boolean?))
-        fn|name (if inline?
+        inline? (s/validate (:inline fn|meta) (t/? t/boolean?))
+        fn|meta (if inline?
                     (do (ulog/pr :warn "requested `:inline`; ignoring until feature is implemented")
-                        (update-meta fn|name dissoc :inline))
-                    fn|name)
+                        (dissoc fn|meta :inline))
+                    fn|meta)
         overloads-data (->> overloads (mapv #(fnt|parsed-overload>overload-data % fnt|output-type)))
         fnt|type (fnt|overloads-data>type overloads-data fnt|output-type)
-        fnt-globals (kw-map fn|name fnt|output-type|form fnt|type)
+        fnt-globals (kw-map fn|meta fn|name fnt|output-type|form fnt|type)
         opts (kw-map gen-gensym lang symbolic-analysis?)
         expanded-overload-groups-by-fnt-overload
           (->> overloads-data
