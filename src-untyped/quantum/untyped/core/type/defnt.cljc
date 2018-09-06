@@ -607,7 +607,7 @@
    expanded-overload-groups-by-fnt-overload (s/vec-of ::expanded-overload-groups)
    i-overload->direct-dispatch-data         ::i-overload->direct-dispatch-data]
  `(defn ~fn|name
-    ~(assoc fn|meta ::t/type
+    ~(assoc fn|meta :quantum.core.type/type
        (>dynamic-dispatch-fn|type-decl fnt-globals expanded-overload-groups-by-fnt-overload))
     ~@(->> i-overload->direct-dispatch-data
            (group-by (fn-> :i-arg->input-types-decl count))

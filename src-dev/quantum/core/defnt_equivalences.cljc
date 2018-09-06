@@ -46,7 +46,7 @@
                        ~'(->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
                               (.getName)))))
                  (defn ~'pid|test
-                   {::t/type (t/fn t/any? ~'[:> (? t/string?)])}
+                   {:quantum.core.type/type (t/fn t/any? ~'[:> (? t/string?)])}
                    ([] (.invoke ~(tag (str `>Object)
                                 'pid|test|__0|0))))))]
     (testing "code equivalence" (is-code= actual expected))
@@ -92,7 +92,7 @@
                            [~'_8__ ~(tag "double"           'x)] ~'x)))
 
                      (defn ~'identity|uninlined
-                       {::t/type (t/fn t/any? ~'[t/any?])}
+                       {:quantum.core.type/type (t/fn t/any? ~'[t/any?])}
                        ([~'x00__]
                          ;; TODO elide check because `t/any?` doesn't require a check
                          ;; and all args are `t/=` `t/any?`
@@ -143,7 +143,7 @@
                              (t/validate ~'(.getName x) ~'(* t/string?))))))
 
                      (defn ~'name|test
-                       {::t/type
+                       {:quantum.core.type/type
                          (t/fn ~'t/string?
                                ~'[t/string?]
                                ~'[(t/isa? Named) :> (* t/string?)])}
@@ -209,9 +209,10 @@
                          (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] true)))
 
                      (defn ~'some?|test
-                       {::t/type (t/fn t/any?
-                                       ~'[t/nil?]
-                                       ~'[t/any?])}
+                       {:quantum.core.type/type
+                         (t/fn t/any?
+                               ~'[t/nil?]
+                               ~'[t/any?])}
                        ([~'x00__]
                          (ifs ((Array/get ~'some?|test|__0|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `Object>boolean) 'some?|test|__0|0) ~'x00__)
@@ -270,9 +271,10 @@
                          (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] false)))
 
                      (defn ~'reduced?|test
-                       {::t/type (t/fn t/any?
-                                       ~'[(t/isa? Reduced)]
-                                       ~'[t/any?])}
+                       {:quantum.core.type/type
+                         (t/fn t/any?
+                               ~'[(t/isa? Reduced)]
+                               ~'[t/any?])}
                        ([~'x00__]
                          (ifs ((Array/get ~'reduced?|test|__0|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `Object>boolean) 'reduced?|test|__0|0) ~'x00__)
@@ -340,10 +342,11 @@
                          (~(tag "boolean" 'invoke) [~'_10__ ~(tag "double"           'x)] true)))
 
                      (defn ~'>boolean
-                       {::t/type (t/fn t/any?
-                                       ~'[t/boolean?]
-                                       ~'[t/nil?]
-                                       ~'[t/any?])}
+                       {:quantum.core.type/type
+                         (t/fn t/any?
+                               ~'[t/boolean?]
+                               ~'[t/nil?]
+                               ~'[t/any?])}
                        ([~'x00__]
                          (ifs ((Array/get ~'>boolean|__0|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `boolean>boolean) '>boolean|__0|0) ~'x00__)
@@ -435,9 +438,10 @@
                            (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(.intValue x)))))
 
                      (defn ~'>int*
-                       {::t/type (t/fn ~'t/int?
-                                       ~'[(t/- t/primitive? t/boolean?)]
-                                       ~'[(t/ref (t/isa? Number))])}
+                       {:quantum.core.type/type
+                         (t/fn ~'t/int?
+                               ~'[(t/- t/primitive? t/boolean?)]
+                               ~'[(t/ref (t/isa? Number))])}
                        ([~'x00__]
                          (ifs ((Array/get ~'>int*|__0|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `byte>int)   '>int*|__0|0) ~'x00__)
@@ -701,7 +705,7 @@
 
            ;; Unindented for greater vertical brevity
            (defn ~'>|test
-             {::t/type
+             {:quantum.core.type/type
                (t/fn t/any?
                      #?(:clj  ~'[t/comparable-primitive? t/comparable-primitive?
                                  :> t/boolean?]
@@ -904,9 +908,10 @@
 
                         (defn ~'>long*
                           {:source "clojure.lang.RT.uncheckedLongCast"
-                           ::t/type (t/fn ~'t/long?
-                                          ~'[(t/- t/primitive? t/boolean?)]
-                                          ~'[(t/ref (t/isa? Number))])}
+                           :quantum.core.type/type
+                             (t/fn ~'t/long?
+                                   ~'[(t/- t/primitive? t/boolean?)]
+                                   ~'[(t/ref (t/isa? Number))])}
                           ([~'x00__]
                             (ifs
                               ((Array/get ~'>long*|__0|input0|types 0) ~'x00__)
@@ -951,7 +956,7 @@
             :clj ($ (do (def ~'defnt-reference|__0|0
                           (reify* [>long] (~(tag "long" 'invoke) [~'_0__] ~'(>long* 1))))
                         (defn ~'defnt-reference
-                          {::t/type (t/fn t/any? [])}
+                          {:quantum.core.type/type (t/fn t/any? [])}
                           ([] (.invoke ~(tag (str `>long) 'defnt-reference|__0|0)))))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
@@ -1138,7 +1143,7 @@
                               ~'(Long/parseLong x radix))))
 
                         #_(defn >long
-                          {::t/type
+                          {:quantum.core.type/type
                             (t/fn
                               [(t/- t/primitive? t/boolean? t/float? t/double?)]
                               [(t/and (t/or t/double? t/float?)
@@ -1216,10 +1221,11 @@
                               ~'(StringBuilder. x))))
 
                         (defn ~'!str
-                          {::t/type (t/fn ~'(t/isa? StringBuilder)
-                                          ~'[]
-                                          ~'[t/string?]
-                                          ~'[(t/or t/char-seq? t/int?)])}
+                          {:quantum.core.type/type
+                            (t/fn ~'(t/isa? StringBuilder)
+                                  ~'[]
+                                  ~'[t/string?]
+                                  ~'[(t/or t/char-seq? t/int?)])}
                           ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.>Object"
                                              '!str|__0|0)))
                           ([~'x00__]
@@ -1314,7 +1320,7 @@
                      (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'x] (.toString x))))
 
                    (defn str
-                     {::t/type
+                     {:quantum.core.type/type
                        (t/fn :> t/string?
                          []
                          [t/nil?]
@@ -1490,7 +1496,7 @@
 
                (defn seq
                  "Taken from `clojure.lang.RT/seq`"
-                 {::t/type
+                 {:quantum.core.type/type
                    (t/fn > (t/? (t/isa? ISeq))
                      [t/nil?]
                      [(t/isa? ASeq)]
