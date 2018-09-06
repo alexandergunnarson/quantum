@@ -25,7 +25,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - do the defnt-equivalences
     - a linting warning that you can narrow the type to whatever the deduced type is from whatever
       wider declared type there is
-    - the option of creating a `defnt` that isn't extensible?
+    - the option of creating a `defnt` that isn't extensible? Or at least in which the input types are limited in the same way per-overload output types are limited by the per-fn output type?
+    - dealing with `apply`...
   - defmacrot
   - dotyped
 - NOTE on namespace organization:
