@@ -15,7 +15,7 @@
       :refer [TODO]]
     [quantum.core.macros
       :refer [case-env defnt #?(:clj defnt') env-lang]]
-    [quantum.core.type                   :as t
+    [quantum.core.type-old               :as t
       :refer [val?]]
     [quantum.core.type.defs              :as tdefs]
     [quantum.untyped.core.identification :as uident]

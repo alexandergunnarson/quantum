@@ -24,7 +24,7 @@
              [quantum.core.paths         :as p
                :refer [path]]
              [quantum.core.resources     :as res]
-             [quantum.core.type          :as t
+             [quantum.core.type-old      :as t
                :refer [svector?]]
              [quantum.core.vars          :as var
                :refer [defalias]]

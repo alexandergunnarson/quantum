@@ -32,7 +32,7 @@
       :refer [defnt]]
     [quantum.core.reducers.reduce  :as red
       :refer [reduce]]
-    [quantum.core.type             :as t
+    [quantum.core.type-old         :as t
       :refer [lseq? editable? ->joinable]]
     [quantum.untyped.core.reducers
       #?@(:cljs [:refer [Transformer]])])

@@ -6,7 +6,7 @@
       :refer [&&]]
     [quantum.core.error     :as err
       :refer [>ex-info]]
-    [quantum.core.type      :as t
+    [quantum.core.type-old  :as t
       :refer [defnt]]
     [quantum.core.vars      :as var
       :refer [defalias]])

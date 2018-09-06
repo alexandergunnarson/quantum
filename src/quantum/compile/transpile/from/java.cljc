@@ -19,7 +19,7 @@
       :refer [fn' fn-> fn->> fn1 rcomp]]
     [quantum.core.logic                      :as logic
       :refer [fn= fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let]]
-    [quantum.core.type                       :as t
+    [quantum.core.type-old                   :as t
       :refer [val?]]
     [quantum.core.type.core                  :as tcore]
     [quantum.core.match                      :as m
@@ -515,4 +515,3 @@
        first
        (map (ifn1 (fn-and seq? (fn-> first (= 'do)) (fn-> count (= 2))) rest list))
        (apply concat))))
-

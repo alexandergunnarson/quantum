@@ -17,7 +17,7 @@
               :refer [promise offer! go]]
             [quantum.core.spec                       :as s
               :refer [validate]]
-            [quantum.core.type           :as t
+            [quantum.core.type-old                   :as t
               :refer [val?]]
             [quantum.core.resources                  :as res]
     #?(:clj [quantum.net.server.router               :as router])))

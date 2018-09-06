@@ -12,7 +12,7 @@
       :refer [fn1]]
     [quantum.core.macros
       :refer [defnt]]
-    [quantum.core.type             :as t]))
+    [quantum.core.type-old         :as t]))
 
 (dv/def instances (fn1 t/sequential?)) ; TODO better validation
 (dv/def targets   (fn1 t/sequential?)) ; TODO better validation

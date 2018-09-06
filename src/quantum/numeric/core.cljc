@@ -21,7 +21,7 @@
       #?@(:cljs [:refer-macros [*']])]
     [quantum.core.reducers
       :refer [multiplex]]
-    [quantum.core.type         :as t]
+    [quantum.core.type-old     :as t]
     [quantum.core.vars
       :refer [defalias]]
     [quantum.core.macros

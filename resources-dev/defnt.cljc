@@ -35,7 +35,7 @@ Note that `;; TODO TYPED` is the annotation we're using
     - quantum.core.logic
     - quantum.core.fn
     - quantum.core.data.map
-    - quantum.core.type
+    - quantum.core.type-old
     - quantum.core.vars
 
 - With `defnt`, protocols and interfaces aren't needed. You can just create `t/fn`s that you can

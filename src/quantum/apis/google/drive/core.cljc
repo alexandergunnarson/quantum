@@ -21,7 +21,7 @@
     [quantum.core.paths       :as path]
     [quantum.core.spec        :as s
       :refer [validate]]
-    [quantum.core.type        :as t]
+    [quantum.core.type-old    :as t]
     [quantum.core.vars        :as var]
     [quantum.apis.google.auth :as gauth]))
 
@@ -529,4 +529,3 @@
 ;       :maxApertureValue         <float>      ; The smallest f-number of the lens at the focal length used to create the photo (APEX value).
 ;       :subjectDistance          <integer>    ; The distance to the subject of the photo, in meters.
 ;       :lens                    "<string>"}}) ; The lens used to create the photo.
-

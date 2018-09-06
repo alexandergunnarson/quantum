@@ -12,7 +12,7 @@
       :refer [fn-or fn-and whenf1]]
     [quantum.core.refs
       :refer [!ref]]
-    [quantum.core.type :as t]
+    [quantum.core.type-old :as t]
     [quantum.core.meta.profile
       :refer [p profile]]))
 

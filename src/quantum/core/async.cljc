@@ -38,7 +38,7 @@
     [quantum.core.spec                 :as s
       :refer [validate]]
     [quantum.core.system               :as sys]
-    [quantum.core.type           :as t
+    [quantum.core.type-old             :as t
       :refer [val?]]
     [quantum.core.vars                 :as var
       :refer [defalias defmalias]]

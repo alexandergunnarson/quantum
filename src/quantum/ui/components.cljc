@@ -22,7 +22,7 @@
     [quantum.core.log    :as log]
     [quantum.core.system :as sys
       :refer  [#?@(:cljs [react-native])]]
-    [quantum.core.type           :as t
+    [quantum.core.type-old :as t
       :refer [val?]]
     [quantum.core.async  :as async
       :refer [go]]

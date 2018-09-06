@@ -23,7 +23,7 @@
     [quantum.core.nondeterministic   :as rand]
     [quantum.core.numeric            :as num]
     [quantum.core.spec               :as s]
-    [quantum.core.type               :as t]
+    [quantum.core.type-old           :as t]
     [quantum.core.vars               :as var
       :refer [defalias]]
     [quantum.numeric.statistics.core :as stat]))

@@ -33,7 +33,7 @@
     [quantum.core.numeric        :as num]
     [quantum.core.reducers       :as r]
     [quantum.core.reflect        :as refl]
-    [quantum.core.type           :as t
+    [quantum.core.type-old       :as t
       :refer [val?]]
     [quantum.measure.convert     :as unit])
   (:import

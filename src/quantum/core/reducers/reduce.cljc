@@ -30,7 +30,7 @@
       :refer [defnt]]
     [quantum.core.refs             :as refs
       :refer [deref !boolean !long ! reset!]]
-    [quantum.core.type             :as t
+    [quantum.core.type-old         :as t
       :refer [editable? val?]]
     [quantum.core.type.defs
       #?@(:cljs [:refer [Transformer]])]

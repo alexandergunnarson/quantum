@@ -22,7 +22,7 @@
     [quantum.core.macros          :as macros
       :refer [defnt]]
     [quantum.core.async           :as async]
-    [quantum.core.type            :as type
+    [quantum.core.type-old        :as type
       :refer [atom? val?]]
     [quantum.core.spec            :as s
       :refer [validate]])

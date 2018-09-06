@@ -8,7 +8,7 @@
 ; (require '[quantum.core.error])
 ; (require '[quantum.core.function])
 ; (require '[quantum.core.logic])
-; (require '[quantum.core.type])
+; (require '[quantum.core.type-old])
 ; (require '[quantum.core.numeric])
 ; (require '[quantum.core.data.vector])
 ; (require '[quantum.core.macros])

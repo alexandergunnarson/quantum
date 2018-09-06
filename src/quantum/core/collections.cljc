@@ -86,7 +86,7 @@
       :refer [setm! swapm! deref !ref]]
     [quantum.core.string                     :as str    ]
     [quantum.core.string.format              :as sform  ]
-    [quantum.core.type                       :as t
+    [quantum.core.type-old                   :as t
       :refer [lseq? transient? editable?
               boolean? should-transientize?
               class]]
@@ -109,7 +109,7 @@
   #?(:clj  (:import java.util.Comparator quantum.core.refs.MutableReference)
      :cljs (:import goog.string.StringBuffer)))
 
-(defalias val? quantum.core.type/val?)
+(defalias val? quantum.core.type-old/val?)
 
 #?(:clj
 (defmacro getf

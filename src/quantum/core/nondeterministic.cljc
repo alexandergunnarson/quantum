@@ -27,7 +27,7 @@
               :refer [>ex-info TODO throw-unless]]
             [quantum.core.macros       :as macros
               :refer [defnt]]
-            [quantum.core.type         :as t
+            [quantum.core.type-old     :as t
               :refer [regex?]]
             [quantum.core.logic        :as logic
               :refer [splice-or condf1 whenc default]]

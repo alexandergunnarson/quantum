@@ -1399,9 +1399,9 @@
   ([xs t/char-seq?] (clojure.lang.StringSeq/create xs))
   ([xs (t/isa? java.util.Map)] (seq (.entrySet xs)))
   ([xs t/array? > (t/* (t/? (t/isa? ISeq)))]
-    ;; We do this only because `clojure.lang.ArraySeq/createFromObject` is private but
-    ;; perhaps it would be wise from a performance perspective to bypass that with e.g. a fast
-    ;; version of reflection
+    ;; We do this only because `clojure.lang.ArraySeq/createFromObject` is private but perhaps it
+    ;; would be wise from a performance perspective to bypass that with e.g. a fast version of
+    ;; reflection
     (clojure.core/seq xs))))
 )
 

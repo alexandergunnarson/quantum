@@ -34,7 +34,7 @@
     [quantum.core.string.regex  :as regex]
     [quantum.core.vars          :as var
       :refer [defalias]]
-    [quantum.core.type          :as t
+    [quantum.core.type-old      :as t
       :refer [val?]])
 #?(:cljs
   (:require-macros

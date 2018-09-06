@@ -14,7 +14,7 @@
                        :refer [&& >>>]]
                      [quantum.core.fn          :as fn
                        :refer [fn1]]
-                     [quantum.core.type        :as t
+                     [quantum.core.type-old    :as t
                        :refer [val?]])
   #?(:clj  (:import  java.util.Arrays)))
 

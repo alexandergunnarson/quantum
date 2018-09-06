@@ -31,7 +31,7 @@
     [quantum.core.string              :as str]
     [quantum.core.async               :as async
       :refer [go]]
-    [quantum.core.type                :as t
+    [quantum.core.type-old            :as t
       :refer [val?]]
     [quantum.core.vars                :as var
       :refer [defalias defaliases]]

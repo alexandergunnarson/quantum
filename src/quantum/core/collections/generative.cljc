@@ -45,7 +45,7 @@
       :refer [join]]
     [quantum.core.logic
       :refer [whenc->]]
-    [quantum.core.type             :as type
+    [quantum.core.type-old         :as type
       :refer [should-transientize?]]
     [quantum.core.loops            :as loops
       :refer [for fortimes]]

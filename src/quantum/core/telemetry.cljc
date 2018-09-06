@@ -11,7 +11,7 @@
       :refer [whenf]]
     [quantum.core.resources      :as res]
     [quantum.core.system         :as sys]
-    [quantum.core.type           :as t]))
+    [quantum.core.type-old       :as t]))
 
 #_(t/def ::offloader keyword? "The offloader implementation to use")
 

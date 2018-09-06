@@ -28,7 +28,7 @@
     [quantum.core.convert     :as conv]
     [quantum.measure.convert
       :refer [convert]]
-    [quantum.core.type        :as t
+    [quantum.core.type-old    :as t
       :refer [val?]]
     [quantum.core.async.pool  :as pool]
     [quantum.db.datomic.core  :as dbc]) ; TODO just for the spec
@@ -490,4 +490,3 @@
                    join))
        (apply (partial mapv (partial apply str)))
        (str/join "\n")))
-

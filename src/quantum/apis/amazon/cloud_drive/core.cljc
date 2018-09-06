@@ -21,7 +21,7 @@
       :include-macros true]
     [quantum.core.spec                    :as s
       :refer [validate]]
-    [quantum.core.type                    :as t
+    [quantum.core.type-old                :as t
       :refer [val?]])
 #?(:cljs
   (:require-macros

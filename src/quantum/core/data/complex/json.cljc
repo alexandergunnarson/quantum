@@ -12,7 +12,7 @@
       :refer [<- fn1]]
     [quantum.core.logic
       :refer [whenp]]
-    [quantum.core.type        :as t
+    [quantum.core.type-old    :as t
       :refer [val?]]))
 
 ; 2.888831 ms for Cheshire (on what?) vs. clojure.data.json : 7.036831 ms

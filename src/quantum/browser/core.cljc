@@ -24,7 +24,7 @@
               :refer [join map+]]
             [quantum.core.macros
               :refer [defnt]]
-            [quantum.core.type              :as t
+            [quantum.core.type-old          :as t
               :refer [val?]])
   #?(:clj (:import
            ;(com.teamdev.jxbrowser.chromium.javafx BrowserView)

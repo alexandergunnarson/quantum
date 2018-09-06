@@ -6,7 +6,7 @@
     [quantum.core.collections :as coll
                  :refer [#?@(:clj [assoc!])]
       #?@(:cljs [:refer-macros [assoc!]])]
-    [quantum.core.type        :as t
+    [quantum.core.type-old    :as t
       :refer [val?]]
     [quantum.apis.google.auth :as gauth]))
 

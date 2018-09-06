@@ -10,7 +10,7 @@
       :refer [catch-all]]
     [quantum.core.macros
       :refer [defnt]]
-    [quantum.core.type :as t]
+    [quantum.core.type-old :as t]
     [quantum.core.collections :as coll
       :refer [map+ map-vals+ cat+ contains?
               filter+ filter-keys+ filter-vals+ remove+ keys+ join seq-and]]))

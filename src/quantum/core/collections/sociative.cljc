@@ -54,7 +54,7 @@
       :refer [defnt]]
     [quantum.core.reducers         :as red
       :refer [join partition-all+]]
-    [quantum.core.type             :as type
+    [quantum.core.type-old         :as type
       :refer [transient? editable?]]
     [quantum.core.loops            :as loops
       :refer [reduce-pair reduce]]))

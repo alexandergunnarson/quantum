@@ -49,7 +49,7 @@
       :refer[defnt]]
     [quantum.core.reducers         :as red
       :refer[indexed+ join' reduce defeager]]
-    [quantum.core.type             :as type]
+    [quantum.core.type-old         :as type]
     [quantum.core.loops            :as loop
       :refer [reducei doseqi lfor]]
     [quantum.core.vars             :as var

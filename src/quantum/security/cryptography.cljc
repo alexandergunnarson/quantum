@@ -33,7 +33,7 @@
     [quantum.core.string           :as str]
     [quantum.core.spec             :as s
       :refer [validate]]
-    [quantum.core.type           :as t
+    [quantum.core.type-old         :as t
       :refer [val?]]
     [quantum.core.vars             :as var
       :refer [defalias]])
@@ -637,4 +637,3 @@
     :aes                (aes       obj :decrypt password opts)
     :threefish #?(:clj  (threefish obj :decrypt          opts)
                   :cljs (throw (>ex-info :unsupported "Threefish unsupported as of yet in CLJS.")))))
-

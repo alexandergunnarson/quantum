@@ -1,8 +1,8 @@
 (ns quantum.apis.quip.core
   #_(:require-quantum [:lib http auth])
-  #_(:require [hickory.core   :as hp]
-              [hickory.select :as hs]
-              [quantum.core.type :as t]))
+  #_(:require [hickory.core          :as hp]
+              [hickory.select        :as hs]
+              [quantum.core.type-old :as t]))
 
 #_(defn request! [req]
   (http/request!

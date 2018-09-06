@@ -27,7 +27,7 @@
     [quantum.core.nondeterministic    :as rand]
     [quantum.core.thread              :as thread
       :refer [async]]
-    [quantum.core.type                :as t
+    [quantum.core.type-old            :as t
       :refer [val?]]
     [quantum.core.vars                :as var
       :refer [defalias]]

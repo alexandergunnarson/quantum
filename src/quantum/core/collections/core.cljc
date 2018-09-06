@@ -44,7 +44,7 @@
               :refer [identity*]]
             [quantum.core.reducers.reduce   :as r
               :refer [reduce reducei]]
-            [quantum.core.type              :as t
+            [quantum.core.type-old          :as t
               :refer [class defnt fnt regex? val?]]
             [quantum.core.type.defs         :as tdef]
             [quantum.core.type.core         :as tcore]

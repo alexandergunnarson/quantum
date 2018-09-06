@@ -39,7 +39,7 @@
     [quantum.core.numeric          :as num]
     [quantum.core.refs             :as refs
       :refer [! deref reset! volatile atom*]]
-    [quantum.core.type             :as type
+    [quantum.core.type-old         :as type
       :refer [instance+? lseq?]]
     [quantum.core.reducers.reduce  :as red
       :refer [transformer]]

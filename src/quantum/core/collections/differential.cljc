@@ -57,7 +57,7 @@
       :refer [map+ reduce indexed+]]
     [quantum.core.vars             :as var
       :refer [defalias]]
-    [quantum.core.type             :as t]
+    [quantum.core.type-old         :as t]
     [quantum.core.collections.map-filter
       :refer        [ffilteri last-filteri]]
     [quantum.untyped.core.data

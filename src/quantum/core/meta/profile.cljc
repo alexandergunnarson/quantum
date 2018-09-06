@@ -15,7 +15,7 @@
               :refer [fn-or fn-and]]
             [quantum.core.vars      :as var
               :refer [defalias]]
-            [quantum.core.type      :as t])
+            [quantum.core.type-old  :as t])
   #?(:clj (:import com.carrotsearch.sizeof.RamUsageEstimator
                    quanta.ClassIntrospector)))
 

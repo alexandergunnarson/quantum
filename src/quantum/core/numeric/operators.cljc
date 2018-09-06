@@ -16,7 +16,7 @@
       :refer [numerator denominator]]
     [quantum.core.numeric.convert      :as conv
       :refer [->bigint #?@(:clj [->big-integer])]]
-    [quantum.core.type           :as t
+    [quantum.core.type-old             :as t
       :refer [val?]]
     [quantum.core.vars
       :refer [defalias #?@(:clj [defmalias])]]

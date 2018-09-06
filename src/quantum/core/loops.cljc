@@ -25,7 +25,7 @@
       :refer [map+]]
     [quantum.core.refs                :as refs
       :refer [deref reset! !long]]
-    [quantum.core.type                :as type]
+    [quantum.core.type-old            :as type]
     [quantum.untyped.core.reducers    :as ured]
     [quantum.core.vars                :as var
       :refer [defalias]])

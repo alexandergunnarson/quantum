@@ -28,7 +28,7 @@
                         :refer [defnt]]
                       [quantum.core.spec                       :as s
                         :refer [validate]]
-                      [quantum.core.type                       :as type
+                      [quantum.core.type-old                   :as type
                         :refer [boolean? val?]]
                       [quantum.core.time.core                  :as time]
                       [quantum.core.cache
@@ -685,5 +685,3 @@
 ;         (whenf ~millis  nil? (fn' 500))
 ;         (whenf ~n-times nil? (fn' 6))
 ;         #(update-out-str-with! ~out-str baos#)))))
-
-

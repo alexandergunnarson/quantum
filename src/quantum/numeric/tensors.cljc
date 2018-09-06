@@ -39,7 +39,7 @@
       :refer [defalias]]
     [quantum.core.spec                        :as s
       :refer [validate]]
-    [quantum.core.type                        :as t])
+    [quantum.core.type-old                    :as t])
   #?(:clj
     (:import
       [org.apache.spark.mllib.linalg BLAS DenseVector]

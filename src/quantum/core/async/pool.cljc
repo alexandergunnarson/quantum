@@ -32,7 +32,7 @@
     [quantum.core.resources      :as res]
     [quantum.core.time.core      :as time]
     [quantum.measure.convert     :as uconv]
-    [quantum.core.type           :as t
+    [quantum.core.type-old       :as t
       :refer [atom?]]
     [quantum.core.vars           :as var])
 #?(:cljs
@@ -588,4 +588,3 @@
     (if apply?
         (apply distribute! distributor inputs)
         (distribute! distributor inputs)))))
-

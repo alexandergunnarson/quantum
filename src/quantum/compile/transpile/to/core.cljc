@@ -20,7 +20,7 @@
               whenf1 whenc ifn condfc condpc coll-or]]
     [quantum.core.macros                     :as macros
       :refer [defnt]]
-    [quantum.core.type                       :as t
+    [quantum.core.type-old                   :as t
       :refer [val?]]))
 
 ; special-symbol? is a clojure thing
@@ -97,10 +97,10 @@
 
 (declare obj-class)
 
-; TODO insert in quantum.core.type
+; TODO insert in quantum.core.type-old
 (def primitive? (partial (fn-not coll?))) ; TODO this is definitely not right
 
-; TODO use quantum.core.type
+; TODO use quantum.core.type-old
 (def primitives-map
   {(type (long 0)) "long"
    (type (int  0)) "int"
@@ -762,5 +762,3 @@
          (map (partial eval-form))
          (interpose (if whitespace? ", " ","))
          (apply str))))
-
-
