@@ -1396,7 +1396,7 @@
   ([xs t/iterable?] (clojure.lang.RT/chunkIteratorSeq (.iterator xs)))
   ([xs t/char-seq?] (clojure.lang.StringSeq/create xs))
   ;; TODO recursion
-  #_([xs (t/isa? java.util.Map)] (seq (.entrySet xs)))
+  ([xs (t/isa? java.util.Map)] (seq (.entrySet xs)))
   ;; TODO use `t/assume`
   ([xs t/array? > (t/* (t/? (t/isa? ISeq)))]
     ;; We do this only because `clojure.lang.ArraySeq/createFromObject` is private but
