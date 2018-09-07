@@ -133,7 +133,7 @@
 
 ;; "global" because they apply to the whole fnt
 (s/def ::fnt-globals
-  (s/kv {:fn|meta              ::uss/meta
+  (s/kv {:fn|meta              (s/nilable :quantum.core.specs/meta)
          :fn|name              ::uss/fn|name
          :fnt|output-type|form t/any?
          :fnt|type             t/type?}))
@@ -271,7 +271,9 @@
                          (if (t/<= (:type analyzed) post-type)
                              (:type analyzed)
                              (err! "Body type does not match declared output type"
-                                   {:body analyzed :output-type post-type})))
+                                   {:form                 (:form analyzed)
+                                    :type                 (:type analyzed)
+                                    :declared-output-type post-type})))
                      (:type analyzed))
         body-form
           (-> (:form analyzed)

@@ -15,7 +15,7 @@
             fn? ifn?
             var?
             meta
-            ref volatile?
+            delay? ref volatile?
             fn])
          (:require
            [clojure.core                               :as c]
@@ -1764,6 +1764,8 @@
          (-def record?       (isa? #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
 
          (-def transformer?  (isa? quantum.untyped.core.reducers.Transformer))
+
+         (-def delay?        (isa? #?(:clj clojure.lang.Delay :cljs cljs.core/Delay)))
 
 ;; ----- Collections ----- ;;
 

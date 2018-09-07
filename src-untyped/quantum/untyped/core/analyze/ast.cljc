@@ -6,14 +6,36 @@
      ==
      unbound?])
   (:require
-    [quantum.untyped.core.compare :as comp
+    [quantum.untyped.core.analyze.expr      :as uxp]
+    [quantum.untyped.core.compare           :as comp
       :refer [==]]
-    [quantum.untyped.core.core    :as ucore]
-    [quantum.untyped.core.type    :as t]))
+    [quantum.untyped.core.core              :as ucore]
+    [quantum.untyped.core.form.type-hint    :as ufth]
+    [quantum.untyped.core.type              :as t]
+    [quantum.untyped.core.type.reifications :as utr]))
 
 (ucore/log-this-ns)
 
-(do
+(defn >type-hint
+  "Applied on every `form` of every AST node created in order to avoid reflection wherever
+   possible."
+  [form t]
+  (if (or (not (t/with-metable? form))
+          (utr/fn-type? t)
+          ;; TODO for now
+          (uxp/iexpr? t))
+      nil
+      (let [cs (t/type>classes t)
+            c  (when (-> cs count (= 1)) (first cs))]
+        (ufth/>body-embeddable-tag c))))
+
+(defn with-type-hint [node]
+  (if-let [type-hint (>type-hint (:form node) (:type node))]
+    (-> node
+        (update :form ufth/with-type-hint type-hint)
+        (cond-> (contains? node :unexpanded-form)
+          (update :unexpanded-form ufth/with-type-hint type-hint)))
+    node))
 
 ;; ===== Constituent types ===== ;;
 
@@ -36,7 +58,8 @@
 
 (defn unbound
   ([form t] (unbound nil form t))
-  ([env form t] (Unbound. env form t t))) ; TODO should wrap second `t` in `t/deducible`
+                ;; TODO should wrap second `t` in `t/deducible`
+  ([env form t] (Unbound. env (ufth/with-type-hint form (>type-hint form t)) t t)))
 
 (defn unbound? [x] (instance? Unbound x))
 
@@ -48,7 +71,9 @@
 
 (defn literal
   ([form t] (literal nil form t))
-  ([env form t] (Literal. env form t)))
+  ([env form t] (Literal. env (ufth/with-type-hint form (>type-hint form t)) t)))
+
+(defn literal? [x] (instance? Literal x))
 
 (defrecord Symbol
   [env   #_::env
@@ -62,7 +87,7 @@
 
 (defn symbol
   ([form value t] (symbol nil form value t))
-  ([env form value t] (Symbol. env form value t)))
+  ([env form value t] (Symbol. env (ufth/with-type-hint form (>type-hint form t)) value t)))
 
 (defn symbol? [x] (instance? Symbol x))
 
@@ -75,7 +100,9 @@
   fipp.ednize/IEdn
     (-edn [this] (list `quoted form type)))
 
-(defn quoted [form t] (Quoted. nil form t))
+(defn quoted [form t] (Quoted. nil (ufth/with-type-hint form (>type-hint form t)) t))
+
+(defn quoted? [x] (instance? Quoted x))
 
 (defrecord Let*
   [env      #_::env
@@ -88,12 +115,14 @@
   fipp.ednize/IEdn
     (-edn [this] (list `let* (into (array-map) this))))
 
-(defn let* [m] (map->Let* m))
+(defn let* [m] (-> m map->Let* with-type-hint))
+
+(defn let*? [x] (instance? Let* x))
 
 (defrecord Do
   [env  #_::env
    form #_::t/form
-   expanded-form #_::t/form
+   unexpanded-form #_::t/form
    body #_(t/and t/sequential? t/indexed? (t/every? ::node))
    type #_t/type?]
   INode
@@ -101,20 +130,24 @@
   fipp.ednize/IEdn
     (-edn [this] (list `do (into (array-map) this))))
 
-(defn do [m] (map->Do m))
+(defn do [m] (-> m map->Do with-type-hint))
+
+(defn do? [x] (instance? Do x))
 
 (defrecord MacroCall
-  [env           #_::env
-   form          #_::t/form
-   expanded-form #_::t/form ; the *fully* expanded form
-   expanded      #_::node
-   type          #_t/type?]
+  [env             #_::env
+   unexpanded-form #_::t/form
+   form            #_::t/form ; the *fully* expanded form
+   expanded        #_::node
+   type            #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (list `macro-call (into (array-map) this))))
 
-(defn macro-call [m] (-> m map->MacroCall (assoc :type (-> m :expanded :type))))
+(defn macro-call [m] (-> m map->MacroCall with-type-hint))
+
+(defn macro-call? [x] (instance? MacroCall x))
 
 (defrecord IfNode
   [env        #_::env
@@ -128,7 +161,9 @@
   fipp.ednize/IEdn
     (-edn [this] (list `if-node (into (array-map) this))))
 
-(defn if-node [m] (map->IfNode m))
+(defn if-node [m] (-> m map->IfNode with-type-hint))
+
+(defn if-node? [x] (instance? IfNode x))
 
 ;; ===== RUNTIME CALLS ===== ;;
 
@@ -143,7 +178,9 @@
   fipp.ednize/IEdn
     (-edn [this] (list `field-access (into (array-map) this))))
 
-(defn field-access [m] (map->FieldAccess m))
+(defn field-access [m] (-> m map->FieldAccess with-type-hint))
+
+(defn field-access? [x] (instance? FieldAccess x))
 
 (defrecord MethodCall
   [env    #_::env
@@ -157,7 +194,9 @@
   fipp.ednize/IEdn
     (-edn [this] (list `method-call (into (array-map) this))))
 
-(defn method-call [m] (map->MethodCall m))
+(defn method-call [m] (-> m map->MethodCall with-type-hint))
+
+(defn method-call? [x] (instance? MethodCall x))
 
 (defrecord CallNode ; by a `t/callable?`
   [env    #_::env
@@ -170,7 +209,9 @@
   fipp.ednize/IEdn
     (-edn [this] (list `call-node (into (array-map) this))))
 
-(defn call-node [m] (map->CallNode m))
+(defn call-node [m] (-> m map->CallNode with-type-hint))
+
+(defn call-node? [x] (instance? CallNode x))
 
 (defrecord NewNode
   [env   #_::env
@@ -183,7 +224,9 @@
   fipp.ednize/IEdn
     (-edn [this] (list `new-node (into (array-map) this))))
 
-(defn new-node [m] (map->NewNode m))
+(defn new-node [m] (-> m map->NewNode with-type-hint))
+
+(defn new-node? [x] (instance? NewNode x))
 
 (defrecord ThrowNode
   [env  #_::env
@@ -195,6 +238,7 @@
   fipp.ednize/IEdn
     (-edn [this] (list `throw-node (into (array-map) this))))
 
+;; Not type hinted because there's no point
 (defn throw-node [m] (map->ThrowNode m))
 
-)
+(defn throw-node? [x] (instance? ThrowNode x))

@@ -43,8 +43,7 @@
           ($ (do (def ~'pid|test|__0|0
                    (reify* [>Object]
                      (~(tag "java.lang.Object" 'invoke) [~'_0__]
-                       ~'(->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
-                              (.getName)))))
+                       ~'(. (java.lang.management.ManagementFactory/getRuntimeMXBean) getName))))
                  (defn ~'pid|test
                    {:quantum.core.type/type (t/fn t/any? ~'[:> (? t/string?)])}
                    ([] (.invoke ~(tag (str `>Object)

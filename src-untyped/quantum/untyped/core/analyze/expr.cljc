@@ -30,6 +30,8 @@
 
 (#?(:clj definterface :cljs defprotocol) IExpr)
 
+(defn iexpr? [x] (#?(:clj instance? :cljs satisfies?) IExpr x))
+
 (defprotocol PExpr
   (with-form   [this form'])
   (update-form [this f])
