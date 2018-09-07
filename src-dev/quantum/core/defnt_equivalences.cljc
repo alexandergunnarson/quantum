@@ -32,7 +32,8 @@
 (do (require '[orchestra.spec.test :as st])
     (orchestra.spec.test/instrument))
 
-(defn O [form] (tag "java.lang.Object" form))
+(defn O   [form] (tag "java.lang.Object" form))
+(defn STR [form] (tag "java.lang.String" form))
 
 #?(:clj
 (deftest test|pid
@@ -44,9 +45,9 @@
         expected
           ($ (do (def ~'pid|test|__0|0
                    (reify* [>Object]
-                     (~(O 'invoke) [~'_0__]
-                       ~(tag "java.lang.String"
-                          '(. (java.lang.management.ManagementFactory/getRuntimeMXBean) getName)))))
+                     (~(tag "java.lang.Object" 'invoke) [~'_0__]
+                       ~(STR '(. (java.lang.management.ManagementFactory/getRuntimeMXBean)
+                                 getName)))))
                  (defn ~'pid|test
                    {:quantum.core.type/type (t/fn t/any? ~'[:> (? t/string?)])}
                    ([] (.invoke ~(tag (str `>Object)
@@ -75,7 +76,7 @@
                        (reify* [Object>Object boolean>boolean byte>byte short>short char>char
                                 int>int long>long float>float double>double]
                          (~(tag "java.lang.Object" 'invoke)
-                           [~'_0__ ~(tag "java.lang.Object" 'x)] ~'x)
+                           [~'_0__ ~(tag "java.lang.Object" 'x)] ~(O 'x))
                          (~(tag "boolean"          'invoke)
                            [~'_1__ ~(tag "boolean"          'x)] ~'x)
                          (~(tag "byte"             'invoke)
@@ -132,7 +133,7 @@
                      (def ~'name|test|__0|0
                        (reify* [Object>Object]
                          (~(tag "java.lang.Object" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)]
-                           (let* [~(tag "java.lang.String" 'x) ~'x] ~'x))))
+                           (let* [~(STR 'x) ~'x] ~(STR 'x)))))
 
                      ;; [(t/isa? Named)]
 
@@ -142,7 +143,8 @@
                        (reify* [Object>Object]
                          (~(tag "java.lang.Object" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)]
                            (let* [~(tag "clojure.lang.Named" 'x) ~'x]
-                             (t/validate ~'(.getName x) ~'(* t/string?))))))
+                             (t/validate ~(STR '(. x getName))
+                                         ~'(* t/string?))))))
 
                      (defn ~'name|test
                        {:quantum.core.type/type
@@ -403,31 +405,31 @@
                      (def ~'>int*|__0|0
                        (reify* [byte>int]
                          (~(tag "int" 'invoke) [~'_0__ ~(tag "byte"             'x)]
-                           ~'(Primitive/uncheckedIntCast x))))
+                           ~'(. Primitive uncheckedIntCast x))))
                      (def ~'>int*|__0|1
                        (reify* [short>int]
                          (~(tag "int" 'invoke) [~'_1__ ~(tag "short"            'x)]
-                           ~'(Primitive/uncheckedIntCast x))))
+                           ~'(. Primitive uncheckedIntCast x))))
                      (def ~'>int*|__0|2
                        (reify* [char>int]
                          (~(tag "int" 'invoke) [~'_2__ ~(tag "char"             'x)]
-                           ~'(Primitive/uncheckedIntCast x))))
+                           ~'(. Primitive uncheckedIntCast x))))
                      (def ~'>int*|__0|3
                        (reify* [int>int]
                          (~(tag "int" 'invoke) [~'_3__ ~(tag "int"              'x)]
-                           ~'(Primitive/uncheckedIntCast x))))
+                           ~'(. Primitive uncheckedIntCast x))))
                      (def ~'>int*|__0|4
                        (reify* [long>int]
                          (~(tag "int" 'invoke) [~'_4__ ~(tag "long"             'x)]
-                           ~'(Primitive/uncheckedIntCast x))))
+                           ~'(. Primitive uncheckedIntCast x))))
                      (def ~'>int*|__0|5
                        (reify* [float>int]
                          (~(tag "int" 'invoke) [~'_5__ ~(tag "float"            'x)]
-                           ~'(Primitive/uncheckedIntCast x))))
+                           ~'(. Primitive uncheckedIntCast x))))
                      (def ~'>int*|__0|6
                        (reify* [double>int]
                          (~(tag "int" 'invoke) [~'_6__ ~(tag "double"           'x)]
-                           ~'(Primitive/uncheckedIntCast x))))
+                           ~'(. Primitive uncheckedIntCast x))))
 
                      ;; [x (t/ref (t/isa? Number))
                      ;;  -> (t/- (t/ref (t/isa? Number)) (t/- t/primitive? t/boolean?))]
@@ -437,7 +439,7 @@
                      (def ~'>int*|__1|0
                        (reify* [Object>int]
                          (~(tag "int" 'invoke) [~'_7__ ~(tag "java.lang.Object" 'x)]
-                           (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(.intValue x)))))
+                           (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(. x intValue)))))
 
                      (defn ~'>int*
                        {:quantum.core.type/type
@@ -511,199 +513,199 @@
                      (def ~'>|test|__0|0
                        (reify* [byte+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_0__  ~(tag "byte"   'a) ~(tag "byte"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|1
                        (reify* [byte+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_1__  ~(tag "byte"   'a) ~(tag "short"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|2
                        (reify* [byte+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_2__  ~(tag "byte"   'a) ~(tag "char"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|3
                        (reify* [byte+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_3__  ~(tag "byte"   'a) ~(tag "int"    'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|4
                        (reify* [byte+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_4__  ~(tag "byte"   'a) ~(tag "long"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|5
                        (reify* [byte+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_5__  ~(tag "byte"   'a) ~(tag "float"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|6
                        (reify* [byte+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_6__  ~(tag "byte"   'a) ~(tag "double" 'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|7
                        (reify* [short+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_7__  ~(tag "short"  'a) ~(tag "byte"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|8
                        (reify* [short+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_8__  ~(tag "short"  'a) ~(tag "short"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|9
                        (reify* [short+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_9__  ~(tag "short"  'a) ~(tag "char"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|10
                        (reify* [short+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_10__ ~(tag "short"  'a) ~(tag "int"    'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|11
                        (reify* [short+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_11__ ~(tag "short"  'a) ~(tag "long"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|12
                        (reify* [short+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_12__ ~(tag "short"  'a) ~(tag "float"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|13
                        (reify* [short+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_13__ ~(tag "short"  'a) ~(tag "double" 'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|14
                        (reify* [char+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_14__ ~(tag "char"   'a) ~(tag "byte"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|15
                        (reify* [char+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_15__ ~(tag "char"   'a) ~(tag "short"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|16
                        (reify* [char+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_16__ ~(tag "char"   'a) ~(tag "char"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|17
                        (reify* [char+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_17__ ~(tag "char"   'a) ~(tag "int"    'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|18
                        (reify* [char+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_18__ ~(tag "char"   'a) ~(tag "long"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|19
                        (reify* [char+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_19__ ~(tag "char"   'a) ~(tag "float"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|20
                        (reify* [char+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_20__ ~(tag "char"   'a) ~(tag "double" 'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|21
                        (reify* [int+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_21__ ~(tag "int"    'a) ~(tag "byte"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|22
                        (reify* [int+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_22__ ~(tag "int"    'a) ~(tag "short"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|23
                        (reify* [int+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_23__ ~(tag "int"    'a) ~(tag "char"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|24
                        (reify* [int+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_24__ ~(tag "int"    'a) ~(tag "int"    'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|25
                        (reify* [int+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_25__ ~(tag "int"    'a) ~(tag "long"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|26
                        (reify* [int+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_26__ ~(tag "int"    'a) ~(tag "float"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|27
                        (reify* [int+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_27__ ~(tag "int"    'a) ~(tag "double" 'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|28
                        (reify* [long+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_28__ ~(tag "long"   'a) ~(tag "byte"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|29
                        (reify* [long+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_29__ ~(tag "long"   'a) ~(tag "short"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|30
                        (reify* [long+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_30__ ~(tag "long"   'a) ~(tag "char"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|31
                        (reify* [long+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_31__ ~(tag "long"   'a) ~(tag "int"    'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|32
                        (reify* [long+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_32__ ~(tag "long"   'a) ~(tag "long"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|33
                        (reify* [long+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_33__ ~(tag "long"   'a) ~(tag "float"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|34
                        (reify* [long+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_34__ ~(tag "long"   'a) ~(tag "double" 'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|35
                        (reify* [float+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_35__ ~(tag "float"  'a) ~(tag "byte"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|36
                        (reify* [float+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_36__ ~(tag "float"  'a) ~(tag "short"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|37
                        (reify* [float+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_37__ ~(tag "float"  'a) ~(tag "char"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|38
                        (reify* [float+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_38__ ~(tag "float"  'a) ~(tag "int"    'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|39
                        (reify* [float+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_39__ ~(tag "float"  'a) ~(tag "long"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|40
                        (reify* [float+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_40__ ~(tag "float"  'a) ~(tag "float"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|41
                        (reify* [float+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_41__ ~(tag "float"  'a) ~(tag "double" 'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|42
                        (reify* [double+byte>boolean]
                          (~(tag "boolean" 'invoke) [~'_42__ ~(tag "double" 'a) ~(tag "byte"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|43
                        (reify* [double+short>boolean]
                          (~(tag "boolean" 'invoke) [~'_43__ ~(tag "double" 'a) ~(tag "short"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|44
                        (reify* [double+char>boolean]
                          (~(tag "boolean" 'invoke) [~'_44__ ~(tag "double" 'a) ~(tag "char"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|45
                        (reify* [double+int>boolean]
                          (~(tag "boolean" 'invoke) [~'_45__ ~(tag "double" 'a) ~(tag "int"    'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|46
                        (reify* [double+long>boolean]
                          (~(tag "boolean" 'invoke) [~'_46__ ~(tag "double" 'a) ~(tag "long"   'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|47
                        (reify* [double+float>boolean]
                          (~(tag "boolean" 'invoke) [~'_47__ ~(tag "double" 'a) ~(tag "float"  'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
                      (def ~'>|test|__0|48
                        (reify* [double+double>boolean]
                          (~(tag "boolean" 'invoke) [~'_48__ ~(tag "double" 'a) ~(tag "double" 'b)]
-                           ~'(Numeric/gt a b))))
+                           ~'(. Numeric gt a b))))
 
            ;; Unindented for greater vertical brevity
            (defn ~'>|test
@@ -873,31 +875,31 @@
                         (def ~'>long*|__0|0
                           (reify* [byte>long]
                             (~(tag "long" 'invoke) [~'_0__ ~(tag "byte"             'x)]
-                              ~'(Primitive/uncheckedLongCast x))))
+                              ~'(. Primitive uncheckedLongCast x))))
                         (def ~'>long*|__0|1
                           (reify* [short>long]
                             (~(tag "long" 'invoke) [~'_1__ ~(tag "short"            'x)]
-                              ~'(Primitive/uncheckedLongCast x))))
+                              ~'(. Primitive uncheckedLongCast x))))
                         (def ~'>long*|__0|2
                           (reify* [char>long]
                             (~(tag "long" 'invoke) [~'_2__ ~(tag "char"             'x)]
-                              ~'(Primitive/uncheckedLongCast x))))
+                              ~'(. Primitive uncheckedLongCast x))))
                         (def ~'>long*|__0|3
                           (reify* [int>long]
                             (~(tag "long" 'invoke) [~'_3__ ~(tag "int"              'x)]
-                              ~'(Primitive/uncheckedLongCast x))))
+                              ~'(. Primitive uncheckedLongCast x))))
                         (def ~'>long*|__0|4
                           (reify* [long>long]
                             (~(tag "long" 'invoke) [~'_4__ ~(tag "long"             'x)]
-                              ~'(Primitive/uncheckedLongCast x))))
+                              ~'(. Primitive uncheckedLongCast x))))
                         (def ~'>long*|__0|5
                           (reify* [float>long]
                             (~(tag "long" 'invoke) [~'_5__ ~(tag "float"            'x)]
-                              ~'(Primitive/uncheckedLongCast x))))
+                              ~'(. Primitive uncheckedLongCast x))))
                         (def ~'>long*|__0|6
                           (reify* [double>long]
                             (~(tag "long" 'invoke) [~'_6__ ~(tag "double"           'x)]
-                              ~'(Primitive/uncheckedLongCast x))))
+                              ~'(. Primitive uncheckedLongCast x))))
 
                         ;; [x (t/ref (t/isa? Number))]
 
@@ -906,7 +908,7 @@
                         (def ~'>long*|__1|0
                           (reify* [Object>long]
                             (~(tag "long" 'invoke) [~'_7__ ~(tag "java.lang.Object" 'x)]
-                              (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(.longValue x)))))
+                              (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(. x longValue)))))
 
                         (defn ~'>long*
                           {:source "clojure.lang.RT.uncheckedLongCast"
@@ -1200,14 +1202,16 @@
             :clj ($ (do (def ~'!str|__0|0
                           (reify* [>Object]
                             (~(tag "java.lang.Object" 'invoke) [~'_0__]
-                              ~'(StringBuilder.))))
+                              ~(tag "java.lang.StringBuilder" '(new StringBuilder)))))
 
                         (def ~(tag "[Ljava.lang.Object;" '!str|__1|input0|types)
                           (*<> (t/isa? java.lang.String)))
                         (def ~'!str|__1|0
                           (reify* [Object>Object]
                             (~(tag "java.lang.Object" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)]
-                              (let* [~(tag "java.lang.String" 'x) ~'x] ~'(StringBuilder. x)))))
+                              (let* [~(Str 'x) ~'x]
+                                ~(tag "java.lang.StringBuilder"
+                                      (list 'new 'StringBuilder (STR 'x)))))))
 
                         (def ~(tag "[Ljava.lang.Object;" '!str|__2|input0|types)
                           (*<> (t/isa? java.lang.CharSequence)
@@ -1216,11 +1220,13 @@
                           (reify* [Object>Object]
                             (~(tag "java.lang.Object" 'invoke) [~'_2__ ~(tag "java.lang.Object" 'x)]
                               (let* [~(tag "java.lang.CharSequence" 'x) ~'x]
-                                ~'(StringBuilder. x)))))
+                                ~(tag "java.lang.StringBuilder"
+                                      (list 'new 'StringBuilder
+                                            (tag "java.lang.CharSequence" 'x)))))))
                         (def ~'!str|__2|1
                           (reify* [int>Object]
                             (~(tag "java.lang.Object" 'invoke) [~'_3__ ~(tag "int" 'x)]
-                              ~'(StringBuilder. x))))
+                              ~(tag "java.lang.StringBuilder" '(new StringBuilder x)))))
 
                         (defn ~'!str
                           {:quantum.core.type/type

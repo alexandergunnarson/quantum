@@ -229,7 +229,8 @@
   fipp.ednize/IEdn
     (-edn [this] (list `new-node (into (array-map) this))))
 
-(defn new-node [m] (-> m map->NewNode with-type-hint))
+;; Not type hinted because it's inferred
+(defn new-node [m] (map->NewNode m))
 
 (defn new-node? [x] (instance? NewNode x))
 
