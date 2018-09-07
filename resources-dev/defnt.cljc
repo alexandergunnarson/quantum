@@ -39,17 +39,19 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - Conversion functions belong in the namespace that their destination types belong in
 - TODO transition the quantum.core.* namespaces:
   - List of semi-approximately topologically ordered namespaces to make typed:
-    - quantum.core.core
-      - TODO delete this namespace?
     - quantum.core.type.core
-    - quantum.core.ns
     - quantum.core.logic
     - quantum.core.fn
     - quantum.core.data.map
     - quantum.core.type-old
     - quantum.core.vars
+    - Worked through all we can for now:
+      - quantum.core.core
+        - TODO delete this namespace?
+      - quantum.core.ns
   - List of corresponding untyped namespaces to incorporate:
     - quantum.untyped.core.core
+    - quantum.untyped.core.ns
     - quantum.untyped.core.vars
   - Standard metadata
     - e.g. `{:alternate-implementations #{'cljs.tools.reader/merge-meta}}`
