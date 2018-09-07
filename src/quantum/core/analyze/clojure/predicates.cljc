@@ -7,7 +7,6 @@
 #?(:clj
     [clojure.jvm.tools.analyzer           :as tana])
     [quantum.core.analyze.clojure.core    :as ana]
-    [quantum.core.core                    :as qcore]
     [quantum.core.fn                      :as fn
       :refer [fnl <- fn-> fn->> fn']]
     [quantum.core.logic                   :as logic

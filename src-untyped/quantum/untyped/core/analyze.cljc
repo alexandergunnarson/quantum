@@ -19,6 +19,9 @@
     [quantum.untyped.core.fn
       :refer [<- fn-> fn->>]]
     [quantum.untyped.core.form.evaluate     :as ufeval]
+    [quantum.untyped.core.form.type-hint    :as ufth]
+    [quantum.untyped.core.identification    :as uident
+      :refer [>symbol]]
     [quantum.untyped.core.log               :as log
       :refer [prl!]]
     [quantum.untyped.core.logic             :as l
@@ -85,8 +88,10 @@
 (defonce *analyze-depth (atom 0))
 
 (defn add-file-context-from [to from]
-  (let [from-meta (meta from)]
-    (update-meta to assoc :line (:line from-meta) :column (:column from-meta))))
+  (let [{:keys [line column]} (meta from)]
+    (update-meta to
+      #(cond-> % line   (assoc :line   line)
+                 column (assoc :column column)))))
 
 (def special-symbols '#{do let* deftype* fn* def . if quote new throw}) ; TODO make more complete
 
@@ -261,7 +266,7 @@
   "A note will be made of what methods match the argument types.
    If only one method is found, that is noted too. If no matching method is found, an
    exception is thrown."
-  [env ::env, form _, target _, target-class t/class?, static? t/boolean?
+  [env ::env, form _, target uast/node?, target-class t/class?, static? t/boolean?
    method-form simple-symbol?, args-forms _ #_(seq-of form?) > uast/method-call?]
   ;; TODO cache type by method
   (if-not-let [methods-for-name (-> target-class class->methods|with-cache
@@ -281,18 +286,22 @@
           (let [args-ct (c/count args-forms)
                 call-data
                   {:env    env
-                   :form   form
+                   :form   ['. (-> target :form ufth/un-type-hint) method-form]
                    :target target
                    :method method-form
                    :args   []
                    :type   (methods->type methods #_(count arg-forms))}
                 call-data-with-arg-types
-                  (r/fori [arg-form   args-forms
-                           call-data' call-data
-                           i|arg]
-                    (let [arg-node (analyze* env arg-form)]
-                      ;; TODO can incrementally calculate return value, but possibly not worth it
-                      (update call-data' :args conj arg-node)))
+                  (-> (r/fori [arg-form   args-forms
+                               call-data' call-data
+                               i|arg]
+                        (let [arg-node (analyze* env arg-form)]
+                          ;; TODO can incrementally calculate return value, but possibly not
+                          ;; worth it
+                          (-> call-data'
+                              (update :form conj (:form arg-node))
+                              (update :args conj arg-node))))
+                      (update :form seq))
                 call-data-with-ret-type
                   (update call-data-with-arg-types :type
                     (fn [ret-type] (->> call-data-with-arg-types :args (mapv :type) ret-type)))
@@ -574,13 +583,15 @@
                             :fn nil)
                         {:keys [input-nodes out-type]}
                           (call>input-nodes+out-type
-                            env caller|node caller|type caller-kind inputs-ct body)]
-                    (uast/call-node
-                      {:env    env
-                       :form   form
-                       :caller caller|node
-                       :args   input-nodes
-                       :type   out-type}))))))
+                            env caller|node caller|type caller-kind inputs-ct body)
+                        call-node
+                          (uast/call-node
+                            {:env    env
+                             :form   form
+                             :caller caller|node
+                             :args   input-nodes
+                             :type   out-type})]
+                    call-node)))))
 
 (defns- analyze-seq [env ::env, form _]
   (let [expanded-form (ufeval/macroexpand form)]
@@ -598,8 +609,6 @@
   (if-let [[_ local] (find env sym)]
     {:value local}
     (let [resolved (ns-resolve *ns* sym)]
-      (log/ppr :warn "Not sure how to handle non-local symbol; resolved it for now"
-                     (kw-map sym resolved))
       (ifs resolved
              {:value resolved}
            (some-> sym namespace symbol resolve class?)
@@ -639,6 +648,5 @@
 (defns analyze > uast/node?
   ([form _] (analyze {} form))
   ([env ::env, form _]
-    (log/pr! form)
     (reset! *analyze-depth 0)
     (analyze* env form)))

@@ -15,10 +15,10 @@
       :refer [fn-or whenf1]]
     [quantum.core.macros.optimization :as opt
       :refer [extern?]]
-    [quantum.untyped.core.collections.tree :as utree
-      :refer [postwalk]]
     [quantum.core.vars
       :refer [defalias]]
+    [quantum.untyped.core.collections.tree :as utree
+      :refer [postwalk]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env]]
     [quantum.untyped.core.form.generate :as ufgen]))

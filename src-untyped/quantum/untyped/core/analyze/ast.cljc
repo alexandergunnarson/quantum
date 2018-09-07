@@ -183,7 +183,8 @@
   fipp.ednize/IEdn
     (-edn [this] (list `field-access (into (array-map) this))))
 
-(defn field-access [m] (-> m map->FieldAccess with-type-hint))
+;; Not type hinted because it's inferred
+(defn field-access [m] (map->FieldAccess m))
 
 (defn field-access? [x] (instance? FieldAccess x))
 
@@ -199,7 +200,8 @@
   fipp.ednize/IEdn
     (-edn [this] (list `method-call (into (array-map) this))))
 
-(defn method-call [m] (-> m map->MethodCall with-type-hint))
+;; Not type hinted because it's inferred
+(defn method-call [m] (map->MethodCall m))
 
 (defn method-call? [x] (instance? MethodCall x))
 
