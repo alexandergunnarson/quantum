@@ -32,6 +32,8 @@
 (do (require '[orchestra.spec.test :as st])
     (orchestra.spec.test/instrument))
 
+(defn O [form] (tag "java.lang.Object" form))
+
 #?(:clj
 (deftest test|pid
   (let [actual
@@ -42,8 +44,9 @@
         expected
           ($ (do (def ~'pid|test|__0|0
                    (reify* [>Object]
-                     (~(tag "java.lang.Object" 'invoke) [~'_0__]
-                       ~'(. (java.lang.management.ManagementFactory/getRuntimeMXBean) getName))))
+                     (~(O 'invoke) [~'_0__]
+                       ~(tag "java.lang.String"
+                          '(. (java.lang.management.ManagementFactory/getRuntimeMXBean) getName)))))
                  (defn ~'pid|test
                    {:quantum.core.type/type (t/fn t/any? ~'[:> (? t/string?)])}
                    ([] (.invoke ~(tag (str `>Object)

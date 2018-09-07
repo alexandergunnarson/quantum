@@ -25,9 +25,14 @@
           ;; TODO for now
           (uxp/iexpr? t))
       nil
-      (let [cs (t/type>classes t)
-            c  (when (-> cs count (= 1)) (first cs))]
-        (ufth/>body-embeddable-tag c))))
+      (let [cs (t/type>classes t)]
+        (case (count cs)
+          1 (let [c (first cs)]
+              (when-let [not-primitive? (not (contains? t/boxed-class->unboxed-symbol c))]
+                (ufth/>body-embeddable-tag c)))
+          2 (when (contains? cs nil)
+              (-> cs (disj nil) first ufth/>body-embeddable-tag))
+          nil))))
 
 (defn with-type-hint [node]
   (if-let [type-hint (>type-hint (:form node) (:type node))]
