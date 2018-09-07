@@ -61,16 +61,17 @@
 ;; ===== Declaration/Interning ===== ;;
 
 #?(:clj
-(defnt intern > t/var?
+(defnt intern
   "Finds or creates a var named by the symbol name in ->`ns-val`, setting its root binding to ->`v`
    if supplied. The namespace must exist. The var will adopt any metadata from ->`name-val`.
    Returns the var."
-  ([ns-val (t/or t/symbol? t/namespace?), var-name t/symbol?]
-    (let [var-ref (clojure.lang.Var/intern (ns/symbol>ns ns-val) var-name)]
-      (when (meta var-name) (.setMeta var- (meta var-name)))
+  > t/var?
+  ([ns-val (t/or t/symbol? t/namespace?), var-name t/symbol? > (t/* t/var?)]
+    (let [var-ref (clojure.lang.Var/intern (ns/>ns ns-val) var-name)]
+      (when (meta var-name) (.setMeta var-ref (meta var-name)))
       var-ref))
-  ([ns-val (t/or t/symbol? t/namespace?), var-name t/symbol?, var-val t/any?]
-    (let [var-ref (clojure.lang.Var/intern (ns/symbol>ns ns-val) var-name var-val)]
+  ([ns-val (t/or t/symbol? t/namespace?), var-name t/symbol?, var-val (t/ref t/any?) > (t/* t/var?)]
+    (let [var-ref (clojure.lang.Var/intern (ns/>ns ns-val) var-name var-val)]
       (when (meta var-name) (.setMeta var-ref (meta var-name)))
       var-ref))))
 
@@ -78,45 +79,45 @@
 #?(:clj (defalias uvar/def))
 
 ;; TODO TYPED
-#?(:clj (uvar/defalias uvar/defalias))
-
-;; TODO TYPED
-#?(:clj (uvar/defaliases uvar defaliases defaliases'))
+#?(:clj (uvar/defaliases uvar defalias defaliases defaliases'))
 
 #?(:clj (defnt defined? [x t/var?] (.hasRoot x)))
 
-#?(:clj
+;; TODO TYPED — need to do `apply`, and `apply` with defnt; also `merge`, `str`, `deref`
+#_(:clj
 (defnt alias-var
   "Create a var with the supplied name in the current namespace, having the same metadata and
    root-binding as the supplied var."
   {:attribution  "flatland.useful.ns"
    :contributors ["Alex Gunnarson"]}
-  [sym t/symbol?, var- t/var?]
+  [sym t/symbol?, var-val t/var?]
   (apply intern *ns*
     (with-meta sym
       (merge
         {:dont-test
-          (str "Alias of " (-> var- meta :name))}
+          (str "Alias of " (-> var-val meta :name))}
         (meta var-0)
         (meta sym)))
-    (when (defined? var-) [(deref var-)]))))
+    (when (defined? var-) [(deref var-val)]))))
 
-;; TODO typed
+;; TODO TYPED
 #?(:clj (quantum.untyped.core.vars/defmalias defmalias quantum.untyped.core.vars/defmalias))
 
-;; TODO typed
-#?(:clj (defaliases u defonce def- defmacro-))
+;; TODO TYPED
+#?(:clj (defaliases uvar defonce def- defmacro-))
 
 ;; ===== Modification ===== ;;
 
-#?(:clj
+;; TODO TYPED — need to do `fnt`
+#_(:clj
 (defnt reset-var!
   "Like `reset!` but for vars. Atomically sets the root binding of ->`var-` to ->`v`."
   {:attribution "alexandergunnarson"}
-  [var- t/var?, v _ > t/var?]
-  (.alterRoot var- (fnt [_] v))))
+  [var-val t/var?, v (t/ref t/any?) > t/var?]
+  (.alterRoot var-val (fnt [_] v))))
 
-#?(:clj
+;; TODO TYPED — need to do `fnt`, `apply`
+#_(:clj
 (defnt update-var!
   {:attribution "alexandergunnarson"}
   ([var- t/var?, f (t/fn [_]) > t/var?]
@@ -127,7 +128,8 @@
     (do (.alterRoot var- (fnt [v' _] (apply f v' args)))
         var-))))
 
-#?(:clj
+;; TODO TYPED — `doseq`
+#_(:clj
 (defnt clear-vars!
   "Sets each var in ->`vars` to nil."
   {:attribution "alexandergunnarson"}
@@ -136,7 +138,7 @@
 
 ;; ===== Thread-local ===== ;;
 
-;; TODO typed
+;; TODO TYPED
 #?(:clj (defalias binding         c/binding))
-;; TODO typed
+;; TODO TYPED
 #?(:clj (defalias with-local-vars c/with-local-vars))
