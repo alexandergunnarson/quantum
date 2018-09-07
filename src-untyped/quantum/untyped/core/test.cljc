@@ -31,8 +31,8 @@
   ([c0 c1]
     (if (metable? c0)
         (and (metable? c1)
-             (let [meta0 (-> c0 meta (dissoc :line :column))
-                   meta1 (-> c1 meta (dissoc :line :column))]
+             (let [meta0 (-> c0 meta (or {}) (dissoc :line :column))
+                   meta1 (-> c1 meta (or {}) (dissoc :line :column))]
                (or (= meta0 meta1)
                    (do (pr! "FAIL: meta should be match for" (pr-str meta0) (pr-str meta1)
                                                    "on code" (pr-str c0)    (pr-str c1))

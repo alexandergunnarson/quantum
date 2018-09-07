@@ -101,8 +101,8 @@
   ([code0 code1]
     (if (uvar/metable? code0)
         (and (uvar/metable? code1)
-             (= (-> code0 meta (dissoc :line :column))
-                (-> code1 meta (dissoc :line :column)))
+             (= (-> code0 meta (or {}) (dissoc :line :column))
+                (-> code1 meta (or {}) (dissoc :line :column)))
              (let [similar-class?
                      (cond (seq?    code0) (seq?    code1)
                            (seq?    code1) (seq?    code0)
