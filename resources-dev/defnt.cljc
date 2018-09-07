@@ -29,6 +29,11 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - dealing with `apply`...
   - defmacrot
   - dotyped
+  - typed core fns
+    - `apply`
+      - especially with `defnt` as the caller
+    - `merge`
+    - `str`
 - NOTE on namespace organization:
   - [quantum.untyped.core.ns :refer [namespace?]]
     instead of
@@ -40,15 +45,43 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
 - TODO transition the quantum.core.* namespaces:
   - List of semi-approximately topologically ordered namespaces to make typed:
     - quantum.core.type.core
+    - quantum.core.type.defs
+    - quantum.core.data.map
     - quantum.core.logic
     - quantum.core.fn
-    - quantum.core.data.map
+    - quantum.core.cache
     - quantum.core.type-old
-    - quantum.core.vars
+    - quantum.core.data.string
+    - quantum.core.print
+    - quantum.core.log
+    - quantum.core.data.vector
+    - quantum.core.spec
+    - quantum.core.error
+    - quantum.core.data.bits
+
+    - quantum.core.convert.primitive
+    - quantum.core.string.regex
+    - quantum.core.data.set
+    - quantum.core.macros.type-hint
+    - quantum.core.analyze.clojure.core
+    - quantum.core.analyze.clojure.predicates
+    - quantum.core.macros.optimization
+    - quantum.core.macros.fn
+    - quantum.core.macros.transform
+    - quantum.core.macros.protocol
+    - quantum.core.macros.reify
+    - quantum.core.macros.defnt
+    - quantum.core.macros
+
+    - quantum.core.refs
+    - quantum.core.reducers.reduce
+    - quantum.core.collections.logic
+    - quantum.core.collections.core
     - Worked through all we can for now:
       - quantum.core.core
         - TODO delete this namespace?
       - quantum.core.ns
+      - quantum.core.vars
   - List of corresponding untyped namespaces to incorporate:
     - quantum.untyped.core.core
     - quantum.untyped.core.ns
