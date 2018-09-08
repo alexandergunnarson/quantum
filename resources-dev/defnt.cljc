@@ -80,6 +80,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - Worked through all we can for now:
       - quantum.core.core
         - TODO delete this namespace?
+      - quantum.core.data.primitive
       - quantum.core.ns
       - quantum.core.vars
   - List of corresponding untyped namespaces to incorporate:

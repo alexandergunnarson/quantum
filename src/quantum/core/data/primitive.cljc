@@ -1,35 +1,49 @@
 (ns quantum.core.data.primitive
+  (:refer-clojure :exclude
+    [char? double? float? int?])
   (:require
-    [quantum.core.macros :refer [defnt]]))
+    [quantum.core.type :as t
+      :refer [defnt]]))
 
-(defnt ->min-magnitude
-  #?(:clj ([^byte   x]          (byte  0)))
-  #?(:clj ([^char   x]          (char  0)))
-  #?(:clj ([^short  x]          (short 0)))
-  #?(:clj ([^int    x]          (int   0)))
-  #?(:clj ([^long   x]          (long  0)))
-  #?(:clj ([^float  x]          Float/MIN_VALUE    ))
-          ([^double x] #?(:clj  Double/MIN_VALUE
-                          :cljs js/Number.MIN_VALUE)))
+;; TODO TYPED type coercion/casts should go in here
 
-#?(:clj (def ^:const min-float  (- Float/MAX_VALUE)))
-        (def ^:const min-double (- #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
+#?(:clj (def byte?   (t/isa? Byte)))
+#?(:clj (def short?  (t/isa? Short)))
+#?(:clj (def char?   (t/isa? Character)))
+#?(:clj (def int?    (t/isa? Integer)))
+#?(:clj (def long?   (t/isa? Long)))
+#?(:clj (def float?  (t/isa? Float)))
+        (def double? (t/isa? #?(:clj Double :cljs js/Number)))
 
-(defnt ->min-value
-  #?(:clj ([^byte   x] Byte/MIN_VALUE     ))
-  #?(:clj ([^char   x] Character/MIN_VALUE))
-  #?(:clj ([^short  x] Short/MIN_VALUE    ))
-  #?(:clj ([^int    x] Integer/MIN_VALUE  ))
-  #?(:clj ([^long   x] Long/MIN_VALUE     ))
-  #?(:clj ([^float  x] min-float          ))
-          ([^double x] min-double         ))
+(defnt >min-magnitude
+  #?(:clj ([x byte?   > byte?]            (byte  0)))
+  #?(:clj ([x short?  > short?]           (short 0)))
+  #?(:clj ([x char?   > char?]            (char  0)))
+  #?(:clj ([x int?    > int?]             (int   0)))
+  #?(:clj ([x long?   > long?]            (long  0)))
+  #?(:clj ([x float?  > float?]           Float/MIN_VALUE))
+          ([x double? > double?] #?(:clj  Double/MIN_VALUE
+                                    :cljs js/Number.MIN_VALUE)))
 
-(defnt ->max-value
-  #?(:clj ([^byte   x]          Byte/MAX_VALUE     ))
-  #?(:clj ([^char   x]          Character/MAX_VALUE))
-  #?(:clj ([^short  x]          Short/MAX_VALUE    ))
-  #?(:clj ([^int    x]          Integer/MAX_VALUE  ))
-  #?(:clj ([^long   x]          Long/MAX_VALUE     ))
-  #?(:clj ([^float  x]          Float/MAX_VALUE    ))
-          ([^double x] #?(:clj  Double/MAX_VALUE
-                          :cljs js/Number.MAX_VALUE)))
+#?(:clj (def min-float  (- Float/MAX_VALUE)))
+        (def min-double (- #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
+
+;; TODO TYPED for some reason it's not figuring out the type of `min-float` and `min-double`
+#_(defnt >min-value
+  #?(:clj ([x byte?   > byte?]   Byte/MIN_VALUE))
+  #?(:clj ([x short?  > short?]  Short/MIN_VALUE))
+  #?(:clj ([x char?   > char?]   Character/MIN_VALUE))
+  #?(:clj ([x int?    > int?]    Integer/MIN_VALUE))
+  #?(:clj ([x long?   > long?]   Long/MIN_VALUE))
+  #?(:clj ([x float?  > float?]  min-float))
+          ([x double? > double?] min-double))
+
+(defnt >max-value
+  #?(:clj ([x byte?   > byte?]            Byte/MAX_VALUE))
+  #?(:clj ([x short?  > short?]           Short/MAX_VALUE))
+  #?(:clj ([x char?   > char?]            Character/MAX_VALUE))
+  #?(:clj ([x int?    > int?]             Integer/MAX_VALUE))
+  #?(:clj ([x long?   > long?]            Long/MAX_VALUE))
+  #?(:clj ([x float?  > float?]           Float/MAX_VALUE))
+          ([x double? > double?] #?(:clj  Double/MAX_VALUE
+                                    :cljs js/Number.MAX_VALUE)))

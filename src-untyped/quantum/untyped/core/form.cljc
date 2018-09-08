@@ -36,7 +36,9 @@
             nil                 (>form [x] nil)
    #?(:clj  java.lang.Boolean
       :cljs boolean)            (>form [x] x)
-            java.lang.Long      (>form [x] x)
+  #?@(:clj [java.lang.Long      (>form [x] x)])
+   #?(:clj  java.lang.Double
+      :cljs number)             (>form [x] x)
    #?(:clj  clojure.lang.Symbol
       :cljs cljs.core.Symbol)   (>form [x] (list 'quote x))
 
