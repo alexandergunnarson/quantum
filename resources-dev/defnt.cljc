@@ -5,6 +5,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
   - t/...
+    - multi-arity `t/-`
     - t/assume
     - t/numerically
     - t/of
@@ -61,6 +62,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - quantum.core.spec
     - quantum.core.error
     - quantum.core.data.bits
+    - quantum.core.data.string — this is where `>str` belongs
 
     - quantum.core.convert.primitive
 
