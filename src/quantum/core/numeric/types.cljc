@@ -1,32 +1,20 @@
 (ns quantum.core.numeric.types
-  (:refer-clojure :exclude
-    [denominator numerator ratio? #?@(:cljs [-compare]) read-string])
-  (:require
-    [clojure.core                      :as core]
-    [clojure.string                    :as str]
-    [clojure.tools.reader
-      :refer [read-string]]
- #?(:cljs
-    [com.gfredericks.goog.math.Integer :as int])
-    [quantum.core.macros
-      :refer [defnt]]
-    [quantum.core.logic
-      :refer [whenf fn-not fn=]]
-    [quantum.core.vars
-      :refer [defalias]]
-    [quantum.core.error
-      :refer [>ex-info]])
-#?(:cljs
-  (:require-macros
-    [quantum.core.numeric.types :as self])))
-
-#?(:clj
-(defnt ^java.math.BigInteger ->big-integer
-  ([^java.math.BigInteger x] x)
-  ([^clojure.lang.BigInt     x] (.toBigInteger x))
-  ([;#{(- number? BigInteger BigInt)} x
-    #{short int long} x] ; TODO BigDecimal
-    (-> x core/long (BigInteger/valueOf)))))
+         (:refer-clojure :exclude
+           [denominator numerator ratio? #?@(:cljs [-compare]) read-string])
+         (:require
+           [clojure.core                      :as core]
+           [clojure.string                    :as str]
+           [clojure.tools.reader
+             :refer [read-string]]
+  #?(:cljs [com.gfredericks.goog.math.Integer :as int])
+           [quantum.core.logic
+             :refer [whenf fn-not fn=]]
+           [quantum.core.type
+             :refer [defnt]]
+           [quantum.core.vars
+             :refer [defalias]])
+#?(:cljs (:require-macros
+           [quantum.core.numeric.types :as self])))
 
 (declare gcd)
 (declare normalize)
@@ -77,11 +65,6 @@
   IHash               (-hash                  [this] (reduce bit-xor 899242490 (.-bits_ this)))
   IComparable         (-compare               [x y]  (-compare x y))))
 
-#?(:cljs
-(defnt ^com.gfredericks.goog.math.Integer ->bigint
-  ([^bigint? x] x)
-  ([^string? x] (int/fromString x))
-  ([^double? x] (-> x str ->bigint))))
 
 #?(:cljs
 (deftype Ratio [n d]
@@ -144,20 +127,7 @@
         n
         (->ratio n d)))))
 
-(defn ->ratio
-  ([x] (->ratio x #?(:clj 1 :cljs int/ONE)))
-  ([x y]
-    #?(:clj  (whenf (rationalize (/ x y))
-                    (fn-not core/ratio?)
-                    #(clojure.lang.Ratio. (->big-integer %) java.math.BigInteger/ONE))
-       :cljs (let [x  (->bigint x)
-                   y  (->bigint y)
-                   d  (gcd x y)
-                   x' (.divide x d)
-                   y' (.divide y d)]
-               (if (.isNegative y')
-                   (Ratio. (.negate x') (.negate y'))
-                   (Ratio. x' y'))))))
+
 
 #?(:clj  (defalias numerator core/numerator)
    :cljs (defnt numerator
@@ -190,10 +160,10 @@
                          (->> r-str rest (apply str))))
         [integral-str decimal-str :as split] (str/split r-str #"\.")
         _ (when (-> split count (> 2))
-            (throw (>ex-info "Number cannot have more than one decimal point" {:num r-str})))
+            (throw (ex-info "Number cannot have more than one decimal point" {:num r-str})))
         _ (doseq [s split]
             (when-not (every? #{\0 \1 \2 \3 \4 \5 \6 \7 \8 \9} s)
-              (throw (>ex-info "Number must have only numeric characters" {:num s}))))
+              (throw (ex-info "Number must have only numeric characters" {:num s}))))
         integral (read-string integral-str)
         decimal  (read-string decimal-str)
         scale    (if decimal
@@ -202,4 +172,3 @@
     (* (if (= minus-ct 1) -1 1)
        (->ratio (+ (* scale integral) (or decimal 0))
                 scale))))
-

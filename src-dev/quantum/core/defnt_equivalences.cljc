@@ -2,7 +2,7 @@
 
 (ns quantum.core.test.defnt-equivalences
   (:refer-clojure :exclude
-    [* count get seq zero?])
+    [* count get ratio? seq zero?])
   (:require
     [quantum.untyped.core.type.defnt
       :refer [defnt fnt unsupported!]]
@@ -26,6 +26,8 @@
     [clojure.lang ASeq ISeq LazySeq Named Reduced Seqable]
     [quantum.core.data Array]
     [quantum.core Numeric Primitive]))
+
+(def ratio? (t/isa? clojure.lang.Ratio))
 
 ;; Just in case
 (clojure.spec.test.alpha/unstrument)
@@ -968,7 +970,7 @@
       (eval '(do (is (identical? (defnt-reference) 1)))))))
 
 (defnt >big-integer > (t/isa? java.math.BigInteger)
-  ([x t/ratio? > (* (t/isa? java.math.BigInteger))] (.bigIntegerValue x)))
+  ([x ratio? > (* (t/isa? java.math.BigInteger))] (.bigIntegerValue x)))
 
 ;; NOTE would use `>long` but that's already an interface
 (deftest test|>long-checked
@@ -991,7 +993,7 @@
                          ;; TODO add this back in
                          #_(fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
                 (.longValue x))
-              ([x t/ratio?] (-> x >big-integer >long-checked))
+              ([x ratio?] (-> x >big-integer >long-checked))
               ([x (t/value true)]  1)
               ([x (t/value false)] 0)
               ([x t/string?] (Long/parseLong x))
@@ -1081,10 +1083,10 @@
                             (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
                               (let* [~(tag "java.math.BigInteger" 'x) ~'x] ~'(.longValue x)))))
 
-                        #_[x t/ratio?]
+                        #_[x ratio?]
 
                         #_(def ~'>long|__9|input-types
-                          (*<> t/ratio?))
+                          (*<> ratio?))
                         #_(def ~'>long|__9|conditions
                           (*<> (-> long|__8|input-types (core/get 0) utr/and-type>args (core/get 1))))
                         (def ~'>long|__9
@@ -1097,7 +1099,7 @@
                                 ;; - `(t/and (t/or t/double? t/float?) ...)`            -> t/<>
                                 ;; - `(t/and (t/isa? clojure.lang.BigInt) ...)`         -> t/<>
                                 ;; - `(t/and (t/isa? java.math.BigInteger) ...)`        -> t/>
-                                ;; - `t/ratio?`                                         -> t/<>
+                                ;; - `ratio?`                                           -> t/<>
                                 ;; - `(t/value true)`                                   -> t/<>
                                 ;; - `(t/value false)`                                  -> t/<>
                                 ;; - `t/string?`                                        -> t/<>
@@ -1157,7 +1159,7 @@
                                       (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
                               [(t/and (t/isa? java.math.BigInteger)
                                       (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
-                              [t/ratio?]
+                              [ratio?]
                               [(t/value true)]
                               [(t/value false)]
                               [t/string?]

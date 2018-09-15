@@ -7,13 +7,13 @@
     [clojure.core                      :as core]
   #?(:cljs
     [com.gfredericks.goog.math.Integer :as int])
+    [quantum.core.data.numeric         :as dnum
+      :refer [numerator denominator]]
     [quantum.core.error                :as err
       :refer [TODO]]
     [quantum.core.log                  :as log]
     [quantum.core.macros
       :refer [defnt defntp #?@(:clj [defnt' variadic-proxy])]]
-    [quantum.core.numeric.types        :as ntypes
-      :refer [numerator denominator]]
     [quantum.core.numeric.convert      :as conv
       :refer [->bigint #?@(:clj [->big-integer])]]
     [quantum.core.type-old             :as t
@@ -54,7 +54,7 @@
             (if (nil? *math-context*)
                 (.add x y)
                 (.add x y *math-context*)))
- #?(:cljs ([x y] (TODO) (ntypes/-add x y))))
+ #?(:cljs ([x y] (TODO) (dnum/-add x y))))
    :cljs (defalias +*-bin unchecked-add))
 
 #?(:clj (variadic-proxy +*  quantum.core.numeric.operators/+*-bin ))
@@ -81,7 +81,7 @@
 #?(:clj (defnt' -*-bin "Lax `-`. Continues on overflow/underflow."
           #?(:clj  ([#{byte char short int long float double} x]
                      (Numeric/negate x))
-             :cljs (^first [^double? x] (TODO "fix") (ntypes/-negate x)))
+             :cljs (^first [^double? x] (TODO "fix") (dnum/-negate x)))
           ([#{byte char short int long float double} #_(- prim? boolean) x
             #{byte char short int long float double} #_(- prim? boolean) y]
             (Numeric/subtract x y))
@@ -133,7 +133,7 @@
    :cljs (defn **-bin "Lax `*`. Continues on overflow/underflow."
            ([] 0)
            ([x] x)
-           ([x y] (TODO "fix") (ntypes/-multiply x y))))
+           ([x y] (TODO "fix") (dnum/-multiply x y))))
 
 #?(:clj (variadic-proxy **  quantum.core.numeric.operators/**-bin ))
 #?(:clj (variadic-proxy **& quantum.core.numeric.operators/**-bin&))
@@ -189,11 +189,11 @@
                  (.divide n d)
                  (.divide n d *math-context*))))
    :cljs (defnt div*-bin "Lax `/`. Continues on overflow/underflow."
-           ([^ratio? x  ] (TODO "fix") (ntypes/-invert x))
+           ([^ratio? x  ] (TODO "fix") (dnum/-invert x))
            ([^ratio? x y]
              (TODO "fix")
               ;(* x (-invert (apply * y more)))
-              (* x (ntypes/-invert y)))
+              (* x (dnum/-invert y)))
            ([^double? x  ] (core// x))
            ([^double? x y] (div*-bin- x y))))
 

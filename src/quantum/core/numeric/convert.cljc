@@ -2,13 +2,13 @@
   (:refer-clojure :exclude [bigdec])
   (:require
     [clojure.core                 :as core]
+    [quantum.core.data.numeric    :as dnum]
     [quantum.core.error           :as err
       :refer [TODO]]
     [quantum.core.macros
-      :refer        [defnt #?@(:clj [defnt'])]]
+      :refer [defnt #?@(:clj [defnt'])]]
     [quantum.core.vars
-      :refer        [defalias]]
-    [quantum.core.numeric.types   :as ntypes])
+      :refer [defalias]])
 #?(:cljs
   (:require-macros
     [quantum.core.numeric.convert :as self]))
@@ -23,7 +23,7 @@
 
 (defn ->boolean-num [x] (if x 1 0))
 
-#?(:clj (defalias ->big-integer ntypes/->big-integer))
+#?(:clj (defalias ->big-integer dnum/->big-integer))
 
 #?(:clj  (defnt' ^BigInt ->bigint
            ([^BigInt  x] x)
@@ -31,7 +31,7 @@
            ([^long   x] (-> x BigInt/fromLong))
            ([^string? x radix] (->bigint (BigInteger. x (int radix))))
            ([#{double? Number} x] (-> x BigInteger/valueOf ->bigint)))
-   :cljs (defalias ->bigint ntypes/->bigint))
+   :cljs (defalias ->bigint dnum/->bigint))
 
 #?(:clj  (doto (defalias ->bigdec core/bigdec) (alter-meta! assoc :tag BigDecimal))
          #_(defnt' ^BigDecimal ->bigdec
@@ -46,7 +46,7 @@
            ([#{(- number? :curr)} x] (BigDecimal/valueOf x)))
    :cljs (defn ->bigdec [x] (TODO)))
 
-#?(:clj (defalias ->ratio ntypes/->ratio)
+#?(:clj (defalias ->ratio dnum/->ratio)
         #_(defnt ^clojure.lang.Ratio ->ratio
            ([^clojure.lang.Ratio   x] x)
            ([^java.math.BigDecimal x]
@@ -59,7 +59,7 @@
                            BigInteger/ONE)
                    (Ratio. bv (-> BigInteger/TEN (.pow scale))))))
            ([^Object x] (-> x ->big-integer (Ratio. BigInteger/ONE))))
-   :cljs (defalias ->ratio ntypes/->ratio))
+   :cljs (defalias ->ratio dnum/->ratio))
 
 #?(:clj
 (defnt exactly

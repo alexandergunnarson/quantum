@@ -637,62 +637,10 @@
 
 ;; ----- Integers ----- ;;
 
-         (-def bigint?           #?(:clj  (or (isa? clojure.lang.BigInt) (isa? java.math.BigInteger))
-                                    :cljs (isa? com.gfredericks.goog.math.Integer)))
-
-         (-def integer?          (or #?@(:clj [byte? short? int? long?]) bigint?))
-
-;; ----- Decimals ----- ;;
-
-#?(:clj  (-def bigdec?           (isa? java.math.BigDecimal))) ; TODO CLJS may have this
-
-         (-def decimal?          (or #?(:clj float?) double? #?(:clj bigdec?)))
 
 ;; ----- General ----- ;;
 
-         (-def ratio?            (isa? #?(:clj  clojure.lang.Ratio
-                                          :cljs quantum.core.numeric.types.Ratio))) ; TODO add this CLJS entry to the predicate after the fact
-
          (-def primitive-number? (or #?@(:clj [short? int? long? float?]) double?))
-
-         (-def number?           (or #?@(:clj  [(isa? java.lang.Number)]
-                                         :cljs [integer? decimal? ratio?])))
-
-;; ----- Likenesses ----- ;;
-
-       #_(-def integer-value?              (or integer? (and decimal? (>expr unum/integer-value?))))
-
-       #_(-def numeric-primitive?          (and primitive? (not boolean?)))
-
-       #_(-def numerically-byte?           (and integer-value? (>expr (c/fn [x] (c/<= -128                 x 127)))))
-       #_(-def numerically-short?          (and integer-value? (>expr (c/fn [x] (c/<= -32768               x 32767)))))
-       #_(-def numerically-char?           (and integer-value? (>expr (c/fn [x] (c/<=  0                   x 65535)))))
-       #_(-def numerically-unsigned-short? numerically-char?)
-       #_(-def numerically-int?            (and integer-value? (>expr (c/fn [x] (c/<= -2147483648          x 2147483647)))))
-       #_(-def numerically-long?           (and integer-value? (>expr (c/fn [x] (c/<= -9223372036854775808 x 9223372036854775807)))))
-       #_(-def numerically-float?          (and number?
-                                                (>expr (c/fn [x] (c/<= -3.4028235E38 x 3.4028235E38)))
-                                                (>expr (c/fn [x] (-> x #?(:clj clojure.lang.RT/floatCast :cljs c/float) (c/== x))))))
-       #_(-def numerically-double?         (and number?
-                                                (>expr (c/fn [x] (c/<= -1.7976931348623157E308 x 1.7976931348623157E308)))
-                                                (>expr (c/fn [x] (-> x clojure.lang.RT/doubleCast (c/== x))))))
-
-       #_(-def int-like?                   (and integer-value? numerically-int?))
-
-#_(defn numerically
-  [t]
-  (assert (utr/class-type? t))
-  (let [c (.-c ^ClassType t)]
-    (case (.getName ^Class c)
-      "java.lang.Byte"      numerically-byte?
-      "java.lang.Short"     numerically-short?
-      "java.lang.Character" numerically-char?
-      "java.lang.Integer"   numerically-int?
-      "java.lang.Long"      numerically-long?
-      "java.lang.Float"     numerically-float?
-      ;; TODO fix
-      ;;"java.lang.Double"    numerically-double?
-      (err! "Could not find numerical range type for class" {:c c}))))
 
 ;; ========== Collections ========== ;;
 

@@ -12,6 +12,7 @@
    [[com.gfredericks.goog.math.Integer :as int]])
     [quantum.core.convert.primitive    :as pconvert
       :refer [#?(:clj ->long)]]
+    [quantum.core.data.numeric         :as dnum]
     [quantum.core.error                :as err
       :refer [>err err! TODO]]
     [quantum.core.fn
@@ -30,8 +31,7 @@
     [quantum.core.numeric.predicates]
     [quantum.core.numeric.trig      ]
     [quantum.core.numeric.truncate     :as trunc
-      :include-macros true]
-    [quantum.core.numeric.types        :as ntypes])
+      :include-macros true])
 #?(:cljs
   (:require-macros
     [quantum.core.numeric              :as self]))
@@ -185,8 +185,8 @@
 
 ; ===== NON-TRANSFORMATIVE OPERATIONS ===== ;
 
-(defalias numerator   ntypes/numerator)
-(defalias denominator ntypes/denominator)
+(defalias numerator   dnum/numerator)
+(defalias denominator dnum/denominator)
 ;_____________________________________________________________________
 ;==================={         CONVERT          }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°

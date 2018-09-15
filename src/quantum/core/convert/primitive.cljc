@@ -4,9 +4,7 @@
     [clojure.core           :as core]
     [quantum.core.data.bits :as bits
       :refer [&&]]
-    [quantum.core.error     :as err
-      :refer [>ex-info]]
-    [quantum.core.type-old  :as t
+    [quantum.core.type      :as t
       :refer [defnt]]
     [quantum.core.vars      :as var
       :refer [defalias]])
@@ -25,7 +23,7 @@
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 #?(:clj
 (defmacro long-out-of-range [x]
-  `(throw (>ex-info :illegal-argument (str "Value out of range for long: " ~x)))))
+  `(throw (ex-info (str "Value out of range for long: " ~x) {:type :illegal-argument}))))
 
 #?(:clj
 (defnt >long*
@@ -47,7 +45,7 @@
          (if (< (.bitLength x) 64)
              (.longValue x)
              (long-out-of-range x)))
-       ([x t/ratio?] (->long (.bigIntegerValue x)))
+       ([x dnum/ratio?] (->long (.bigIntegerValue x)))
        ([x (t/or t/char? t/byte? t/short? t/int? t/long?)] (>long* x))
        ([x t/float?] (clojure.lang.RT/longCast x)) ; Because primitive casting in Clojure is not supported ; TODO fix
        ([x t/double?] (clojure.lang.RT/longCast x)) ; TODO fix
@@ -64,7 +62,8 @@
 (defmacro cast-via-long [class- x]
   `(let [n# (->long ~x)]
      (if (or (< n# ~(list '. class- 'MIN_VALUE)) (> n# ~(list '. class- 'MAX_VALUE)))
-         (throw (>ex-info :illegal-argument (str ~(str "value out of range for " (name class-) ": ") ~x)))
+         (throw (ex-info (str ~(str "value out of range for " (name class-) ": ") ~x)
+                         {:type :illegal-argument}))
          n#))))
 ;_____________________________________________________________________
 ;==================={          BOOLEAN         }======================
@@ -112,7 +111,7 @@
   ([#{byte short char int long float double} x] (Primitive/uncheckedCharCast x))
   ([^string?   x] (if (->> x .length (= 1))
                       (.charAt x 0)
-                      (throw (>ex-info "Cannot cast non-singleton string to char." x))))))
+                      (throw (ex-info "Cannot cast non-singleton string to char." {:string x}))))))
 ;_____________________________________________________________________
 ;==================={           SHORT          }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°

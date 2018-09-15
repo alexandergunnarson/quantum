@@ -23,7 +23,7 @@
       :refer [- -' + abs inc div:natural]]
     [quantum.core.numeric.predicates :as pred
       :refer [neg? pos? zero?]]
-    [quantum.core.numeric.types      :as ntypes]
+    [quantum.core.data.numeric       :as dnum]
     [quantum.core.reducers           :as red
       :refer [reduce, transduce]]
     [quantum.core.vars

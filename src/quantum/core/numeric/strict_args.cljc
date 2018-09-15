@@ -10,6 +10,7 @@
      #?@(:clj  [bigint biginteger bigdec numerator denominator inc' dec'])])
   (:require
     [clojure.core                      :as c]
+    [quantum.core.data.numeric         :as dnum]
     [quantum.core.vars                 :as var
       :refer [defalias defaliases]]
     [quantum.core.numeric.convert   ]
@@ -17,11 +18,10 @@
     [quantum.core.numeric.operators    :as op]
     [quantum.core.numeric.predicates]
     [quantum.core.numeric.trig      ]
-    [quantum.core.numeric.truncate     :as trunc]
-    [quantum.core.numeric.types        :as ntypes])
+    [quantum.core.numeric.truncate     :as trunc])
 #?(:cljs
   (:require-macros
-    [quantum.core.numeric.strict-args :as self]))
+    [quantum.core.numeric.strict-args  :as self]))
 #?(:clj
   (:import
     [java.nio ByteBuffer]

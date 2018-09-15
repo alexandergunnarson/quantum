@@ -63,6 +63,16 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - quantum.core.data.bits
 
     - quantum.core.convert.primitive
+
+    - quantum.core.numeric.convert
+    - quantum.core.numeric.misc
+    - quantum.core.numeric.operators
+    - quantum.core.numeric.predicates
+    - quantum.core.numeric.trig
+    - quantum.core.numeric.truncate
+    - quantum.core.data.numeric
+    - quantum.core.numeric
+
     - quantum.core.string.regex
     - quantum.core.data.set
     - quantum.core.macros.type-hint
@@ -96,6 +106,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - quantum.untyped.core.data
   - Standard metadata
     - e.g. `{:alternate-implementations #{'cljs.tools.reader/merge-meta}}`
+    - {:adapted-from <symbol>}
   - Instead of e.g. `ns-` or `var-` we can do `ns-val` and `var-val`
   - Should we type `when`, `let`?
 

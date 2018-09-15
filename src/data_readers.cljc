@@ -1,1 +1,1 @@
-{r quantum.core.numeric.types/read-rational}
+{r quantum.core.data.numeric/read-rational}

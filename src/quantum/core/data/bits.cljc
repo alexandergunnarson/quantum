@@ -2,17 +2,17 @@
   ^{:doc "Useful bit/binary operations."
     :attribution "alexandergunnarson"}
   quantum.core.data.bits
-  (:refer-clojure :exclude
-    [unsigned-bit-shift-right bit-shift-left bit-shift-right
-     bit-or bit-and bit-xor bit-not])
-  (:require
-    [clojure.core      :as core  ]
-    [quantum.core.type :as t
-      :refer [defnt]]
-    [quantum.core.vars :as var
-      :refer [defalias]])
-  #?(:clj (:import #_[quantum.core Numeric]
-                      java.nio.ByteBuffer)))
+        (:refer-clojure :exclude
+          [and not or])
+        (:require
+          [clojure.core      :as core]
+          [quantum.core.type :as t
+            :refer [defnt]]
+          [quantum.core.vars :as var
+            :refer [defalias]])
+#?(:clj (:import
+          [quantum.core Numeric]
+        #_java.nio.ByteBuffer)))
 
 ; Because "cannot resolve symbol 'import'"
 #?(:clj
@@ -58,6 +58,8 @@
 #_(macros/variadic-proxy bool-and quantum.core.Numeric/and)    ; &&
 #_(macros/variadic-proxy bool-or  quantum.core.Numeric/or)     ; ||
 #_(macros/variadic-proxy bool-xor quantum.core.Numeric/xor)
+
+(defnt not )
 
 (defalias bit-not core/bit-not)
 (defalias bit-and core/bit-and)

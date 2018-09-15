@@ -19,7 +19,7 @@
       :refer [->num ->num&]]
     [quantum.core.convert.primitive  :as pconv
       :refer [->boxed ->boolean ->long]]
-    [quantum.core.numeric.types      :as ntypes])
+    [quantum.core.data.numeric       :as dnum])
 #?(:cljs
   (:require-macros
     [quantum.core.compare.core       :as self
@@ -85,7 +85,7 @@
            ([^prim?   x          y] (.equals ^Object y x)))
    :cljs (defn =-bin
            ([x] true)
-           ([x y] (TODO "fix") (core/zero? (ntypes/-compare x y)))))
+           ([x y] (TODO "fix") (core/zero? (dnum/-compare x y)))))
 
 #?(:clj (variadic-predicate-proxy =  =-bin ))
 #?(:clj (variadic-predicate-proxy =& =-bin&))
@@ -94,7 +94,7 @@
            ([#{#_Object prim?} x #{#_Object prim?} y] (Numeric/not (=-bin& x y)))) ; TODO make this one operation; TODO can only work with inline
    :cljs (defn not=-bin
            ([x] false)
-           ([x y] (TODO "fix") (not (core/zero? (ntypes/-compare x y))))))
+           ([x y] (TODO "fix") (not (core/zero? (dnum/-compare x y))))))
 
 #?(:clj (variadic-predicate-proxy not=  not=-bin ))
 #?(:clj (variadic-predicate-proxy not=& not=-bin&))
