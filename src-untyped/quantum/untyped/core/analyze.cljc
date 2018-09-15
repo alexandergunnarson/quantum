@@ -48,7 +48,7 @@
 #?(:clj (defns method? [x _] (instance? Method x)))
 
 #?(:clj
-(defns class->methods [^Class c t/class? > t/map?]
+(defns class->methods [^Class c t/class? > map?]
   (->> (.getMethods c)
        (c/remove+  (fn [^java.lang.reflect.Method x]
                      (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
@@ -70,7 +70,7 @@
   fipp.ednize/IOverride
   fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "F") (into (array-map) this))))
 
-(defns class->fields [^Class c t/class? > t/map?]
+(defns class->fields [^Class c t/class? > map?]
   (->> (.getFields c)
        (c/remove+ (fn [^java.lang.reflect.Field x]
                     (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))

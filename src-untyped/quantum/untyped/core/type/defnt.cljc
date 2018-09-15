@@ -49,6 +49,9 @@
     [quantum.core Numeric]
     [quantum.core.data Array]))
 
+;; TODO probably move
+(def index? #(and (integer? %) (>= % 0)))
+
 #?(:clj
 (defns class>simplest-class
   "This ensures that special overloads are not created for non-primitive subclasses
@@ -112,7 +115,7 @@
          :body-form                   t/any?
          :out-class                   (? t/class?)
          :out-type                    t/type?
-         :positional-args-ct          t/nneg-int?
+         :positional-args-ct          (s/and integer? #(>= % 0))
          ;; When present, varargs are considered to be of class Object
          :variadic?                   t/boolean?}))
 
@@ -415,14 +418,14 @@
      :out-class    out-class})))
 
 (defns >reify|name
-  [{:keys [::uss/fn|name ::uss/fn|name, i|fnt-overload t/index?
-           i|expanded-overload-group t/index?]} _ > simple-symbol?]
+  [{:keys [::uss/fn|name ::uss/fn|name, i|fnt-overload index?
+           i|expanded-overload-group index?]} _ > simple-symbol?]
   (>symbol (str fn|name "|__" i|fnt-overload "|" i|expanded-overload-group)))
 
 #?(:clj
 (defns expanded-overload-group>reify
   [{:as   in
-    :keys [::uss/fn|name ::uss/fn|name, i|fnt-overload t/index?, i|expanded-overload-group t/index?
+    :keys [::uss/fn|name ::uss/fn|name, i|fnt-overload index?, i|expanded-overload-group index?
            expanded-overload-group ::expanded-overload-group]} _
    {:as opts :keys [gen-gensym _]} ::opts
    > ::reify]
@@ -445,14 +448,14 @@
      :overloads                 reify-overloads})))
 
 (defns >input-type-decl|name
-  [fn|name ::uss/fn|name, i|fnt-overload t/index?, i|arg t/index? > simple-symbol?]
+  [fn|name ::uss/fn|name, i|fnt-overload index?, i|arg index? > simple-symbol?]
   (>symbol (str fn|name "|__" i|fnt-overload "|input" i|arg "|types")))
 
 (defns >i-arg->input-types-decl
   "The evaluated `form` of each input-types-decl is an array of non-primitivized types that the
    dynamic dispatch uses to dispatch off input types."
   [{:keys [fn|name _]} ::fnt-globals
-   arg-types|split ::expanded-overload-groups|arg-types|split, i|fnt-overload t/index?
+   arg-types|split ::expanded-overload-groups|arg-types|split, i|fnt-overload index?
    > (s/vec-of ::input-types-decl)]
   (->> arg-types|split
        (c/map-indexed
@@ -513,7 +516,7 @@
       overloads)))
 
 ;; TODO spec
-(defns unsupported! [name- _ #_t/qualified-symbol?, args t/indexed?, i t/index?]
+(defns unsupported! [name- _ #_t/qualified-symbol?, args _ #_indexed?, i index?]
   (TODO))
 
 (defns >direct-dispatch
@@ -566,7 +569,7 @@
     `(~dotted-reify-method-sym ~hinted-reify-sym ~@arglist)))
 
 (defns >dynamic-dispatch|conditional
-  [fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?), i|arg t/index?, body _]
+  [fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?), i|arg index?, body _]
   (if (-> body count (= 1))
       (first body)
       `(ifs ~@body (unsupported! (quote ~(uident/qualify fn|name)) [~@arglist] ~i|arg))))
@@ -586,7 +589,7 @@
                             c/lcat)]
           (>dynamic-dispatch|conditional fn|name arglist i|arg branches))))
   ([fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?), reify-seq (s/vec-of ::reify)
-    input-types-decl-group' (s/seq-of ::input-types-decl), *i|reify _, i|arg t/index?]
+    input-types-decl-group' (s/seq-of ::input-types-decl), *i|reify _, i|arg index?]
     (let [{:as input-types-decl :keys [arg-type|split]} (first input-types-decl-group')
           input-types-decl-group'' (rest input-types-decl-group')]
       (->> arg-type|split

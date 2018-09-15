@@ -92,12 +92,6 @@
    #?(:clj ^long n :cljs n)]
   (and x (unchecked-dec (<< 1 n))))
 
-;; ===== Endianness reversal ===== ;;
-
-#?(:clj (defn reverse|short [x]       (Numeric/reverseShort (short x))))
-#?(:clj (defn reverse|int   [x]       (Numeric/reverseInt   (int   x))))
-#?(:clj (defn reverse|long  [^long x] (Numeric/reverseLong  x)))
-
 ;; ===== Primitives ===== ;;
 
 #?(:clj  (eval `(defalias ~(if (resolve `fcore/boolean?)

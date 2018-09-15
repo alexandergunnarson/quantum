@@ -28,17 +28,6 @@
            [it.unimi.dsi.fastutil.objects Reference2LongOpenHashMap]]
     :cljs [[goog.structs AvlTree LinkedMap]])))
 
-;; ===== Map entries ===== ;;
-
-;; TODO excise?
-(defn map-entry-seq [args]
-  (loop [[k v :as args-n] args
-         accum []]
-    (if (empty? args-n)
-        accum
-        (recur (-> args-n rest rest)
-               (conj accum (map-entry k v))))))
-
 ;; ----- Hash maps ----- ;;
 
 #?(:clj (def hash-map? (partial instance? clojure.lang.PersistentHashMap)))

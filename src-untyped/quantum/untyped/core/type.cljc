@@ -623,11 +623,11 @@
 
 ;; ========== Collections ========== ;;
 
-;; ===== Tuples ===== ;;
-
-         (-def tuple?           ;; clojure.lang.Tuple was discontinued; we won't support it for now
-                                (isa? quantum.untyped.core.data.tuple.Tuple))
-#?(:clj  (-def map-entry?       (isa? java.util.Map$Entry)))
+;; Necessary for `quantum.untyped.core.analyze`
+(def +map|built-in?
+     (or (isa? #?(:clj clojure.lang.PersistentHashMap  :cljs cljs.core/PersistentHashMap))
+         (isa? #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core/PersistentArrayMap))
+         (isa? #?(:clj clojure.lang.PersistentTreeMap  :cljs cljs.core/PersistentTreeMap))))
 
 ;; ===== Sequences ===== ;; Sequential (generally not efficient Lookup / RandomAccess)
 
@@ -653,99 +653,6 @@
          (-def !list?           #?(:clj (isa? java.util.LinkedList) :cljs none?))
          (-def  list?           #?(:clj  (isa? java.util.List)
                                    :cljs +list?))
-
-;; ----- Generic ----- ;;
-
-;; ===== Arrays ===== ;; Sequential, Associative (specifically, whose keys are sequential,
-                      ;; dense integer values), not extensible
-
-#?(:clj
-(defns >array-nd-type [kind c/symbol?, n unum/pos-int? > utr/class-type?]
-  (let [prefix (apply str (repeat n \[))
-        letter (case kind
-                 boolean "Z"
-                 byte    "B"
-                 char    "C"
-                 short   "S"
-                 int     "I"
-                 long    "J"
-                 float   "F"
-                 double  "D"
-                 object  "Ljava.lang.Object;")]
-    (isa? (Class/forName (str prefix letter))))))
-
-#?(:clj
-(defns >array-nd-types [n unum/pos-int? > utr/type?]
-  (->> '[boolean byte char short int long float double object]
-       (map #(>array-nd-type % n))
-       (apply or))))
-
-         (-def booleans?       #?(:clj (>array-nd-type 'boolean 1) :cljs none?))
-         (-def bytes?          #?(:clj (>array-nd-type 'byte    1) :cljs (isa? js/Int8Array)))
-         (-def ubytes?         #?(:clj none?                       :cljs (isa? js/Uint8Array)))
-         (-def ubytes-clamped? #?(:clj none?                       :cljs (isa? js/Uint8ClampedArray)))
-         (-def chars?          #?(:clj (>array-nd-type 'char    1) :cljs (isa? js/Uint16Array))) ; kind of
-         (-def shorts?         #?(:clj (>array-nd-type 'short   1) :cljs (isa? js/Int16Array)))
-         (-def ushorts?        #?(:clj none?                       :cljs (isa? js/Uint16Array)))
-         (-def ints?           #?(:clj (>array-nd-type 'int     1) :cljs (isa? js/Int32Array)))
-         (-def uints?          #?(:clj none?                       :cljs (isa? js/Uint32Array)))
-         (-def longs?          #?(:clj (>array-nd-type 'long    1) :cljs none?))
-         (-def floats?         #?(:clj (>array-nd-type 'float   1) :cljs (isa? js/Float32Array)))
-         (-def doubles?        #?(:clj (>array-nd-type 'double  1) :cljs (isa? js/Float64Array)))
-         (-def objects?        #?(:clj (>array-nd-type 'object  1) :cljs (isa? js/Array)))
-
-         (-def numeric-1d?     (or bytes? ubytes? ubytes-clamped?
-                                   chars?
-                                   shorts? ushorts? ints? uints? longs?
-                                   floats? doubles?))
-
-         (-def array-1d?       (or booleans? bytes? ubytes? ubytes-clamped?
-                                   chars?
-                                   shorts? ushorts? ints? uints? longs?
-                                   floats? doubles? objects?))
-
-#?(:clj  (-def booleans-2d?    (>array-nd-type 'boolean 2)))
-#?(:clj  (-def bytes-2d?       (>array-nd-type 'byte    2)))
-#?(:clj  (-def chars-2d?       (>array-nd-type 'char    2)))
-#?(:clj  (-def shorts-2d?      (>array-nd-type 'short   2)))
-#?(:clj  (-def ints-2d?        (>array-nd-type 'int     2)))
-#?(:clj  (-def longs-2d?       (>array-nd-type 'long    2)))
-#?(:clj  (-def floats-2d?      (>array-nd-type 'float   2)))
-#?(:clj  (-def doubles-2d?     (>array-nd-type 'double  2)))
-#?(:clj  (-def objects-2d?     (>array-nd-type 'object  2)))
-
-#?(:clj  (-def numeric-2d?     (or bytes-2d?
-                                   chars-2d?
-                                   shorts-2d? ints-2d? longs-2d?
-                                   floats-2d? doubles-2d?)))
-
-#?(:clj  (-def array-2d?       (>array-nd-types 2 )))
-
-#?(:clj  (-def array-3d?       (>array-nd-types 3 )))
-#?(:clj  (-def array-4d?       (>array-nd-types 4 )))
-#?(:clj  (-def array-5d?       (>array-nd-types 5 )))
-#?(:clj  (-def array-6d?       (>array-nd-types 6 )))
-#?(:clj  (-def array-7d?       (>array-nd-types 7 )))
-#?(:clj  (-def array-8d?       (>array-nd-types 8 )))
-#?(:clj  (-def array-9d?       (>array-nd-types 9 )))
-#?(:clj  (-def array-10d?      (>array-nd-types 10)))
-
-         ;; TODO differentiate between "all supported n-D arrays" and "all n-D arrays"
-         (-def objects-nd?     (or objects?
-                                   #?@(:clj [(>array-nd-type 'object  2)
-                                             (>array-nd-type 'object  3)
-                                             (>array-nd-type 'object  4)
-                                             (>array-nd-type 'object  5)
-                                             (>array-nd-type 'object  6)
-                                             (>array-nd-type 'object  7)
-                                             (>array-nd-type 'object  8)
-                                             (>array-nd-type 'object  9)
-                                             (>array-nd-type 'object 10)])))
-
-         ;; TODO differentiate between "all supported n-D arrays" and "all n-D arrays"
-         (-def array?          (or array-1d?
-                                   #?@(:clj [array-2d? array-3d? array-4d? array-5d?
-                                             array-6d? array-7d? array-8d? array-9d? array-10d?])))
 
 ;; ----- String ----- ;; A special wrapper for char array where different encodings, etc. are possible
 
@@ -1027,94 +934,9 @@
                                 ;; TODO other things are comparable; really it depends on the two objects in question
                                 :cljs (or nil? (isa? cljs.core/IComparable))))
 
-         (-def record?       (isa? #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
-
          (-def transformer?  (isa? quantum.untyped.core.reducers.Transformer))
 
          (-def delay?        (isa? #?(:clj clojure.lang.Delay :cljs cljs.core/Delay)))
-
-;; ----- Collections ----- ;;
-
-         (-def sorted?         (or (isa? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
-                                   #?@(:clj  [(isa? java.util.SortedMap)
-                                              (isa? java.util.SortedSet)]
-                                       :cljs [(isa? goog.structs.AvlTree)])
-                                   ;; TODO implement — monotonically <, <=, =, >=, >
-                                   #_(>expr monotonic?)))
-
-         (-def transient?      (isa? #?(:clj  clojure.lang.ITransientCollection
-                                        :cljs cljs.core/ITransientCollection)))
-
-         (-def editable?       (isa? #?(:clj  clojure.lang.IEditableCollection
-                                        :cljs cljs.core/IEditableCollection)))
-
-         ;; Indicates efficient lookup by (integer) index (via `get`)
-         (-def indexed?        (or (isa? #?(:clj clojure.lang.Indexed :cljs cljs.core/IIndexed))
-                                   ;; Doesn't guarantee `java.util.List` is implemented, except by
-                                   ;; convention
-                                   #?(:clj (isa? java.util.RandomAccess))
-                                   #?(:clj char-seq? :cljs string?)
-                                   array?))
-
-         ;; Indicates whether `assoc?!` is supported
-         (-def associative?    (or (isa? #?(:clj clojure.lang.Associative           :cljs cljs.core/IAssociative))
-                                   (isa? #?(:clj clojure.lang.ITransientAssociative :cljs cljs.core/ITransientAssociative))
-                                   (or map? indexed?)))
-
-         (-def sequential?     (or (isa? #?(:clj clojure.lang.Sequential :cljs cljs.core/ISequential))
-                                   list? indexed?))
-
-         (-def counted?        (or (isa? #?(:clj clojure.lang.Counted :cljs cljs.core/ICounted))
-                                   #?(:clj char-seq? :cljs string?) vector? map? set? array?))
-
-#?(:clj  (-def java-coll?      (isa? java.util.Collection)))
-
-         ;; A group of objects/elements
-         (-def coll?           (or #?(:clj java-coll?)
-                                   #?@(:clj  [(isa? clojure.lang.IPersistentCollection)
-                                              (isa? clojure.lang.ITransientCollection)]
-                                       :cljs (isa? cljs.core/ICollection))
-                                   sequential? associative?))
-
-         (-def iterable?       (isa? #?(:clj java.lang.Iterable :cljs cljs.core/IIterable)))
-
-         ;; Whatever is `seqable?` is reducible via a call to `seq`.
-         ;; Reduction is nearly always preferable to seq-iteration if for no other reason than that
-         ;; it can take advantage of transducers and reducers. This predicate just answers whether
-         ;; it is more efficient to reduce than to seq-iterate (note that it should be at least as
-         ;; efficient as seq-iteration).
-         ;; TODO re-enable when dispatch enabled
-         #_(-def prefer-reduce?  (or (isa? #?(:clj clojure.lang.IReduceInit :cljs cljs.core/IReduce))
-                                   (isa? #?(:clj clojure.lang.IKVReduce   :cljs cljs.core/IKVReduce))
-                                   #?(:clj (isa? clojure.core.protocols/IKVReduce))
-                                   #?(:clj char-seq? :cljs string?)
-                                   array?
-                                   record?
-                                   (isa? #?(:clj fast_zip.core.ZipperLocation :cljs fast-zip.core/ZipperLocation))
-                                   chan?))
-
-         ;; Whatever is `reducible?` is seqable via a call to `sequence`.
-         (-def seqable?        (or #?@(:clj  [(isa? clojure.lang.Seqable)
-                                              iterable?
-                                              char-seq?
-                                              map?
-                                              array?]
-                                       :cljs [(isa? cljs.core/ISeqable)
-                                              array?
-                                              string?])))
-
-         ;; Able to be traversed over in some fashion, whether by `first`/`next` seq-iteration,
-         ;; reduction, etc.
-         ;; TODO re-enable when dispatch enabled
-         #_(-def traversable?    (or (isa? #?(:clj clojure.lang.IReduceInit :cljs cljs.core/IReduce))
-                                   (isa? #?(:clj clojure.lang.IKVReduce :cljs cljs.core/IKVReduce))
-                                   #?(:clj (isa? clojure.core.protocols/IKVReduce))
-                                   (isa? #?(:clj clojure.lang.Seqable :cljs cljs.core/ISeqable))
-                                   iterable?
-                                   #?(:clj char-seq? :cljs string?)
-                                   array?
-                                   (isa? #?(:clj fast_zip.core.ZipperLocation :cljs fast-zip.core/ZipperLocation))
-                                   chan?))
 
 #?(:clj  (-def tagged-literal?   (isa? clojure.lang.TaggedLiteral)))
 
@@ -1123,10 +945,7 @@
 
 ;; ===== Generic ===== ;;
 
-         ;; Standard "uncuttable" types
-         (-def integral?  (or primitive? number?))
-
          ;; TODO make into a type
-         (def  nneg-int?  #(c/and (integer? %) (c/>= % 0)))
+       #_(def  nneg-int?  #(c/and (integer? %) (c/>= % 0)))
          ;; TODO make into a type
-         (def  index?     nneg-int?)
+       #_(def  index?     nneg-int?)

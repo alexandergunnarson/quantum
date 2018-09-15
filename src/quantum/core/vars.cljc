@@ -5,6 +5,7 @@
          (:require
            ;; TODO TYPED remove reference to `clojure.core`
            [clojure.core              :as c]
+           [quantum.core.data.map     :as map]
            [quantum.core.ns           :as ns]
            [quantum.core.type         :as t
              :refer [defnt]]
@@ -18,7 +19,7 @@
 
 ;; ===== Meta ===== ;;
 
-(def meta? (t/? ut/+map?))
+(def meta? (t/? map/+map?))
 
 (defnt meta
   "Returns the (possibly nil) metadata of ->`x`."

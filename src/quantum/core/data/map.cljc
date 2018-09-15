@@ -9,13 +9,14 @@
           #_[quantum.core.reducers         :as r
               :refer [reduce-pair]]
             [quantum.core.type             :as t]
-            [quantum.core.vars
-              :refer [defalias def- defmacro-]]
             [quantum.untyped.core.data.map :as umap]
             [quantum.untyped.core.defnt
               :refer [defns-]]
+            [quantum.untyped.core.type     :as ut]
             [quantum.untyped.core.type.defnt
-              :refer [defnt]])
+              :refer [defnt]]
+            [quantum.untyped.core.vars
+              :refer [defalias def- defmacro-]])
   (:import
 #?@(:clj  [[java.util HashMap IdentityHashMap LinkedHashMap TreeMap]
            [it.unimi.dsi.fastutil.ints    Int2ReferenceOpenHashMap]
@@ -50,7 +51,7 @@
 
 #?(:clj
 (defmacro- def-preds|map|any [prefix #_symbol?]
-  (let [anys (->> (for [kind basic-type-syms]
+  (let [anys (->> (for [kind basic-type-syms-for-maps]
                     [(list 'def (>kv-sym prefix kind 'any)
                                 (->> basic-type-syms-for-maps
                                      (map #(>kv-sym prefix kind %))
@@ -61,7 +62,7 @@
                                      (list* `t/or)))])
                   (apply concat))
         any->any (list 'def (>kv-sym prefix 'any 'any)
-                            (->> basic-type-syms
+                            (->> basic-type-syms-for-maps
                                  (map #(vector (>kv-sym prefix 'any %) (>kv-sym prefix % 'any)))
                                  (apply concat)
                                  (list* `t/or)))]
@@ -1444,10 +1445,7 @@
 
 ;; ----- General Maps ----- ;;
 
-(def +map|built-in?
-     (t/or (t/isa? #?(:clj clojure.lang.PersistentHashMap  :cljs cljs.core/PersistentHashMap))
-           (t/isa? #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core/PersistentArrayMap))
-           (t/isa? #?(:clj clojure.lang.PersistentTreeMap  :cljs cljs.core/PersistentTreeMap))))
+(defalias ut/+map|built-in?)
 
 ;; `+map?` and `!+map?` defined above
 (def ?!+map? (t/or !+map? +map?))
