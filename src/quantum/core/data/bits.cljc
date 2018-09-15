@@ -182,7 +182,7 @@
 (defnt ^:inline <<<
   "Unsigned (logical) bit shift left"
 #_([x (t/- p/primitive? t/boolean?), n (t/- p/primitive? t/boolean?) > (t/type x)]
-    (Numeric/bitOr a b))
+    (Numeric/bitOr x n))
   ([x p/byte?  , n (t/- p/primitive? p/boolean?) > p/byte?]   (Numeric/shiftLeft x n))
   ([x p/short? , n (t/- p/primitive? p/boolean?) > p/short?]  (Numeric/shiftLeft x n))
   ;; TODO implement this correctly because it likely isn't correct just to do `<<` in Java
@@ -232,6 +232,62 @@
   ([x p/long?  , n (t/- p/primitive? p/boolean?) > p/long?]   (Numeric/shiftRight x n))
   ([x p/float? , n (t/- p/primitive? p/boolean?) > p/float?]  (Numeric/shiftRight x n))
   ([x p/double?, n (t/- p/primitive? p/boolean?) > p/double?] (Numeric/shiftRight x n)))
+
+;; ===== Single-bit operations ===== ;;
+
+;; TODO TYPED we can shorten this by having dependent types
+(defnt ^:inline clear*
+  "Bit-clear. Unchecked w.r.t. the bit index."
+  {:todo "Extend index to non-longs"}
+#_([x (t/- p/primitive? t/boolean?), i p/long? > (t/type x)] (Numeric/bitClear x i))
+  ([x p/byte?  , i p/long? > p/byte?]   (Numeric/bitClear x i))
+  ([x p/short? , i p/long? > p/short?]  (Numeric/bitClear x i))
+  ([x p/char?  , i p/long? > p/char?]   (Numeric/bitClear x i))
+  ([x p/int?   , i p/long? > p/int?]    (Numeric/bitClear x i))
+  ([x p/long?  , i p/long? > p/long?]   (Numeric/bitClear x i))
+  ([x p/float? , i p/long? > p/float?]  (Numeric/bitClear x i))
+  ([x p/double?, i p/long? > p/double?] (Numeric/bitClear x i)))
+
+;; TODO TYPED we can shorten this by having dependent types
+(defnt ^:inline invert*
+  "Bit-invert/bit-flip. Unchecked w.r.t. the bit index."
+  {:todo "Extend index to non-longs"}
+#_([x (t/- p/primitive? t/boolean?), i p/long? > (t/type x)] (Numeric/bitFlip x i))
+  ([x p/byte?  , i p/long? > p/byte?]   (Numeric/bitFlip x i))
+  ([x p/short? , i p/long? > p/short?]  (Numeric/bitFlip x i))
+  ([x p/char?  , i p/long? > p/char?]   (Numeric/bitFlip x i))
+  ([x p/int?   , i p/long? > p/int?]    (Numeric/bitFlip x i))
+  ([x p/long?  , i p/long? > p/long?]   (Numeric/bitFlip x i))
+  ([x p/float? , i p/long? > p/float?]  (Numeric/bitFlip x i))
+  ([x p/double?, i p/long? > p/double?] (Numeric/bitFlip x i)))
+
+;; TODO TYPED we can shorten this by having dependent types
+(defnt ^:inline set*
+  "Bit-set. Unchecked w.r.t. the bit index."
+  {:todo "Extend index to non-longs"}
+#_([x (t/- p/primitive? t/boolean?), i p/long? > (t/type x)] (Numeric/bitSet x i))
+  ([x p/byte?  , i p/long? > p/byte?]   (Numeric/bitSet x i))
+  ([x p/short? , i p/long? > p/short?]  (Numeric/bitSet x i))
+  ([x p/char?  , i p/long? > p/char?]   (Numeric/bitSet x i))
+  ([x p/int?   , i p/long? > p/int?]    (Numeric/bitSet x i))
+  ([x p/long?  , i p/long? > p/long?]   (Numeric/bitSet x i))
+  ([x p/float? , i p/long? > p/float?]  (Numeric/bitSet x i))
+  ([x p/double?, i p/long? > p/double?] (Numeric/bitSet x i)))
+
+;; TODO TYPED we can shorten this by having dependent types
+(defnt ^:inline test*
+  "Bit-test. Unchecked w.r.t. the bit index."
+  {:todo "Extend index to non-longs"}
+#_([x (t/- p/primitive? t/boolean?), i p/long? > (t/type x)] (Numeric/bitTest x i))
+  ([x p/byte?  , i p/long? > p/byte?]   (Numeric/bitTest x i))
+  ([x p/short? , i p/long? > p/short?]  (Numeric/bitTest x i))
+  ([x p/char?  , i p/long? > p/char?]   (Numeric/bitTest x i))
+  ([x p/int?   , i p/long? > p/int?]    (Numeric/bitTest x i))
+  ([x p/long?  , i p/long? > p/long?]   (Numeric/bitTest x i))
+  ([x p/float? , i p/long? > p/float?]  (Numeric/bitTest x i))
+  ([x p/double?, i p/long? > p/double?] (Numeric/bitTest x i)))
+
+(defalias ? test*)
 
 ;; ===== Rotations ===== ;;
 
