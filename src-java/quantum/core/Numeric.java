@@ -342,60 +342,60 @@ public class Numeric {
 
     // -------------------------------- unsignedShiftRight : >>> -------------------------------- //
 
-    public static boolean ushiftRight (final boolean a, final boolean b) { return a && !b; }
-    public static byte    ushiftRight (final byte    a, final byte    b) { return (byte) (a >>> b);}
-    public static short   ushiftRight (final byte    a, final short   b) { return (short)(a >>> b);}
-    public static char    ushiftRight (final byte    a, final char    b) { return (char) (a >>> b);}
-    public static int     ushiftRight (final byte    a, final int     b) { return         a >>> b ;}
-    public static long    ushiftRight (final byte    a, final long    b) { return         a >>> b ;}
-    public static float   ushiftRight (final byte    a, final float   b) {
+    public static boolean uShiftRight (final boolean a, final boolean b) { return a && !b; }
+    public static byte    uShiftRight (final byte    a, final byte    b) { return (byte) (a >>> b);}
+    public static short   uShiftRight (final byte    a, final short   b) { return (short)(a >>> b);}
+    public static char    uShiftRight (final byte    a, final char    b) { return (char) (a >>> b);}
+    public static int     uShiftRight (final byte    a, final int     b) { return         a >>> b ;}
+    public static long    uShiftRight (final byte    a, final long    b) { return         a >>> b ;}
+    public static float   uShiftRight (final byte    a, final float   b) {
       return Float.intBitsToFloat(a >>> Float.floatToIntBits(b));
     }
-    public static double  ushiftRight (final byte    a, final double  b) {
+    public static double  uShiftRight (final byte    a, final double  b) {
       return Double.longBitsToDouble(a >>> Double.doubleToLongBits(b));
     }
-    public static short   ushiftRight (final short   a, final byte    b) { return (short)(a >>> b);}
-    public static short   ushiftRight (final short   a, final short   b) { return (short)(a >>> b);}
-    public static short   ushiftRight (final short   a, final char    b) { return (short)(a >>> b);}
-    public static int     ushiftRight (final short   a, final int     b) { return         a >>> b ;}
-    public static long    ushiftRight (final short   a, final long    b) { return         a >>> b ;}
-    public static float   ushiftRight (final short   a, final float   b) {
+    public static short   uShiftRight (final short   a, final byte    b) { return (short)(a >>> b);}
+    public static short   uShiftRight (final short   a, final short   b) { return (short)(a >>> b);}
+    public static short   uShiftRight (final short   a, final char    b) { return (short)(a >>> b);}
+    public static int     uShiftRight (final short   a, final int     b) { return         a >>> b ;}
+    public static long    uShiftRight (final short   a, final long    b) { return         a >>> b ;}
+    public static float   uShiftRight (final short   a, final float   b) {
       return Float.intBitsToFloat(a >>> Float.floatToIntBits(b));
     }
-    public static double  ushiftRight (final short   a, final double  b) {
+    public static double  uShiftRight (final short   a, final double  b) {
       return Double.longBitsToDouble(a >>> Double.doubleToLongBits(b));
     }
-    public static char    ushiftRight (final char    a, final byte    b) { return (char) (a >>> b);}
-    public static short   ushiftRight (final char    a, final short   b) { return (short)(a >>> b);}
-    public static char    ushiftRight (final char    a, final char    b) { return (char) (a >>> b);}
-    public static int     ushiftRight (final char    a, final int     b) { return         a >>> b ;}
-    public static long    ushiftRight (final char    a, final long    b) { return         a >>> b ;}
-    public static float   ushiftRight (final char    a, final float   b) {
+    public static char    uShiftRight (final char    a, final byte    b) { return (char) (a >>> b);}
+    public static short   uShiftRight (final char    a, final short   b) { return (short)(a >>> b);}
+    public static char    uShiftRight (final char    a, final char    b) { return (char) (a >>> b);}
+    public static int     uShiftRight (final char    a, final int     b) { return         a >>> b ;}
+    public static long    uShiftRight (final char    a, final long    b) { return         a >>> b ;}
+    public static float   uShiftRight (final char    a, final float   b) {
       return Float.intBitsToFloat(a >>> Float.floatToIntBits(b));
     }
-    public static double  ushiftRight (final char    a, final double  b) {
+    public static double  uShiftRight (final char    a, final double  b) {
       return Double.longBitsToDouble(a >>> Double.doubleToLongBits(b));
     }
-    public static int     ushiftRight (final int     a, final byte    b) { return         a >>> b ;}
-    public static int     ushiftRight (final int     a, final short   b) { return         a >>> b ;}
-    public static int     ushiftRight (final int     a, final char    b) { return         a >>> b ;}
-    public static int     ushiftRight (final int     a, final int     b) { return         a >>> b ;}
-    public static long    ushiftRight (final int     a, final long    b) { return         a >>> b ;}
-    public static float   ushiftRight (final int     a, final float   b) {
+    public static int     uShiftRight (final int     a, final byte    b) { return         a >>> b ;}
+    public static int     uShiftRight (final int     a, final short   b) { return         a >>> b ;}
+    public static int     uShiftRight (final int     a, final char    b) { return         a >>> b ;}
+    public static int     uShiftRight (final int     a, final int     b) { return         a >>> b ;}
+    public static long    uShiftRight (final int     a, final long    b) { return         a >>> b ;}
+    public static float   uShiftRight (final int     a, final float   b) {
       return Float.intBitsToFloat(a >>> Float.floatToIntBits(b));
     }
-    public static double  ushiftRight (final int     a, final double  b) {
+    public static double  uShiftRight (final int     a, final double  b) {
       return Double.longBitsToDouble(a >>> Double.doubleToLongBits(b));
     }
-    public static long    ushiftRight (final long    a, final byte    b) { return         a >>> b ;}
-    public static long    ushiftRight (final long    a, final char    b) { return         a >>> b ;}
-    public static long    ushiftRight (final long    a, final short   b) { return         a >>> b ;}
-    public static long    ushiftRight (final long    a, final int     b) { return         a >>> b ;}
-    public static long    ushiftRight (final long    a, final long    b) { return         a >>> b ;}
-    public static double  ushiftRight (final long    a, final float   b) {
+    public static long    uShiftRight (final long    a, final byte    b) { return         a >>> b ;}
+    public static long    uShiftRight (final long    a, final char    b) { return         a >>> b ;}
+    public static long    uShiftRight (final long    a, final short   b) { return         a >>> b ;}
+    public static long    uShiftRight (final long    a, final int     b) { return         a >>> b ;}
+    public static long    uShiftRight (final long    a, final long    b) { return         a >>> b ;}
+    public static double  uShiftRight (final long    a, final float   b) {
       return Double.longBitsToDouble(a >>> Float.floatToIntBits(b));
     }
-    public static double  ushiftRight (final long    a, final double  b) {
+    public static double  uShiftRight (final long    a, final double  b) {
       return Double.longBitsToDouble(a >>> Double.doubleToLongBits(b));
     }
 
