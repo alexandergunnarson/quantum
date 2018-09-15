@@ -23,18 +23,34 @@ public class Numeric {
     public static boolean isTrue  (final boolean a                 ) { return a == true; }
     public static boolean isFalse (final boolean a                 ) { return a == false; }
     public static boolean isNil   (final Object  a                 ) { return a == null; }
+    public static boolean not     (final boolean a                 ) { return !a; }
     public static boolean and     (final boolean a, final boolean b) { return a && b; }
     public static boolean or      (final boolean a, final boolean b) { return a || b; }
-    public static boolean not     (final boolean a                 ) { return !a; }
 
     // =================================== Bit Operations ======================================= //
 
+    // ---------------------------- bitNot : ! (implicitly checked) ---------------------------- //
+
+    public static boolean bitNot (final boolean x) { return        !x; }
+    public static byte    bitNot (final byte    x) { return (byte) ~x; }
+    public static short   bitNot (final short   x) { return (short)~x; }
+    public static char    bitNot (final char    x) { return (char) ~x; }
+    public static int     bitNot (final int     x) { return        ~x; }
+    public static long    bitNot (final long    x) { return        ~x; }
+    public static float   bitNot (final float   x) {
+      return Float.intBitsToFloat(~Float.floatToIntBits(x));
+    }
+    public static double  bitNot (final double  x) {
+      return Double.longBitsToDouble(~Double.doubleToLongBits(x));
+    }
+
     // ---------------------------- bitAnd : & (implicitly checked) ---------------------------- //
+    // Returns the smallest safe type; decimals are "infectious"
 
     public static boolean bitAnd (final boolean a, final boolean b) { return         a & b ; }
     public static byte    bitAnd (final byte    a, final byte    b) { return (byte) (a & b); }
     public static short   bitAnd (final byte    a, final short   b) { return (short)(a & b); }
-    public static char    bitAnd (final byte    a, final char    b) { return (char) (a & b); }
+    public static int     bitAnd (final byte    a, final char    b) { return         a & b ; }
     public static int     bitAnd (final byte    a, final int     b) { return         a & b ; }
     public static long    bitAnd (final byte    a, final long    b) { return         a & b ; }
     public static float   bitAnd (final byte    a, final float   b) {
@@ -45,7 +61,7 @@ public class Numeric {
     }
     public static short   bitAnd (final short   a, final byte    b) { return (short)(a & b); }
     public static short   bitAnd (final short   a, final short   b) { return (short)(a & b); }
-    public static short   bitAnd (final short   a, final char    b) { return (short)(a & b); }
+    public static int     bitAnd (final short   a, final char    b) { return         a & b ; }
     public static int     bitAnd (final short   a, final int     b) { return         a & b ; }
     public static long    bitAnd (final short   a, final long    b) { return         a & b ; }
     public static float   bitAnd (final short   a, final float   b) {
@@ -54,8 +70,8 @@ public class Numeric {
     public static double  bitAnd (final short   a, final double  b) {
       return Double.longBitsToDouble(a & Double.doubleToLongBits(b));
     }
-    public static char    bitAnd (final char    a, final byte    b) { return (char) (a & b); }
-    public static short   bitAnd (final char    a, final short   b) { return (short)(a & b); }
+    public static int     bitAnd (final char    a, final byte    b) { return         a & b ; }
+    public static int     bitAnd (final char    a, final short   b) { return         a & b ; }
     public static char    bitAnd (final char    a, final char    b) { return (char) (a & b); }
     public static int     bitAnd (final char    a, final int     b) { return         a & b ; }
     public static long    bitAnd (final char    a, final long    b) { return         a & b ; }
@@ -87,13 +103,56 @@ public class Numeric {
     public static double  bitAnd (final long    a, final double  b) {
       return Double.longBitsToDouble(a & Double.doubleToLongBits(b));
     }
+    public static float   bitAnd (final float   a, final byte    b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) & b);
+    }
+    public static float   bitAnd (final float   a, final short   b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) & b);
+    }
+    public static float   bitAnd (final float   a, final char    b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) & b);
+    }
+    public static float   bitAnd (final float   a, final int     b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) & b);
+    }
+    public static double  bitAnd (final float   a, final long    b) {
+      return Double.longBitsToDouble(Float.floatToIntBits(a) & b);
+    }
+    public static double  bitAnd (final float   a, final float   b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) & Float.floatToIntBits(b));
+    }
+    public static double  bitAnd (final float   a, final double  b) {
+      return Double.longBitsToDouble(Float.floatToIntBits(a) & Double.doubleToLongBits(b));
+    }
+    public static double  bitAnd (final double  a, final byte    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) & b);
+    }
+    public static double  bitAnd (final double  a, final short   b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) & b);
+    }
+    public static double  bitAnd (final double  a, final char    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) & b);
+    }
+    public static double  bitAnd (final double  a, final int     b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) & b);
+    }
+    public static double  bitAnd (final double  a, final long    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) & b);
+    }
+    public static double  bitAnd (final double  a, final float   b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) & Float.floatToIntBits(b));
+    }
+    public static double  bitAnd (final double  a, final double  b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) & Double.doubleToLongBits(b));
+    }
 
     // ----------------------------- bitOr : | (implicitly checked) ----------------------------- //
+    // Returns the smallest safe type; decimals are "infectious"
 
     public static boolean bitOr (final boolean a, final boolean b) { return         a | b ; }
     public static byte    bitOr (final byte    a, final byte    b) { return (byte) (a | b); }
     public static short   bitOr (final byte    a, final short   b) { return (short)(a | b); }
-    public static char    bitOr (final byte    a, final char    b) { return (char) (a | b); }
+    public static int     bitOr (final byte    a, final char    b) { return         a | b ; }
     public static int     bitOr (final byte    a, final int     b) { return         a | b ; }
     public static long    bitOr (final byte    a, final long    b) { return         a | b ; }
     public static float   bitOr (final byte    a, final float   b) {
@@ -104,7 +163,7 @@ public class Numeric {
     }
     public static short   bitOr (final short   a, final byte    b) { return (short)(a | b); }
     public static short   bitOr (final short   a, final short   b) { return (short)(a | b); }
-    public static short   bitOr (final short   a, final char    b) { return (short)(a | b); }
+    public static int     bitOr (final short   a, final char    b) { return         a | b ; }
     public static int     bitOr (final short   a, final int     b) { return         a | b ; }
     public static long    bitOr (final short   a, final long    b) { return         a | b ; }
     public static float   bitOr (final short   a, final float   b) {
@@ -113,8 +172,8 @@ public class Numeric {
     public static double  bitOr (final short   a, final double  b) {
       return Double.longBitsToDouble(a | Double.doubleToLongBits(b));
     }
-    public static char    bitOr (final char    a, final byte    b) { return (char) (a | b); }
-    public static short   bitOr (final char    a, final short   b) { return (short)(a | b); }
+    public static int     bitOr (final char    a, final byte    b) { return         a | b ; }
+    public static int     bitOr (final char    a, final short   b) { return         a | b ; }
     public static char    bitOr (final char    a, final char    b) { return (char) (a | b); }
     public static int     bitOr (final char    a, final int     b) { return         a | b ; }
     public static long    bitOr (final char    a, final long    b) { return         a | b ; }
@@ -146,13 +205,56 @@ public class Numeric {
     public static double  bitOr (final long    a, final double  b) {
       return Double.longBitsToDouble(a | Double.doubleToLongBits(b));
     }
+    public static float   bitOr (final float   a, final byte    b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) | b);
+    }
+    public static float   bitOr (final float   a, final short   b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) | b);
+    }
+    public static float   bitOr (final float   a, final char    b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) | b);
+    }
+    public static float   bitOr (final float   a, final int     b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) | b);
+    }
+    public static double  bitOr (final float   a, final long    b) {
+      return Double.longBitsToDouble(Float.floatToIntBits(a) | b);
+    }
+    public static double  bitOr (final float   a, final float   b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) | Float.floatToIntBits(b));
+    }
+    public static double  bitOr (final float   a, final double  b) {
+      return Double.longBitsToDouble(Float.floatToIntBits(a) | Double.doubleToLongBits(b));
+    }
+    public static double  bitOr (final double  a, final byte    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) | b);
+    }
+    public static double  bitOr (final double  a, final short   b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) | b);
+    }
+    public static double  bitOr (final double  a, final char    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) | b);
+    }
+    public static double  bitOr (final double  a, final int     b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) | b);
+    }
+    public static double  bitOr (final double  a, final long    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) | b);
+    }
+    public static double  bitOr (final double  a, final float   b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) | Float.floatToIntBits(b));
+    }
+    public static double  bitOr (final double  a, final double  b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) | Double.doubleToLongBits(b));
+    }
 
     // ------------------------------ bitXOr (implicitly checked) ------------------------------ //
+    // Returns the smallest safe type; decimals are "infectious"
 
     public static boolean bitXOr (final boolean a, final boolean b) { return         a ^ b ; }
     public static byte    bitXOr (final byte    a, final byte    b) { return (byte) (a ^ b); }
     public static short   bitXOr (final byte    a, final short   b) { return (short)(a ^ b); }
-    public static char    bitXOr (final byte    a, final char    b) { return (char) (a ^ b); }
+    public static int     bitXOr (final byte    a, final char    b) { return         a ^ b ; }
     public static int     bitXOr (final byte    a, final int     b) { return         a ^ b ; }
     public static long    bitXOr (final byte    a, final long    b) { return         a ^ b ; }
     public static float   bitXOr (final byte    a, final float   b) {
@@ -163,7 +265,7 @@ public class Numeric {
     }
     public static short   bitXOr (final short   a, final byte    b) { return (short)(a ^ b); }
     public static short   bitXOr (final short   a, final short   b) { return (short)(a ^ b); }
-    public static short   bitXOr (final short   a, final char    b) { return (short)(a ^ b); }
+    public static int     bitXOr (final short   a, final char    b) { return         a ^ b ; }
     public static int     bitXOr (final short   a, final int     b) { return         a ^ b ; }
     public static long    bitXOr (final short   a, final long    b) { return         a ^ b ; }
     public static float   bitXOr (final short   a, final float   b) {
@@ -172,8 +274,8 @@ public class Numeric {
     public static double  bitXOr (final short   a, final double  b) {
       return Double.longBitsToDouble(a ^ Double.doubleToLongBits(b));
     }
-    public static char    bitXOr (final char    a, final byte    b) { return (char) (a ^ b); }
-    public static short   bitXOr (final char    a, final short   b) { return (short)(a ^ b); }
+    public static int     bitXOr (final char    a, final byte    b) { return         a ^ b ; }
+    public static int     bitXOr (final char    a, final short   b) { return         a ^ b ; }
     public static char    bitXOr (final char    a, final char    b) { return (char) (a ^ b); }
     public static int     bitXOr (final char    a, final int     b) { return         a ^ b ; }
     public static long    bitXOr (final char    a, final long    b) { return         a ^ b ; }
@@ -205,29 +307,57 @@ public class Numeric {
     public static double  bitXOr (final long    a, final double  b) {
       return Double.longBitsToDouble(a ^ Double.doubleToLongBits(b));
     }
-
-    // ---------------------------- bitNot : ! (implicitly checked) ---------------------------- //
-
-    public static boolean bitNot (final boolean x) { return        !x; }
-    public static byte    bitNot (final byte    x) { return (byte) ~x; }
-    public static short   bitNot (final short   x) { return (short)~x; }
-    public static char    bitNot (final char    x) { return (char) ~x; }
-    public static int     bitNot (final int     x) { return        ~x; }
-    public static long    bitNot (final long    x) { return        ~x; }
-    public static float   bitNot (final float   x) {
-      return Float.intBitsToFloat(~Float.floatToIntBits(x));
+    public static float   bitXOr (final float   a, final byte    b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) ^ b);
     }
-    public static double  bitNot (final double  x) {
-      return Double.longBitsToDouble(~Double.doubleToLongBits(x));
+    public static float   bitXOr (final float   a, final short   b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) ^ b);
+    }
+    public static float   bitXOr (final float   a, final char    b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) ^ b);
+    }
+    public static float   bitXOr (final float   a, final int     b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) ^ b);
+    }
+    public static double  bitXOr (final float   a, final long    b) {
+      return Double.longBitsToDouble(Float.floatToIntBits(a) ^ b);
+    }
+    public static double  bitXOr (final float   a, final float   b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) ^ Float.floatToIntBits(b));
+    }
+    public static double  bitXOr (final float   a, final double  b) {
+      return Double.longBitsToDouble(Float.floatToIntBits(a) ^ Double.doubleToLongBits(b));
+    }
+    public static double  bitXOr (final double  a, final byte    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) ^ b);
+    }
+    public static double  bitXOr (final double  a, final short   b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) ^ b);
+    }
+    public static double  bitXOr (final double  a, final char    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) ^ b);
+    }
+    public static double  bitXOr (final double  a, final int     b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) ^ b);
+    }
+    public static double  bitXOr (final double  a, final long    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) ^ b);
+    }
+    public static double  bitXOr (final double  a, final float   b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) ^ Float.floatToIntBits(b));
+    }
+    public static double  bitXOr (final double  a, final double  b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) ^ Double.doubleToLongBits(b));
     }
 
     // -------------------------- shiftLeft : << (implicitly checked) -------------------------- //
+    // Returns the smallest safe type; decimals are "infectious"
 
     // Though technically `1 << 1` = 2, not 1
     public static boolean shiftLeft (final boolean a, final boolean b) { return a; }
     public static byte    shiftLeft (final byte    a, final byte    b) { return (byte) (a << b); }
     public static short   shiftLeft (final byte    a, final short   b) { return (short)(a << b); }
-    public static char    shiftLeft (final byte    a, final char    b) { return (char) (a << b); }
+    public static int     shiftLeft (final byte    a, final char    b) { return         a << b ; }
     public static int     shiftLeft (final byte    a, final int     b) { return         a << b ; }
     public static long    shiftLeft (final byte    a, final long    b) { return         a << b ; }
     public static float   shiftLeft (final byte    a, final float   b) {
@@ -238,7 +368,7 @@ public class Numeric {
     }
     public static short   shiftLeft (final short   a, final byte    b) { return (short)(a << b); }
     public static short   shiftLeft (final short   a, final short   b) { return (short)(a << b); }
-    public static short   shiftLeft (final short   a, final char    b) { return (short)(a << b); }
+    public static int     shiftLeft (final short   a, final char    b) { return         a << b ; }
     public static int     shiftLeft (final short   a, final int     b) { return         a << b ; }
     public static long    shiftLeft (final short   a, final long    b) { return         a << b ; }
     public static float   shiftLeft (final short   a, final float   b) {
@@ -247,8 +377,8 @@ public class Numeric {
     public static double  shiftLeft (final short   a, final double  b) {
       return Double.longBitsToDouble(a << Double.doubleToLongBits(b));
     }
-    public static char    shiftLeft (final char    a, final byte    b) { return (char) (a << b); }
-    public static short   shiftLeft (final char    a, final short   b) { return (short)(a << b); }
+    public static int     shiftLeft (final char    a, final byte    b) { return         a << b ; }
+    public static int     shiftLeft (final char    a, final short   b) { return         a << b ; }
     public static char    shiftLeft (final char    a, final char    b) { return (char) (a << b); }
     public static int     shiftLeft (final char    a, final int     b) { return         a << b ; }
     public static long    shiftLeft (final char    a, final long    b) { return         a << b ; }
@@ -280,13 +410,56 @@ public class Numeric {
     public static double  shiftLeft (final long    a, final double  b) {
       return Double.longBitsToDouble(a << Double.doubleToLongBits(b));
     }
+    public static float   shiftLeft (final float   a, final byte    b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) << b);
+    }
+    public static float   shiftLeft (final float   a, final short   b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) << b);
+    }
+    public static float   shiftLeft (final float   a, final char    b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) << b);
+    }
+    public static float   shiftLeft (final float   a, final int     b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) << b);
+    }
+    public static double  shiftLeft (final float   a, final long    b) {
+      return Double.longBitsToDouble(Float.floatToIntBits(a) << b);
+    }
+    public static double  shiftLeft (final float   a, final float   b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) << Float.floatToIntBits(b));
+    }
+    public static double  shiftLeft (final float   a, final double  b) {
+      return Double.longBitsToDouble(Float.floatToIntBits(a) << Double.doubleToLongBits(b));
+    }
+    public static double  shiftLeft (final double  a, final byte    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) << b);
+    }
+    public static double  shiftLeft (final double  a, final short   b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) << b);
+    }
+    public static double  shiftLeft (final double  a, final char    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) << b);
+    }
+    public static double  shiftLeft (final double  a, final int     b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) << b);
+    }
+    public static double  shiftLeft (final double  a, final long    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) << b);
+    }
+    public static double  shiftLeft (final double  a, final float   b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) << Float.floatToIntBits(b));
+    }
+    public static double  shiftLeft (final double  a, final double  b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) << Double.doubleToLongBits(b));
+    }
 
     // -------------------------- shiftRight : >> (implicitly checked) -------------------------- //
+    // Returns the smallest safe type; decimals are "infectious"
 
     public static boolean shiftRight (final boolean a, final boolean b) { return a && !b; }
     public static byte    shiftRight (final byte    a, final byte    b) { return (byte) (a >> b); }
     public static short   shiftRight (final byte    a, final short   b) { return (short)(a >> b); }
-    public static char    shiftRight (final byte    a, final char    b) { return (char) (a >> b); }
+    public static int     shiftRight (final byte    a, final char    b) { return         a >> b ; }
     public static int     shiftRight (final byte    a, final int     b) { return         a >> b ; }
     public static long    shiftRight (final byte    a, final long    b) { return         a >> b ; }
     public static float   shiftRight (final byte    a, final float   b) {
@@ -297,7 +470,7 @@ public class Numeric {
     }
     public static short   shiftRight (final short   a, final byte    b) { return (short)(a >> b); }
     public static short   shiftRight (final short   a, final short   b) { return (short)(a >> b); }
-    public static short   shiftRight (final short   a, final char    b) { return (short)(a >> b); }
+    public static int     shiftRight (final short   a, final char    b) { return         a >> b ; }
     public static int     shiftRight (final short   a, final int     b) { return         a >> b ; }
     public static long    shiftRight (final short   a, final long    b) { return         a >> b ; }
     public static float   shiftRight (final short   a, final float   b) {
@@ -306,8 +479,8 @@ public class Numeric {
     public static double  shiftRight (final short   a, final double  b) {
       return Double.longBitsToDouble(a >> Double.doubleToLongBits(b));
     }
-    public static char    shiftRight (final char    a, final byte    b) { return (char) (a >> b); }
-    public static short   shiftRight (final char    a, final short   b) { return (short)(a >> b); }
+    public static int     shiftRight (final char    a, final byte    b) { return         a >> b ; }
+    public static int     shiftRight (final char    a, final short   b) { return         a >> b ; }
     public static char    shiftRight (final char    a, final char    b) { return (char) (a >> b); }
     public static int     shiftRight (final char    a, final int     b) { return         a >> b ; }
     public static long    shiftRight (final char    a, final long    b) { return         a >> b ; }
@@ -339,13 +512,56 @@ public class Numeric {
     public static double  shiftRight (final long    a, final double  b) {
       return Double.longBitsToDouble(a >> Double.doubleToLongBits(b));
     }
+    public static float   shiftRight (final float   a, final byte    b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) >> b);
+    }
+    public static float   shiftRight (final float   a, final short   b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) >> b);
+    }
+    public static float   shiftRight (final float   a, final char    b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) >> b);
+    }
+    public static float   shiftRight (final float   a, final int     b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) >> b);
+    }
+    public static double  shiftRight (final float   a, final long    b) {
+      return Double.longBitsToDouble(Float.floatToIntBits(a) >> b);
+    }
+    public static double  shiftRight (final float   a, final float   b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) >> Float.floatToIntBits(b));
+    }
+    public static double  shiftRight (final float   a, final double  b) {
+      return Double.longBitsToDouble(Float.floatToIntBits(a) >> Double.doubleToLongBits(b));
+    }
+    public static double  shiftRight (final double  a, final byte    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> b);
+    }
+    public static double  shiftRight (final double  a, final short   b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> b);
+    }
+    public static double  shiftRight (final double  a, final char    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> b);
+    }
+    public static double  shiftRight (final double  a, final int     b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> b);
+    }
+    public static double  shiftRight (final double  a, final long    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> b);
+    }
+    public static double  shiftRight (final double  a, final float   b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> Float.floatToIntBits(b));
+    }
+    public static double  shiftRight (final double  a, final double  b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> Double.doubleToLongBits(b));
+    }
 
     // -------------------------------- unsignedShiftRight : >>> -------------------------------- //
+    // Returns the smallest safe type; decimals are "infectious"
 
     public static boolean uShiftRight (final boolean a, final boolean b) { return a && !b; }
     public static byte    uShiftRight (final byte    a, final byte    b) { return (byte) (a >>> b);}
     public static short   uShiftRight (final byte    a, final short   b) { return (short)(a >>> b);}
-    public static char    uShiftRight (final byte    a, final char    b) { return (char) (a >>> b);}
+    public static int     uShiftRight (final byte    a, final char    b) { return         a >>> b ;}
     public static int     uShiftRight (final byte    a, final int     b) { return         a >>> b ;}
     public static long    uShiftRight (final byte    a, final long    b) { return         a >>> b ;}
     public static float   uShiftRight (final byte    a, final float   b) {
@@ -356,7 +572,7 @@ public class Numeric {
     }
     public static short   uShiftRight (final short   a, final byte    b) { return (short)(a >>> b);}
     public static short   uShiftRight (final short   a, final short   b) { return (short)(a >>> b);}
-    public static short   uShiftRight (final short   a, final char    b) { return (short)(a >>> b);}
+    public static int     uShiftRight (final short   a, final char    b) { return         a >>> b ;}
     public static int     uShiftRight (final short   a, final int     b) { return         a >>> b ;}
     public static long    uShiftRight (final short   a, final long    b) { return         a >>> b ;}
     public static float   uShiftRight (final short   a, final float   b) {
@@ -365,8 +581,8 @@ public class Numeric {
     public static double  uShiftRight (final short   a, final double  b) {
       return Double.longBitsToDouble(a >>> Double.doubleToLongBits(b));
     }
-    public static char    uShiftRight (final char    a, final byte    b) { return (char) (a >>> b);}
-    public static short   uShiftRight (final char    a, final short   b) { return (short)(a >>> b);}
+    public static int     uShiftRight (final char    a, final byte    b) { return         a >>> b ;}
+    public static int     uShiftRight (final char    a, final short   b) { return         a >>> b ;}
     public static char    uShiftRight (final char    a, final char    b) { return (char) (a >>> b);}
     public static int     uShiftRight (final char    a, final int     b) { return         a >>> b ;}
     public static long    uShiftRight (final char    a, final long    b) { return         a >>> b ;}
@@ -398,6 +614,48 @@ public class Numeric {
     public static double  uShiftRight (final long    a, final double  b) {
       return Double.longBitsToDouble(a >>> Double.doubleToLongBits(b));
     }
+    public static float   uShiftRight (final float   a, final byte    b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) >>> b);
+    }
+    public static float   uShiftRight (final float   a, final short   b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) >>> b);
+    }
+    public static float   uShiftRight (final float   a, final char    b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) >>> b);
+    }
+    public static float   uShiftRight (final float   a, final int     b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) >>> b);
+    }
+    public static double  uShiftRight (final float   a, final long    b) {
+      return Double.longBitsToDouble(Float.floatToIntBits(a) >>> b);
+    }
+    public static double  uShiftRight (final float   a, final float   b) {
+      return Float.intBitsToFloat(Float.floatToIntBits(a) >>> Float.floatToIntBits(b));
+    }
+    public static double  uShiftRight (final float   a, final double  b) {
+      return Double.longBitsToDouble(Float.floatToIntBits(a) >>> Double.doubleToLongBits(b));
+    }
+    public static double  uShiftRight (final double  a, final byte    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> b);
+    }
+    public static double  uShiftRight (final double  a, final short   b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> b);
+    }
+    public static double  uShiftRight (final double  a, final char    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> b);
+    }
+    public static double  uShiftRight (final double  a, final int     b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> b);
+    }
+    public static double  uShiftRight (final double  a, final long    b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> b);
+    }
+    public static double  uShiftRight (final double  a, final float   b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> Float.floatToIntBits(b));
+    }
+    public static double  uShiftRight (final double  a, final double  b) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> Double.doubleToLongBits(b));
+    }
 
     // ---------------------------------- bitClear (unchecked) ---------------------------------- //
 
@@ -428,6 +686,7 @@ public class Numeric {
     }
 
     // ----------------------------------- bitSet (unchecked) ----------------------------------- //
+    // Returns the smallest safe type
 
     public static byte   bitSet (final byte   x, final long n) { return (byte) (x | (1L << n)); }
     public static short  bitSet (final short  x, final long n) { return (short)(x | (1L << n)); }
@@ -453,26 +712,6 @@ public class Numeric {
     }
     public static boolean bitTest (final double x, final long n) {
       return (Double.doubleToLongBits(x) & (1L << n)) != 0L;
-    }
-
-    // ------------------------------ reverse (implicitly checked) ------------------------------ //
-
-    // Because "more than one matching method"
-    public static short reverseShort(final short x) {
-        return (short) ((x << 8)
-                        | ((char) x >>> 8));
-    }
-
-    public static int   reverseInt  (final int   x) {
-        return (  (x << 24)
-                | ((x & 0x0000ff00) <<  8)
-                | ((x & 0x00ff0000) >>> 8)
-                | (x >>> 24));
-    }
-
-    public static long  reverseLong (final long  x) {
-        return (  ((long) reverseInt((int)x) << 32)
-                | ((long) reverseInt((int)(x >>> 32)) & 0xffffffffL));
     }
 
     // ======================================= lt : < =========================================== //
