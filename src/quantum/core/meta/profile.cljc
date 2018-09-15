@@ -17,7 +17,7 @@
               :refer [defalias]]
             [quantum.core.type-old  :as t])
   #?(:clj (:import com.carrotsearch.sizeof.RamUsageEstimator
-                   quanta.ClassIntrospector)))
+                   quantum.misc.ClassIntrospector)))
 
 ; TO EXPLORE
 ; - Timbre profiling
@@ -52,6 +52,7 @@
 (defn deep-byte-size
   "Warning: doesn't handle ref-cycles."
   [obj]
+  ;; TODO port ClassIntrospector
   (-> (ClassIntrospector.)
       (.introspect obj)
       (.getDeepSize))))

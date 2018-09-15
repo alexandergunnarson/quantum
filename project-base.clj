@@ -167,7 +167,6 @@
          [org.clojure/math.combinatorics        "0.1.3"           ]
          [net.mikera/core.matrix                "0.57.0"
            :exclusions [org.clojure/clojure]]
-         [quantum/java                          "1.8.2"           ]
          [uncomplicate/neanderthal              "0.8.0"           ] ; BLAS
        ; ==== PRINT ====
          [fipp                                  "0.6.10"
@@ -703,7 +702,7 @@
      ;; ===== Paths ===== ;;
      :target-path  "target"
      :test-paths   ["test"]
-     :source-paths ["src"]
+     :source-paths ["src" "src-java"]
      ;; ===== Compilation ===== ;;
      :jar-name     (str artifact-base-name "-dep.jar")
      :uberjar-name (str artifact-base-name ".jar")

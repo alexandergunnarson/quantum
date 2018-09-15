@@ -1,12 +1,12 @@
-package quanta;
+package quantum.misc;
 import sun.misc.Unsafe;
- 
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.util.*;
- 
+
 /**
  * This class could be used for any object contents/memory layout printing.
  */
@@ -25,11 +25,11 @@ public class ClassIntrospector
         //res = ci.introspect( new String[] { "str1", "str2" } );
         //res = ci.introspect(ObjectInfo.class);
         //res = ci.introspect( new TestObj() );
- 
+
         System.out.println( res.getDeepSize() );
         System.out.println( res );
     }
- 
+
     /** First test object - testing various arrays and complex objects */
     private static class TestObj
     {
@@ -37,7 +37,7 @@ public class ClassIntrospector
         protected final int[] ints = { 14, 16 };
         private final Integer i = 28;
         protected final BigDecimal bigDecimal = BigDecimal.ONE;
- 
+
         @Override
         public String toString() {
             return "TestObj{" +
@@ -48,13 +48,13 @@ public class ClassIntrospector
                     '}';
         }
     }
- 
+
     /** Test class 2 - testing inheritance */
     private static class TestObjChild extends TestObj
     {
         private final boolean[] flags = { true, true, false };
         private final boolean flag = false;
- 
+
         @Override
         public String toString() {
             return "TestObjChild{" +
@@ -63,7 +63,7 @@ public class ClassIntrospector
                     '}';
         }
     }
- 
+
     private static final Unsafe unsafe;
     /** Size of any Object reference */
     private static final int objectRefSize;
@@ -74,7 +74,7 @@ public class ClassIntrospector
             Field field = Unsafe.class.getDeclaredField("theUnsafe");
             field.setAccessible(true);
             unsafe = (Unsafe)field.get(null);
- 
+
             objectRefSize = unsafe.arrayIndexScale( Object[].class );
         }
         catch (Exception e)
@@ -82,10 +82,10 @@ public class ClassIntrospector
             throw new RuntimeException(e);
         }
     }
- 
+
     /** Sizes of all primitive values */
     private static final Map<Class, Integer> primitiveSizes;
- 
+
     static
     {
         primitiveSizes = new HashMap<Class, Integer>( 10 );
@@ -97,7 +97,7 @@ public class ClassIntrospector
         primitiveSizes.put( double.class, 8 );
         primitiveSizes.put( boolean.class, 1 );
     }
- 
+
     /**
      * Get object information for any Java object. Do not pass primitives to this method because they
      * will boxed and the information you will get will be related to a boxed version of your value.
@@ -115,10 +115,10 @@ public class ClassIntrospector
             m_visited.clear();
         }
     }
- 
+
     //we need to keep track of already visited objects in order to support cycles in the object graphs
     private IdentityHashMap<Object, Boolean> m_visited = new IdentityHashMap<Object, Boolean>( 100 );
- 
+
     private ObjectInfo introspect( final Object obj, final Field fld ) throws IllegalAccessException
     {
         //use Field type only if the field contains null. In this case we will at least know what's expected to be
@@ -133,7 +133,7 @@ public class ClassIntrospector
                 isRecursive = true;
             m_visited.put( obj, true );
         }
- 
+
         final Class type = ( fld == null || ( obj != null && !isPrimitive) ) ?
                 obj.getClass() : fld.getType();
         int arraySize = 0;
@@ -145,7 +145,7 @@ public class ClassIntrospector
             indexScale = unsafe.arrayIndexScale( type );
             arraySize = baseOffset + indexScale * Array.getLength( obj );
         }
- 
+
         final ObjectInfo root;
         if ( fld == null )
         {
@@ -158,7 +158,7 @@ public class ClassIntrospector
             root = new ObjectInfo( fld.getName(), type.getCanonicalName(), getContents( obj, type ), offset,
                     getShallowSize( type ), arraySize, baseOffset, indexScale );
         }
- 
+
         if ( !isRecursive && obj != null )
         {
             if ( isObjectArray( type ) )
@@ -182,11 +182,11 @@ public class ClassIntrospector
                 }
             }
         }
- 
+
         root.sort(); //sort by offset
         return root;
     }
- 
+
     //get all fields for this class, including all superclasses fields
     private static List<Field> getAllFields( final Class type )
     {
@@ -203,7 +203,7 @@ public class ClassIntrospector
         }
         return res;
     }
- 
+
     //check if it is an array of objects. I suspect there must be a more API-friendly way to make this check.
     private static boolean isObjectArray( final Class type )
     {
@@ -214,7 +214,7 @@ public class ClassIntrospector
             return false;
         return true;
     }
- 
+
     //advanced toString logic
     private static String getContents( final Object val, final Class type )
     {
@@ -243,7 +243,7 @@ public class ClassIntrospector
         }
         return val.toString();
     }
- 
+
     //obtain a shallow size of a field of given class (primitive or object reference size)
     private static int getShallowSize( final Class type )
     {

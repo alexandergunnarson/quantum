@@ -42,7 +42,7 @@
         org.apache.commons.io.FileUtils
         (java.nio.charset Charset CharsetEncoder CharacterCodingException)
         (java.nio CharBuffer ByteBuffer)
-        (quanta Packed12 ClassIntrospector))))
+        (quantum.misc Packed12))))
 
 (defrecord CompressionCodec
    [name    extension algorithm speed      compression implemented?              doc                                                        ])
