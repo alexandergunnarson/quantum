@@ -22,6 +22,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - declare-fnt (a way to do protocols/interfaces)
     - extend-fnt!
   - defnt (t/defn)
+    - ^:inline
+      - if you do (Numeric/bitAnd a b) inline then bitAnd needs to know the primitive type so maybe
+        we do the `let*`-binding approach to typing vars?
     - handle varargs
       - [& args _] shouldn't result in `t/any?` but rather like `t/seqable?` or whatever
     - do the defnt-equivalences
@@ -65,6 +68,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - quantum.core.data.string — this is where `>str` belongs
 
     - quantum.core.convert.primitive
+    - quantum.core.data.collections
+    - quantum.core.data.tuple
 
     - quantum.core.numeric.convert
     - quantum.core.numeric.misc
@@ -106,9 +111,28 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - quantum.untyped.core.data.map
     - quantum.untyped.core.type.defs
     - quantum.untyped.core.data
+  - List of Numeric fns to implement:
+    - [ ] isTrue (?)
+    - [ ] isFalse (?)
+    - [ ] isNil (?)
+    - [ ] (logical) and (?)
+    - [ ] (logical) or (?)
+    - [ ] (logical) not
+    - [ ] reverseBits
+    - [ ] reverseBytes
+  - List of Primitive fns to implement:
+    - uncheckedByteCast
+    - uncheckedCharCast
+    - uncheckedShortCast
+    - uncheckedIntCast
+    - uncheckedLongCast
+    - uncheckedFloatCast
+    - uncheckedDoubleCast
   - Standard metadata
     - e.g. `{:alternate-implementations #{'cljs.tools.reader/merge-meta}}`
     - {:adapted-from <symbol>}
+    - :todo <todo-string>
+    - :attribution <github-username-symbol | string-description>
   - Instead of e.g. `ns-` or `var-` we can do `ns-val` and `var-val`
   - Should we type `when`, `let`?
 
