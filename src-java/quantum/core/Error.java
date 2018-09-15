@@ -26,8 +26,11 @@ import static quantum.core.Core.classOf;
 import static quantum.core.Core.keyword;
 import static quantum.core.Core.throw_;
 
-// Like `clojure.lang.ExceptionInfo`, but a record
-// This is expanded from `(macroexpand-all '(defrecord Error [ident message data trace cause]))`, while extending `RuntimeException`
+// - Like `clojure.lang.ExceptionInfo`, but a record
+// - This is expanded from `(macroexpand-all '(defrecord Error [ident message data trace cause]))`,
+//   while extending `RuntimeException`
+// - The reason this is in Java code is in order to extend `RuntimeException` directly without using
+//   Clojure's `proxy`
 public class Error
    extends
      RuntimeException
