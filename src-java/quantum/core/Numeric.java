@@ -351,310 +351,177 @@ public class Numeric {
     }
 
     // -------------------------- shiftLeft : << (implicitly checked) -------------------------- //
-    // Returns the smallest safe type; decimals are "infectious"
 
-    // Though technically `1 << 1` = 2, not 1
-    public static boolean shiftLeft (final boolean a, final boolean b) { return a; }
-    public static byte    shiftLeft (final byte    a, final byte    b) { return (byte) (a << b); }
-    public static short   shiftLeft (final byte    a, final short   b) { return (short)(a << b); }
-    public static int     shiftLeft (final byte    a, final char    b) { return         a << b ; }
-    public static int     shiftLeft (final byte    a, final int     b) { return         a << b ; }
-    public static long    shiftLeft (final byte    a, final long    b) { return         a << b ; }
-    public static float   shiftLeft (final byte    a, final float   b) {
-      return Float.intBitsToFloat(a << Float.floatToIntBits(b));
+    public static byte   shiftLeft (final byte   x, final byte  n) { return (byte) (x << n); }
+    public static byte   shiftLeft (final byte   x, final short n) { return (byte) (x << n); }
+    public static byte   shiftLeft (final byte   x, final char  n) { return (byte) (x << n); }
+    public static byte   shiftLeft (final byte   x, final int   n) { return (byte) (x << n); }
+    public static byte   shiftLeft (final byte   x, final long  n) { return (byte) (x << n); }
+    public static short  shiftLeft (final short  x, final byte  n) { return (short)(x << n); }
+    public static short  shiftLeft (final short  x, final short n) { return (short)(x << n); }
+    public static short  shiftLeft (final short  x, final char  n) { return (short)(x << n); }
+    public static short  shiftLeft (final short  x, final int   n) { return (short)(x << n); }
+    public static short  shiftLeft (final short  x, final long  n) { return (short)(x << n); }
+    public static char   shiftLeft (final char   x, final byte  n) { return (char) (x << n); }
+    public static char   shiftLeft (final char   x, final short n) { return (char) (x << n); }
+    public static char   shiftLeft (final char   x, final char  n) { return (char) (x << n); }
+    public static char   shiftLeft (final char   x, final int   n) { return (char) (x << n); }
+    public static char   shiftLeft (final char   x, final long  n) { return (char) (x << n); }
+    public static int    shiftLeft (final int    x, final byte  n) { return         x << n ; }
+    public static int    shiftLeft (final int    x, final short n) { return         x << n ; }
+    public static int    shiftLeft (final int    x, final char  n) { return         x << n ; }
+    public static int    shiftLeft (final int    x, final int   n) { return         x << n ; }
+    public static int    shiftLeft (final int    x, final long  n) { return         x << n ; }
+    public static long   shiftLeft (final long   x, final byte  n) { return         x << n ; }
+    public static long   shiftLeft (final long   x, final char  n) { return         x << n ; }
+    public static long   shiftLeft (final long   x, final short n) { return         x << n ; }
+    public static long   shiftLeft (final long   x, final int   n) { return         x << n ; }
+    public static long   shiftLeft (final long   x, final long  n) { return         x << n ; }
+    public static float  shiftLeft (final float  x, final byte  n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) << n);
     }
-    public static double  shiftLeft (final byte    a, final double  b) {
-      return Double.longBitsToDouble(a << Double.doubleToLongBits(b));
+    public static float  shiftLeft (final float  x, final short n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) << n);
     }
-    public static short   shiftLeft (final short   a, final byte    b) { return (short)(a << b); }
-    public static short   shiftLeft (final short   a, final short   b) { return (short)(a << b); }
-    public static int     shiftLeft (final short   a, final char    b) { return         a << b ; }
-    public static int     shiftLeft (final short   a, final int     b) { return         a << b ; }
-    public static long    shiftLeft (final short   a, final long    b) { return         a << b ; }
-    public static float   shiftLeft (final short   a, final float   b) {
-      return Float.intBitsToFloat(a << Float.floatToIntBits(b));
+    public static float  shiftLeft (final float  x, final char  n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) << n);
     }
-    public static double  shiftLeft (final short   a, final double  b) {
-      return Double.longBitsToDouble(a << Double.doubleToLongBits(b));
+    public static float  shiftLeft (final float  x, final int   n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) << n);
     }
-    public static int     shiftLeft (final char    a, final byte    b) { return         a << b ; }
-    public static int     shiftLeft (final char    a, final short   b) { return         a << b ; }
-    public static char    shiftLeft (final char    a, final char    b) { return (char) (a << b); }
-    public static int     shiftLeft (final char    a, final int     b) { return         a << b ; }
-    public static long    shiftLeft (final char    a, final long    b) { return         a << b ; }
-    public static float   shiftLeft (final char    a, final float   b) {
-      return Float.intBitsToFloat(a << Float.floatToIntBits(b));
+    public static float  shiftLeft (final float  x, final long  n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) << n);
     }
-    public static double  shiftLeft (final char    a, final double  b) {
-      return Double.longBitsToDouble(a << Double.doubleToLongBits(b));
+    public static double shiftLeft (final double x, final byte  n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) << n);
     }
-    public static int     shiftLeft (final int     a, final byte    b) { return         a << b ; }
-    public static int     shiftLeft (final int     a, final short   b) { return         a << b ; }
-    public static int     shiftLeft (final int     a, final char    b) { return         a << b ; }
-    public static int     shiftLeft (final int     a, final int     b) { return         a << b ; }
-    public static long    shiftLeft (final int     a, final long    b) { return         a << b ; }
-    public static float   shiftLeft (final int     a, final float   b) {
-      return Float.intBitsToFloat(a << Float.floatToIntBits(b));
+    public static double shiftLeft (final double x, final short n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) << n);
     }
-    public static double  shiftLeft (final int     a, final double  b) {
-      return Double.longBitsToDouble(a << Double.doubleToLongBits(b));
+    public static double shiftLeft (final double x, final char  n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) << n);
     }
-    public static long    shiftLeft (final long    a, final byte    b) { return         a << b ; }
-    public static long    shiftLeft (final long    a, final char    b) { return         a << b ; }
-    public static long    shiftLeft (final long    a, final short   b) { return         a << b ; }
-    public static long    shiftLeft (final long    a, final int     b) { return         a << b ; }
-    public static long    shiftLeft (final long    a, final long    b) { return         a << b ; }
-    public static double  shiftLeft (final long    a, final float   b) {
-      return Double.longBitsToDouble(a << Float.floatToIntBits(b));
+    public static double shiftLeft (final double x, final int   n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) << n);
     }
-    public static double  shiftLeft (final long    a, final double  b) {
-      return Double.longBitsToDouble(a << Double.doubleToLongBits(b));
-    }
-    public static float   shiftLeft (final float   a, final byte    b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) << b);
-    }
-    public static float   shiftLeft (final float   a, final short   b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) << b);
-    }
-    public static float   shiftLeft (final float   a, final char    b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) << b);
-    }
-    public static float   shiftLeft (final float   a, final int     b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) << b);
-    }
-    public static double  shiftLeft (final float   a, final long    b) {
-      return Double.longBitsToDouble(Float.floatToIntBits(a) << b);
-    }
-    public static float   shiftLeft (final float   a, final float   b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) << Float.floatToIntBits(b));
-    }
-    public static double  shiftLeft (final float   a, final double  b) {
-      return Double.longBitsToDouble(Float.floatToIntBits(a) << Double.doubleToLongBits(b));
-    }
-    public static double  shiftLeft (final double  a, final byte    b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) << b);
-    }
-    public static double  shiftLeft (final double  a, final short   b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) << b);
-    }
-    public static double  shiftLeft (final double  a, final char    b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) << b);
-    }
-    public static double  shiftLeft (final double  a, final int     b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) << b);
-    }
-    public static double  shiftLeft (final double  a, final long    b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) << b);
-    }
-    public static double  shiftLeft (final double  a, final float   b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) << Float.floatToIntBits(b));
-    }
-    public static double  shiftLeft (final double  a, final double  b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) << Double.doubleToLongBits(b));
+    public static double shiftLeft (final double x, final long  n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) << n);
     }
 
     // -------------------------- shiftRight : >> (implicitly checked) -------------------------- //
-    // Returns the smallest safe type; decimals are "infectious"
 
-    public static boolean shiftRight (final boolean a, final boolean b) { return a && !b; }
-    public static byte    shiftRight (final byte    a, final byte    b) { return (byte) (a >> b); }
-    public static short   shiftRight (final byte    a, final short   b) { return (short)(a >> b); }
-    public static int     shiftRight (final byte    a, final char    b) { return         a >> b ; }
-    public static int     shiftRight (final byte    a, final int     b) { return         a >> b ; }
-    public static long    shiftRight (final byte    a, final long    b) { return         a >> b ; }
-    public static float   shiftRight (final byte    a, final float   b) {
-      return Float.intBitsToFloat(a >> Float.floatToIntBits(b));
+    public static byte   shiftRight (final byte   x, final byte  n) { return (byte) (x >> n); }
+    public static byte   shiftRight (final byte   x, final short n) { return (byte) (x >> n); }
+    public static byte   shiftRight (final byte   x, final char  n) { return (byte) (x >> n); }
+    public static byte   shiftRight (final byte   x, final int   n) { return (byte) (x >> n); }
+    public static byte   shiftRight (final byte   x, final long  n) { return (byte) (x >> n); }
+    public static short  shiftRight (final short  x, final byte  n) { return (short)(x >> n); }
+    public static short  shiftRight (final short  x, final short n) { return (short)(x >> n); }
+    public static short  shiftRight (final short  x, final char  n) { return (short)(x >> n); }
+    public static short  shiftRight (final short  x, final int   n) { return (short)(x >> n); }
+    public static short  shiftRight (final short  x, final long  n) { return (short)(x >> n); }
+    public static char   shiftRight (final char   x, final byte  n) { return (char) (x >> n); }
+    public static char   shiftRight (final char   x, final short n) { return (char) (x >> n); }
+    public static char   shiftRight (final char   x, final char  n) { return (char) (x >> n); }
+    public static char   shiftRight (final char   x, final int   n) { return (char) (x >> n); }
+    public static char   shiftRight (final char   x, final long  n) { return (char) (x >> n); }
+    public static int    shiftRight (final int    x, final byte  n) { return         x >> n ; }
+    public static int    shiftRight (final int    x, final short n) { return         x >> n ; }
+    public static int    shiftRight (final int    x, final char  n) { return         x >> n ; }
+    public static int    shiftRight (final int    x, final int   n) { return         x >> n ; }
+    public static int    shiftRight (final int    x, final long  n) { return         x >> n ; }
+    public static long   shiftRight (final long   x, final byte  n) { return         x >> n ; }
+    public static long   shiftRight (final long   x, final char  n) { return         x >> n ; }
+    public static long   shiftRight (final long   x, final short n) { return         x >> n ; }
+    public static long   shiftRight (final long   x, final int   n) { return         x >> n ; }
+    public static long   shiftRight (final long   x, final long  n) { return         x >> n ; }
+    public static float  shiftRight (final float  x, final byte  n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) >> n);
     }
-    public static double  shiftRight (final byte    a, final double  b) {
-      return Double.longBitsToDouble(a >> Double.doubleToLongBits(b));
+    public static float  shiftRight (final float  x, final short n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) >> n);
     }
-    public static short   shiftRight (final short   a, final byte    b) { return (short)(a >> b); }
-    public static short   shiftRight (final short   a, final short   b) { return (short)(a >> b); }
-    public static int     shiftRight (final short   a, final char    b) { return         a >> b ; }
-    public static int     shiftRight (final short   a, final int     b) { return         a >> b ; }
-    public static long    shiftRight (final short   a, final long    b) { return         a >> b ; }
-    public static float   shiftRight (final short   a, final float   b) {
-      return Float.intBitsToFloat(a >> Float.floatToIntBits(b));
+    public static float  shiftRight (final float  x, final char  n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) >> n);
     }
-    public static double  shiftRight (final short   a, final double  b) {
-      return Double.longBitsToDouble(a >> Double.doubleToLongBits(b));
+    public static float  shiftRight (final float  x, final int   n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) >> n);
     }
-    public static int     shiftRight (final char    a, final byte    b) { return         a >> b ; }
-    public static int     shiftRight (final char    a, final short   b) { return         a >> b ; }
-    public static char    shiftRight (final char    a, final char    b) { return (char) (a >> b); }
-    public static int     shiftRight (final char    a, final int     b) { return         a >> b ; }
-    public static long    shiftRight (final char    a, final long    b) { return         a >> b ; }
-    public static float   shiftRight (final char    a, final float   b) {
-      return Float.intBitsToFloat(a >> Float.floatToIntBits(b));
+    public static float  shiftRight (final float  x, final long  n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) >> n);
     }
-    public static double  shiftRight (final char    a, final double  b) {
-      return Double.longBitsToDouble(a >> Double.doubleToLongBits(b));
+    public static double shiftRight (final double x, final byte  n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) >> n);
     }
-    public static int     shiftRight (final int     a, final byte    b) { return         a >> b ; }
-    public static int     shiftRight (final int     a, final short   b) { return         a >> b ; }
-    public static int     shiftRight (final int     a, final char    b) { return         a >> b ; }
-    public static int     shiftRight (final int     a, final int     b) { return         a >> b ; }
-    public static long    shiftRight (final int     a, final long    b) { return         a >> b ; }
-    public static float   shiftRight (final int     a, final float   b) {
-      return Float.intBitsToFloat(a >> Float.floatToIntBits(b));
+    public static double shiftRight (final double x, final short n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) >> n);
     }
-    public static double  shiftRight (final int     a, final double  b) {
-      return Double.longBitsToDouble(a >> Double.doubleToLongBits(b));
+    public static double shiftRight (final double x, final char  n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) >> n);
     }
-    public static long    shiftRight (final long    a, final byte    b) { return         a >> b ; }
-    public static long    shiftRight (final long    a, final char    b) { return         a >> b ; }
-    public static long    shiftRight (final long    a, final short   b) { return         a >> b ; }
-    public static long    shiftRight (final long    a, final int     b) { return         a >> b ; }
-    public static long    shiftRight (final long    a, final long    b) { return         a >> b ; }
-    public static double  shiftRight (final long    a, final float   b) {
-      return Double.longBitsToDouble(a >> Float.floatToIntBits(b));
+    public static double shiftRight (final double x, final int   n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) >> n);
     }
-    public static double  shiftRight (final long    a, final double  b) {
-      return Double.longBitsToDouble(a >> Double.doubleToLongBits(b));
-    }
-    public static float   shiftRight (final float   a, final byte    b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) >> b);
-    }
-    public static float   shiftRight (final float   a, final short   b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) >> b);
-    }
-    public static float   shiftRight (final float   a, final char    b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) >> b);
-    }
-    public static float   shiftRight (final float   a, final int     b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) >> b);
-    }
-    public static double  shiftRight (final float   a, final long    b) {
-      return Double.longBitsToDouble(Float.floatToIntBits(a) >> b);
-    }
-    public static float   shiftRight (final float   a, final float   b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) >> Float.floatToIntBits(b));
-    }
-    public static double  shiftRight (final float   a, final double  b) {
-      return Double.longBitsToDouble(Float.floatToIntBits(a) >> Double.doubleToLongBits(b));
-    }
-    public static double  shiftRight (final double  a, final byte    b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> b);
-    }
-    public static double  shiftRight (final double  a, final short   b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> b);
-    }
-    public static double  shiftRight (final double  a, final char    b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> b);
-    }
-    public static double  shiftRight (final double  a, final int     b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> b);
-    }
-    public static double  shiftRight (final double  a, final long    b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> b);
-    }
-    public static double  shiftRight (final double  a, final float   b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> Float.floatToIntBits(b));
-    }
-    public static double  shiftRight (final double  a, final double  b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >> Double.doubleToLongBits(b));
+    public static double shiftRight (final double x, final long  n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) >> n);
     }
 
-    // -------------------------------- unsignedShiftRight : >>> -------------------------------- //
-    // Returns the smallest safe type; decimals are "infectious"
+    // --------------------- unsignedShiftRight : >>> (implicitly checked) --------------------- //
 
-    public static boolean uShiftRight (final boolean a, final boolean b) { return a && !b; }
-    public static byte    uShiftRight (final byte    a, final byte    b) { return (byte) (a >>> b);}
-    public static short   uShiftRight (final byte    a, final short   b) { return (short)(a >>> b);}
-    public static int     uShiftRight (final byte    a, final char    b) { return         a >>> b ;}
-    public static int     uShiftRight (final byte    a, final int     b) { return         a >>> b ;}
-    public static long    uShiftRight (final byte    a, final long    b) { return         a >>> b ;}
-    public static float   uShiftRight (final byte    a, final float   b) {
-      return Float.intBitsToFloat(a >>> Float.floatToIntBits(b));
+    public static byte   uShiftRight (final byte   x, final byte  n) { return (byte) (x >>> n);}
+    public static byte   uShiftRight (final byte   x, final short n) { return (byte) (x >>> n);}
+    public static byte   uShiftRight (final byte   x, final char  n) { return (byte) (x >>> n);}
+    public static byte   uShiftRight (final byte   x, final int   n) { return (byte) (x >>> n);}
+    public static byte   uShiftRight (final byte   x, final long  n) { return (byte) (x >>> n);}
+    public static short  uShiftRight (final short  x, final byte  n) { return (short)(x >>> n);}
+    public static short  uShiftRight (final short  x, final short n) { return (short)(x >>> n);}
+    public static short  uShiftRight (final short  x, final char  n) { return (short)(x >>> n);}
+    public static short  uShiftRight (final short  x, final int   n) { return (short)(x >>> n);}
+    public static short  uShiftRight (final short  x, final long  n) { return (short)(x >>> n);}
+    public static char   uShiftRight (final char   x, final byte  n) { return (char) (x >>> n);}
+    public static char   uShiftRight (final char   x, final short n) { return (char) (x >>> n);}
+    public static char   uShiftRight (final char   x, final char  n) { return (char) (x >>> n);}
+    public static char   uShiftRight (final char   x, final int   n) { return (char) (x >>> n);}
+    public static char   uShiftRight (final char   x, final long  n) { return (char) (x >>> n);}
+    public static int    uShiftRight (final int    x, final byte  n) { return         x >>> n ;}
+    public static int    uShiftRight (final int    x, final short n) { return         x >>> n ;}
+    public static int    uShiftRight (final int    x, final char  n) { return         x >>> n ;}
+    public static int    uShiftRight (final int    x, final int   n) { return         x >>> n ;}
+    public static int    uShiftRight (final int    x, final long  n) { return         x >>> n ;}
+    public static long   uShiftRight (final long   x, final byte  n) { return         x >>> n ;}
+    public static long   uShiftRight (final long   x, final char  n) { return         x >>> n ;}
+    public static long   uShiftRight (final long   x, final short n) { return         x >>> n ;}
+    public static long   uShiftRight (final long   x, final int   n) { return         x >>> n ;}
+    public static long   uShiftRight (final long   x, final long  n) { return         x >>> n ;}
+    public static float  uShiftRight (final float  x, final byte  n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) >>> n);
     }
-    public static double  uShiftRight (final byte    a, final double  b) {
-      return Double.longBitsToDouble(a >>> Double.doubleToLongBits(b));
+    public static float  uShiftRight (final float  x, final short n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) >>> n);
     }
-    public static short   uShiftRight (final short   a, final byte    b) { return (short)(a >>> b);}
-    public static short   uShiftRight (final short   a, final short   b) { return (short)(a >>> b);}
-    public static int     uShiftRight (final short   a, final char    b) { return         a >>> b ;}
-    public static int     uShiftRight (final short   a, final int     b) { return         a >>> b ;}
-    public static long    uShiftRight (final short   a, final long    b) { return         a >>> b ;}
-    public static float   uShiftRight (final short   a, final float   b) {
-      return Float.intBitsToFloat(a >>> Float.floatToIntBits(b));
+    public static float  uShiftRight (final float  x, final char  n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) >>> n);
     }
-    public static double  uShiftRight (final short   a, final double  b) {
-      return Double.longBitsToDouble(a >>> Double.doubleToLongBits(b));
+    public static float  uShiftRight (final float  x, final int   n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) >>> n);
     }
-    public static int     uShiftRight (final char    a, final byte    b) { return         a >>> b ;}
-    public static int     uShiftRight (final char    a, final short   b) { return         a >>> b ;}
-    public static char    uShiftRight (final char    a, final char    b) { return (char) (a >>> b);}
-    public static int     uShiftRight (final char    a, final int     b) { return         a >>> b ;}
-    public static long    uShiftRight (final char    a, final long    b) { return         a >>> b ;}
-    public static float   uShiftRight (final char    a, final float   b) {
-      return Float.intBitsToFloat(a >>> Float.floatToIntBits(b));
+    public static float  uShiftRight (final float  x, final long  n) {
+      return Float.intBitsToFloat(Float.floatToIntBits(x) >>> n);
     }
-    public static double  uShiftRight (final char    a, final double  b) {
-      return Double.longBitsToDouble(a >>> Double.doubleToLongBits(b));
+    public static double uShiftRight (final double x, final byte  n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) >>> n);
     }
-    public static int     uShiftRight (final int     a, final byte    b) { return         a >>> b ;}
-    public static int     uShiftRight (final int     a, final short   b) { return         a >>> b ;}
-    public static int     uShiftRight (final int     a, final char    b) { return         a >>> b ;}
-    public static int     uShiftRight (final int     a, final int     b) { return         a >>> b ;}
-    public static long    uShiftRight (final int     a, final long    b) { return         a >>> b ;}
-    public static float   uShiftRight (final int     a, final float   b) {
-      return Float.intBitsToFloat(a >>> Float.floatToIntBits(b));
+    public static double uShiftRight (final double x, final short n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) >>> n);
     }
-    public static double  uShiftRight (final int     a, final double  b) {
-      return Double.longBitsToDouble(a >>> Double.doubleToLongBits(b));
+    public static double uShiftRight (final double x, final char  n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) >>> n);
     }
-    public static long    uShiftRight (final long    a, final byte    b) { return         a >>> b ;}
-    public static long    uShiftRight (final long    a, final char    b) { return         a >>> b ;}
-    public static long    uShiftRight (final long    a, final short   b) { return         a >>> b ;}
-    public static long    uShiftRight (final long    a, final int     b) { return         a >>> b ;}
-    public static long    uShiftRight (final long    a, final long    b) { return         a >>> b ;}
-    public static double  uShiftRight (final long    a, final float   b) {
-      return Double.longBitsToDouble(a >>> Float.floatToIntBits(b));
+    public static double uShiftRight (final double x, final int   n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) >>> n);
     }
-    public static double  uShiftRight (final long    a, final double  b) {
-      return Double.longBitsToDouble(a >>> Double.doubleToLongBits(b));
-    }
-    public static float   uShiftRight (final float   a, final byte    b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) >>> b);
-    }
-    public static float   uShiftRight (final float   a, final short   b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) >>> b);
-    }
-    public static float   uShiftRight (final float   a, final char    b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) >>> b);
-    }
-    public static float   uShiftRight (final float   a, final int     b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) >>> b);
-    }
-    public static double  uShiftRight (final float   a, final long    b) {
-      return Double.longBitsToDouble(Float.floatToIntBits(a) >>> b);
-    }
-    public static float   uShiftRight (final float   a, final float   b) {
-      return Float.intBitsToFloat(Float.floatToIntBits(a) >>> Float.floatToIntBits(b));
-    }
-    public static double  uShiftRight (final float   a, final double  b) {
-      return Double.longBitsToDouble(Float.floatToIntBits(a) >>> Double.doubleToLongBits(b));
-    }
-    public static double  uShiftRight (final double  a, final byte    b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> b);
-    }
-    public static double  uShiftRight (final double  a, final short   b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> b);
-    }
-    public static double  uShiftRight (final double  a, final char    b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> b);
-    }
-    public static double  uShiftRight (final double  a, final int     b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> b);
-    }
-    public static double  uShiftRight (final double  a, final long    b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> b);
-    }
-    public static double  uShiftRight (final double  a, final float   b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> Float.floatToIntBits(b));
-    }
-    public static double  uShiftRight (final double  a, final double  b) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(a) >>> Double.doubleToLongBits(b));
+    public static double uShiftRight (final double x, final long  n) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) >>> n);
     }
 
     // ---------------------------------- bitClear (unchecked) ---------------------------------- //
