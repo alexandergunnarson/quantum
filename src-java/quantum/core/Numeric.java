@@ -118,7 +118,7 @@ public class Numeric {
     public static double  bitAnd (final float   a, final long    b) {
       return Double.longBitsToDouble(Float.floatToIntBits(a) & b);
     }
-    public static double  bitAnd (final float   a, final float   b) {
+    public static float   bitAnd (final float   a, final float   b) {
       return Float.intBitsToFloat(Float.floatToIntBits(a) & Float.floatToIntBits(b));
     }
     public static double  bitAnd (final float   a, final double  b) {
@@ -220,7 +220,7 @@ public class Numeric {
     public static double  bitOr (final float   a, final long    b) {
       return Double.longBitsToDouble(Float.floatToIntBits(a) | b);
     }
-    public static double  bitOr (final float   a, final float   b) {
+    public static float   bitOr (final float   a, final float   b) {
       return Float.intBitsToFloat(Float.floatToIntBits(a) | Float.floatToIntBits(b));
     }
     public static double  bitOr (final float   a, final double  b) {
@@ -322,7 +322,7 @@ public class Numeric {
     public static double  bitXOr (final float   a, final long    b) {
       return Double.longBitsToDouble(Float.floatToIntBits(a) ^ b);
     }
-    public static double  bitXOr (final float   a, final float   b) {
+    public static float   bitXOr (final float   a, final float   b) {
       return Float.intBitsToFloat(Float.floatToIntBits(a) ^ Float.floatToIntBits(b));
     }
     public static double  bitXOr (final float   a, final double  b) {
@@ -425,7 +425,7 @@ public class Numeric {
     public static double  shiftLeft (final float   a, final long    b) {
       return Double.longBitsToDouble(Float.floatToIntBits(a) << b);
     }
-    public static double  shiftLeft (final float   a, final float   b) {
+    public static float   shiftLeft (final float   a, final float   b) {
       return Float.intBitsToFloat(Float.floatToIntBits(a) << Float.floatToIntBits(b));
     }
     public static double  shiftLeft (final float   a, final double  b) {
@@ -527,7 +527,7 @@ public class Numeric {
     public static double  shiftRight (final float   a, final long    b) {
       return Double.longBitsToDouble(Float.floatToIntBits(a) >> b);
     }
-    public static double  shiftRight (final float   a, final float   b) {
+    public static float   shiftRight (final float   a, final float   b) {
       return Float.intBitsToFloat(Float.floatToIntBits(a) >> Float.floatToIntBits(b));
     }
     public static double  shiftRight (final float   a, final double  b) {
@@ -629,7 +629,7 @@ public class Numeric {
     public static double  uShiftRight (final float   a, final long    b) {
       return Double.longBitsToDouble(Float.floatToIntBits(a) >>> b);
     }
-    public static double  uShiftRight (final float   a, final float   b) {
+    public static float   uShiftRight (final float   a, final float   b) {
       return Float.intBitsToFloat(Float.floatToIntBits(a) >>> Float.floatToIntBits(b));
     }
     public static double  uShiftRight (final float   a, final double  b) {
