@@ -1,8 +1,6 @@
 (ns quantum.untyped.ui.features
   (:require
     [quantum.untyped.core.core     :as ucore]
-    [quantum.untyped.core.data.map
-      :refer [map-entry]]
     [quantum.untyped.core.logic
       :refer [whenc fn=]]
     [quantum.untyped.core.system :as usys]
@@ -25,5 +23,5 @@
               :safari  "-webkit-flex"
               :safari- "-webkit-box" ; (Older)
               :ie      "-ms-flexbox"}
-             (map (fn [browser s] (map-entry (whenc browser (fn= :safari-) :safari) (flex-test div s))))
+             (map (fn [browser s] [(whenc browser (fn= :safari-) :safari) (flex-test div s)]))
              (into {})))))

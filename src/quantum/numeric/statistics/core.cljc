@@ -9,11 +9,11 @@
               reduce reduce-multi, transduce]]
     [quantum.core.compare                    :as comp]
     [quantum.core.data.map
-      :refer [!hash-map]]
+      :refer [!>hash-map]]
     [quantum.core.data.set
-      :refer [!hash-set]]
+      :refer [!>hash-set]]
     [quantum.core.data.vector
-      :refer [!vector]]
+      :refer [!>vector]]
     [quantum.core.fn
       :refer [fn1 fn&2 fnl fn-> <-]]
     [quantum.core.log                        :as log]
@@ -104,7 +104,7 @@
   {:attribution "alexandergunnarson"}
   [xs] ; TODO xs is `reducible?`
   (->> xs
-       (frequencies (!hash-map))
+       (frequencies (!>hash-map))
        (comp/reduce-max-keys-into !vector val) ; TODO this is possible to do this without allocating the intermediate collection
        (map+ key)))
 
@@ -117,7 +117,7 @@
   {:attribution "alexandergunnarson"}
   [xs] ; TODO xs is `reducible?`
   (->> xs
-       (frequencies (!hash-map))
+       (frequencies (!>hash-map))
        (comp/reduce-max-key val)
        key))
 

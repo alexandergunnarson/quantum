@@ -3,9 +3,13 @@
     [char? double? float? int?])
   (:require
     [quantum.core.type :as t
-      :refer [defnt]]))
+      :refer [defnt]]
+    [quantum.core.vars
+      :refer [def-]]))
 
 ;; TODO TYPED type coercion/casts should go in here
+
+;; ===== Predicates ===== ;;
 
 #?(:clj (def byte?   (t/isa? Byte)))
 #?(:clj (def short?  (t/isa? Short)))
@@ -14,6 +18,33 @@
 #?(:clj (def long?   (t/isa? Long)))
 #?(:clj (def float?  (t/isa? Float)))
         (def double? (t/isa? #?(:clj Double :cljs js/Number)))
+
+;; ===== Class relationships ===== ;;
+
+#?(:clj
+(def unboxed-class->boxed-class
+  {Boolean/TYPE   Boolean
+   Byte/TYPE      Byte
+   Character/TYPE Character
+   Long/TYPE      Long
+   Double/TYPE    Double
+   Short/TYPE     Short
+   Integer/TYPE   Integer
+   Float/TYPE     Float}))
+
+#?(:clj
+(def boxed-class->unboxed-class
+  {Integer   Integer/TYPE
+   Long      Long/TYPE
+   Float     Float/TYPE
+   Short     Short/TYPE
+   Boolean   Boolean/TYPE
+   Byte      Byte/TYPE
+   Character Character/TYPE
+   Double    Double/TYPE
+   Void      Void/TYPE}))
+
+;; ===== Extreme magnitudes and values ===== ;;
 
 (defnt >min-magnitude
   #?(:clj ([x byte?   > byte?]            (byte  0)))
@@ -25,8 +56,8 @@
           ([x double? > double?] #?(:clj  Double/MIN_VALUE
                                     :cljs js/Number.MIN_VALUE)))
 
-#?(:clj (def min-float  (- Float/MAX_VALUE)))
-        (def min-double (- #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
+#?(:clj (def- min-float  (- Float/MAX_VALUE)))
+        (def- min-double (- #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
 
 ;; TODO TYPED for some reason it's not figuring out the type of `min-float` and `min-double`
 #_(defnt >min-value

@@ -8,18 +8,19 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - t/assume
     - t/numerically
     - t/of
-      - (t/of t/+map? t/symbol? t/string?)
+      - (t/of map/+map? t/symbol? str/string?)
       - (t/of t/seq? namespace?)
       - t/map-of
       - t/seq-of
     - t/unqualified-symbol?
     - expressions (`quantum.untyped.core.analyze.expr`)
+    - comparison of `t/fn`s is probably possible?
   - deft
-  - fnt
+  - fnt (t/fn; current t/fn might transition to t/fn-spec or whatever?)
   - declaret
   - declare-fnt (a way to do protocols/interfaces)
     - extend-fnt!
-  - defnt
+  - defnt (t/defn)
     - handle varargs
       - [& args _] shouldn't result in `t/any?` but rather like `t/seqable?` or whatever
     - do the defnt-equivalences
@@ -27,13 +28,16 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       wider declared type there is
     - the option of creating a `defnt` that isn't extensible? Or at least in which the input types are limited in the same way per-overload output types are limited by the per-fn output type?
     - dealing with `apply`...
-  - defmacrot
+  - t/defmacro
+  - t/deftype
   - dotyped
   - typed core fns
     - `apply`
       - especially with `defnt` as the caller
     - `merge`
     - `str`
+    - `compare`
+    - `get`
 - NOTE on namespace organization:
   - [quantum.untyped.core.ns :refer [namespace?]]
     instead of
@@ -46,7 +50,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - List of semi-approximately topologically ordered namespaces to make typed:
     - quantum.core.type.core
     - quantum.core.type.defs
-    - quantum.core.data.map
     - quantum.core.logic
     - quantum.core.fn
     - quantum.core.cache
@@ -83,10 +86,14 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - quantum.core.data.primitive
       - quantum.core.ns
       - quantum.core.vars
+      - quantum.core.data.map
   - List of corresponding untyped namespaces to incorporate:
     - quantum.untyped.core.core
     - quantum.untyped.core.ns
     - quantum.untyped.core.vars
+    - quantum.untyped.core.data.map
+    - quantum.untyped.core.type.defs
+    - quantum.untyped.core.data
   - Standard metadata
     - e.g. `{:alternate-implementations #{'cljs.tools.reader/merge-meta}}`
   - Instead of e.g. `ns-` or `var-` we can do `ns-val` and `var-val`

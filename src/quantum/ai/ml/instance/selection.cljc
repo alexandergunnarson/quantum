@@ -11,11 +11,11 @@
     [quantum.core.collections.core :as ccoll
       :refer [->objects-nd]]
     [quantum.core.data.map         :as map
-      :refer [!hash-map #?(:clj !hash-map|int->ref)]]
+      :refer [>!hash-map #?(:clj >!hash-map|int->ref)]]
     [quantum.core.data.set         :as set
-      :refer [!hash-set #?(:clj !hash-set|int)]]
+      :refer [>!hash-set #?(:clj >!hash-set|int)]]
     [quantum.core.data.vector
-      :refer [!vector]]
+      :refer [>!vector]]
     [quantum.core.error
       :refer [TODO]]
     [quantum.core.fn
@@ -87,14 +87,14 @@
   (; for multi-dimensional label vectors, with
    ; one hashf that outputs several bucket values and whose bucket values are dense longs 0..`ct:buckets`
    [#{doubles-2d?} x•• #{doubles-2d?} l•• ^fn? hashf ^long ct:buckets]
-    (let [x••':indices (do #?(:clj (!hash-set|int) :cljs (!hash-set)))
+    (let [x••':indices (do #?(:clj (!>hash-set|int) :cljs (!>hash-set)))
           i:hashf->bucket->hash:l•->x••:l•
             ; map of simulated hash-function index to
             (fortimes:objects2 [_ ct:buckets]
               ; map of bucket value `b` to
               (fortimes:objects [_ ct:buckets]
                 ; map of label `l•` to all instances, `x••`, which are labeled with `l•` and in `b`
-                #?(:clj (!hash-map|int->ref) :cljs (!hash-map))))]
+                #?(:clj (!>hash-map|int->ref) :cljs (!>hash-map))))]
       (doseqi [x• x•• i:x•] ; T(|x••|*b*|x•|)
         (let [l• (get l•• i:x•)]
           (doseqi [bucket (hashf x•) i:hashf] ; T(b*|x•|) + T(hash)
@@ -103,7 +103,7 @@
                                         :cljs (hash                            l•)))]
               (if-let [x••:l• (get hash:l•->x••:l• hash:l•)]
                 (conj! x••:l• x•)
-                (assoc! hash:l•->x••:l• hash:l• (!vector x•)))))))
+                (assoc! hash:l•->x••:l• hash:l• (!>vector x•)))))))
       (doseq [bucket->hash:l•->x••:l• i:hashf->bucket->hash:l•->x••:l•] ; T(|hashf•|*b*|l•◦|)
         (doseq [hash:l•->x••:l• bucket->hash:l•->x••:l•] ; T(b*|l•◦|)
           (doseq [_ x••:l• hash:l•->x••:l•] ; T(|l•◦|)

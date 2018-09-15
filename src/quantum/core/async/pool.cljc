@@ -361,7 +361,7 @@
                      :generated shut-down-pools!)))
       (log/pr ::debug "Stopped ThreadpoolManager.")))))
 
-#?(:clj (defn validate-pools-map [x] (t/+map? x))) ; TODO more validation
+#?(:clj (defn validate-pools-map [x] (map/+map? x))) ; TODO more validation
 
 #?(:clj
 (dv/def-map threadpool-manager:config ; TODO merge with ThreadpoolManager

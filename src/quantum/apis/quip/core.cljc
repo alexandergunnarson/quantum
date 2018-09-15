@@ -2,7 +2,8 @@
   #_(:require-quantum [:lib http auth])
   #_(:require [hickory.core          :as hp]
               [hickory.select        :as hs]
-              [quantum.core.type-old :as t]))
+              [quantum.core.type-old :as t]
+              [quantum.core.data.map :as map]))
 
 #_(defn request! [req]
   (http/request!
@@ -29,7 +30,7 @@
           (->> table second :content
                (mapv (fn->> :content
                             (mapv (fn-> :content first :content first
-                                        (whenf (fn1 t/+map?) (fn-> :content first)))))))]
+                                        (whenf (fn1 map/+map?) (fn-> :content first)))))))]
     (coll/zipmap map/om (first columns) (-> columns rest coll/transpose))))
 
 #_(def ^{:doc "Checks whether the argument is a singleton string consisting of

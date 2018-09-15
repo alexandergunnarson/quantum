@@ -1,18 +1,18 @@
 (ns quantum.compile.transpile.to.core
   (:require
-    [quantum.compile.transpile.util          :as util ]
-    [quantum.core.analyze.clojure.predicates :as anap ]
-    [quantum.core.data.map                   :as map  ]
+    [quantum.compile.transpile.util          :as util]
+    [quantum.core.analyze.clojure.predicates :as anap]
+    [quantum.core.data.map                   :as map]
     [quantum.core.collections                :as coll
       :refer [containsv? kw-map popr popl contains? in? dropl]]
     [quantum.core.convert                    :as conv
       :refer [->name]]
     [quantum.core.error                      :as err
       :refer [throw-unless >ex-info]]
-    [quantum.core.log                        :as log  ]
-    [quantum.core.compare                    :as comp ]
-    [quantum.core.string                     :as str  ]
-    [quantum.core.string.format              :as strf ]
+    [quantum.core.log                        :as log]
+    [quantum.core.compare                    :as comp]
+    [quantum.core.string                     :as str]
+    [quantum.core.string.format              :as strf]
     [quantum.core.fn                         :as fn
       :refer [<- fn-> fn->> fn1 fn']]
     [quantum.core.logic                      :as logic
@@ -564,7 +564,7 @@
                        (cond
                          (even? arg-ct)
                            (apply sorted-map arg-0 args) ; sorts the keys
-                         (and (= 1 arg-ct) (t/+map? arg-0))
+                         (and (= 1 arg-ct) (map/+map? arg-0))
                            arg-0
                          (and (= 1 arg-ct) (nil? arg-0))
                            {}

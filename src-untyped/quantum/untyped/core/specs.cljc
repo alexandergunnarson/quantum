@@ -136,7 +136,7 @@
           (dissoc :quantum.core.specs/docstring
                   :quantum.core.specs/pre-meta
                   :quantum.core.specs/post-meta)
-          (update :quantum.core.specs/fn|name with-meta nil)
+          (update :quantum.core.specs/fn|name #(some-> % (with-meta nil)))
           (assoc :quantum.core.specs/meta
             (-> ;; TODO use `merge-unique` instead of `:quantum.core.specs/fn|unique-meta`
                 (merge (meta fn|name) pre-meta post-meta)

@@ -357,7 +357,7 @@
 ;       #(and (vector?   %)
 ;             (= 2       (count %))
 ;             (keyword?  (first %)) ; id
-;             (t/+map?   (second %)) ; id-meta
+;             (map/+map? (second %)) ; id-meta
 ;             (contains? (second %) :title))
 ;       #(func (second %))
 ;       drive-dir))

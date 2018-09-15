@@ -13,7 +13,7 @@
     [quantum.untyped.core.ns   :as uns]
     ;; TODO TYPED remove reference to `quantum.untyped.core.vars`
     [quantum.untyped.core.vars :as uvar
-      :refer [defalias]]))
+      :refer [defalias defaliases]]))
 
 #?(:clj (def namespace? (t/isa? clojure.lang.Namespace)))
 
@@ -102,7 +102,7 @@
 #_(:clj
 (defnt ns>mappings
   "Supersedes `clojure.core/ns-map`."
-  [x namespace? > (t/assume (t/of t/+map? t/unqualified-symbol? (t/or t/var? t/class?)))]
+  [x namespace? > (t/assume (t/of ut/+map? t/unqualified-symbol? (t/or t/var? t/class?)))]
   (.getMappings x)))
 
 ;; TODO TYPED finish `t/assume`, `t/of`, `t/unqualified-symbol?`
@@ -111,7 +111,7 @@
   "Outputs the alias->namespace mappings for the namespace.
 
    Supersedes `clojure.core/ns-aliases`."
-  [x namespace? > (t/assume (t/of t/+map? t/unqualified-symbol? namespace?))]
+  [x namespace? > (t/assume (t/of ut/+map? t/unqualified-symbol? namespace?))]
   (.getAliases x)))
 
 ;; TODO TYPED finish `t/assume`, `t/of`, `t/unqualified-symbol?`, decide on `filter-vals'`?
@@ -120,7 +120,7 @@
   "Outputs the import-mappings for the namespace.
 
    Supersedes `clojure.core/ns-imports`."
-  [x namespace? > (t/assume (t/of t/+map? t/unqualified-symbol? t/class?))]
+  [x namespace? > (t/assume (t/of ut/+map? t/unqualified-symbol? t/class?))]
   (->> x (filter-vals' t/class?))))
 
 ;; TODO TYPED finish `t/assume`, `t/of`, `t/unqualified-symbol?`, decide on `filter-vals'`?
@@ -129,7 +129,7 @@
   "Outputs the intern-mappings for the namespace.
 
    Supersedes `clojure.core/ns-interns`."
-  [ns-val namespace? > (t/assume (t/of t/+map? t/unqualified-symbol? t/var?))]
+  [ns-val namespace? > (t/assume (t/of ut/+map? t/unqualified-symbol? t/var?))]
   (->> ns-val
        ns>mappings
        (filter-vals' (fn [^clojure.lang.Var v] (and (t/var? v) (= ns-val (.ns v))))))))
@@ -139,7 +139,7 @@
   "Outputs the public intern-mappings for the namespace.
 
    Supersedes `clojure.core/ns-publics`."
-  [ns-val namespace? > (t/assume (t/of t/+map? t/unqualified-symbol? t/var?))]
+  [ns-val namespace? > (t/assume (t/of ut/+map? t/unqualified-symbol? t/var?))]
   (->> ns-val
        ns>interns
        (filter-vals' (fn [^clojure.lang.Var v] (.isPublic v))))))
@@ -150,7 +150,7 @@
   "Outputs the refer-mappings for the namespace.
 
    Supersedes `clojure.core/ns-refers`."
-  [ns-val namespace? > (t/assume (t/of t/+map? t/unqualified-symbol? t/var?))]
+  [ns-val namespace? > (t/assume (t/of ut/+map? t/unqualified-symbol? t/var?))]
   (->> ns-val
        ns>mappings
        (remove-vals' (fn [^clojure.lang.Var v] (and (t/var? v) (= ns-val (.ns v))))))))

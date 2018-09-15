@@ -46,12 +46,12 @@
     [clojure.core                            :as c      ]
     [fast-zip.core                           :as zip    ]
     [quantum.core.data.map                   :as map
-      :refer [!hash-map]]
+      :refer [!>hash-map]]
     [quantum.core.data.set                   :as set    ]
     [quantum.core.data.string
       :refer [!str]]
     [quantum.core.data.vector                :as vec
-      :refer [catvec subsvec !vector]]
+      :refer [catvec subsvec !>vector]]
     [quantum.core.collections.core           :as coll]
     [quantum.core.collections.sociative      :as soc    ]
     [quantum.core.collections.differential   :as diff
@@ -637,7 +637,7 @@
    (fn [m k]
      (let [v (get m k)]
        (if (or (nil? v)
-               (and (or (t/+map? v)
+               (and (or (map/+map? v)
                         (c/sequential? v))
                     (empty? v)))
          (dissoc m k) m)))
@@ -1175,7 +1175,7 @@
 
 (defnt probabilities+
   ([ #_reducible? xs]
-    (let [ct (count xs)] (->> xs (frequencies (!hash-map)) (map-vals+ (fn1 / ct))))))
+    (let [ct (count xs)] (->> xs (frequencies (!>hash-map)) (map-vals+ (fn1 / ct))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         GROUPING         }=====================================================
 ;=================================================={     group, aggregate     }=====================================================
@@ -1709,8 +1709,8 @@
    (reduce-kv (fn [m k v]
                 (if (or (and (not (> 0 max))
                              (<= max 1))
-                        (not (#?(:clj  t/+hash-map?
-                                 :cljs t/+map?) v))
+                        (not (#?(:clj  map/+hash-map?
+                                 :cljs map/+map?) v))
                         (and keep-empty
                              (empty? v)))
                   (assoc m (conj arr k) v)
@@ -2187,7 +2187,7 @@
                     (long (num/ceil (double (* n p))))) ; TODO make not use long or double
         sorted (->> allocated
                     (map-indexed+ vector)
-                    (join! (!vector))
+                    (join! (!>vector))
                     (sort-by! (fn1 second)))
         total  (->> allocated (reduce + 0))
         *flow  (long (- total n))] ; over- or underflow

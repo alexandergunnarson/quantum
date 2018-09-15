@@ -16,6 +16,7 @@
               while-let lfor doseqi for fori red-for join reduce zip lzip]]
     [quantum.core.async       :as async
       :refer [go <! <!! >! put! timeout]]
+    [quantum.core.data.map       :as map]
     [quantum.core.data.validated :as dv]
     [quantum.core.spec           :as s
       :refer [validate]]
@@ -351,7 +352,7 @@
   (release-all! offset))
 
 (defn gen-ops-for-note [{:keys [chan pitch velocity duration tie-on? measure-ties scheduler]}]
-  (let [_          (validate measure-ties (fn1 t/+map?))
+  (let [_          (validate measure-ties (fn1 map/+map?))
         tied       (get measure-ties chan)
         prev-tied? (= tied pitch)]
     (cond prev-tied?
@@ -378,7 +379,7 @@
    {:as   line
     :keys [instrument expr-0 measures octave]}
    {:keys [base-duration scheduler normal-chan bar-ties]}]
-  (validate bar-ties (fn1 t/+map?))
+  (validate bar-ties (fn1 map/+map?))
   (red-for [note* measure
             {:keys [measure-ties measure-ops]} {:measure-ties bar-ties :measure-ops []}]
     (let [{:keys [note note-duration duration relative-duration octave' pitch-int modwheel chan velocity tie?] :as setup}
@@ -405,7 +406,7 @@
 
 (defn gen-ops-for-bar
   [{:keys [music base-duration scheduler normal-chans i-measure ties ops]}]
-  (validate ties (fn1 t/+map?))
+  (validate ties (fn1 map/+map?))
   (red-for [[i-line line] (coll/lindexed music)
             {:keys [bar-ties bar-ops]} {:bar-ties ties :bar-ops []}]
     (let [measure (-> line :measures (get i-measure))

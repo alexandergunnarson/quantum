@@ -7,7 +7,7 @@
     [quantum.untyped.core.type       :as ut]
     ;; TODO TYPED prefer e.g. `deft-alias`
     [quantum.untyped.core.vars
-      :refer [defaliases]]))
+      :refer [defalias defaliases]]))
 
 (defalias udefnt/fnt)
 (defalias udefnt/defnt)
@@ -19,7 +19,9 @@
   and or
   ;; Predicates
   any?
-  +map?
+  none?
+  ref?
+  fn?
   metable?
   seq?
   symbol?

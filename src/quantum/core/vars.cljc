@@ -9,6 +9,7 @@
            [quantum.core.type         :as t
              :refer [defnt]]
            ;; TODO TYPED remove reference to `quantum.untyped.core.vars`
+           [quantum.untyped.core.type :as ut]
            [quantum.untyped.core.vars :as uvar])
 #?(:cljs (:require-macros
            [quantum.core.vars         :as this])))
@@ -17,7 +18,7 @@
 
 ;; ===== Meta ===== ;;
 
-(def meta? (t/? t/+map?))
+(def meta? (t/? ut/+map?))
 
 (defnt meta
   "Returns the (possibly nil) metadata of ->`x`."
@@ -66,17 +67,17 @@
    if supplied. The namespace must exist. The var will adopt any metadata from ->`name-val`.
    Returns the var."
   > t/var?
-  ([ns-val (t/or t/symbol? t/namespace?), var-name t/symbol? > (t/* t/var?)]
+  ([ns-val (t/or t/symbol? ns/namespace?), var-name t/symbol? > (t/* t/var?)]
     (let [var-ref (clojure.lang.Var/intern (ns/>ns ns-val) var-name)]
       (when (meta var-name) (.setMeta var-ref (meta var-name)))
       var-ref))
-  ([ns-val (t/or t/symbol? t/namespace?), var-name t/symbol?, var-val (t/ref t/any?) > (t/* t/var?)]
+  ([ns-val (t/or t/symbol? ns/namespace?), var-name t/symbol?, var-val (t/ref t/any?) > (t/* t/var?)]
     (let [var-ref (clojure.lang.Var/intern (ns/>ns ns-val) var-name var-val)]
       (when (meta var-name) (.setMeta var-ref (meta var-name)))
       var-ref))))
 
 ;; TODO TYPED
-#?(:clj (defalias uvar/def))
+#?(:clj (uvar/defalias uvar/def))
 
 ;; TODO TYPED
 #?(:clj (uvar/defaliases uvar defalias defaliases defaliases'))

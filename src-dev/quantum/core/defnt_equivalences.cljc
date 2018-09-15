@@ -1633,10 +1633,10 @@
            (let [rf ((.-xf x) f)]
              (rf (reduce rf init (.-prev x)))))
          ([f rf?, init _, x  t/chan?] (async/reduce f init x)) ; TODO spec `async/reduce`
-#?(:cljs ([f rf?, init _, xs t/+map?] (#_(:clj  clojure.core.protocols/kv-reduce
-                                      :cljs -kv-reduce) ; in order to use transducers...
+#?(:cljs ([f rf?, init _, xs map/+map?] (#_(:clj  clojure.core.protocols/kv-reduce
+                                            :cljs -kv-reduce) ; in order to use transducers...
                                 -reduce-seq xs f init)))
-#?(:cljs ([f rf?, init _, xs t/+set?] (-reduce-seq xs f init)))
+#?(:cljs ([f rf?, init _, xs set/+set?] (-reduce-seq xs f init)))
          ([f rf?, init _, n (t/numerically t/int?)]
            (loop [i 0 v init]
              (if (< i n)
