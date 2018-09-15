@@ -51,7 +51,6 @@
 
 #?(:clj (defalias false? core/false?))
 
-#_(defmacro bit-not [x] `(Numeric/bitNot ~x))
 #_(macros/variadic-proxy bit-and  quantum.core.Numeric/bitAnd) ; &
 #_(macros/variadic-proxy bit-or   quantum.core.Numeric/bitOr)  ; |
 #_(macros/variadic-proxy bit-xor  quantum.core.Numeric/bitXor)
@@ -59,9 +58,8 @@
 #_(macros/variadic-proxy bool-or  quantum.core.Numeric/or)     ; ||
 #_(macros/variadic-proxy bool-xor quantum.core.Numeric/xor)
 
-(defnt not )
+(defnt ^:inline not [])
 
-(defalias bit-not core/bit-not)
 (defalias bit-and core/bit-and)
 (defalias && bit-and) ; tried to do `& but, "No method in multimethod 'parse' for dispatch value: &"
 (defalias bit-or  core/bit-or)

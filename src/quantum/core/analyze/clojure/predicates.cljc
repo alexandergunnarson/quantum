@@ -7,6 +7,7 @@
 #?(:clj
     [clojure.jvm.tools.analyzer           :as tana])
     [quantum.core.analyze.clojure.core    :as ana]
+    [quantum.core.data.primitive          :as p]
     [quantum.core.fn                      :as fn
       :refer [fnl <- fn-> fn->> fn']]
     [quantum.core.logic                   :as logic
@@ -50,7 +51,7 @@
                                      (fn-and symbol? (fn-or (fn= 'default)
                                                             (fn-> name (str-index-of "?") (not= -1))))))
 (def hinted-literal?
-  (fn-or #?(:clj char?) number? string? vector? map? nil? keyword? ubit/boolean? ustr/regex?))
+  (fn-or #?(:clj char?) number? string? vector? map? nil? keyword? p/boolean? ustr/regex?))
 
 ;  ===== SCOPE =====
 (defn shadows-var? [bindings v]

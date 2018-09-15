@@ -599,34 +599,16 @@
 #?(:clj  (-def protocol?        (>expr (ufn/fn-> :on-interface class?))))
 
 ;; ===== Primitives ===== ;;
+;; NOTE these are kept here because they're used in both type analysis and various test namespaces
 
-         (-def  boolean?  (isa? #?(:clj Boolean :cljs js/Boolean)))
-         (-def ?boolean?  (? boolean?))
-
-#?(:clj  (-def  byte?     (isa? Byte)))
-#?(:clj  (-def ?byte?     (? byte?)))
-
-#?(:clj  (-def  char?     (isa? Character)))
-#?(:clj  (-def ?char?     (? char?)))
-
-#?(:clj  (-def  short?    (isa? Short)))
-#?(:clj  (-def ?short?    (? short?)))
-
-#?(:clj  (-def  int?      (isa? Integer)))
-#?(:clj  (-def ?int?      (? int?)))
-
-#?(:clj  (-def  long?     (isa? Long)))
-#?(:clj  (-def ?long?     (? long?)))
-
-#?(:clj  (-def  float?    (isa? Float)))
-#?(:clj  (-def ?float?    (? float?)))
-
-         (-def  double?   (isa? #?(:clj Double :cljs js/Number)))
-         (-def ?double?   (? double?))
-
-         (-def primitive? (or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
-
-#?(:clj  (-def comparable-primitive? (- primitive? boolean?)))
+         (-def  boolean? (isa? #?(:clj Boolean :cljs js/Boolean)))
+#?(:clj  (-def  byte?    (isa? Byte)))
+#?(:clj  (-def  char?    (isa? Character)))
+#?(:clj  (-def  short?   (isa? Short)))
+#?(:clj  (-def  int?     (isa? Integer)))
+#?(:clj  (-def  long?    (isa? Long)))
+#?(:clj  (-def  float?   (isa? Float)))
+         (-def  double?  (isa? #?(:clj Double :cljs js/Number)))
 
 ;; ===== Booleans ===== ;;
 
@@ -634,9 +616,6 @@
          (-def false? (value false))
 
 ;; ===== Numbers ===== ;;
-
-;; ----- Integers ----- ;;
-
 
 ;; ----- General ----- ;;
 

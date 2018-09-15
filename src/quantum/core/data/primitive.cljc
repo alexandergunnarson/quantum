@@ -1,6 +1,6 @@
 (ns quantum.core.data.primitive
   (:refer-clojure :exclude
-    [char? double? float? int?])
+    [boolean? char? double? float? int?])
   (:require
     [quantum.core.type :as t
       :refer [defnt]]
@@ -11,13 +11,18 @@
 
 ;; ===== Predicates ===== ;;
 
-#?(:clj (def byte?   (t/isa? Byte)))
-#?(:clj (def short?  (t/isa? Short)))
-#?(:clj (def char?   (t/isa? Character)))
-#?(:clj (def int?    (t/isa? Integer)))
-#?(:clj (def long?   (t/isa? Long)))
-#?(:clj (def float?  (t/isa? Float)))
-        (def double? (t/isa? #?(:clj Double :cljs js/Number)))
+#?(:clj (def boolean? (t/isa? #?(:clj Boolean :cljs js/Boolean))))
+#?(:clj (def byte?    (t/isa? Byte)))
+#?(:clj (def short?   (t/isa? Short)))
+#?(:clj (def char?    (t/isa? Character)))
+#?(:clj (def int?     (t/isa? Integer)))
+#?(:clj (def long?    (t/isa? Long)))
+#?(:clj (def float?   (t/isa? Float)))
+        (def double?  (t/isa? #?(:clj Double :cljs js/Number)))
+
+        (def primitive? (t/or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
+
+#?(:clj (def comparable-primitive? (t/- primitive? boolean?)))
 
 ;; ===== Class relationships ===== ;;
 

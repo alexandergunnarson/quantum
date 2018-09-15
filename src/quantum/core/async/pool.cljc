@@ -10,6 +10,7 @@
       :refer [close! go-loop put!]]
     [quantum.core.core           :as qcore]
     [quantum.core.data.map       :as map]
+    [quantum.core.data.primitive :as p]
     [quantum.core.data.set       :as set]
     [quantum.core.data.validated :as dv]
     [quantum.core.fn
@@ -534,7 +535,7 @@
         threadpool-f   (atom (or threadpool (->pool :fixed max-threads-f)))
         threadpool-interrupted?
           (doto (atom false)
-            (set-validator! (fn1 t/boolean?))
+            (set-validator! (fn1 p/boolean?))
             (add-watch :interrupt-monitor
               (fn [_ _ _ newv]
                 (when (true? newv)

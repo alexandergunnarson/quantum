@@ -9,6 +9,7 @@
               contains?, subset?, assoc-default, count]]
     [quantum.core.compare            :as comp
       :refer [reduce-min reduce-max]]
+    [quantum.core.data.primitive     :as p]
     [quantum.core.data.validated     :as dv]
     [quantum.core.data.vector
       :refer [!vector]]
@@ -67,14 +68,14 @@
            ^{:doc "Will be passed 3 args, `model`, `instance`, `output`."}
            (def :this/accuracyf         fn?) ; TODO must return a number, accept 3 args, etc.
            ^{:doc "Whether to shuffle the instances+targets before using the sliding window. Defaults to `true`"}
-           (def :this/shuffle?          (fn1 t/boolean?))
+           (def :this/shuffle?          (fn1 p/boolean?))
            (def :this/compute-for       (s/and (fn1 t/+set?) (fn1 subset? #{:train :validation})))]
   :opt-un [^{:doc "Number of iterations"}
            (def :this/n                 (fn1 t/integer?))
            ^{:doc "Desired ratio of training instances to validation instances"}
            (def :this/training-ratio    (s/and (fn1 t/number?) (fn1 > 0) (fn1 < 1)))
            ^{:doc "Whether to report the accuracies per split instead of calling `mean` on them"}
-           (def :this/verbose?          (fn1 t/boolean?))])
+           (def :this/verbose?          (fn1 p/boolean?))])
 
 (defn n-fold-cross-validation
   "Assumes `instances` and `targets` have same length and correspond to each other.

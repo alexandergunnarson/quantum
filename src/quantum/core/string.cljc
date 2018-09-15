@@ -10,31 +10,32 @@
   (:refer-clojure :exclude
     [reverse replace remove val re-find reduce])
   (:require
-    [clojure.core               :as core]
-    [clojure.string             :as str]
+    [clojure.core                :as core]
+    [clojure.string              :as str]
     [frak]
-    [cuerdas.core               :as str+]
-    [quantum.core.data.map      :as map]
-    [quantum.core.data.set      :as set]
+    [cuerdas.core                :as str+]
+    [quantum.core.data.primitive :as p]
+    [quantum.core.data.map       :as map]
+    [quantum.core.data.set       :as set]
     [quantum.core.error
       :refer [>ex-info]]
-    [quantum.core.fn            :as fn
+    [quantum.core.fn             :as fn
       :refer [fn-> fn1 rfn fnl]]
-    [quantum.core.logic         :as logic
+    [quantum.core.logic          :as logic
       :refer [fn-and whenc whenc1 ifn condf]]
-    [quantum.core.loops         :as loops
+    [quantum.core.loops          :as loops
       :refer [reduce reducei]]
-    [quantum.core.macros        :as macros
+    [quantum.core.macros         :as macros
       :refer [defnt defnt']]
     [quantum.core.collections.core
       :refer [contains? containsv?]]
     [quantum.core.collections.logic
       :refer [seq-and]]
-    [quantum.core.string.format :as form]
-    [quantum.core.string.regex  :as regex]
-    [quantum.core.vars          :as var
+    [quantum.core.string.format  :as form]
+    [quantum.core.string.regex   :as regex]
+    [quantum.core.vars           :as var
       :refer [defalias]]
-    [quantum.core.type-old      :as t
+    [quantum.core.type-old       :as t
       :refer [val?]])
 #?(:cljs
   (:require-macros
@@ -402,7 +403,7 @@
 
 (defn properize-key [k v]
   (let [k-0 (keywordize k)
-        k-f (if (t/boolean? v)
+        k-f (if (p/boolean? v)
                 (keyword+ k-0 "?")
                 k-0)]
     k-f))

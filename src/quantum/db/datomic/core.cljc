@@ -5,37 +5,38 @@
      update merge if-let for doseq nth filter
      contains?])
   (:require
-    [clojure.core               :as c]
+    [clojure.core                :as c]
 #?@(:clj
-   [[datomic.api                :as db]])
-    [datascript.core            :as mdb]
-    [com.stuartsierra.component :as comp]
-    [quantum.core.collections   :as coll
+   [[datomic.api                 :as db]])
+    [datascript.core             :as mdb]
+    [com.stuartsierra.component  :as comp]
+    [quantum.core.collections    :as coll
       :refer [join for kw-map val? contains?
               filter+ filter-vals+ filter-vals', remove-vals+, map+, remove+ remove', nth
               group-by+ prewalk postwalk merge-deep dissoc-in doseq]]
-    [quantum.core.core          :as qcore]
-    [quantum.core.async         :as async
+    [quantum.core.core           :as qcore]
+    [quantum.core.async          :as async
       :refer [<! <!! >! >!!]]
-    [quantum.core.data.set      :as set]
-    [quantum.core.error         :as err
+    [quantum.core.data.primitive :as p]
+    [quantum.core.data.set       :as set]
+    [quantum.core.error          :as err
       :refer [>ex-info >err TODO catch-all]]
-    [quantum.core.fn            :as fn
+    [quantum.core.fn             :as fn
       :refer [<- fn-> fn->> fn1 fnl fn' rfn with-do]]
-    [quantum.core.log           :as log]
-    [quantum.core.logic         :as logic
+    [quantum.core.log            :as log]
+    [quantum.core.logic          :as logic
       :refer [fn-not fn-and fn-or whenf whenf1 ifn ifn1 if-let condf1]]
-    [quantum.core.print         :as pr]
-    [quantum.core.resources     :as res]
-    [quantum.core.process       :as proc]
+    [quantum.core.print          :as pr]
+    [quantum.core.resources      :as res]
+    [quantum.core.process        :as proc]
     [quantum.core.convert.primitive :as pconv
       :refer [->long]]
-    [quantum.core.vars           :as var
+    [quantum.core.vars            :as var
       :refer [defalias]]
-    [quantum.core.data.validated :as dv]
-    [quantum.core.spec           :as s
+    [quantum.core.data.validated  :as dv]
+    [quantum.core.spec            :as s
       :refer [validate]]
-    [quantum.core.type-old       :as t]
+    [quantum.core.type-old        :as t]
     [quantum.untyped.core.identification
       :refer [>?name]])
 #?(:clj
@@ -322,18 +323,18 @@
 (dv/def -ref     (s/or* :db/id :db/ident dbfn-call?)) ; TODO look over this more
 (dv/def -keyword (s/or* keyword? dbfn-call?))
 (dv/def -string  (s/or* string? dbfn-call?))
-(dv/def -boolean (s/or* (fn1 t/boolean?) dbfn-call?))
+(dv/def -boolean (s/or* (fn1 p/boolean?) dbfn-call?))
 (dv/def -long    (s/or* #?(:clj  (fn-or (fnl instance? Long   )
-                                               (fnl instance? Integer)
-                                               (fnl instance? Short  )) #_long?
+                                        (fnl instance? Integer)
+                                        (fnl instance? Short  )) #_long?
                                   :cljs c/integer?) ; TODO CLJS |long?| ; TODO autocast from e.g. bigint if safe to do so
                                dbfn-call?))
 (dv/def -bigint  (s/or* (fn1 t/bigint?)
                                dbfn-call?))
-(dv/def -float   (s/or* #?(:clj  (fn1 t/float?)
+(dv/def -float   (s/or* #?(:clj  (fn1 p/float?)
                                   :cljs number?)
                                dbfn-call?))  ; TODO CLJS |float?|
-(dv/def -double  (s/or* #?(:clj  (fn1 t/double?)
+(dv/def -double  (s/or* #?(:clj  (fn1 p/double?)
                                   :cljs number?)
                                dbfn-call?))
 (dv/def -bigdec  (s/or* #?(:clj  (fnl instance? BigDecimal) #_bigdec?
@@ -419,10 +420,10 @@
            (def :datomic:schema/type        allowed-types)
            (def :datomic:schema/cardinality #{:one :many})]
   :opt-un [(def :datomic:schema/doc         string?)
-           (def :datomic:schema/component?  (fn1 t/boolean?))
-           (def :datomic:schema/index?      (fn1 t/boolean?))
-           (def :datomic:schema/full-text?  (fn1 t/boolean?))
-           (def :datomic:schema/no-history? (fn1 t/boolean?))
+           (def :datomic:schema/component?  (fn1 p/boolean?))
+           (def :datomic:schema/index?      (fn1 p/boolean?))
+           (def :datomic:schema/full-text?  (fn1 p/boolean?))
+           (def :datomic:schema/no-history? (fn1 p/boolean?))
            (def :datomic:schema/unique      #{:identity :value})])
 
 ; TODO for datascript:

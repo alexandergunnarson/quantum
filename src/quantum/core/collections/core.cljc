@@ -26,6 +26,7 @@
                       ->long*
                       ->float*
                       ->double*])]]
+            [quantum.core.data.primitive    :as p]
             [quantum.core.data.string
               :refer [!str]]
             [quantum.core.data.vector       :as vec
@@ -131,7 +132,7 @@
   ;; TODO for O(1) reversible inputs, you can just do that with `drop+`
   ;; TODO this is not suitable for `fold` contexts
   {:attribution "Christophe Grand - http://grokbase.com/t/gg/clojure/1388ev2krx/butlast-with-reducers"}
-  [n (t/numerically t/int?), xs t/reducible? > t/reducible?]
+  [n (t/numerically p/int?), xs t/reducible? > t/reducible?]
   (let [n' (>int n)]
     (r/transformer xs
       (fnt [rf r/rf?]
