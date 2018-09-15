@@ -702,7 +702,8 @@
      ;; ===== Paths ===== ;;
      :target-path  "target"
      :test-paths   ["test"]
-     :source-paths ["src" "src-java"]
+     :source-paths ["src"]
+     :java-source-paths ["src-java"]
      ;; ===== Compilation ===== ;;
      :jar-name     (str artifact-base-name "-dep.jar")
      :uberjar-name (str artifact-base-name ".jar")

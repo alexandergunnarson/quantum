@@ -1,4 +1,4 @@
-package quantum.core.error;
+package quantum.core;
 
 import java.util.Collection;
 import java.util.Iterator;

@@ -15,8 +15,6 @@
     [quantum.untyped.core.error :as self
       :refer [err-constructor]])))
 
-#?(:clj (do (ns-unmap *ns* 'Error) (import quantum.core.error.Error)))
-
 (ucore/log-this-ns)
 
 ;; ===== Types ===== ;;
@@ -109,16 +107,17 @@
 
 ;; ===== Error type: `defrecord`/map ===== ;;
 
-#?(#_:clj #_(defrecord Error [ident message data trace cause]) ; defined in Java as `quantum.core.error.Error`
+            ;; Defined in Java as `quantum.core.Error`
+#?(#_:clj #_(defrecord Error [ident message data trace cause])
      :cljs  (defrecord Error [ident message data trace cause]))
 
-(def error-map-type #?(:clj quantum.core.error.Error :cljs quantum.untyped.core.error/Error))
+(def error-map-type #?(:clj quantum.core.Error :cljs quantum.untyped.core.error/Error))
 
 (def error-map? (fnl instance? error-map-type))
 
 #?(:clj
 (defmacro- err-constructor [& args]
-  `(~(case-env :clj  'quantum.core.error.Error.
+  `(~(case-env :clj  'quantum.core.Error.
                :cljs 'quantum.untyped.core.error.Error.) ~@args)))
 
 (declare ?ex-data)

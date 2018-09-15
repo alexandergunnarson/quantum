@@ -169,7 +169,7 @@
         fipp.ednize/IOverride
         fipp.ednize/IEdn
           (-edn [this] (tagged-literal '!! (into {} this)))) ; TODO ->map
-      (extend-type quantum.core.error.Error
+      (extend-type quantum.core.Error
         fipp.ednize/IOverride
         fipp.ednize/IEdn
           (-edn [this] (tagged-literal 'err (into {} this))))
