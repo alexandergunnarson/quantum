@@ -526,59 +526,59 @@ public class Numeric {
 
     // ---------------------------------- bitClear (unchecked) ---------------------------------- //
 
-    public static byte   bitClear (final byte   x, final long n) { return (byte) (x & ~(1L << n)); }
-    public static short  bitClear (final short  x, final long n) { return (short)(x & ~(1L << n)); }
-    public static char   bitClear (final char   x, final long n) { return (char) (x & ~(1L << n)); }
-    public static int    bitClear (final int    x, final long n) { return (int)  (x & ~(1L << n)); }
-    public static long   bitClear (final long   x, final long n) { return         x & ~(1L << n) ; }
-    public static float  bitClear (final float  x, final long n) {
-      return Float.intBitsToFloat((int)(Float.floatToIntBits(x) & ~(1L << n)));
+    public static byte   bitClear (final byte   x, final long i) { return (byte) (x & ~(1L << i)); }
+    public static short  bitClear (final short  x, final long i) { return (short)(x & ~(1L << i)); }
+    public static char   bitClear (final char   x, final long i) { return (char) (x & ~(1L << i)); }
+    public static int    bitClear (final int    x, final long i) { return (int)  (x & ~(1L << i)); }
+    public static long   bitClear (final long   x, final long i) { return         x & ~(1L << i) ; }
+    public static float  bitClear (final float  x, final long i) {
+      return Float.intBitsToFloat((int)(Float.floatToIntBits(x) & ~(1L << i)));
     }
-    public static double bitClear (final double x, final long n) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(x) & ~(1L << n));
+    public static double bitClear (final double x, final long i) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) & ~(1L << i));
     }
 
     // ---------------------------------- bitFlip (unchecked) ---------------------------------- //
 
-    public static byte   bitFlip (final byte   x, final long n) { return (byte) (x ^ (1L << n)); }
-    public static short  bitFlip (final short  x, final long n) { return (short)(x ^ (1L << n)); }
-    public static char   bitFlip (final char   x, final long n) { return (char) (x ^ (1L << n)); }
-    public static int    bitFlip (final int    x, final long n) { return (int)  (x ^ (1L << n)); }
-    public static long   bitFlip (final long   x, final long n) { return         x ^ (1L << n) ; }
-    public static float  bitFlip (final float  x, final long n) {
-      return Float.intBitsToFloat((int)(Float.floatToIntBits(x) ^ (1L << n)));
+    public static byte   bitFlip (final byte   x, final long i) { return (byte) (x ^ (1L << i)); }
+    public static short  bitFlip (final short  x, final long i) { return (short)(x ^ (1L << i)); }
+    public static char   bitFlip (final char   x, final long i) { return (char) (x ^ (1L << i)); }
+    public static int    bitFlip (final int    x, final long i) { return (int)  (x ^ (1L << i)); }
+    public static long   bitFlip (final long   x, final long i) { return         x ^ (1L << i) ; }
+    public static float  bitFlip (final float  x, final long i) {
+      return Float.intBitsToFloat((int)(Float.floatToIntBits(x) ^ (1L << i)));
     }
-    public static double bitFlip (final double x, final long n) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(x) ^ (1L << n));
+    public static double bitFlip (final double x, final long i) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) ^ (1L << i));
     }
 
     // ----------------------------------- bitSet (unchecked) ----------------------------------- //
     // Returns the smallest safe type
 
-    public static byte   bitSet (final byte   x, final long n) { return (byte) (x | (1L << n)); }
-    public static short  bitSet (final short  x, final long n) { return (short)(x | (1L << n)); }
-    public static char   bitSet (final char   x, final long n) { return (char) (x | (1L << n)); }
-    public static int    bitSet (final int    x, final long n) { return (int)  (x | (1L << n)); }
-    public static long   bitSet (final long   x, final long n) { return         x | (1L << n) ; }
-    public static float  bitSet (final float  x, final long n) {
-      return Float.intBitsToFloat((int)(Float.floatToIntBits(x) | (1L << n)));
+    public static byte   bitSet (final byte   x, final long i) { return (byte) (x | (1L << i)); }
+    public static short  bitSet (final short  x, final long i) { return (short)(x | (1L << i)); }
+    public static char   bitSet (final char   x, final long i) { return (char) (x | (1L << i)); }
+    public static int    bitSet (final int    x, final long i) { return (int)  (x | (1L << i)); }
+    public static long   bitSet (final long   x, final long i) { return         x | (1L << i) ; }
+    public static float  bitSet (final float  x, final long i) {
+      return Float.intBitsToFloat((int)(Float.floatToIntBits(x) | (1L << i)));
     }
-    public static double bitSet (final double x, final long n) {
-      return Double.longBitsToDouble(Double.doubleToLongBits(x) | (1L << n));
+    public static double bitSet (final double x, final long i) {
+      return Double.longBitsToDouble(Double.doubleToLongBits(x) | (1L << i));
     }
 
     // ---------------------------------- bitTest (unchecked) ---------------------------------- //
 
-    public static boolean bitTest (final byte   x, final long n) { return (x & (1L << n)) != 0L; }
-    public static boolean bitTest (final short  x, final long n) { return (x & (1L << n)) != 0L; }
-    public static boolean bitTest (final char   x, final long n) { return (x & (1L << n)) != 0L; }
-    public static boolean bitTest (final int    x, final long n) { return (x & (1L << n)) != 0L; }
-    public static boolean bitTest (final long   x, final long n) { return (x & (1L << n)) != 0L; }
-    public static boolean bitTest (final float  x, final long n) {
-      return (Float.floatToIntBits(x) & (1L << n)) != 0L;
+    public static boolean bitTest (final byte   x, final long i) { return (x & (1L << i)) != 0L; }
+    public static boolean bitTest (final short  x, final long i) { return (x & (1L << i)) != 0L; }
+    public static boolean bitTest (final char   x, final long i) { return (x & (1L << i)) != 0L; }
+    public static boolean bitTest (final int    x, final long i) { return (x & (1L << i)) != 0L; }
+    public static boolean bitTest (final long   x, final long i) { return (x & (1L << i)) != 0L; }
+    public static boolean bitTest (final float  x, final long i) {
+      return (Float.floatToIntBits(x) & (1L << i)) != 0L;
     }
-    public static boolean bitTest (final double x, final long n) {
-      return (Double.doubleToLongBits(x) & (1L << n)) != 0L;
+    public static boolean bitTest (final double x, final long i) {
+      return (Double.doubleToLongBits(x) & (1L << i)) != 0L;
     }
 
     // ======================================= lt : < =========================================== //
