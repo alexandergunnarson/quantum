@@ -14,11 +14,12 @@
 
 (defaliases ut
   ;; Generators
-  ? * isa? fn ref
+  ? * isa? fn ref value
   ;; Combinators
   and or -
   ;; Predicates
   any?
+  nil?
   none?
   ref?
   fn?
@@ -27,3 +28,33 @@
   symbol?
   var?
   with-metable?)
+
+
+;; TODO TYPED move
+#_(defnt ^boolean nil?
+  ([^Object x] (quantum.core.Numeric/isNil x))
+  ([:else   x] false))
+
+;; TODO TYPED move
+#_(:clj (defalias nil? core/nil?))
+
+;; TODO TYPED move
+#_(defnt ^boolean not'
+  ([^boolean? x] (Numeric/not x))
+  ([x] (if (nil? x) true))) ; Lisp nil punning
+
+;; TODO TYPED move
+#_(defnt ^boolean true?
+  ([^boolean? x] x)
+  ([:else     x] false))
+
+;; TODO TYPED move
+#_(:clj (defalias true? core/true?))
+
+;; TODO TYPED move
+#_(defnt ^boolean false?
+  ([^boolean? x] (not' x))
+  ([:else     x] false))
+
+;; TODO TYPED move
+#_(:clj (defalias false? core/false?))
