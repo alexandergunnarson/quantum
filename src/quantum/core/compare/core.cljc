@@ -67,7 +67,7 @@
            {:todo #{"Handle nil values"}}
            ([^Comparable a ^Comparable b] (int (.compareTo a b)))
            ([^Comparable a ^prim?      b] (int (.compareTo a b)))
-           ([^prim?      a ^Comparable b] (int (.compareTo (p/>boxed a) b)))
+           ([^prim?      a ^Comparable b] (int (.compareTo (p/box a) b)))
            ([^array-1d?  a ^array-1d?  b] (compare-1d-arrays-lexicographically a b)))
    :cljs (defalias compare core/compare))
 

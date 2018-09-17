@@ -62,7 +62,7 @@
    Void      Void/TYPE}))
 
 #?(:clj
-(defnt >boxed
+(defnt box
   ([x boolean? > (t/ref boolean?)] (Boolean/valueOf   x))
   ([x byte?    > (t/ref byte?)]    (Byte/valueOf      x))
   ([x char?    > (t/ref char?)]    (Character/valueOf x))
@@ -73,7 +73,7 @@
   ([x double?  > (t/ref double?)]  (Double/valueOf    x))))
 
 #?(:clj
-(defnt >unboxed
+(defnt unboxed
   ([x (t/ref boolean?) > boolean?] (.booleanValue x))
   ([x (t/ref byte?)    > byte?]    (.byteValue    x))
   ([x (t/ref char?)    > char?]    (.charValue    x))

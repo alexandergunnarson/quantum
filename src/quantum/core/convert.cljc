@@ -22,6 +22,7 @@
     ; CompilerException java.lang.NoClassDefFoundError: IllegalName: compile__stub.gloss.data.bytes.core.gloss.data.bytes.core/MultiBufferSequence, compiling:(gloss/data/bytes/core.clj:78:1)
   ; [gloss.core.formats                 :as gforms]
     [quantum.core.data.array             :as arr]
+    [quantum.core.data.primitive         :as p]
     [quantum.core.error                  :as err
       :refer [TODO]]
     [quantum.core.numeric                :as num]
@@ -88,16 +89,17 @@
 (log/this-ns)
 
 #?(:clj
-(defaliases pconv
-  ->boolean
-  ->byte* ->byte
-  ->char* ->short
-  ->int* ->int
-  ->long* ->long
-  ->float* ->float
-  ->double* ->double
-  ->boxed ->unboxed ->unsigned
-  ubyte->byte ushort->short uint->int ulong->long))
+(defaliases p
+  >boolean
+  >byte*   >byte
+  >short*  >short
+  >char*   >char
+  >int*    >int
+  >long*   >long
+  >float*  >float
+  >double* >double
+  box unbox >unsigned
+  ubyte>byte ushort>short uint>int ulong>long))
 
         (defalias utf8-string   conv/utf8-string  )
         (defalias base64-encode conv/base64-encode)
