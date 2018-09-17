@@ -15,7 +15,6 @@
       :refer [declare-spec]]
     [quantum.core.spec              :as s]
     [quantum.db.datomic             :as db]
-    [quantum.core.convert.primitive :as pconv]
     [quantum.core.numeric           :as num
       :refer [percent?]]))
 

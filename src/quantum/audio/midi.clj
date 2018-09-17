@@ -4,6 +4,7 @@
   (:require
     [clojure.core.match
       :refer [match]]
+    [quantum.core.data.primitive :as p]
     [quantum.core.fn
       :refer [<- fn-> fn->> fn1 fnl]]
     [quantum.core.logic
@@ -25,7 +26,6 @@
     [quantum.core.log         :as log]
     [quantum.core.resources   :as res]
     [quantum.core.string      :as str]
-    [quantum.core.convert.primitive     :as pconv]
     [quantum.core.convert     :as conv]
     [quantum.measure.convert
       :refer [convert]]
@@ -205,7 +205,7 @@
                                  {:instrument (-> label str/trim)
                                   :expr-0     (-> expr-0 str/trim)
                                   :measures   measures
-                                  :octave     (-> octave str/trim pconv/->int)})))
+                                  :octave     (-> octave str/trim p/>int)})))
                      join)
           _ (dotimes [i-measure num-all-measures]
               (let [count-this-measure (fn [line]

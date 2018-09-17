@@ -9,8 +9,6 @@
     [quantum.core.collections.core   :as ccoll
       :refer [conj?! ?persistent! ?transient!, first, join]]
     [quantum.core.compare.core       :as ccomp]
-    [quantum.core.convert.primitive  :as pconv
-      :refer [->boxed ->boolean ->long]]
     [quantum.core.error :as err
       :refer [TODO]]
     [quantum.core.fn                 :as fn

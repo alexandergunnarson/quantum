@@ -11,7 +11,7 @@
           [java.nio ByteBuffer]
           [quantum.core Numeric Primitive])))
 
-;; TODO TYPED type coercion/casts should go in here
+;; TODO TYPED `>boxed` and `>unboxed`
 
 ;; ===== Predicates ===== ;;
 

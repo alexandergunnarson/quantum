@@ -14,8 +14,8 @@
     [cljsjs.js-joda-timezone]]) ; For IANA timezone support
     [quantum.core.collections       :as coll
       :refer [ifor]]
-    [quantum.core.convert.primitive :as pconv
-      :refer [->int ->long]]
+    [quantum.core.data.primitive
+      :refer [>int >long]]
     [quantum.core.error             :as err
       :refer [>ex-info TODO throw-unless err!]]
     [quantum.core.fn                :as fn
@@ -126,12 +126,12 @@
   #?@(:clj  [([^long                    x] x)
              ([^java.time.Instant       x] (-> x (.toEpochMilli)))
              ([^java.util.Date          x] (-> x (.getTime)     ))
-             ([^java.time.LocalDate     x] (-> x (.toEpochDay ) (convert :days  :millis) ->long))
+             ([^java.time.LocalDate     x] (-> x (.toEpochDay ) (convert :days  :millis) >long))
              ([^java.time.LocalDateTime x] (-> x (.toInstant ZoneOffset/UTC) ->epoch-millis))
              ([^java.time.ZonedDateTime x] (-> x .toInstant ->epoch-millis))
              ([^org.joda.time.DateTime  x] (-> x (.getMillis)   ))
              ([^java.util.Calendar      x] (-> x (.getTimeInMillis)))]
-      :cljs [([^number?                 x] (->long x))
+      :cljs [([^number?                 x] (>long x))
              ([^js/Date                 x] (.getTime x))]))
 
 (declare ->local-date-time-protocol)
@@ -139,7 +139,7 @@
 #?(:clj
 (defnt ^java.time.Instant ->instant
   "Coerces to an instantaneous point on an imaginary timeline."
-  ([#{long? bigint?} x] (-> x ->long (java.time.Instant/ofEpochMilli)))
+  ([#{long? bigint?} x] (-> x >long (java.time.Instant/ofEpochMilli)))
   ([x] (-> x ->epoch-millis-protocol ->instant))))
 
 ; ===== DATE ===== ;
@@ -154,7 +154,7 @@
   (^{:doc "Obtain an instance of LocalDate from a year, month, and dayOfMonth value"}
    [#?(:cljs ^number? y
        :clj           y) m d]
-    (#?(:clj LocalDate/of :cljs js/JSJoda.LocalDate.of) (->long y) (->long m) (->long d))))
+    (#?(:clj LocalDate/of :cljs js/JSJoda.LocalDate.of) (>long y) (>long m) (>long d))))
 
 #?(:clj
 (defmacro ->local-date
@@ -175,15 +175,15 @@
   (^{:doc "Obtain an instance of LocalTime from an hour and minute value"}
    [#?(:cljs ^number? h
        :clj           h) m]
-    (#?(:clj LocalTime/of :cljs js/JSJoda.LocalTime.of) (->long h) (->long m)))
+    (#?(:clj LocalTime/of :cljs js/JSJoda.LocalTime.of) (>long h) (>long m)))
   (^{:doc "Obtain an instance of LocalTime from an hour, minute, and second value"}
    [#?(:cljs ^number? h
        :clj           h) m s]
-    (#?(:clj LocalTime/of :cljs js/JSJoda.LocalTime.of) (->long h) (->long m) (->long s)))
+    (#?(:clj LocalTime/of :cljs js/JSJoda.LocalTime.of) (>long h) (>long m) (>long s)))
   (^{:doc "Obtain an instance of LocalTime from an hour, minute, second, and nano value"}
    [#?(:cljs ^number? h
        :clj           h) m s n]
-    (#?(:clj LocalTime/of :cljs js/JSJoda.LocalTime.of) (->long h) (->long m) (->long s) (->long n))))
+    (#?(:clj LocalTime/of :cljs js/JSJoda.LocalTime.of) (>long h) (>long m) (>long s) (>long n))))
 
 #?(:clj
 (defmacro ->local-time
@@ -205,17 +205,17 @@
    [#?(:cljs ^number? y
        :clj           y) mo d h m]
     (#?(:clj LocalDateTime/of :cljs js/JSJoda.LocalDateTime.of)
-      (->long y) (->long mo) (->long d) (->long h) (->long m)))
+      (>long y) (>long mo) (>long d) (>long h) (>long m)))
   (^{:doc "Obtain an instance of LocalDateTime from a year, month, day, hour, minute, and second value"}
    [#?(:cljs ^number? y
        :clj           y) mo d h m s]
     (#?(:clj LocalDateTime/of :cljs js/JSJoda.LocalDateTime.of)
-      (->long y) (->long mo) (->long d) (->long h) (->long m) (->long s)))
+      (>long y) (>long mo) (>long d) (>long h) (>long m) (>long s)))
   (^{:doc "Obtain an instance of LocalDateTime from a year, month, day, hour, minute, second, and nano value"}
    [#?(:cljs ^number? y
        :clj           y) mo d h m s n]
     (#?(:clj LocalDateTime/of :cljs js/JSJoda.LocalDateTime.of)
-      (->long y) (->long mo) (->long d) (->long h) (->long m) (->long s) (->long n) )))
+      (>long y) (>long mo) (>long d) (>long h) (>long m) (>long s) (>long n) )))
 
 #?(:clj
 (defmacro ->local-date-time
@@ -246,7 +246,7 @@
    [#?(:cljs ^number? y
        :clj           y) mo d h m s n zone]
     (#?(:clj ZonedDateTime/of :cljs js/JSJoda.ZonedDateTime.of)
-      (->long y) (->long mo) (->long d) (->long h) (->long m) (->long s) (->long n) (->zone-id zone))))
+      (>long y) (>long mo) (>long d) (>long h) (>long m) (>long s) (>long n) (->zone-id zone))))
 
 #?(:clj
 (defmacro ->zoned-date-time
@@ -270,7 +270,7 @@
   ([y     ] (->period* y 0 0))
   ([y mo  ] (->period* y mo 0))
   ([y mo d]
-    (#?(:clj Period/of :cljs (TODO)) (->int y) (->int mo) (->int d)))))
+    (#?(:clj Period/of :cljs (TODO)) (>int y) (>int mo) (>int d)))))
 
 ; TODO CLJS
 #?(:clj (defmacro ->period ([] (case-env :clj `Period/ZERO :cljs (TODO)))
@@ -284,13 +284,13 @@
 (defnt ^{:tag #?(:clj Duration)} ->duration*
   ([d        ] (#?(:clj Duration/ofDays :cljs (TODO)) d))
   ([d h      ] (.plus (->duration* d)
-                      (#?(:clj Duration/ofHours   :cljs (TODO)) (->long h))))
+                      (#?(:clj Duration/ofHours   :cljs (TODO)) (>long h))))
   ([d h m    ] (.plus (->duration* d h)
-                      (#?(:clj Duration/ofMinutes :cljs (TODO)) (->long m))))
+                      (#?(:clj Duration/ofMinutes :cljs (TODO)) (>long m))))
   ([d h m s  ] (.plus (->duration* d h m)
-                      (#?(:clj Duration/ofSeconds :cljs (TODO)) (->long s))))
+                      (#?(:clj Duration/ofSeconds :cljs (TODO)) (>long s))))
   ([d h m s n] (.plus (->duration* d h m s)
-                      (#?(:clj Duration/ofNanos   :cljs (TODO)) (->long n))))))
+                      (#?(:clj Duration/ofNanos   :cljs (TODO)) (>long n))))))
 
 ; TODO CLJS
 #?(:clj (defmacro ->duration ([] (case-env :clj `Duration/ZERO :cljs (TODO)))

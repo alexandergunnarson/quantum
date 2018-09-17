@@ -29,7 +29,6 @@
     [quantum.core.collections.core
       :refer [lasti]]
     [quantum.core.convert.core           :as conv]
-    [quantum.core.convert.primitive      :as pconv]
     [quantum.core.data.complex.json      :as json]
     [quantum.core.macros                 :as macros
       :refer [defnt #?(:clj defnt')]]

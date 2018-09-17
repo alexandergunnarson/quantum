@@ -17,7 +17,8 @@
     [quantum.core.core           :as qcore]
     [quantum.core.async          :as async
       :refer [<! <!! >! >!!]]
-    [quantum.core.data.primitive :as p]
+    [quantum.core.data.primitive :as p
+      :refer [>long]]
     [quantum.core.data.set       :as set]
     [quantum.core.error          :as err
       :refer [>ex-info >err TODO catch-all]]
@@ -29,8 +30,6 @@
     [quantum.core.print          :as pr]
     [quantum.core.resources      :as res]
     [quantum.core.process        :as proc]
-    [quantum.core.convert.primitive :as pconv
-      :refer [->long]]
     [quantum.core.vars            :as var
       :refer [defalias]]
     [quantum.core.data.validated  :as dv]
@@ -342,7 +341,7 @@
                                dbfn-call?)) ; TODO CLJS |bigdec?|
 (dv/def -instant (s/or* (fnl instance? #?(:clj java.util.Date :cljs js/Date  )) ; TODO time/->instant
                        #?(:clj (s/and string?        (s/conformer clojure.instant/read-instant-date)))
-                               (s/and (fn1 t/integer?) (s/conformer #(#?(:clj java.util.Date. :cljs js/Date.) (->long %))))
+                               (s/and (fn1 t/integer?) (s/conformer #(#?(:clj java.util.Date. :cljs js/Date.) (>long %))))
                                dbfn-call?))
 (dv/def -uri     (s/or* (fnl instance? #?(:clj java.net.URI   :cljs (TODO) #_paths/URI))
                                dbfn-call?))

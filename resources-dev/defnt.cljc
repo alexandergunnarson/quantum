@@ -4,6 +4,8 @@
 
 >boolean is different than `truthy?`
 
+Sometimes you want (byte <whatever-double>) to fail at runtime rather than fail at runtime when you can't know everything
+
 #_"
 LEFT OFF LAST TIME (9/3/2018):
 
@@ -80,7 +82,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - quantum.core.error
     - quantum.core.data.string — this is where `>str` belongs
 
-    - quantum.core.convert.primitive
     - quantum.core.data.collections
     - quantum.core.data.tuple
 
@@ -110,14 +111,16 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - quantum.core.reducers.reduce
     - quantum.core.collections.logic
     - quantum.core.collections.core
+
     - Worked through all we can for now:
       - quantum.core.core
         - TODO delete this namespace?
-      - quantum.core.data.primitive
+      - quantum.core.data.primitive (TODO make it compile)
       - quantum.core.ns
       - quantum.core.vars
       - quantum.core.data.map
       - quantum.core.data.bits
+      - quantum.core.convert.primitive
   - List of corresponding untyped namespaces to incorporate:
     - [ ] quantum.untyped.core.core
     - [ ] quantum.untyped.core.ns

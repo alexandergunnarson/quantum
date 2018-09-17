@@ -8,8 +8,7 @@
       :refer [defnt #?@(:clj [defnt'])]]
     [quantum.core.vars      :as var
       :refer [defalias defaliases]]
-    [quantum.core.convert.primitive
-      :refer [#?@(:clj [->int ->double])]]
+    [quantum.core.data.primitive :as p]
     [quantum.core.numeric.convert
       :refer [->bigdec]]
     [quantum.core.compare.core :as ccomp
@@ -31,7 +30,7 @@
            (^BigDecimal [^BigDecimal x math-context]
              (.round x math-context))
            (^long       [#{long ratio?} x]
-             (round-int (->double x))) ; TODO 0
+             (round-int (p/>double x))) ; TODO 0
            (^BigDecimal [#{long ratio?} x math-context]
              (round-int (->bigdec x) math-context)))
    :cljs (defn round-int [x] (js/Math.round x)))

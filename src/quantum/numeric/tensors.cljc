@@ -23,8 +23,8 @@
               ->objects]]
     [quantum.core.compare
       :refer [max]]
-    [quantum.core.convert.primitive
-      :refer [->int ->long ->double* ->double]]
+    [quantum.core.data.primitive
+      :refer [>int >long >double]]
     [quantum.core.error                       :as err
       :refer [>ex-info TODO]]
     [quantum.core.fn                          :as fn
@@ -131,9 +131,9 @@
    numpy:  a[0,1]
    R:      a[1,2]"
   {:implemented-by '#{smile.math.matrix.Matrix}}
-  #?(:clj (^double [^RealVector X ^long a        ] (->double (real/entry X a  ))))
+  #?(:clj (^double [^RealVector X ^long a        ] (>double (real/entry X a  ))))
           (        [            X       a        ] (TODO))
-  #?(:clj (^double [^RealMatrix X ^long a ^long b] (->double (real/entry X a b))))
+  #?(:clj (^double [^RealMatrix X ^long a ^long b] (>double (real/entry X a b))))
           (        [            X       a       b] (TODO)))
 
 (defnt set-in!*
@@ -167,17 +167,17 @@
   ([^long m ^long n               ] (nat/dge m n))
   ([      x                       ] (nat/dge x))
   ([^array-2d? x]
-    (let [width  (-> x c/first ccoll/count& ->long) ; TODO fix where type hints aren't showing up
+    (let [width  (-> x c/first ccoll/count& >long) ; TODO fix where type hints aren't showing up
           height (c/count x)
           ret    (->dmatrix width height)]
       (dotimes [i height j width]
-        (set-in!* ret (-> x (c/get-in* (int i) (int j)) ->double) i j)) ; TODO figure out why `->int` instead of `int` creates verifyerror
+        (set-in!* ret (-> x (c/get-in* (int i) (int j)) >double) i j)) ; TODO figure out why `>int` instead of `int` creates verifyerror
       ret))
   ([^vector? x] ; TODO lists/seqs are okay too
     (if (c/empty? x)
         (->dmatrix 0 0)
         (let [_      (validate x (fn-> c/first t/sequential?))
-              width  (-> x c/first c/count ->long)
+              width  (-> x c/first c/count >long)
               height (c/count x)
               ret    (->dmatrix width height)]
           (red-fori [row  x
@@ -185,7 +185,7 @@
             ; All rows must be same width
             (assert (-> row c/count (= width)) (kw-map row width i)) ; TODO cheap `validate`
             (red-fori [elem row _ nil j]
-              (set-in!* ret' (->double elem) i j)))
+              (set-in!* ret' (>double elem) i j)))
           ret)))))
 
 #_"May take either a boxed or unboxed fn:

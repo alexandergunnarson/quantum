@@ -10,23 +10,22 @@
     #?(:clj [seqspert.vector])
     #?(:clj [clojure.core.async             :as casync])
             [quantum.core.log               :as log]
-            [quantum.core.convert.primitive :as pconvert
-              :refer [->boolean
-                      ->byte
-              #?(:clj ->char)
-                      ->short
-                      ->int
-                      ->long
-              #?(:clj ->float)
-                      ->double
-            #?@(:clj [->byte*
-                      ->char*
-                      ->short*
-                      ->int*
-                      ->long*
-                      ->float*
-                      ->double*])]]
-            [quantum.core.data.primitive    :as p]
+            [quantum.core.data.primitive    :as p
+              :refer [>boolean
+                      >byte
+                      >short
+              #?(:clj >char)
+                      >int
+                      >long
+              #?(:clj >float)
+                      >double
+            #?@(:clj [>byte*
+                      >short*
+                      >char*
+                      >int*
+                      >long*
+                      >float*
+                      >double*])]]
             [quantum.core.data.string
               :refer [!str]]
             [quantum.core.data.vector       :as vec
@@ -576,13 +575,13 @@
 (defnt empty
   {:todo #{"implement core/empty"}}
            (     [^boolean   x] false         )
-  #?(:clj  (     [^char      x] (->char   0)  ))
-  #?(:clj  (     [^byte      x] (->byte   0)  ))
-  #?(:clj  (     [^short     x] (->short  0)  ))
-  #?(:clj  (     [^int       x] (->int    0)  ))
-  #?(:clj  (     [^long      x] (->long   0)  ))
-  #?(:clj  (     [^float     x] (->float  0)  ))
-  #?(:clj  (     [^double    x] (->double 0)  ))
+  #?(:clj  (     [^char      x] (>char   0)  ))
+  #?(:clj  (     [^byte      x] (>byte   0)  ))
+  #?(:clj  (     [^short     x] (>short  0)  ))
+  #?(:clj  (     [^int       x] (>int    0)  ))
+  #?(:clj  (     [^long      x] (>long   0)  ))
+  #?(:clj  (     [^float     x] (>float  0)  ))
+  #?(:clj  (     [^double    x] (>double 0)  ))
   #?(:cljs (^<0> [^pnum?     x] 0             ))
            (^<0> [^string?   x] ""            )
            ; TODO ^array?

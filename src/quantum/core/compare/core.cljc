@@ -17,9 +17,8 @@
       :refer [neg? pos? zero?]]
     [quantum.core.numeric.convert
       :refer [->num ->num&]]
-    [quantum.core.convert.primitive  :as pconv
-      :refer [->boxed ->boolean ->long]]
-    [quantum.core.data.numeric       :as dnum])
+    [quantum.core.data.numeric       :as dnum]
+    [quantum.core.data.primitive     :as p])
 #?(:cljs
   (:require-macros
     [quantum.core.compare.core       :as self
@@ -59,7 +58,7 @@
       (loop [i 0]
         (if (== i len) ; TODO = ?
             (- alen blen)
-            (let [x (pconv/->long-protocol (- (->num (aget a i)) (->num (aget b i))))] ; TODO remove protocol
+            (let [x (p/>long (- (->num (aget a i)) (->num (aget b i))))] ; TODO remove protocol
               (if (zero? x)
                   (recur (core/inc i))
                   x))))))))
@@ -68,7 +67,7 @@
            {:todo #{"Handle nil values"}}
            ([^Comparable a ^Comparable b] (int (.compareTo a b)))
            ([^Comparable a ^prim?      b] (int (.compareTo a b)))
-           ([^prim?      a ^Comparable b] (int (.compareTo (->boxed a) b)))
+           ([^prim?      a ^Comparable b] (int (.compareTo (p/>boxed a) b)))
            ([^array-1d?  a ^array-1d?  b] (compare-1d-arrays-lexicographically a b)))
    :cljs (defalias compare core/compare))
 
@@ -78,8 +77,8 @@
            ([#{byte char short int long float double} x
              #{byte char short int long float double} y] (Numeric/eq x y))
            ([^boolean x ^boolean y] (Numeric/eq x y))
-           ([^boolean x #{byte char short int long float double} y] (->boolean false))
-           ([#{byte char short int long float double} x ^boolean y] (->boolean false))
+           ([^boolean x #{byte char short int long float double} y] false)
+           ([#{byte char short int long float double} x ^boolean y] false)
            ([         x          y] (.equals ^Object x y))
            ([         x ^prim?   y] (.equals ^Object x y))
            ([^prim?   x          y] (.equals ^Object y x)))
@@ -102,7 +101,7 @@
 ; ===== `<` ===== ;
 
 #?(:clj  (defnt' ^boolean <-bin
-           ([#{byte char short int long float double} x] (->boolean true))
+           ([#{byte char short int long float double} x] true)
            ([#{byte char short int long float double} x
              #{byte char short int long float double} y] (Numeric/lt x y))
            ; TODO numbers, but not nil
@@ -115,7 +114,7 @@
 ; ----- `comp<` ----- ;
 
 #?(:clj  (defnt' ^boolean comp<-bin
-           ([^comparable? x] (->boolean true))
+           ([^comparable? x] true)
            ([#{byte char short int long float double} x
              #{byte char short int long float double} y] (< x y))
            ([^boolean    x ^boolean    y] (< (->num& x) (->num& y)))
@@ -135,7 +134,7 @@
 ; ===== `<=` ===== ;
 
 #?(:clj  (defnt' ^boolean <=-bin
-           ([#{byte char short int long float double} x] (->boolean true))
+           ([#{byte char short int long float double} x] true)
            ([#{byte char short int long float double} x
              #{byte char short int long float double} y] (Numeric/lte x y))
            ; TODO numbers, but not nil
@@ -148,7 +147,7 @@
 ; ----- `comp<=` ----- ;
 
 #?(:clj  (defnt' ^boolean comp<=-bin
-           ([^comparable? x] (->boolean true))
+           ([^comparable? x] true)
            ([#{byte char short int long float double} x
              #{byte char short int long float double} y] (<= x y))
            ([^boolean    x ^boolean    y] (<= (->num& x) (->num& y)))
@@ -168,7 +167,7 @@
 ; ===== `>` ===== ;
 
 #?(:clj  (defnt' ^boolean >-bin
-           ([#{byte char short int long float double} x] (->boolean true))
+           ([#{byte char short int long float double} x] true)
            ([#{byte char short int long float double} x
              #{byte char short int long float double} y] (Numeric/gt x y))
            ; TODO numbers, but not nil
@@ -181,7 +180,7 @@
 ; ----- `comp>` ----- ;
 
 #?(:clj  (defnt' ^boolean comp>-bin
-           ([^comparable? x] (->boolean true))
+           ([^comparable? x] true)
            ([#{byte char short int long float double} x
              #{byte char short int long float double} y] (> x y))
            ([^boolean    x ^boolean    y] (> (->num& x) (->num& y)))
@@ -201,7 +200,7 @@
 ; ===== `>=` ===== ;
 
 #?(:clj  (defnt' ^boolean >=-bin
-           ([#{byte char short int long float double} x] (->boolean true))
+           ([#{byte char short int long float double} x] true)
            ([#{byte char short int long float double} x
              #{byte char short int long float double} y] (Numeric/gte x y))
            ; TODO numbers, but not nil
@@ -214,7 +213,7 @@
 ; ----- `comp>=` ----- ;
 
 #?(:clj  (defnt' ^boolean comp>=-bin
-           ([^comparable? x] (->boolean true))
+           ([^comparable? x] true)
            ([#{byte char short int long float double} x
              #{byte char short int long float double} y] (>= x y))
            ([^boolean    x ^boolean    y] (>= (->num& x) (->num& y)))

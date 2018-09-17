@@ -10,9 +10,9 @@
     [clojure.core                      :as c]
 #?@(:cljs
    [[com.gfredericks.goog.math.Integer :as int]])
-    [quantum.core.convert.primitive    :as pconvert
-      :refer [#?(:clj ->long)]]
     [quantum.core.data.numeric         :as dnum]
+    [quantum.core.data.primitive
+      :refer [#?(:clj >long)]]
     [quantum.core.error                :as err
       :refer [>err err! TODO]]
     [quantum.core.fn
@@ -234,16 +234,16 @@
    :cljs (defonce         ONE  int/ONE ))
 
 ; For units
-(defonce ^:const ten              (#?(:clj ->long :cljs int)   10    ))
-(defonce ^:const hundred          (#?(:clj ->long :cljs int)   100   ))
-(defonce ^:const thousand         (#?(:clj ->long :cljs int)   1000  ))
-(defonce ^:const ten-thousand     (#?(:clj ->long :cljs int)   10000 ))
-(defonce ^:const hundred-thousand (#?(:clj ->long :cljs int)   100000))
-(defonce ^:const million          (#?(:clj ->long :cljs int)   1E6   ))
-(defonce ^:const billion          (#?(:clj ->long :cljs int)   1E9   ))
-(defonce ^:const trillion         (#?(:clj ->long :cljs int)   1E12  ))
-(defonce ^:const quadrillion      (#?(:clj ->long :cljs int)   1E15  ))
-(defonce ^:const quintillion      (#?(:clj ->long :cljs int)   1E18  )) ; + exa | - atto
+(defonce ^:const ten              (#?(:clj >long :cljs int)   10    ))
+(defonce ^:const hundred          (#?(:clj >long :cljs int)   100   ))
+(defonce ^:const thousand         (#?(:clj >long :cljs int)   1000  ))
+(defonce ^:const ten-thousand     (#?(:clj >long :cljs int)   10000 ))
+(defonce ^:const hundred-thousand (#?(:clj >long :cljs int)   100000))
+(defonce ^:const million          (#?(:clj >long :cljs int)   1E6   ))
+(defonce ^:const billion          (#?(:clj >long :cljs int)   1E9   ))
+(defonce ^:const trillion         (#?(:clj >long :cljs int)   1E12  ))
+(defonce ^:const quadrillion      (#?(:clj >long :cljs int)   1E15  ))
+(defonce ^:const quintillion      (#?(:clj >long :cljs int)   1E18  )) ; + exa | - atto
 (defonce ^:const sextillion       #?(:clj (c/bigint 1E21  ) :cljs 0))
 (defonce ^:const septillion       #?(:clj (c/bigint 1E24  ) :cljs 0))
 (defonce ^:const octillion        #?(:clj (c/bigint 1E27  ) :cljs 0))

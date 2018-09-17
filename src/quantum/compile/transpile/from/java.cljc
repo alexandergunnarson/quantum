@@ -10,7 +10,7 @@
               containsv? popl popr kw-map contains?]]
     [quantum.core.convert                    :as conv
       :refer [->name]                                 ]
-    [quantum.core.convert.primitive          :as pconv]
+    [quantum.core.data.primitive             :as p]
     [quantum.core.error                      :as err
       :refer [>ex-info]                                   ]
     [quantum.core.macros                     :as macros
@@ -372,7 +372,7 @@
   ([^StringLiteralExpr x]
     (-> x .getValue))
   ([^LongLiteralExpr x]
-    `(~'long ~(->> x .getValue popr pconv/->long)))
+    `(~'long ~(->> x .getValue popr p/>long)))
   ([^BooleanLiteralExpr x]
     (-> x .getValue))
   ([^IntegerLiteralExpr x]

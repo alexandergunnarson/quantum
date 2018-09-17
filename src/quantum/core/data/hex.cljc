@@ -3,10 +3,10 @@
     :attribution "alexandergunnarson"}
   quantum.core.data.hex
   (:require
+    [quantum.core.data.primitive
+      :refer [>int]]
     [quantum.core.macros            :as macros
       :refer [defnt]]
-    [quantum.core.convert.primitive :as pconvert
-      :refer [->int ->byte*]]
     [quantum.core.string            :as str]))
 
 (defnt ^String ->hex-string
@@ -16,7 +16,7 @@
   #?(:cljs ([^pnumber? x] (.toString x 16)))
   #?(:clj  ([^int?     x] (Integer/toHexString x)))
   #?(:clj  ([^char?    x]
-             (let [^String s (->hex-string (->int x))]
+             (let [^String s (->hex-string (>int x))]
                (.substring s 0 4))))
   #?(:clj  ([^byte?    x]
              (let [^String hs (->hex-string (+ 256 (long x)))
@@ -27,7 +27,7 @@
   #?(:clj  ([^bytes? bs]
              (->hex-string bs " ")))
   #?(:clj  ([^bytes? bs separator]
-             (str/join separator (map (fn [x] (->hex-string (->byte* ^Byte x))) bs))))
+             (str/join separator (map (fn [x] (->hex-string (>byte x))) bs))))
   #_([:else n zero-pad-length]
     (text/pad-left (->hex-string n) zero-pad-length "0")))
 
@@ -45,4 +45,3 @@
                                      (bit-and 0x0F           (long (Character/getNumericValue (.charAt x (int (+ (* 2 i) 1))))))))))
               res)
        :cljs (-> x  js/goog.crypt.hexToByteArray js/Uint8Array.))))
-
