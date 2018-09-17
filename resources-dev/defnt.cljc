@@ -1,3 +1,9 @@
+;; Truncation is different from safe coercion
+`>integer` is for e.g.:
+- truncation e.g. js/Math.trunc
+
+>boolean is different than `truthy?`
+
 #_"
 LEFT OFF LAST TIME (9/3/2018):
 
@@ -7,9 +13,16 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - t/...
     - multi-arity `t/-`
     - t/assume
-    - t/numerically
+    - t/numerically : e.g. a double representing exactly what a float is able to represent
+      - and variants thereof: `numerically-long?` etc.
+      - t/numerically-integer?
+    - range-of : e.g. a double being between float max values but possibly representing a 'hole' in
+                 possible float values
+    - dependent types: `[x p/int? > (t/type x)]`
+    - t/extend-defnt!
     - t/of
-      - (t/of map/+map? t/symbol? str/string?)
+      - (t/of number?) ; implicitly the container is a `traversable?`
+      - (t/of map/+map? t/symbol? dstr/string?)
       - (t/of t/seq? namespace?)
       - t/map-of
       - t/seq-of
@@ -22,6 +35,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - declare-fnt (a way to do protocols/interfaces)
     - extend-fnt!
   - defnt (t/defn)
+    - (t/and (t/or a b) c) should -> (t/or (t/and a c) (t/and b c)) for purposes of separating dispatches
     - ^:inline
       - if you do (Numeric/bitAnd a b) inline then bitAnd needs to know the primitive type so maybe
         we do the `let*`-binding approach to typing vars?
@@ -64,7 +78,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - quantum.core.data.vector
     - quantum.core.spec
     - quantum.core.error
-    - quantum.core.data.bits
     - quantum.core.data.string — this is where `>str` belongs
 
     - quantum.core.convert.primitive
@@ -104,13 +117,15 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - quantum.core.ns
       - quantum.core.vars
       - quantum.core.data.map
+      - quantum.core.data.bits
   - List of corresponding untyped namespaces to incorporate:
-    - quantum.untyped.core.core
-    - quantum.untyped.core.ns
-    - quantum.untyped.core.vars
-    - quantum.untyped.core.data.map
-    - quantum.untyped.core.type.defs
-    - quantum.untyped.core.data
+    - [ ] quantum.untyped.core.core
+    - [ ] quantum.untyped.core.ns
+    - [ ] quantum.untyped.core.vars
+    - [ ] quantum.untyped.core.data.map
+    - [ ] quantum.untyped.core.type.defs
+    - [ ] quantum.untyped.core.data
+    - [ ] quantum.untyped.core.data.bits
   - List of Numeric fns to implement:
     - [ ] isTrue (?)
     - [ ] isFalse (?)
@@ -118,8 +133,29 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] (logical) and (?)
     - [ ] (logical) or (?)
     - [ ] (logical) not
-    - [ ] reverseBits
-    - [ ] reverseBytes
+    - [ ] lt
+    - [ ] lte
+    - [ ] gt
+    - [ ] gte
+    - [ ] eq
+    - [ ] neq
+    - [ ] inc
+    - [ ] dec
+    - [ ] isZero
+    - [ ] isNeg
+    - [ ] inc
+    - [ ] dec
+    - [ ] isZero
+    - [ ] isNeg
+    - [ ] isPos
+    - [ ] add
+    - [ ] subtract
+    - [ ] negate
+    - [ ] multiply
+    - [ ] divide
+    - [ ] max
+    - [ ] min
+    - [ ] rem
   - List of Primitive fns to implement:
     - uncheckedByteCast
     - uncheckedCharCast
@@ -130,9 +166,11 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - uncheckedDoubleCast
   - Standard metadata
     - e.g. `{:alternate-implementations #{'cljs.tools.reader/merge-meta}}`
-    - {:adapted-from <symbol>}
-    - :todo <todo-string>
+    - :adapted-from <namespace-or-class-symbol>
+    - :source <namespace-or-class-symbol>
+    - :todo #{<todo-string>}
     - :attribution <github-username-symbol | string-description>
+    - :doc <string-documentation>
   - Instead of e.g. `ns-` or `var-` we can do `ns-val` and `var-val`
   - Should we type `when`, `let`?
 
