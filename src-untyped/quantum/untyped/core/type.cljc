@@ -128,9 +128,10 @@
   "Sequential/ordered `or`. Analogous to `set/union`.
    Applies as much 'compression'/deduplication/simplification as possible to the supplied types.
    Effectively computes the union of the extension of the ->`args`."
-  [arg & args]
-  (create-logical-type :or ->OrType utr/or-type? utr/or-type>args
-    (cons arg args) (fn1 c/= >ident)))
+  ([] empty-set)
+  ([arg & args]
+    (create-logical-type :or ->OrType utr/or-type? utr/or-type>args
+      (cons arg args) (fn1 c/= >ident))))
 
 (uvar/defalias | or)
 
