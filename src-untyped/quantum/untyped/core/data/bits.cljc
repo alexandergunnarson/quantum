@@ -17,16 +17,16 @@
 
 ;; ===== Bit logic ===== ;;
 
-(defalias not       bit-not)
-(defalias and       bit-and)
-(defalias and-not   bit-and-not)
-(defalias or        bit-or)
-(defalias xor       bit-xor)
-(defalias not!      bit-flip)
+(defalias not     bit-not)
+(defalias and     bit-and)
+(defalias and-not bit-and-not)
+(defalias or      bit-or)
+(defalias xor     bit-xor)
+(defalias not!    bit-flip)
 
 ;; ===== Bit set operations ===== ;;
 
-(defalias disj      bit-clear)
+(defalias disj    bit-clear)
 
 (def ^:const empty 0)
 
