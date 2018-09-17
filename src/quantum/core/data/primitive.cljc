@@ -11,8 +11,6 @@
           [java.nio ByteBuffer]
           [quantum.core Numeric Primitive])))
 
-;; TODO TYPED `>boxed` and `>unboxed`
-
 ;; ===== Predicates ===== ;;
 
 #?(:clj (def boolean? (t/isa? #?(:clj Boolean :cljs js/Boolean))))
@@ -38,7 +36,7 @@
         ;; Specifically comparable primitives
         (def comparable? (t/- primitive? boolean?))
 
-;; ===== Class relationships ===== ;;
+;; ===== Boxing/unboxing ===== ;;
 
 #?(:clj
 (def unboxed-class->boxed-class
@@ -62,6 +60,28 @@
    Character Character/TYPE
    Double    Double/TYPE
    Void      Void/TYPE}))
+
+#?(:clj
+(defnt >boxed
+  ([x boolean? > (t/ref boolean?)] (Boolean/valueOf   x))
+  ([x byte?    > (t/ref byte?)]    (Byte/valueOf      x))
+  ([x char?    > (t/ref char?)]    (Character/valueOf x))
+  ([x short?   > (t/ref short?)]   (Short/valueOf     x))
+  ([x int?     > (t/ref int?)]     (Integer/valueOf   x))
+  ([x long?    > (t/ref long?)]    (Long/valueOf      x))
+  ([x float?   > (t/ref float?)]   (Float/valueOf     x))
+  ([x double?  > (t/ref double?)]  (Double/valueOf    x))))
+
+#?(:clj
+(defnt >unboxed
+  ([x (t/ref boolean?) > boolean?] (.booleanValue x))
+  ([x (t/ref byte?)    > byte?]    (.byteValue    x))
+  ([x (t/ref char?)    > char?]    (.charValue    x))
+  ([x (t/ref short?)   > short?]   (.shortValue   x))
+  ([x (t/ref int?)     > int?]     (.intValue     x))
+  ([x (t/ref long?)    > long?]    (.longValue    x))
+  ([x (t/ref float?)   > float?]   (.floatValue   x))
+  ([x (t/ref double?)  > double?]  (.doubleValue  x))))
 
 ;; ===== Extreme magnitudes and values ===== ;;
 
