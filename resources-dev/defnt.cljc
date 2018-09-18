@@ -6,6 +6,10 @@
 
 Sometimes you want (byte <whatever-double>) to fail at runtime rather than fail at runtime when you can't know everything
 
+TODO:
+- `(or (and pred then) (and (not pred) else))` (which is not correct)
+- needs to equal `(t/and (t/or (t/not a) b) (t/or a c))` (which is correct)
+
 #_"
 LEFT OFF LAST TIME (9/3/2018):
 

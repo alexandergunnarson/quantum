@@ -48,7 +48,7 @@
 
 ;; ===== Decimals ===== ;;
 
-#?(:clj (def bigdec? (t/isa? BigDecimal))) ; TODO CLJS may have this
+(def bigdec? #?(:clj (t/isa? BigDecimal) :cljs t/none?))
 
 ;; ===== Ratios ===== ;;
 
@@ -86,7 +86,7 @@
 
 ;; ===== General ===== ;;
 
-(def decimal? (or #?(:clj p/float?) p/double? #?(:clj bigdec?)))
+(def decimal? (or #?(:clj p/float?) p/double? bigdec?))
 
 ;; ===== Likenesses ===== ;;
 

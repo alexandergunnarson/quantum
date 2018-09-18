@@ -147,6 +147,17 @@
 
 (uvar/defalias & and)
 
+;; ----- If ----- ;;
+
+;; This won't shadow anything because `if` and `def` are non-shadowable
+(defns if
+  "(if a b c)
+   : (a->b) & (~a->c)
+   : (~a | b) & (a | c)
+   : (a & b) | (~a & c)"
+  [pred utr/type?, then utr/type?, else utr/type? > utr/type?]
+  (or (and pred then) (and (not pred) else)))
+
 ;; ----- Expression ----- ;;
 
 ;; ----- ProtocolType ----- ;;
