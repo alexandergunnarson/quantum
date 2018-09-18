@@ -4,7 +4,7 @@
 
 >boolean is different than `truthy?`
 
-Sometimes you want (byte <whatever-double>) to fail at runtime rather than fail at runtime when you can't know everything
+Sometimes you want (byte <whatever-double>) to fail at runtime rather than fail at runtime when you can't know everything about the input's range
 
 TODO:
 - `(or (and pred then) (and (not pred) else))` (which is not correct)
@@ -18,7 +18,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
 - TODO implement the following:
   - t/...
     - multi-arity `t/-`
-    - t/assume
     - t/numerically : e.g. a double representing exactly what a float is able to represent
       - and variants thereof: `numerically-long?` etc.
       - t/numerically-integer?

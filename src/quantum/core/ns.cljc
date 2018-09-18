@@ -43,7 +43,7 @@
 
 #?(:clj (def in in-ns))
 
-;; TODO TYPED finish `t/of`, `t/assume`
+;; TODO TYPED finish `t/of`
 #_(:clj
 (defnt all
   "Returns a sequence of all namespaces."
@@ -98,14 +98,14 @@
 
 ;; ===== Mappings ===== ;;
 
-;; TODO TYPED finish `t/assume`, `t/of`, `t/unqualified-symbol?`
+;; TODO TYPED finish `t/of`, `t/unqualified-symbol?`
 #_(:clj
 (defnt ns>mappings
   "Supersedes `clojure.core/ns-map`."
   [x namespace? > (t/assume (t/of ut/+map? t/unqualified-symbol? (t/or t/var? t/class?)))]
   (.getMappings x)))
 
-;; TODO TYPED finish `t/assume`, `t/of`, `t/unqualified-symbol?`
+;; TODO TYPED finish `t/of`, `t/unqualified-symbol?`
 #_(:clj
 (defnt ns>alias-map
   "Outputs the alias->namespace mappings for the namespace.
@@ -114,7 +114,7 @@
   [x namespace? > (t/assume (t/of ut/+map? t/unqualified-symbol? namespace?))]
   (.getAliases x)))
 
-;; TODO TYPED finish `t/assume`, `t/of`, `t/unqualified-symbol?`, decide on `filter-vals'`?
+;; TODO TYPED finish `t/of`, `t/unqualified-symbol?`, decide on `filter-vals'`?
 #_(:clj
 (defnt ns>imports
   "Outputs the import-mappings for the namespace.
@@ -123,7 +123,7 @@
   [x namespace? > (t/assume (t/of ut/+map? t/unqualified-symbol? t/class?))]
   (->> x (filter-vals' t/class?))))
 
-;; TODO TYPED finish `t/assume`, `t/of`, `t/unqualified-symbol?`, decide on `filter-vals'`?
+;; TODO TYPED finish `t/of`, `t/unqualified-symbol?`, decide on `filter-vals'`?
 #_(:clj
 (defnt ns>interns
   "Outputs the intern-mappings for the namespace.
@@ -134,6 +134,7 @@
        ns>mappings
        (filter-vals' (fn [^clojure.lang.Var v] (and (t/var? v) (= ns-val (.ns v))))))))
 
+;; TODO TYPED finish `t/of`, `t/unqualified-symbol?`, decide on `filter-vals'`?
 #_(:clj
 (defnt ns>publics
   "Outputs the public intern-mappings for the namespace.
@@ -144,7 +145,7 @@
        ns>interns
        (filter-vals' (fn [^clojure.lang.Var v] (.isPublic v))))))
 
-;; TODO TYPED finish `t/assume`, `t/of`, `t/unqualified-symbol?`, decide on `remove-vals'`?
+;; TODO TYPED finish `t/of`, `t/unqualified-symbol?`, decide on `remove-vals'`?
 #_(:clj
 (defnt ns>refers
   "Outputs the refer-mappings for the namespace.

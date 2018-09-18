@@ -14,9 +14,11 @@
 
 (defaliases ut
   ;; Generators
-  ? * isa? fn ref value
+  ? * isa? fn value
   ;; Combinators
   and or - if not
+  ;; Metadata suppliers
+  ref assume
   ;; Predicates
   any?
   nil?
