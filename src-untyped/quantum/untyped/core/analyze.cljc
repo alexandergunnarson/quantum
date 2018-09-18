@@ -414,7 +414,7 @@
   (if (-> body count (not= 1))
       (err! "Must supply exactly one input to `throw`; supplied" {:body body})
       (let [arg|analyzed (analyze* env arg)]
-        ;; TODO this is not quite true for CLJS but it's nice at least
+        ;; TODO this is not quite true for CLJS but it's good practice at least
         (if-not (-> arg|analyzed :type (t/<= t/throwable?))
           (err! "`throw` requires a throwable; received" {:arg arg :type (:type arg|analyzed)})
           (uast/throw-node
@@ -524,80 +524,79 @@
   "Analyze a seq after it has been macro-expanded.
    The ->`form` is post- incremental macroexpansion."
   [env ::env, [caller|form _ & body _ :as form] _ > uast/node?]
-  (ifs (special-symbols caller|form)
-       (case caller|form
-         do       (analyze-seq|do    env form)
-         let*     (analyze-seq|let*  env form)
-         deftype* (TODO "deftype*")
-         fn*      (TODO "fn*")
-         def      (TODO "def")
-         .        (analyze-seq|dot   env form)
-         if       (analyze-seq|if    env form)
-         quote    (analyze-seq|quote env form)
-         new      (analyze-seq|new   env form)
-         throw    (analyze-seq|throw env form))
-       (let [caller|node (analyze* env caller|form)
-             caller|type (:type caller|node)
-             inputs-ct   (count body)]
-               ;; TODO fix this line of code and extend t/compare so the comparison checks below
-               ;;      will work with t/fn
-         (case (if (utr/fn-type? caller|type)
-                   -1
-                   (t/compare caller|type t/callable?))
-           (1 2)  (err! "It is not known whether form can be called" {:node caller|node})
-           3      (err! "Form cannot be called" {:node caller|node})
-           (-1 0) (let [caller-kind
-                          (ifs (utr/fn-type? caller|type)             :fnt
-                               (t/<= caller|type t/keyword?)          :keyword
-                               (t/<= caller|type t/+map|built-in?)    :map
-                               (t/<= caller|type t/+vector|built-in?) :vector
-                               (t/<= caller|type t/+set|built-in?)    :set
-                               (t/<= caller|type t/fn?)               :fn
-                               ;; If it's callable but not fn, we might have missed something in
-                               ;; this dispatch so for now we throw
-                               (err! "Don't know how how to handle non-fn callable"
-                                     {:caller caller|node}))
-                        assert-valid-inputs-ct
-                          (case caller-kind
-                            (:keyword :map)
-                              (when-not (or (= inputs-ct 1) (= inputs-ct 2))
-                                (err! (str "Keywords and `clojure.core` persistent maps must be "
-                                           "provided with exactly one or two inputs when calling "
-                                           "them")
-                                      {:inputs-ct inputs-ct :caller caller|node}))
+  (case caller|form
+    do       (analyze-seq|do    env form)
+    let*     (analyze-seq|let*  env form)
+    deftype* (TODO "deftype*")
+    fn*      (TODO "fn*")
+    def      (TODO "def")
+    .        (analyze-seq|dot   env form)
+    if       (analyze-seq|if    env form)
+    quote    (analyze-seq|quote env form)
+    new      (analyze-seq|new   env form)
+    throw    (analyze-seq|throw env form)
+    (let [caller|node (analyze* env caller|form)
+          caller|type (:type caller|node)
+          inputs-ct   (count body)]
+            ;; TODO fix this line of code and extend t/compare so the comparison checks below
+            ;;      will work with t/fn
+      (case (if (utr/fn-type? caller|type)
+                -1
+                (t/compare caller|type t/callable?))
+        (1 2)  (err! "It is not known whether form can be called" {:node caller|node})
+        3      (err! "Form cannot be called" {:node caller|node})
+        (-1 0) (let [caller-kind
+                       (ifs (utr/fn-type? caller|type)             :fnt
+                            (t/<= caller|type t/keyword?)          :keyword
+                            (t/<= caller|type t/+map|built-in?)    :map
+                            (t/<= caller|type t/+vector|built-in?) :vector
+                            (t/<= caller|type t/+set|built-in?)    :set
+                            (t/<= caller|type t/fn?)               :fn
+                            ;; If it's callable but not fn, we might have missed something in
+                            ;; this dispatch so for now we throw
+                            (err! "Don't know how how to handle non-fn callable"
+                                  {:caller caller|node}))
+                     assert-valid-inputs-ct
+                       (case caller-kind
+                         (:keyword :map)
+                           (when-not (or (= inputs-ct 1) (= inputs-ct 2))
+                             (err! (str "Keywords and `clojure.core` persistent maps must be "
+                                        "provided with exactly one or two inputs when calling "
+                                        "them")
+                                   {:inputs-ct inputs-ct :caller caller|node}))
 
-                            (:vector :set)
-                              (when-not (= inputs-ct 1)
-                                 (err! (str "`clojure.core` persistent vectors and `clojure.core` "
-                                            "persistent sets must be provided with exactly one "
-                                            "input when calling them")
-                                       {:inputs-ct inputs-ct :caller caller|node}))
+                         (:vector :set)
+                           (when-not (= inputs-ct 1)
+                              (err! (str "`clojure.core` persistent vectors and `clojure.core` "
+                                         "persistent sets must be provided with exactly one "
+                                         "input when calling them")
+                                    {:inputs-ct inputs-ct :caller caller|node}))
 
-                            :fnt
-                              (when-not (-> caller|type utr/fn-type>arities (contains? inputs-ct))
-                                (err! "Unhandled number of inputs for fnt"
-                                      {:inputs-ct inputs-ct :caller caller|node}))
-                              ;; For non-typed fns, unknown; we will have to risk runtime exception
-                              ;; because we can't necessarily rely on metadata to tell us the
-                              ;; whole truth
-                            :fn nil)
-                        {:keys [input-nodes out-type]}
-                          (call>input-nodes+out-type
-                            env caller|node caller|type caller-kind inputs-ct body)
-                        call-node
-                          (uast/call-node
-                            {:env    env
-                             :form   form
-                             :caller caller|node
-                             :args   input-nodes
-                             :type   out-type})]
-                    call-node)))))
+                         :fnt
+                           (when-not (-> caller|type utr/fn-type>arities (contains? inputs-ct))
+                             (err! "Unhandled number of inputs for fnt"
+                                   {:inputs-ct inputs-ct :caller caller|node}))
+                           ;; For non-typed fns, unknown; we will have to risk runtime exception
+                           ;; because we can't necessarily rely on metadata to tell us the
+                           ;; whole truth
+                         :fn nil)
+                     {:keys [input-nodes out-type]}
+                       (call>input-nodes+out-type
+                         env caller|node caller|type caller-kind inputs-ct body)
+                     call-node
+                       (uast/call-node
+                         {:env    env
+                          :form   form
+                          :caller caller|node
+                          :args   input-nodes
+                          :type   out-type})]
+                 call-node)))))
 
 (defns- analyze-seq [env ::env, form _]
   (let [expanded-form (ufeval/macroexpand form)]
     (if (ucomp/== form expanded-form)
         (analyze-seq* env expanded-form)
-        (let [expanded (analyze-seq* env expanded-form)]
+        (let [expanded (analyze* env expanded-form)]
           (uast/macro-call
             {:env             env
              :unexpanded-form form
