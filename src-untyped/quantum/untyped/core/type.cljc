@@ -297,17 +297,22 @@
 (-def nil?           (value nil))
 (-def object?        (isa? #?(:clj java.lang.Object :cljs js/Object)))
 
-;; ===== Miscellaneous ===== ;;
+;; ===== Type metadata ===== ;;
+
+(defns assume
+  "Denotes that, whatever the declared output type (to which `assume` is applied) of a function may
+   be, it is assumed that the output satisfies that type."
+  [t utr/type? > utr/type?] (update-meta t assoc :quantum.core.type/assume? true))
 
 (defns *
   "Denote on a type that it must be enforced at runtime.
    For use with `defnt`."
-  [t utr/type? > utr/type?] (update-meta t assoc :runtime? true))
+  [t utr/type? > utr/type?] (update-meta t assoc :quantum.core.type/runtime? true))
 
 (defns ref
   "Denote on a type that it must not be expanded to use primitive values.
    For use with `defnt`."
-  [t utr/type? > utr/type?] (update-meta t assoc :ref? true))
+  [t utr/type? > utr/type?] (update-meta t assoc :quantum.core.type/ref? true))
 
 ;; TODO figure this out
 #_(do (udt/deftype DeducibleSpec [*spec #_(t/atom-of t/spec?)]

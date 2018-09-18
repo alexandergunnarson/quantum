@@ -450,7 +450,7 @@
                      ;;  -> (t/- (t/ref (t/isa? Number)) (t/- primitive? boolean?))]
 
                      (def ~(tag "[Ljava.lang.Object;" '>int*|__1|input0|types)
-                       (*<> ~(with-meta `(t/isa? Number) {:ref? true})))
+                       (*<> ~(with-meta `(t/isa? Number) {:quantum.core.type/ref? true})))
                      (def ~'>int*|__1|0
                        (reify* [Object>int]
                          (~(tag "int" 'invoke) [~'_7__ ~(tag "java.lang.Object" 'x)]
@@ -919,7 +919,7 @@
                         ;; [x (t/ref (t/isa? Number))]
 
                         (def ~(tag "[Ljava.lang.Object;" '>long*|__1|input0|types)
-                          (*<> ~(with-meta `(t/isa? Number) {:ref? true})))
+                          (*<> ~(with-meta `(t/isa? Number) {:quantum.core.type/ref? true})))
                         (def ~'>long*|__1|0
                           (reify* [Object>long]
                             (~(tag "long" 'invoke) [~'_7__ ~(tag "java.lang.Object" 'x)]
@@ -981,6 +981,14 @@
     (testing "functionality"
       (eval actual)
       (eval '(do (is (identical? (defnt-reference) 1)))))))
+
+(deftest defnt-assume-test
+  (throws (eval '(defnt defnt-assume-0 [> (t/assume t/int?)] "asd")))
+  (throws (eval '(defnt defnt-assume-1 [> (t/assume t/int?)] nil)))
+  (is= nil (do (eval '(defnt defnt-assume-2 [> (t/assume t/int?)] (Object.)))
+               nil))
+  (is= nil (do (eval '(defnt defnt-assume-3 [> (t/assume t/int?)] (or (Object.) nil)))
+               nil)))
 
 (defnt >big-integer > (t/isa? java.math.BigInteger)
   ([x ratio? > (* (t/isa? java.math.BigInteger))] (.bigIntegerValue x)))

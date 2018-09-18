@@ -14,6 +14,7 @@
       :refer [defns defns- fns]]
     [quantum.untyped.core.collections           :as c
       :refer [>set >vec]]
+    [quantum.untyped.core.compare               :as ucomp]
     [quantum.untyped.core.data
       :refer [kw-map]]
     [quantum.untyped.core.data.array            :as uarr]
@@ -222,7 +223,7 @@
   [arg-types (s/seq-of t/type?) > (s/seq-of ::expanded-overload|arg-classes)]
   (->> arg-types
        (c/lmap (fn [t #_t/type?]
-                 (if (-> t meta :ref?)
+                 (if (-> t meta :quantum.type.core/ref?)
                      (-> t t/type>classes (disj nil) seq)
                      (let [cs (type>most-primitive-classes t)
                            base-classes
@@ -262,21 +263,20 @@
                           lang
                           (c/count arg-bindings)
                           varargs)))
-        post-type|runtime? (-> post-type meta :runtime?)
+        post-type|runtime? (-> post-type meta :quantum.core.type/runtime?)
+        post-type|assume?  (-> post-type meta :quantum.core.type/assume?)
+        err-info {:form                 (:form analyzed)
+                  :type                 (:type analyzed)
+                  :declared-output-type post-type}
         out-type (if post-type
-                     (if post-type|runtime?
-                         (case (t/compare post-type (:type analyzed))
-                           -1     post-type
-                            1     (:type analyzed)
-                            0     post-type
-                            (2 3) (err! "Body and output type comparison not handled"
-                                        {:body analyzed :output-type post-type}))
-                         (if (t/<= (:type analyzed) post-type)
-                             (:type analyzed)
-                             (err! "Body type does not match declared output type"
-                                   {:form                 (:form analyzed)
-                                    :type                 (:type analyzed)
-                                    :declared-output-type post-type})))
+                     (case (t/compare (:type analyzed) post-type)
+                       (-1 0) (:type analyzed)
+                       1      (if (or post-type|runtime? post-type|assume?)
+                                  post-type
+                                  (err! (str "Body type incompatible with declared output type even"
+                                             " when relaxing compile-time type enforcement")
+                                        err-info))
+                       (2 3)  (err! "Body type incompatible with declared output type" err-info))
                      (:type analyzed))
         body-form
           (-> (:form analyzed)
