@@ -223,7 +223,7 @@
   [arg-types (s/seq-of t/type?) > (s/seq-of ::expanded-overload|arg-classes)]
   (->> arg-types
        (c/lmap (fn [t #_t/type?]
-                 (if (-> t meta :quantum.type.core/ref?)
+                 (if (-> t meta :quantum.core.type/ref?)
                      (-> t t/type>classes (disj nil) seq)
                      (let [cs (type>most-primitive-classes t)
                            base-classes
