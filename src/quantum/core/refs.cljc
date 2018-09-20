@@ -18,7 +18,7 @@
     [quantum.core.type-old               :as t
       :refer [val?]]
     [quantum.core.type.defs              :as tdefs]
-    [quantum.untyped.core.identification :as uident]
+    [quantum.untyped.core.identifiers    :as uident]
     [quantum.untyped.core.refs
       :refer [atom?]]
     [quantum.core.vars                   :as var

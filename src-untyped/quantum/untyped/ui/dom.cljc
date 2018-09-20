@@ -2,7 +2,7 @@
   #?(:cljs (:require [quantum.untyped.reactive.core :as re])))
 
 #?(:cljs
-(defn append-element! [parent #_dom-element? tag #_t/string? id #_t/string?]
+(defn append-element! [parent #_dom-element? tag #_dstr/str? id #_dstr/str?]
   (or (.getElementById js/document id)
       (doto (.createElement js/document tag)
             (-> .-id (set! id))

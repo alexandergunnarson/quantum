@@ -4,7 +4,7 @@
   (:require
     [quantum.untyped.core.core       :as ucore]
     [quantum.untyped.core.data.array :as uarr]
-    [quantum.untyped.core.identification
+    [quantum.untyped.core.identifiers
       :refer [>keyword]]
     [quantum.untyped.core.vars
       :refer [defalias]]))

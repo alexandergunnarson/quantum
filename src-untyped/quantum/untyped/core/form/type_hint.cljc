@@ -3,7 +3,7 @@
     [quantum.untyped.core.collections :as uc]
     [quantum.untyped.core.error
       :refer [err!]]
-    [quantum.untyped.core.identification
+    [quantum.untyped.core.identifiers
       :refer [>name]]
     [quantum.untyped.core.logic
       :refer [ifs]]

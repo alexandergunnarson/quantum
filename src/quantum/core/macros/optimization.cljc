@@ -8,7 +8,7 @@
     [quantum.core.logic                  :as logic
       :refer [fn-and]]
     [quantum.core.vars                   :as var]
-    [quantum.untyped.core.identification :as uident]))
+    [quantum.untyped.core.identifiers    :as uident]))
 
 ; ===== EXTERN =====
 

@@ -12,7 +12,7 @@
     [quantum.untyped.core.form.generate.definterface]
     [quantum.untyped.core.form.type-hint :as uth
       :refer [type-hint with-type-hint un-type-hint]]
-    [quantum.untyped.core.identification :as uident]
+    [quantum.untyped.core.identifiers    :as uident]
     [quantum.untyped.core.string         :as ustr]))
 
 (defn ?Associative   [lang] (case lang :clj 'clojure.lang.Associative           :cljs 'cljs.core/IAssociative))

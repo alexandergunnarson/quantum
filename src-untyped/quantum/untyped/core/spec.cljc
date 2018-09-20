@@ -16,7 +16,7 @@
       :refer [constantly with-do]]
     [quantum.untyped.core.form.evaluate  :as ufeval
       :refer [case-env]]
-    [quantum.untyped.core.identification :as uident
+    [quantum.untyped.core.identifiers    :as uident
       :refer [>keyword ident?]]
     [quantum.untyped.core.vars
       :refer [defalias defmalias]])

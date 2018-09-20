@@ -9,6 +9,7 @@
              :refer [read-string]]
   #?(:cljs [com.gfredericks.goog.math.Integer :as int])
            [quantum.core.data.primitive       :as p]
+           [quantum.core.data.string          :as dstr]
            [quantum.core.logic
              :refer [whenf fn-not fn=]]
            [quantum.core.type                 :as t
@@ -43,7 +44,7 @@
 #?(:cljs
 (defnt >bigint > bigint?
   ([x bigint?] x)
-  ([x t/string?] (int/fromString x))
+  ([x dstr/string?] (int/fromString x))
   ([x p/double?] (-> x (.toString) >bigint))))
 
 ;; ===== Decimals ===== ;;

@@ -5,7 +5,7 @@
     [clojure.string                   :as str]
     [quantum.untyped.core.collections :as uc]
     [quantum.untyped.core.core        :as ucore]
-    [quantum.untyped.core.identification
+    [quantum.untyped.core.identifiers
       :refer [>?name]]
     [quantum.untyped.core.system      :as usys]))
 

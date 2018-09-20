@@ -20,7 +20,7 @@
       :refer [<- fn-> fn->>]]
     [quantum.untyped.core.form.evaluate     :as ufeval]
     [quantum.untyped.core.form.type-hint    :as ufth]
-    [quantum.untyped.core.identification    :as uident
+    [quantum.untyped.core.identifers        :as uident
       :refer [>symbol]]
     [quantum.untyped.core.log               :as log
       :refer [prl!]]
@@ -118,7 +118,7 @@
   ([v]       (->WatchableMutable v nil))
   ([v watch] (->WatchableMutable v watch)))
 
-(s/def ::env (s/map-of t/symbol? t/any?))
+(s/def ::env (s/map-of symbol? t/any?))
 
 (declare analyze*)
 
@@ -249,7 +249,7 @@
 
    Unchecked fns could be assumed to actually *want* to shift the range over if the
    range hits a certain point, but we do not make that assumption here."
-  [c t/class?, method t/symbol? > (? t/type?)]
+  [c t/class?, method symbol? > (? t/type?)]
   (when (identical? c clojure.lang.RT)
     (case method
       (uncheckedBooleanCast booleanCast) t/boolean?
@@ -604,7 +604,7 @@
              :expanded        expanded
              :type            (:type expanded)})))))
 
-(defns ?resolve-with-env [sym t/symbol?, env ::env]
+(defns ?resolve-with-env [sym symbol?, env ::env]
   (if-let [[_ local] (find env sym)]
     {:value local}
     (let [resolved (ns-resolve *ns* sym)]
@@ -614,7 +614,7 @@
              {:value (analyze-seq|dot env (list '. (-> sym namespace symbol) (-> sym name symbol)))}
            nil))))
 
-(defns- analyze-symbol [env ::env, form t/symbol? > uast/symbol?]
+(defns- analyze-symbol [env ::env, form symbol? > uast/symbol?]
   (if-not-let [{resolved :value} (?resolve-with-env form env)]
     (err! "Could not resolve symbol" {:sym form})
     (uast/symbol env form resolved

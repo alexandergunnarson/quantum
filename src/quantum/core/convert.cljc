@@ -42,7 +42,7 @@
       :refer [case-env]]
     [quantum.untyped.core.form.type-hint
       :refer [static-cast]]
-    [quantum.untyped.core.identification :as uident])
+    [quantum.untyped.core.identifiers    :as uident])
 #?(:cljs
   (:require-macros
     [quantum.core.convert :as self]))

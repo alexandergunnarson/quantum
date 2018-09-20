@@ -12,7 +12,7 @@
     [quantum.untyped.core.form.evaluate
       :refer [compile-if]]
     [quantum.untyped.core.form.generate  :as ufgen]
-    [quantum.untyped.core.identification :as uident]
+    [quantum.untyped.core.identifiers    :as uident]
     [quantum.untyped.core.meta.debug     :as udebug]
     [quantum.untyped.core.print          :as upr]
     [quantum.untyped.core.vars
@@ -42,13 +42,13 @@
 ;; ===== Log levels ===== ;;
 
 (defn disable!
-  ([pr-type #_t/keyword?] (swap! *levels assoc pr-type false))
+  ([pr-type #_keyword?] (swap! *levels assoc pr-type false))
   ([pr-type & pr-types]
     (doseq [pr-type-n (conj pr-types pr-type)]
       (disable! pr-type-n))))
 
 (defn enable!
-  ([pr-type #_t/keyword?] (swap! *levels assoc pr-type true))
+  ([pr-type #_keyword?] (swap! *levels assoc pr-type true))
   ([pr-type & pr-types]
     (doseq [pr-type-n (conj pr-types pr-type)]
       (enable! pr-type-n))))
@@ -156,7 +156,7 @@
 ;; ===== Level-specific macros ===== ;;
 
 #?(:clj
-(defmacro -gen-from-levels [& levels #_(t/seq-of t/keyword?)]
+(defmacro -gen-from-levels [& levels #_(t/seq-of keyword?)]
   `(do ~@(for [level levels]
            `(defmacro ~(-> level name symbol) [& ~'args]
               `(ppr ~~level ~@'args))))))

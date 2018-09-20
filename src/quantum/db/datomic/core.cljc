@@ -36,7 +36,7 @@
     [quantum.core.spec            :as s
       :refer [validate]]
     [quantum.core.type-old        :as t]
-    [quantum.untyped.core.identification
+    [quantum.untyped.core.identifiers
       :refer [>?name]])
 #?(:clj
     (:import

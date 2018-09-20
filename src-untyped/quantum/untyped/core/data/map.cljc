@@ -13,7 +13,7 @@
    [[clojure.data.int-map          :as imap]
     [seqspert.hash-map]])
     [quantum.untyped.core.data     :as udata]
-    [quantum.untyped.core.identification
+    [quantum.untyped.core.identifiers
       :refer [>keyword]]
     [quantum.untyped.core.reducers :as ur
       :refer [reduce-pair]]

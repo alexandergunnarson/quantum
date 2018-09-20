@@ -7,7 +7,7 @@
       :refer [rcomp]]
     [quantum.untyped.core.ns]
     [quantum.untyped.core.print]
-    [quantum.untyped.core.identification]
+    [quantum.untyped.core.identifiers]
     [quantum.untyped.core.vars]))
 
 #?(:clj
@@ -51,12 +51,12 @@
 (defn visit-symbol* [x]
   [:text (cond-> x
            quantum.untyped.core.print/*collapse-symbols?*
-             (quantum.untyped.core.identification/collapse-symbol
+             (quantum.untyped.core.identifiers/collapse-symbol
                (not quantum.untyped.core.print/*print-as-code?*)))]))
 
 #?(:clj
 (defn visit-fn [visitor x]
-  [:group "#" "fn" " " (-> x quantum.untyped.core.identification/>symbol visit-symbol*)]))
+  [:group "#" "fn" " " (-> x quantum.untyped.core.identifiers/>symbol visit-symbol*)]))
 
 #?(:clj
 (defn visit*

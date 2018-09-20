@@ -51,11 +51,11 @@
 (defn node? [x] (instance? INode x))
 
 #_(t/def ::node (t/isa? INode))
-#_(t/def ::env  (t/map-of t/symbol? ::node))
+#_(t/def ::env  (t/map-of symbol? ::node))
 
 ;; ===== Nodes ===== ;;
 
-(defrecord Unbound [env #_::env, form #_t/symbol?, minimum-type #_t/type?, type #_t/type?] ;; TODO `type` should be `t/deducible-type?`
+(defrecord Unbound [env #_::env, form #_symbol?, minimum-type #_t/type?, type #_t/type?] ;; TODO `type` should be `t/deducible-type?`
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -82,7 +82,7 @@
 
 (defrecord Symbol
   [env   #_::env
-   form  #_t/symbol?
+   form  #_symbol?
    value #_t/any?
    type  #_t/type?]
   INode
@@ -176,7 +176,7 @@
   [env    #_::env
    form   #_::t/form
    target #_::node
-   field  #_t/unqualified-symbol?
+   field  #_id/unqualified-symbol?
    type   #_t/type?]
   INode
   fipp.ednize/IOverride
@@ -192,7 +192,7 @@
   [env    #_::env
    form   #_::t/form
    target #_::node
-   method #_::t/unqualified-symbol?
+   method #_::id/unqualified-symbol?
    args   #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
    type   #_t/type?]
   INode

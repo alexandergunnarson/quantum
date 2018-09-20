@@ -13,7 +13,6 @@
             array? associative? coll? counted? indexed? iterable? list? map? map-entry? record?
             seq? seqable? sequential? set? sorted? vector?
             fn? ifn?
-            var?
             meta
             delay? ref volatile?
             fn])
@@ -39,7 +38,7 @@
            [quantum.untyped.core.fn                    :as ufn
              :refer [fn1 rcomp <- fn->]]
            [quantum.untyped.core.form.generate.deftype :as udt]
-           [quantum.untyped.core.identification
+           [quantum.untyped.core.identifiers
              :refer [>symbol]]
            [quantum.untyped.core.logic
              :refer [fn-and ifs whenp->]]
@@ -256,15 +255,11 @@
 
 ;; ===== Definition/Registration ===== ;;
 
-(defns register-type! [sym c/symbol?, t utr/type?]
-  (TODO))
-
 ;; TODO clean up
 #?(:clj
 (defmacro define [sym t]
   `(~'def ~sym (let [t# ~t]
                  (assert (utr/type? t#) t#)
-                 #_(register-type! '~(uident/qualify sym) t#)
                  t#))))
 
 ;; TODO clean up
@@ -671,15 +666,6 @@
          (-def  list?           #?(:clj  (isa? java.util.List)
                                    :cljs +list?))
 
-;; ----- String ----- ;; A special wrapper for char array where different encodings, etc. are possible
-
-         ;; Mutable String
-         (-def !string?  (isa? #?(:clj java.lang.StringBuilder :cljs goog.string.StringBuffer)))
-         ;; Immutable String
-         (-def  string?  (isa? #?(:clj java.lang.String        :cljs js/String)))
-
-#?(:clj  (-def char-seq? (isa? java.lang.CharSequence)))
-
 ;; ===== Vectors ===== ;; Sequential, Associative (specifically, whose keys are sequential,
                        ;; dense integer values), extensible
 
@@ -924,7 +910,7 @@
 
 ;; ===== Miscellaneous ===== ;;
 
-         (-def metable?      (isa? #?(:clj clojure.lang.IMeta :cljs cljs.core/IMeta)))
+         ;; Used by `quantum.untyped.core.analyze.ast`
          (-def with-metable? (isa? #?(:clj clojure.lang.IObj  :cljs cljs.core/IWithMeta)))
 
 #?(:clj  (-def thread?       (isa? java.lang.Thread)))
@@ -937,12 +923,10 @@
          (-def chan?         (isa? #?(:clj  clojure.core.async.impl.protocols/Channel
                                       :cljs cljs.core.async.impl.protocols/Channel)))
 
+         ;; Used by `quantum.untyped.core.analyze`
          (-def keyword?      (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
-         (-def symbol?       (isa? #?(:clj clojure.lang.Symbol  :cljs cljs.core/Symbol)))
 
 #?(:clj  (-def namespace?    (isa? clojure.lang.Namespace)))
-
-#?(:clj  (-def var?          (isa? clojure.lang.Var)))
 
          ;; `js/File` isn't always available! Use an abstraction
 #?(:clj  (-def file?         (isa? java.io.File)))
@@ -957,7 +941,7 @@
 
 #?(:clj  (-def tagged-literal?   (isa? clojure.lang.TaggedLiteral)))
 
-         (-def literal?          (or nil? boolean? symbol? keyword? string? #?(:clj long?) double? #?(:clj tagged-literal?)))
+         (-def literal?          (or nil? boolean? symbol? keyword? t/string? #?(:clj long?) double? #?(:clj tagged-literal?)))
        #_(-def form?             (or literal? +list? +vector? ...))
 
 ;; ===== Generic ===== ;;

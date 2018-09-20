@@ -27,6 +27,25 @@
              ProtocolType ClassType
              ValueType])))
 
+;; ===== Type predicates ===== ;;
+;; Declared here instead of in `quantum.untyped.core.type` to avoid dependency
+
+#?(:clj (def boolean?   (t/isa? #?(:clj Boolean :cljs js/Boolean))))
+#?(:clj (def byte?      (t/isa? Byte)))
+#?(:clj (def short?     (t/isa? Short)))
+#?(:clj (def char?      (t/isa? Character)))
+#?(:clj (def int?       (t/isa? Integer)))
+#?(:clj (def long?      (t/isa? Long)))
+#?(:clj (def float?     (t/isa? Float)))
+        (def double?    (t/isa? #?(:clj Double :cljs js/Number)))
+
+        (def primitive? (t/or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
+
+#?(:clj (def char-seq?  (t/isa? CharSequence)))
+        (def string?    (t/isa? #?(:clj String :cljs js/String)))
+
+;; ===== End type predicates ===== ;;
+
 (defn test-equality [genf]
   (let [a (genf) b (genf)]
           (testing "structural equality (`c/=`)"
@@ -80,8 +99,8 @@
   (testing ">"
     (is= (t/- (| a b) a)
          b)
-    (is= (t/- (| a b t/long?) a)
-         (| b t/long?)))
+    (is= (t/- (| a b long?) a)
+         (| b long?)))
   (testing "><"
     ))
 
@@ -125,15 +144,15 @@
       (is= (| a b (| (! a) (! b)))
            t/universal-set))
     (testing "nested"
-      (is= (utr/or-type>args (| (| t/string? t/double?)
-                                t/char-seq?))
-           [t/double? t/char-seq?])
-      (is= (utr/or-type>args (| (| t/string? t/double?)
-                                (| t/double? t/char-seq?)))
-           [t/double? t/char-seq?])
-      (is= (utr/or-type>args (| (| t/string? t/double?)
-                                (| t/char-seq? t/number?)))
-           [t/char-seq? t/number?]))
+      (is= (utr/or-type>args (| (| string? double?)
+                                char-seq?))
+           [double? char-seq?])
+      (is= (utr/or-type>args (| (| string? double?)
+                                (| double? char-seq?)))
+           [double? char-seq?])
+      (is= (utr/or-type>args (| (| string? double?)
+                                (| char-seq? t/number?)))
+           [char-seq? t/number?]))
     (testing "#{<+ =} -> #{<+}"
       (is= (utr/or-type>args (| i|>a+b i|>a0 i|a))
            [i|>a+b i|>a0]))
@@ -167,17 +186,17 @@
          t/empty-set)
     (is= (& t/universal-set t/empty-set t/universal-set)
          t/empty-set)
-    (is= (& t/universal-set t/string?)
-         t/string?)
-    (is= (& t/universal-set t/char-seq? t/string?)
-         t/string?)
-    (is= (& t/universal-set t/string? t/char-seq?)
-         t/string?)
-    (is= (& t/empty-set t/string?)
+    (is= (& t/universal-set string?)
+         string?)
+    (is= (& t/universal-set char-seq? string?)
+         string?)
+    (is= (& t/universal-set string? char-seq?)
+         string?)
+    (is= (& t/empty-set string?)
          t/empty-set)
-    (is= (& t/empty-set t/char-seq? t/string?)
+    (is= (& t/empty-set char-seq? string?)
          t/empty-set)
-    (is= (& t/empty-set t/string? t/char-seq?)
+    (is= (& t/empty-set string? char-seq?)
          t/empty-set))
   (testing "simplification"
     (testing "via single-arg"
@@ -192,8 +211,8 @@
            a)
       (is= (& a (& a a))
            a)
-      (is= (& (| t/string? t/byte?) (| t/byte? t/string?))
-           (| t/string? t/byte?))
+      (is= (& (| string? byte?) (| byte? string?))
+           (| string? byte?))
       (is= (& (| a b) (| b a))
            (| a b))
       (is= (& (| a b ><0) (| a ><0 b))
@@ -204,7 +223,7 @@
     (testing "empty-set"
       (is= (& a b)
            t/empty-set)
-      (is= (& t/string? t/byte?)
+      (is= (& string? byte?)
            t/empty-set)
       (is= (& a ><0)
            t/empty-set)
@@ -238,8 +257,8 @@
              a)
         (is= (& (| a b) (! b) (| ><0 b))
              t/empty-set))
-      (is= (& t/primitive? (! t/boolean?))
-           (| t/byte? t/short? t/char? t/int? t/long? t/float? t/double?)))
+      (is= (& primitive? (! boolean?))
+           (| byte? short? char? int? long? float? double?)))
     (testing "#{<+ =} -> #{=}"
       (is= (& i|>a+b i|>a0 i|a)
            i|a))

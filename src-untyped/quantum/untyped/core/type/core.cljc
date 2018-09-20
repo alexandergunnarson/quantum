@@ -15,7 +15,7 @@
       :refer [>ex-info]]
     [quantum.untyped.core.fn
       :refer [<- fn->>]]
-    [quantum.untyped.core.identification
+    [quantum.untyped.core.identifiers
       :refer [>name]]
     [quantum.untyped.core.vars
       :refer [defalias]]

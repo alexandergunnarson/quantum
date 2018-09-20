@@ -834,7 +834,7 @@
          - `(t/<> (t/tuple sheep? wheat?) animal?)
          - `(t/<> (t/map :requirement sheep? :extra0 wheat?) animal?)
          - `(t/<= (t/closed-map :requirement sheep? :extra0 wheat?)
-                  (t/merge (t/closed-map :requirement animal?) (t/map-of t/keyword? t/any?)))
+                  (t/merge (t/closed-map :requirement animal?) (t/map-of id/keyword? t/any?)))
          - `(t/<= (t/map :requirement sheep? :extra0 wheat?)
                   (t/map :requirement animal?))
      - Outputs
@@ -846,7 +846,7 @@
          - `(t/<> (t/tuple sheep? wheat?) animal?)
          - `(t/<> (t/map :guarantee sheep? :extra0 wheat?) animal?)
          - `(t/<= (t/closed-map :guarantee sheep? :extra0 wheat?)
-                  (t/merge (t/closed-map :requirement animal?) (t/map-of t/keyword? t/any?)))
+                  (t/merge (t/closed-map :requirement animal?) (t/map-of id/keyword? t/any?)))
      Contract non-satisfaction ('Breakage') is `>=|input` (input covariance) and `t/<=|output`
      (output contravariance)
      - Inputs

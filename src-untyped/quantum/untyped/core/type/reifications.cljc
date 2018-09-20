@@ -164,7 +164,7 @@
    ^int ^:unsynchronized-mutable hash-code
    meta #_(t/? ::meta)
    p    #_t/protocol?
-   name #_(t/? t/symbol?)]
+   name #_(t/? symbol?)]
   {PType          nil
    ?Fn            {invoke    ([_ x] (satisfies? p x))}
    ?Meta          {meta      ([this] meta)
@@ -192,7 +192,7 @@
    ^int ^:unsynchronized-mutable hash-code
    meta     #_(t/? ::meta)
    ^Class c #_t/class?
-   name     #_(t/? t/symbol?)]
+   name     #_(t/? symbol?)]
   {PType          nil
    ?Fn            {invoke    ([_ x] (instance? c x))}
    ?Meta          {meta      ([this] meta)

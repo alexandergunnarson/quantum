@@ -16,7 +16,7 @@
        :refer [macroexpand-all]]
      [quantum.core.collections.tree       :as tree]
      [quantum.core.collections.zippers    :as zip]
-     [quantum.untyped.core.identification :as uident]))
+     [quantum.untyped.core.identifiers    :as uident]))
 
 ; Regex seq matching
 

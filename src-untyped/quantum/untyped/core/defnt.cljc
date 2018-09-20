@@ -12,7 +12,7 @@
       [quantum.untyped.core.data.map
         :refer [om]]
       [quantum.untyped.core.form.evaluate  :as ufeval]
-      [quantum.untyped.core.identification
+      [quantum.untyped.core.identifiers
         :refer [>keyword ident? qualified-keyword? simple-symbol?]]
       [quantum.untyped.core.loops
         :refer [reduce-2]]

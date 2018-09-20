@@ -1,5 +1,5 @@
-(ns quantum.untyped.core.identification
-  "Functions related to variable identification/naming (name, namespace, etc.) and
+(ns quantum.untyped.core.identifiers
+  "Functions related to variable identifiers/names (`name`, `namespace`, etc.) and
    qualification/unqualification of nameables."
       (:refer-clojure :exclude
         [ident? qualified-keyword? simple-symbol?])

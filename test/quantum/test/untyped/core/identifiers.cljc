@@ -1,10 +1,10 @@
-(ns quantum.test.untyped.core.identification
+(ns quantum.test.untyped.core.identifiers
           (:require
-            [quantum.untyped.core.identification :as this
+            [quantum.untyped.core.identifiers    :as this
    #?@(:cljs [:refer [DelimitedIdent]])]
             [quantum.untyped.core.test           :as test
               :refer [deftest testing is is= throws]])
-  #?(:clj (:import quantum.untyped.core.identification.DelimitedIdent)))
+  #?(:clj (:import quantum.untyped.core.identifiers.DelimitedIdent)))
 
 (deftest test|>ident
   (is= (this/>delim-ident "a|b|c|d")                    (DelimitedIdent. ["a" "b" "c" "d"]))

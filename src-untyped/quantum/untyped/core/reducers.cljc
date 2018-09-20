@@ -14,7 +14,7 @@
              :refer [err!]]
            [quantum.untyped.core.form.evaluate
              :refer [case-env]]
-           [quantum.untyped.core.identification :as uident]
+           [quantum.untyped.core.identifiers    :as uident]
            [quantum.untyped.core.vars           :as uvar
              :refer [defalias]])
 #?(:cljs (:require-macros

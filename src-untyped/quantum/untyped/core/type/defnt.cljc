@@ -29,7 +29,7 @@
     [quantum.untyped.core.form.evaluate         :as ufeval]
     [quantum.untyped.core.form.generate         :as ufgen]
     [quantum.untyped.core.form.type-hint        :as ufth]
-    [quantum.untyped.core.identification        :as uident
+    [quantum.untyped.core.identifiers           :as uident
       :refer [>name >symbol]]
     [quantum.untyped.core.log                   :as ulog]
     [quantum.untyped.core.logic                 :as ul
@@ -368,7 +368,7 @@
 
 (def fnt-method-sym 'invoke)
 
-(defns- class>interface-part-name [c t/class? > t/string?]
+(defns- class>interface-part-name [c t/class? > string?]
   (if (= c java.lang.Object)
       "Object"
       (let [illegal-pattern #"\|\+"]
@@ -376,7 +376,7 @@
             (err! "Class cannot contain pattern" {:class c :pattern illegal-pattern})
             (-> c >name (str/replace "." "|"))))))
 
-(defns fnt-overload>interface-sym [args-classes (s/seq-of t/class?), out-class t/class? > t/symbol?]
+(defns fnt-overload>interface-sym [args-classes (s/seq-of t/class?), out-class t/class? > symbol?]
   (>symbol (str (->> args-classes (c/lmap class>interface-part-name) (str/join "+"))
                 ">" (class>interface-part-name out-class))))
 
