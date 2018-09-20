@@ -73,7 +73,7 @@
   ([x double?  > (t/ref double?)]  (Double/valueOf    x))))
 
 #?(:clj
-(defnt unboxed
+(defnt unbox
   ([x (t/ref boolean?) > boolean?] (.booleanValue x))
   ([x (t/ref byte?)    > byte?]    (.byteValue    x))
   ([x (t/ref char?)    > char?]    (.charValue    x))
