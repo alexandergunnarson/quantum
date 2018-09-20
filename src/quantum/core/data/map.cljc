@@ -8,13 +8,14 @@
             ;; TODO TYPED
           #_[quantum.core.reducers         :as r
               :refer [reduce-pair]]
-            [quantum.core.type             :as t]
+            [quantum.core.type             :as t
+              :refer [defnt]]
             [quantum.untyped.core.data.map :as umap]
+            ;; TODO TYPED
             [quantum.untyped.core.defnt
               :refer [defns-]]
             [quantum.untyped.core.type     :as ut]
-            [quantum.untyped.core.type.defnt
-              :refer [defnt]]
+            ;; TODO TYPED
             [quantum.untyped.core.vars
               :refer [defalias def- defmacro-]])
   (:import
@@ -113,38 +114,34 @@
    On JS, this is a `js/Map` (ECMAScript 6 Map)."
   > !identity-map?
   ([] #?(:clj (IdentityHashMap.) :cljs (js/Map.)))
-  ([k0 (t/ref t/any?), v0 (t/ref t/any?)]
+  ([k0 t/ref?, v0 t/ref?]
     (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)))
-  ([k0 (t/ref t/any?), v0 (t/ref t/any?), k1 (t/ref t/any?), v1 (t/ref t/any?)]
+  ([k0 t/ref?, v0 t/ref?, k1 t/ref?, v1 t/ref?]
     (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)))
-  ([k0 (t/ref t/any?), v0 (t/ref t/any?), k1 (t/ref t/any?), v1 (t/ref t/any?)
-    k2 (t/ref t/any?), v2 (t/ref t/any?)]
+  ([k0 t/ref?, v0 t/ref?, k1 t/ref?, v1 t/ref?, k2 t/ref?, v2 t/ref?]
     (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)
           (#?(:clj .put :cljs .set) k2 v2)))
-  ([k0 (t/ref t/any?), v0 (t/ref t/any?), k1 (t/ref t/any?), v1 (t/ref t/any?)
-    k2 (t/ref t/any?), v2 (t/ref t/any?), k3 (t/ref t/any?), v3 (t/ref t/any?)]
+  ([k0 t/ref?, v0 t/ref?, k1 t/ref?, v1 t/ref?, k2 t/ref?, v2 t/ref?, k3 t/ref?, v3 t/ref?]
     (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)
           (#?(:clj .put :cljs .set) k2 v2)
           (#?(:clj .put :cljs .set) k3 v3)))
-  ([k0 (t/ref t/any?), v0 (t/ref t/any?), k1 (t/ref t/any?), v1 (t/ref t/any?)
-    k2 (t/ref t/any?), v2 (t/ref t/any?), k3 (t/ref t/any?), v3 (t/ref t/any?)
-    k4 (t/ref t/any?), v4 (t/ref t/any?)]
+  ([k0 t/ref?, v0 t/ref?, k1 t/ref?, v1 t/ref?, k2 t/ref?, v2 t/ref?, k3 t/ref?, v3 t/ref?
+    k4 t/ref?, v4 t/ref?]
     (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)
           (#?(:clj .put :cljs .set) k2 v2)
           (#?(:clj .put :cljs .set) k3 v3)
           (#?(:clj .put :cljs .set) k4 v4)))
-  ([k0 (t/ref t/any?), v0 (t/ref t/any?), k1 (t/ref t/any?), v1 (t/ref t/any?)
-    k2 (t/ref t/any?), v2 (t/ref t/any?), k3 (t/ref t/any?), v3 (t/ref t/any?)
-    k4 (t/ref t/any?), v4 (t/ref t/any?), k5 (t/ref t/any?), v5 (t/ref t/any?)]
+  ([k0 t/ref?, v0 t/ref?, k1 t/ref?, v1 t/ref?, k2 t/ref?, v2 t/ref?, k3 t/ref?, v3 t/ref?
+    k4 t/ref?, v4 t/ref?, k5 t/ref?, v5 t/ref?]
     (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)
@@ -153,10 +150,8 @@
           (#?(:clj .put :cljs .set) k4 v4)
           (#?(:clj .put :cljs .set) k5 v5)))
   ;; TODO TYPED handle varargs
-#_([k0 (t/ref t/any?), v0 (t/ref t/any?), k1 (t/ref t/any?), v1 (t/ref t/any?)
-    k2 (t/ref t/any?), v2 (t/ref t/any?), k3 (t/ref t/any?), v3 (t/ref t/any?)
-    k4 (t/ref t/any?), v4 (t/ref t/any?), k5 (t/ref t/any?), v5 (t/ref t/any?)
-    k6 (t/ref t/any?), v6 (t/ref t/any?) & kvs _]
+#_([k0 t/ref?, v0 t/ref?, k1 t/ref?, v1 t/ref?, k2 t/ref?, v2 t/ref?, k3 t/ref?, v3 t/ref?
+    k4 t/ref?, v4 t/ref?, k5 t/ref?, v5 t/ref?, k6 t/ref?, v6 t/ref? & kvs _]
     (reduce-pair
       (fn [#?(:clj ^IdentityHashMap m :cljs m) k v] (doto m (#?(:clj .put :cljs .set) k v)))
       (doto #?(:clj (IdentityHashMap.) :cljs (js/Map.))
@@ -1075,7 +1070,7 @@
   ([] (clojure.data.int_map.PersistentIntMap. clojure.data.int_map.Nodes$Empty/EMPTY 0 nil))
   ;; TODO TYPED handle varargs
   ;; TODO TYPED `assoc`, `t/nneg-int?`
-#_([k t/nneg-int? v (t/ref t/any?)] (assoc (>unsorted-map|long->ref) k v))
+#_([k t/nneg-int? v t/ref?] (assoc (>unsorted-map|long->ref) k v))
   ;; TODO TYPED handle calling other typed fns
 #_([kv & kvs] (apply assoc (>hash-map|long->ref) k v kvs))))
 
