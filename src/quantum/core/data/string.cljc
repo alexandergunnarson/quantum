@@ -1,24 +1,81 @@
 (ns quantum.core.data.string
-   (:import #?(:clj  com.carrotsearch.hppc.CharArrayDeque)
-            #?(:cljs goog.string.StringBuffer)))
+  "A String is a special wrapper for a char array where different encodings, etc. are possible."
+       (:require
+         [quantum.core.type         :as t
+           :refer [defnt]]
+         [quantum.untyped.core.core :as ucore])
+       (:import
+#?(:clj  [com.carrotsearch.hppc CharArrayDeque])
+#?(:cljs [goog.string           StringBuffer])))
 
-; TODO investigate http://ahmadsoft.org/ropes/ : A rope is a high performance replacement for Strings. The datastructure, described in detail in "Ropes: an Alternative to Strings", provides asymptotically better performance than both String and StringBuffer
+(ucore/log-this-ns)
 
-(defn !str
-  "Creates a mutable string."
-  ([  ] #?(:clj (StringBuilder.   ) :cljs (StringBuffer.   )))
-  ([a0] #?(:clj (StringBuilder. a0) :cljs (StringBuffer. a0))))
+;; TODO investigate http://ahmadsoft.org/ropes/ : A rope is a high performance replacement for Strings. The datastructure, described in detail in "Ropes: an Alternative to Strings", provides asymptotically better performance than both String and StringBuffer
+;; What about structural sharing with strings?
+;; Wouldn't there have to be some sort of compact immutable bit map or something to diff it rather
+;; than just making an entirely new string?
+
+;; ===== General string-like entities ===== ;;
+
+#?(:clj (def char-seq? (t/isa? java.lang.CharSequence)))
+
+;; ===== Immutable strings ===== ;;
+
+(def str? (t/isa? #?(:clj java.lang.String :cljs js/String)))
+
+#_(defnt str ...) ; TODO TYPED
+
+;; ----- Metable immutable strings ----- ;;
+
+;; TODO TYPED `deftypet`
+#?(:clj
+(deftype MetableString [^String s ^clojure.lang.IPersistentMap _meta]
+  clojure.lang.IObj
+    (meta        [this]       _meta)
+    (withMeta    [this meta'] (MetableString. s meta'))
+  CharSequence
+    (charAt      [this i]     (.charAt s i))
+    (length      [this]       (.length s))
+    (subSequence [this a b]   (.subSequence s a b))
+  Object
+    (toString    [this]       s)
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] s)))
 
 #?(:clj
-(defn !sync-str
-  "Creates a synchronized mutable string."
-  []
-  (StringBuffer.)))
+(defmethod print-method MetableString [^MetableString x ^java.io.Writer w]
+  (print-method (.toString x) w)))
 
-; What about structural sharing with strings?
-; Wouldn't there have to be some sort of compact immutable bit
-; map or something to diff it rather than just making
-; an entirely new string?
+(def metable-str? #?(:clj (t/isa? MetableString) :cljs str?))
+
+(defnt >metable-str
+  > metable-str?
+  ([s str?] #?(:clj (MetableString. s nil) :cljs s))
+  ([s str?, meta' ??/meta?] #?(:clj (MetableString. s meta') :cljs (??/with-meta s new-meta))))
+
+;; ===== Mutable strings ===== ;;
+
+(def !str? (t/isa? #?(:clj java.lang.StringBuilder :cljs StringBuffer)))
+
+(defnt !str
+  "Creates a mutable string."
+  > !str?
+  ([]   #?(:clj (StringBuilder.)    :cljs (StringBuffer.)))
+  ;; TODO
+  #_([x0] #?(:clj (StringBuilder. x0) :cljs (StringBuffer. x0))))
+
+;; ----- Synchronously mutable strings ----- ;;
+
+#?(:clj (def !sync-str? (t/isa? java.lang.StringBuffer)))
+
+#?(:clj
+(defnt !sync-str
+  "Creates a synchronized mutable string."
+  > !sync-str?
+  [] (StringBuffer.)))
+
+;; ----- Mutable char deques ----- ;;
 
 ; TODO rework. Instead of |condf|, use records to represent
 ; parsed types and dispatch in |defnt| accordingly
@@ -26,7 +83,7 @@
 ; Currently only for strings
 #_(:clj
 (defn rreduce [f init ^String s]
-  (loop [ret init i (-> s lasti int)] ; int because charAt requires int, I think
+  (loop [ret init i (-> s lasti int)] ; int because charAt requires int
     (if (>= i 0)
         (recur (f ret (.charAt s i)) (unchecked-dec i))
         ret))))
@@ -76,7 +133,6 @@
 ;(conjl! "(")
 ;(conjl! "abc")
 
-
 #_(:clj
 (defn sp+ [& args]
   (fn [sb]
@@ -84,27 +140,3 @@
       (conjl! sb arg)
       (when (< n (-> args count dec))
         (conjl! sb " "))))))
-
-#?(:clj
-(deftype StringWithMeta [^String s ^clojure.lang.IPersistentMap _meta]
-  clojure.lang.IObj
-    (meta        [this]       _meta)
-    (withMeta    [this meta'] (StringWithMeta. s meta'))
-  CharSequence
-    (charAt      [this i]     (get s i))
-    (length      [this]       (count s))
-    (subSequence [this a b]   (.subSequence s a b))
-  Object
-    (toString    [this]       s)
-  fipp.ednize/IOverride
-  fipp.ednize/IEdn
-    (-edn [this] s)))
-
-#?(:clj
-(defmethod print-method StringWithMeta [^StringWithMeta x ^java.io.Writer w]
-  (print-method (.toString x) w)))
-
-#?(:clj
-(defn string-with-meta
-  ([s] #?(:clj (StringWithMeta. s nil) :cljs s))
-  ([s meta'] #?(:clj (StringWithMeta. s meta') :cljs (with-meta s new-meta)))))
