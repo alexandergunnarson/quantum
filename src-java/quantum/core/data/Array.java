@@ -1151,6 +1151,8 @@ public class Array {
 
   // ================================ NEW 1D ARRAY ================================ //
 
+  public static     Object []                  new1dObjectArray() { return new Object [] {}; }
+
   public static     Object []                  new1dObjectArray(final Object  a0                                                                                                                                                                                     ) { return       new Object []{ a0                                          }; }
   public static     Object []                  new1dObjectArray(final Object  a0, final Object  a1                                                                                                                                                                   ) { return       new Object []{ a0, a1                                      }; }
   public static     Object []                  new1dObjectArray(final Object  a0, final Object  a1, final Object  a2                                                                                                                                                 ) { return       new Object []{ a0, a1, a2                                  }; }
