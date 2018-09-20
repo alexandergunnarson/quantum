@@ -499,49 +499,6 @@
 
 #?(:clj (defalias ->!array-list ->!vector))
 
-
-; TODO: `newUninitialized<n>d<type>Array`
-; TODO boolean array doesn't work... ?
-#?(:clj
-(defmacro gen-arr<> []
- `(defnt' ~'arr<>
-    "Creates a 1-D array"
-  ~@(for [arglength (range 1 11)
-          kind      '#{boolean byte char short int long float double Object}]
-      (let [arglist (vec (repeatedly arglength gensym))
-            hints   (vec (repeat     arglength kind  ))]
-        `(~(ufth/hint-arglist-with arglist hints)
-           (. quantum.core.data.Array ~(symbol (str "new1dArray")) ~@arglist)))))))
-
-#?(:clj (gen-arr<>))
-
-; TODO generalize
-#?(:clj
-(defmacro gen-object<> []
- `(defnt' ~'object<>
-    "Creates a 1-D object array from the provided arguments"
-   ~@(for [arglength (range 1 11)]
-       (let [arglist (vec (repeatedly arglength gensym))]
-         `(~arglist
-            (. quantum.core.data.Array ~(symbol (str "new1dObjectArray")) ~@arglist)))))))
-
-#?(:clj (gen-object<>))
-
-#?(:clj
-(defmacro gen-array-nd []
-  `(do ~@(for [kind '#{boolean byte char short int long float double object}]
-          `(defnt ~(symbol (str "->" kind "s-nd"))
-             ~(str "Creates an n-D " kind " array with the provided dims")
-             ~@(for [dim (range 1 11)]
-                 (let [arglist (vec (repeatedly dim gensym))
-                       hints   (apply core/vector 'long (repeat (dec dim) 'int))] ; first one should be long for protocol dispatch purposes
-                   `(~(ufth/hint-arglist-with arglist hints)
-                      (. quantum.core.data.Array
-                         ~(symbol (str "newInitializedNd" (str/capitalize kind) "Array"))
-                         ~@arglist)))))))))
-
-#?(:clj (gen-array-nd))
-
 (defnt elem->array ; TODO generate this
   #?(:clj  ([^boolean x ^long n0                  ] (->booleans-nd  n0      )))
   #?(:clj  ([^boolean x ^long n0 ^long n1         ] (->booleans-nd  n0 n1   )))
