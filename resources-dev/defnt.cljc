@@ -16,34 +16,45 @@ LEFT OFF LAST TIME (9/3/2018):
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  - t/...
-    - multi-arity `t/-`
-    - t/numerically : e.g. a double representing exactly what a float is able to represent
-      - and variants thereof: `numerically-long?` etc.
-      - t/numerically-integer?
-    - range-of : e.g. a double being between float max values but possibly representing a 'hole' in
-                 possible float values
-    - dependent types: `[x p/int? > (t/type x)]`
-    - t/extend-defnt!
-    - t/of
-      - (t/of number?) ; implicitly the container is a `traversable?`
-      - (t/of map/+map? t/symbol? dstr/string?)
-      - (t/of t/seq? namespace?)
-      - t/map-of
-      - t/seq-of
-    - t/unqualified-symbol?
-    - expressions (`quantum.untyped.core.analyze.expr`)
-    - comparison of `t/fn`s is probably possible?
-  - deft
-  - fnt (t/fn; current t/fn might transition to t/fn-spec or whatever?)
-  - declaret
+  - t/- : multi-arity
+  - t/value-of
+    - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
+  - t/numerically : e.g. a double representing exactly what a float is able to represent
+    - and variants thereof: `numerically-long?` etc.
+    - t/numerically-integer?
+  - t/range-of : e.g. a double being between float max values but possibly representing a 'hole' in
+               possible float values
+  - t/type
+    - dependent types: `[x arr/array? > (t/type x)]`
+  - ? : type inference
+    - use logic programming and variable unification e.g. `?1` `?2` ?
+  - t/extend-defnt!
+  - t/input-type
+    - `(t/input-type >namespace t/?)` meaing the possible input types to the first input to `>namespace`
+  - t/of
+    - (t/of number?) ; implicitly the container is a `traversable?`
+    - (t/of map/+map? symbol? dstr/string?)
+    - (t/of t/seq? namespace?)
+    - t/map-of
+    - t/seq-of
+  - t/defrecord
+  - t/def-concrete-type (i.e. `t/deftype`)
+  - expressions (`quantum.untyped.core.analyze.expr`)
+  - comparison of `t/fn`s is probably possible?
+  - t/def
+  - t/fnt (t/fn; current t/fn might transition to t/fn-spec or whatever?)
+  - t/declare
   - declare-fnt (a way to do protocols/interfaces)
     - extend-fnt!
   - defnt (t/defn)
     - (t/and (t/or a b) c) should -> (t/or (t/and a c) (t/and b c)) for purposes of separating dispatches
+    - t/extend-defn!
+      - `(t/extend-defn! id/>name (^:inline [x namespace?] (-> x .getName id/>name)))`
     - ^:inline
       - if you do (Numeric/bitAnd a b) inline then bitAnd needs to know the primitive type so maybe
         we do the `let*`-binding approach to typing vars?
+      - should be able to be per-arity like so:
+        (^:inline [] ...)
     - handle varargs
       - [& args _] shouldn't result in `t/any?` but rather like `t/seqable?` or whatever
     - do the defnt-equivalences
@@ -53,14 +64,17 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - dealing with `apply`...
   - t/defmacro
   - t/deftype
-  - dotyped
+  - t/dotyped
+  - lazy compilation especially around `t/input-type`
   - typed core fns
     - `apply`
-      - especially with `defnt` as the caller
+      - especially with `t/defn` as the caller
     - `merge`
     - `str`
     - `compare`
     - `get`
+    - `concat`
+    - `repeat`
 - NOTE on namespace organization:
   - [quantum.untyped.core.ns :refer [namespace?]]
     instead of
@@ -78,6 +92,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - quantum.core.cache
     - quantum.core.type-old
     - quantum.core.data.string
+    - [x] quantum.core.data.map
+    - [x] quantum.core.data.meta
+    - [x] quantum.core.ns ; TODO split up into data.ns?
     - quantum.core.print
     - quantum.core.log
     - quantum.core.data.vector
@@ -85,6 +102,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - quantum.core.error
     - quantum.core.data.string — this is where `>str` belongs
 
+    - quantum.core.data.array
     - quantum.core.data.collections
     - quantum.core.data.tuple
 
@@ -119,9 +137,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - quantum.core.core
         - TODO delete this namespace?
       - quantum.core.data.primitive (TODO make it compile)
-      - quantum.core.ns
-      - quantum.core.vars
-      - quantum.core.data.map
       - quantum.core.data.bits
       - quantum.core.convert.primitive
   - List of corresponding untyped namespaces to incorporate:
@@ -132,6 +147,17 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] quantum.untyped.core.type.defs
     - [ ] quantum.untyped.core.data
     - [ ] quantum.untyped.core.data.bits
+    - [x] quantum.untyped.core.identifiers
+  - List of Array fns to implement:
+    - [ ] count
+    - [ ] get
+    - [ ] set
+    - [ ] new1dObjectArray
+    - [ ] new1dArray
+    - [ ] newUninitialized<n : 1-10>d<type>Array
+    - [ ] newInitializedNd<type>Array
+    - [ ] newUninitializedArrayOfType
+    - [ ] newInitializedArrayOfType
   - List of Numeric fns to implement:
     - [ ] isTrue (?)
     - [ ] isFalse (?)
