@@ -27,6 +27,9 @@
     [quantum.core.data Array]
     [quantum.core Numeric Primitive]))
 
+;; ===== Type predicates ===== ;;
+;; Declared here instead of in `quantum.untyped.core.type` to avoid dependency
+
 #?(:clj (def ratio?   (t/isa? clojure.lang.Ratio)))
 
 #?(:clj (def boolean? (t/isa? #?(:clj Boolean :cljs js/Boolean))))
@@ -41,6 +44,8 @@
         (def primitive? (t/or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
 
 #?(:clj (def comparable-primitive? (t/- primitive? boolean?)))
+
+;; ===== End type predicates ===== ;;
 
 ;; Just in case
 (clojure.spec.test.alpha/unstrument)
