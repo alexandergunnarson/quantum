@@ -4,7 +4,13 @@
 
 >boolean is different than `truthy?`
 
+We should not rely on the value of dynamic vars e.g. `*math-context*` unless specifically typed
+
 Sometimes you want (byte <whatever-double>) to fail at runtime rather than fail at runtime when you can't know everything about the input's range
+
+These two should be defined in the (whatever) data namespace:
+- `>(whatever)`
+- `(whatever)>`
 
 TODO:
 - `(or (and pred then) (and (not pred) else))` (which is not correct)
@@ -84,57 +90,57 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - Same with the `core.convert` namespace too
     - Conversion functions belong in the namespace that their destination types belong in
 - TODO transition the quantum.core.* namespaces:
+  ->>>>>> TODO need to add *all* quantum namespaces in here
   - List of semi-approximately topologically ordered namespaces to make typed:
-    - quantum.core.type.core
-    - quantum.core.type.defs
-    - quantum.core.logic
-    - quantum.core.fn
-    - quantum.core.cache
-    - quantum.core.type-old
-    - quantum.core.data.string
+    - [ ] quantum.core.core -> TODO just need to delete this from all references
+    - [ ] quantum.core.type.core
+    - [ ] quantum.core.type.defs
+    - [ ] quantum.core.refs -> quantum.core.data.refs
+    - [ ] quantum.core.logic
+          - (def nneg?    (l/fn-not neg?))
+          - (def pos-int? (l/fn-and dnum/integer? pos?))
+    - [ ] quantum.core.fn
+    - [ ] quantum.core.cache
+    - [ ] quantum.core.type-old
+    - [ ] quantum.core.data.string
     - [x] quantum.core.data.map
     - [x] quantum.core.data.meta
     - [x] quantum.core.ns ; TODO split up into data.ns?
-    - quantum.core.print
-    - quantum.core.log
-    - quantum.core.data.vector
-    - quantum.core.spec
-    - quantum.core.error
-    - quantum.core.data.string — this is where `>str` belongs
-
-    - quantum.core.data.array
-    - quantum.core.data.collections
-    - quantum.core.data.tuple
-
-    - quantum.core.numeric.convert
-    - quantum.core.numeric.misc
-    - quantum.core.numeric.operators
-    - quantum.core.numeric.predicates
-    - quantum.core.numeric.trig
-    - quantum.core.numeric.truncate
-    - quantum.core.data.numeric
-    - quantum.core.numeric
-
-    - quantum.core.string.regex
-    - quantum.core.data.set
-    - quantum.core.macros.type-hint
-    - quantum.core.analyze.clojure.core
-    - quantum.core.analyze.clojure.predicates
-    - quantum.core.macros.optimization
-    - quantum.core.macros.fn
-    - quantum.core.macros.transform
-    - quantum.core.macros.protocol
-    - quantum.core.macros.reify
-    - quantum.core.macros.defnt
-    - quantum.core.macros
-
-    - quantum.core.refs
-    - quantum.core.reducers.reduce
-    - quantum.core.collections.logic
-    - quantum.core.collections.core
+    - [ ] quantum.core.print
+    - [ ] quantum.core.log
+    - [ ] quantum.core.data.vector
+    - [ ] quantum.core.spec
+    - [ ] quantum.core.error
+    - [ ] quantum.core.data.string — this is where `>str` belongs
+    - [ ] quantum.core.data.array
+    - [ ] quantum.core.data.collections
+    - [ ] quantum.core.data.tuple
+    - [ ] quantum.core.numeric.predicates
+    - [ ] quantum.core.numeric.convert
+    - [ ] quantum.core.numeric.misc
+    - [ ] quantum.core.numeric.operators
+    - [ ] quantum.core.numeric.trig
+    - [ ] quantum.core.numeric.truncate
+    - [ ] quantum.core.data.numeric
+    - [ ] quantum.core.numeric
+    - [ ] quantum.core.string.regex
+    - [ ] quantum.core.data.set
+    - [ ] quantum.core.macros.type-hint
+    - [ ] quantum.core.analyze.clojure.core
+    - [ ] quantum.core.analyze.clojure.predicates
+    - [ ] quantum.core.macros.optimization
+    - [ ] quantum.core.macros.fn
+    - [ ] quantum.core.macros.transform
+    - [ ] quantum.core.macros.protocol
+    - [ ] quantum.core.macros.reify
+    - [ ] quantum.core.macros.defnt
+    - [ ] quantum.core.macros
+    - [ ] quantum.core.reducers.reduce
+    - [ ] quantum.core.collections.logic
+    - [ ] quantum.core.collections.core
 
     - Worked through all we can for now:
-      - quantum.core.core
+      -
         - TODO delete this namespace?
       - quantum.core.data.primitive (TODO make it compile)
       - quantum.core.data.bits
@@ -180,7 +186,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] isZero
     - [ ] isNeg
     - [ ] isPos
-    - [ ] add
+    - [x] add
     - [ ] subtract
     - [ ] negate
     - [ ] multiply

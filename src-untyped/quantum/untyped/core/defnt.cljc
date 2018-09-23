@@ -21,7 +21,7 @@
       [quantum.untyped.core.specs          :as uss])
 #?(:cljs
     (:require-macros
-      [quantum.untyped.core.defnt :as this])))
+      [quantum.untyped.core.defnt          :as self])))
 
 ;; ===== Specs ===== ;;
 
@@ -383,11 +383,11 @@
                                (case ~arity-kind-sym ~@spec-form|fn)))))
         fn|name|with-meta (with-meta fn|name fn|meta)
         fn-form (case kind
-                  :fn    (list* 'fn (concat (when (contains? args' :quantum.core.specs/fn|name)
+                  :fn    (list* 'clojure.core/fn (concat (when (contains? args' :quantum.core.specs/fn|name)
                                               [fn|name|with-meta])
                                             overload-forms))
-                  :defn  (list* 'defn fn|name|with-meta overload-forms)
-                  :defn- (list* 'defn- fn|name|with-meta overload-forms))
+                  :defn  (list* 'clojure.core/defn  fn|name|with-meta overload-forms)
+                  :defn- (list* 'clojure.core/defn- fn|name|with-meta overload-forms))
         code `(do ~spec-form ~fn-form)]
     code))
 

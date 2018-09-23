@@ -7,7 +7,7 @@
              :refer [case-env case-env*]]
            [quantum.untyped.core.form.generate :as ufgen])
 #?(:cljs (:require-macros
-           [quantum.untyped.core.vars :as this])))
+           [quantum.untyped.core.vars          :as self])))
 
 (ucore/log-this-ns)
 

@@ -5,13 +5,13 @@
     [clojure.spec.test.alpha    :as stest]
     [clojure.test.check.clojure-test
       :refer [defspec]]
-    [quantum.untyped.core.defnt :as this]
+    [quantum.untyped.core.defnt :as self]
     [quantum.untyped.core.spec  :as us]
     [quantum.untyped.core.test
       :refer [defspec-test]]))
 
 ;; Implicit compilation tests
-(this/defns abcde "Documentation" {:metadata "fhgjik"}
+(self/defns abcde "Documentation" {:metadata "fhgjik"}
   ([a number? > number?] (inc a))
   ([a pos-int?, b pos-int?
     | (> a b)
@@ -35,28 +35,28 @@
            a b c ca cb cc cca ccaa ccab ccabaa ccabab ccababa ccabb ccabc d da db ea f fa)
     > number?] 0))
 
-(this/defns basic [a number? > number?] (rand))
+(self/defns basic [a number? > number?] (rand))
 
 (defspec-test test|basic `basic)
 
-(this/defns equality [a number? > #(= % a)] a)
+(self/defns equality [a number? > #(= % a)] a)
 
 (defspec-test test|equality `equality)
 
-(this/defns pre-post [a number? | (> a 3) > #(> % 4)] (inc a))
+(self/defns pre-post [a number? | (> a 3) > #(> % 4)] (inc a))
 
 (defspec-test test|pre-post `pre-post)
 
-(this/defns gen|seq|0 [[a number? b number? :as b] ^:gen? (s/tuple double? double?)])
+(self/defns gen|seq|0 [[a number? b number? :as b] ^:gen? (s/tuple double? double?)])
 
 (defspec-test test|gen|seq|0 `gen|seq|0)
 
-(this/defns gen|seq|1
+(self/defns gen|seq|1
   [[a number? b number? :as b] ^:gen? (s/nonconforming (s/cat :a double? :b double?))])
 
 (defspec-test test|gen|seq|1 `gen|seq|1)
 
-(this/defns fn-wide-and-overload-specific-post
+(self/defns fn-wide-and-overload-specific-post
   > number?
   [> integer?] 123)
 
@@ -64,7 +64,7 @@
 
 ;; TODO assert that the below 2 things are equivalent
 
-#_(this/defns abcde "Documentation" {:metadata "abc"}
+#_(self/defns abcde "Documentation" {:metadata "abc"}
   ([a number? > number?] (inc a))
   ([a pos-int?, b pos-int?
     | (> a b)
@@ -100,21 +100,21 @@
           (s/cat
             :a      #{"a" "b" "c"}
             :b      boolean?
-            :c      (this/map-destructure #(-> % count (= 3))
+            :c      (self/map-destructure #(-> % count (= 3))
                       {:ca keyword?
                        :cb string?
-                       :cc (this/map-destructure map?
-                             {:cca (this/map-destructure map?
+                       :cc (self/map-destructure map?
+                             {:cca (self/map-destructure map?
                                      {:ccaa keyword?
-                                      :ccab (this/seq-destructure seq?
-                                              [:arg-0 (this/seq-destructure some?
+                                      :ccab (self/seq-destructure seq?
+                                              [:arg-0 (self/seq-destructure some?
                                                         [:ccabaa some?
-                                                         :ccabab (this/map-destructure some? {:ccababa some?})])
+                                                         :ccabab (self/map-destructure some? {:ccababa some?})])
                                                :ccabb some?]
                                               [:ccabc some?])})})})
-            :d      (this/seq-destructure sequential? [:da double?] [:db seq?])
-            :arg-4# (this/seq-destructure ^{:gen? true} (s/coll-of symbol? :kind vector?) [:ea symbol?] )
-            :f      (this/seq-destructure seq? [:fa #{"a" "b" "c"}]))
+            :d      (self/seq-destructure sequential? [:da double?] [:db seq?])
+            :arg-4# (self/seq-destructure ^{:gen? true} (s/coll-of symbol? :kind vector?) [:ea symbol?] )
+            :f      (self/seq-destructure seq? [:fa #{"a" "b" "c"}]))
           (fn [{a :a
                 b :b
                 {:as c

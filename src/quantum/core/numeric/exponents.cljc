@@ -1,15 +1,13 @@
 (ns quantum.core.numeric.exponents
-  (:refer-clojure :exclude [+ *])
   (:require
-    [clojure.core       :as core]
-    [quantum.core.error :as err
-      :refer [TODO]]
-    [quantum.core.macros
-      :refer [defnt #?@(:clj [defnt'])]]
+    [clojure.core                   :as core]
+    [quantum.core.numeric.operators :as no]
+    [quantum.core.type              :as t]
     [quantum.core.vars
-      :refer [defalias #?@(:clj [defmalias])]]
-    [quantum.core.numeric.operators
-      :refer [+ * dec* div*]])
+      :refer [defalias]]
+    ;; TODO TYPED excise this reference
+    [quantum.untyped.core.error
+      :refer [TODO]])
 #?(:clj
   (:import
     [quantum.core Numeric]
@@ -22,7 +20,7 @@
           [#{byte #_char short int float double} x #{long? double?} n]
           (loop [acc (Long. 1) nn n]
             (if (<= (double nn) 0) acc
-                (recur (* x acc) (dec* nn)))))
+                (recur (no/* x acc) (no/dec* nn)))))
    :cljs (defn pow- [x n] (TODO)))
 
 (defn pow'
@@ -141,7 +139,7 @@
   {:todo ["Need to intelligently determine, at compile time if possible, whether
            @x is e, 2, or 10 and choose the appropriate fn."]}
   ([#?(:clj #{double}) x #?(:clj #{double}) base] ; arbitrary to choose ln vs. log-10
-    (div* (ln x) (ln base))))
+    (no/div* (ln x) (ln base))))
 
 #?(:clj
 (defmacro log [base x] ; TODO do ln'

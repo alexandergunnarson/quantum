@@ -27,6 +27,8 @@
   (:import
     clojure.lang.BigInt quantum.core.Numeric)))
 
+;; TODO `==` from Numeric/equals
+
 ; Some of the ideas here adapted from gfredericks/compare
 ; TODO include diffing
 ; TODO use -compare in CLJS

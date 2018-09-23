@@ -18,7 +18,7 @@
            [quantum.untyped.core.vars           :as uvar
              :refer [defalias]])
 #?(:cljs (:require-macros
-           [quantum.untyped.core.reducers       :as this])))
+           [quantum.untyped.core.reducers       :as self])))
 
 (ucore/log-this-ns)
 

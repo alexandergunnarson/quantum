@@ -1,4 +1,6 @@
 (ns quantum.untyped.core.type.defnt
+  (:refer-clojure :exclude
+    [defn])
   (:require
     [clojure.core                               :as core]
     [clojure.string                             :as str]
@@ -29,7 +31,7 @@
     [quantum.untyped.core.form.evaluate         :as ufeval]
     [quantum.untyped.core.form.generate         :as ufgen]
     [quantum.untyped.core.form.type-hint        :as ufth]
-    [quantum.untyped.core.identifiers           :as uident
+    [quantum.untyped.core.identifiers           :as uid
       :refer [>name >symbol]]
     [quantum.untyped.core.log                   :as ulog]
     [quantum.untyped.core.logic                 :as ul
@@ -50,55 +52,11 @@
     [quantum.core Numeric]
     [quantum.core.data Array]))
 
-;; TODO probably move
-(def index? #(and (integer? %) (>= % 0)))
-
-#?(:clj
-(defns class>simplest-class
-  "This ensures that special overloads are not created for non-primitive subclasses
-   of java.lang.Object (e.g. String, etc.)."
-  [c (? t/class?) > (? t/class?)]
-  (if (t/primitive-class? c)
-      c
-      (or (tcore/boxed->unboxed c) java.lang.Object))))
-
-#?(:clj
-(defns class>most-primitive-class [c (? t/class?), nilable? t/boolean? > (? t/class?)]
-  (if nilable? c (or (tcore/boxed->unboxed c) c))))
-
-#?(:clj
-(defns type>most-primitive-classes [t t/type? > (s/set-of (? t/class?))]
-  (let [cs (t/type>classes t) nilable? (contains? cs nil)]
-    (->> cs
-         (c/map+ #(class>most-primitive-class % nilable?))
-         (r/join #{})))))
-
-#?(:clj
-(defns type>most-primitive-class [t t/type? > (? t/class?)]
-  (let [cs (type>most-primitive-classes t)]
-    (if (-> cs count (not= 1))
-        (err! "Not exactly 1 class found" (kw-map t cs))
-        (first cs)))))
-
-#?(:clj
-(defns out-type>class [t t/type? > (? t/class?)]
-  (let [cs (t/type>classes t) cs' (disj cs nil)]
-    (if (-> cs' count (not= 1))
-        ;; NOTE: we don't need to vary the output class if there are multiple output possibilities
-        ;; or just nil
-        java.lang.Object
-        (-> (class>most-primitive-class (first cs') (contains? cs nil))
-            class>simplest-class)))))
-
-; ----- TYPED PART ----- ;
-
 (defonce *fn->type (atom {}))
 
 (defonce defnt-cache (atom {})) ; TODO For now — but maybe lock-free concurrent hash map to come
 
 (defonce *interfaces (atom {}))
-
-;; ===== (DE)FNT ===== ;;
 
 ;; Internal specs
 
@@ -187,13 +145,13 @@
          :overload-data               ::overload-data}))
 
 #_(:clj
-(defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
+(core/defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
   (cond (not= k :spec) java.lang.Object; default class
         (symbol? spec) (pred->class lang spec))))
 
 ;; TODO optimize such that `post-type|form` doesn't create a new type-validator wholesale every
 ;; time the function gets run; e.g. extern it
-(defn >with-post-type|form [body post-type|form] `(t/validate ~body ~post-type|form))
+(core/defn >with-post-type|form [body post-type|form] `(t/validate ~body ~post-type|form))
 
 #?(:clj
 (uvar/def sort-guide "for use in arity sorting, in increasing conceptual (and bit) size"
@@ -206,6 +164,57 @@
    tdef/long    6
    tdef/float   7
    tdef/double  8}))
+
+;; TODO move
+(def index? #(and (integer? %) (>= % 0)))
+
+;; TODO simplify this class computation
+
+#?(:clj
+(defns class>simplest-class
+  "This ensures that special overloads are not created for non-primitive subclasses
+   of java.lang.Object (e.g. String, etc.)."
+  [c (? t/class?) > (? t/class?)]
+  (if (t/primitive-class? c) c java.lang.Object)))
+
+#?(:clj
+(defns class>most-primitive-class [c (? t/class?), nilable? t/boolean? > (? t/class?)]
+  (if nilable? c (or (tcore/boxed->unboxed c) c))))
+
+#?(:clj
+(defns type>most-primitive-classes [t t/type? > (s/set-of (? t/class?))]
+  (let [cs       (t/type>classes t)
+        nilable? (or (-> t meta :quantum.core.type/ref?) (contains? cs nil))]
+    (->> cs
+         (c/map+ #(class>most-primitive-class % nilable?))
+         (r/join #{})))))
+
+#?(:clj
+(defns out-type>class [t t/type? > (? t/class?)]
+  (if (-> t meta :quantum.core.type/ref?)
+      java.lang.Object
+      (let [cs  (t/type>classes t)
+            cs' (disj cs nil)]
+        (if (-> cs' count (not= 1))
+            ;; NOTE: we don't need to vary the output class if there are multiple output possibilities
+            ;; or just nil
+            java.lang.Object
+            (-> (class>most-primitive-class (first cs') (contains? cs nil))
+                class>simplest-class))))))
+
+#?(:clj
+(defns arg-type>arg-classes-seq|primitivized [arg-type t/type? > (s/seq-of class?)]
+  (if (-> arg-type meta :quantum.core.type/ref?)
+      (-> arg-type t/type>classes (disj nil) seq)
+      (let [cs (type>most-primitive-classes arg-type)
+            base-classes
+            (cond-> cs
+                    (contains? cs nil) (-> (disj nil) (conj java.lang.Object)))]
+        (->> cs
+             (c/map+ tcore/class>prim-subclasses)
+             (educe (aritoid nil identity uset/union) base-classes)
+             ;; for purposes of cleanliness and reproducibility in tests
+             (sort-by sort-guide))))))
 
 #?(:clj
 (defns arg-types>arg-classes-seq|primitivized
@@ -222,18 +231,7 @@
    which includes all primitive subclasses of the type."
   [arg-types (s/seq-of t/type?) > (s/seq-of ::expanded-overload|arg-classes)]
   (->> arg-types
-       (c/lmap (fn [t #_t/type?]
-                 (if (-> t meta :quantum.core.type/ref?)
-                     (-> t t/type>classes (disj nil) seq)
-                     (let [cs (type>most-primitive-classes t)
-                           base-classes
-                             (cond-> (>set cs)
-                               (contains? cs nil) (-> (disj nil) (conj java.lang.Object)))]
-                       (->> cs
-                            (c/map+ tcore/class>prim-subclasses)
-                            (educe (aritoid nil identity uset/union) base-classes)
-                            ;; for purposes of cleanliness and reproducibility in tests
-                            (sort-by sort-guide))))))
+       (c/lmap arg-type>arg-classes-seq|primitivized)
        (apply ucombo/cartesian-product)
        (c/lmap >vec))))
 
@@ -263,21 +261,22 @@
                           lang
                           (c/count arg-bindings)
                           varargs)))
-        post-type|runtime? (-> post-type meta :quantum.core.type/runtime?)
         post-type|assume?  (-> post-type meta :quantum.core.type/assume?)
+        post-type|ref?     (-> post-type meta :quantum.core.type/ref?)
+        post-type|runtime? (-> post-type meta :quantum.core.type/runtime?)
         err-info {:form                 (:form analyzed)
                   :type                 (:type analyzed)
                   :declared-output-type post-type}
         out-type (if post-type
                      (case (t/compare (:type analyzed) post-type)
-                       (-1 0) (:type analyzed)
+                       (-1 0) (cond-> (:type analyzed) post-type|ref? t/ref)
                        1      (if (or post-type|runtime? post-type|assume?)
                                   post-type
                                   (err! (str "Body type incompatible with declared output type even"
                                              " when relaxing compile-time type enforcement")
                                         err-info))
                        (2 3)  (err! "Body type incompatible with declared output type" err-info))
-                     (:type analyzed))
+                     (cond-> (:type analyzed) post-type|ref? t/ref))
         body-form
           (-> (:form analyzed)
               (cond-> post-type|runtime? (>with-post-type|form post-type|form))
@@ -307,8 +306,8 @@
                (mapv (fn [arg-classes #_::expanded-overload|arg-classes]
                        (let [arg-types|satisfying-primitivization
                                (c/mergev-with
-                                 (fn [_ s #_t/type? c #_t/class?]
-                                   (cond-> s (t/primitive-class? c) (t/and c)))
+                                 (fn [_ t #_t/type? c #_t/class?]
+                                   (cond-> t (t/primitive-class? c) (t/and c)))
                                  arg-types|expanded arg-classes)]
                          (>expanded-overload overload-data fnt-globals opts
                            arg-bindings arg-types|satisfying-primitivization arg-classes
@@ -469,7 +468,7 @@
 (def min-shorthand-tag-length 1)
 (def max-shorthand-tag-length 64) ; for now
 
-(defn >all-shorthand-tags []
+(core/defn >all-shorthand-tags []
   (->> (range min-shorthand-tag-length (inc max-shorthand-tag-length))
        c/unchunk
        (c/lmap (fn [n] (apply ucombo/cartesian-product (repeat n allowed-shorthand-tag-chars))))
@@ -492,7 +491,7 @@
           (get c))))
 
 ;; TODO spec
-(defn assert-monotonically-increasing-types!
+(core/defn assert-monotonically-increasing-types!
   "Asserts that each type in an overload of the same arity and arg-position
    are in monotonically increasing order in terms of `t/compare`."
   [overloads|grouped-by-arity]
@@ -572,7 +571,7 @@
   [fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?), i|arg index?, body _]
   (if (-> body count (= 1))
       (first body)
-      `(ifs ~@body (unsupported! (quote ~(uident/qualify fn|name)) [~@arglist] ~i|arg))))
+      `(ifs ~@body (unsupported! (quote ~(uid/qualify fn|name)) [~@arglist] ~i|arg))))
 
 (defns >dynamic-dispatch|body-for-arity
   ([fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?)
@@ -611,7 +610,7 @@
    {:as opts        :keys [gen-gensym _, lang _]} ::opts
    expanded-overload-groups-by-fnt-overload (s/vec-of ::expanded-overload-groups)
    i-overload->direct-dispatch-data         ::i-overload->direct-dispatch-data]
- `(defn ~fn|name
+ `(core/defn ~fn|name
     ~(assoc fn|meta :quantum.core.type/type
        (>dynamic-dispatch-fn|type-decl fnt-globals expanded-overload-groups-by-fnt-overload))
     ~@(->> i-overload->direct-dispatch-data
@@ -696,5 +695,5 @@
                :defn `(~'do ~@fn-codelist))]
     code))
 
-#?(:clj (defmacro fnt   [& args] (fnt|code :fn   (ufeval/env-lang) args)))
-#?(:clj (defmacro defnt [& args] (fnt|code :defn (ufeval/env-lang) args)))
+#?(:clj (defmacro fnt  [& args] (fnt|code :fn   (ufeval/env-lang) args)))
+#?(:clj (defmacro defn [& args] (fnt|code :defn (ufeval/env-lang) args)))

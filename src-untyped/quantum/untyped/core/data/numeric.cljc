@@ -1,12 +1,9 @@
 (ns quantum.core.data.numeric
          (:refer-clojure :exclude
-           [#?@(:cljs [-compare]) decimal? denominator integer? number? numerator ratio?
-            read-string])
+           [#?@(:cljs [-compare]) decimal? denominator integer? number? numerator ratio?])
          (:require
            [clojure.core                      :as core]
            [clojure.string                    :as str]
-           [clojure.tools.reader
-             :refer [read-string]]
   #?(:cljs [com.gfredericks.goog.math.Integer :as int])
            [quantum.core.data.primitive       :as p]
            [quantum.core.data.string          :as dstr]
@@ -14,7 +11,7 @@
              :refer [whenf fn-not fn=]]
            [quantum.core.type                 :as t
              :refer [defnt]]
-           [quantum.core.vars
+           [quantum.core.vars                 :as var
              :refer [defalias]])
          (:import
            [clojure.lang BigInt Numbers]
@@ -127,3 +124,9 @@
 
 (def number? (t/or #?@(:clj  [(t/isa? java.lang.Number)]
                        :cljs [integer? decimal? ratio?])))
+
+(var/def numeric?
+  "Something 'numeric' is something that may be treated as a number but may not actually *be* one."
+  (t/or number? #?(:clj p/char?)))
+
+(def numeric-primitive? (t/- p/primitive? p/boolean?))

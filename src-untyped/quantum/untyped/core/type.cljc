@@ -9,7 +9,7 @@
             isa?
             nil? any? class? tagged-literal? #?(:cljs object?)
             number? decimal? bigdec? integer? ratio?
-            true? false? keyword? string? symbol?
+            true? false? keyword? symbol?
             array? associative? coll? counted? indexed? iterable? list? map? map-entry? record?
             seq? seqable? sequential? set? sorted? vector?
             fn? ifn?
@@ -926,6 +926,12 @@
          ;; Used by `quantum.untyped.core.analyze`
          (-def keyword?      (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
 
+         ;; Used by `quantum.untyped.core.analyze` via `t/literal?`
+         (-def str?          (isa? #?(:clj java.lang.String :cljs js/String)))
+
+         ;; Used by `quantum.untyped.core.analyze` via `t/literal?`
+         (-def symbol?       (isa? #?(:clj clojure.lang.Symbol :cljs cljs.core/Symbol)))
+
 #?(:clj  (-def namespace?    (isa? clojure.lang.Namespace)))
 
          ;; `js/File` isn't always available! Use an abstraction
@@ -941,7 +947,8 @@
 
 #?(:clj  (-def tagged-literal?   (isa? clojure.lang.TaggedLiteral)))
 
-         (-def literal?          (or nil? boolean? symbol? keyword? t/string? #?(:clj long?) double? #?(:clj tagged-literal?)))
+         ;; Used in `quantum.untyped.core.analyze`
+         (-def literal?          (or nil? boolean? symbol? keyword? str? #?(:clj long?) double? #?(:clj tagged-literal?)))
        #_(-def form?             (or literal? +list? +vector? ...))
 
 ;; ===== Generic ===== ;;

@@ -71,8 +71,7 @@
   ;; "Ratios should not be constructed directly by user code; we assume n and d are
   ;;  canonical; i.e., they are coprime and at most n is negative."
   Object
-    (toString [_]
-      (str "#ratio [" n " " d "]"))
+    (toString [_] (str "#ratio [" n " " d "]"))
   Add            (-add              [x y] (-add-with-ratio y x))
   AddWithInteger (-add-with-integer [x y] (-add-with-ratio x (->ratio y)))
   AddWithRatio
@@ -108,11 +107,9 @@
            (core/= n (.-n other))
            (core/= d (.-d other))))
   IHash
-    (-hash [_]
-      (bit-xor 124790411 (-hash n) (-hash d)))
+    (-hash [_] (bit-xor 124790411 (-hash n) (-hash d)))
   IComparable
-    (-compare [x y]
-      (-compare x y))))
+    (-compare [x y] (-compare x y))))
 
 #?(:cljs
 (defn- normalize

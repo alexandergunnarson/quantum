@@ -1,7 +1,6 @@
-(ns
-  ^{:doc "Useful numeric functions. Floor, ceil, round, sin, abs, neg, etc."
-    :attribution "alexandergunnarson"}
-  quantum.core.numeric
+(ns quantum.core.numeric
+  "Numeric functions.
+   Aliases all subnamespaces."
   (:refer-clojure :exclude
     [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? pos-int?
      min max quot mod format
@@ -13,25 +12,23 @@
     [quantum.core.data.numeric         :as dnum]
     [quantum.core.data.primitive
       :refer [#?(:clj >long)]]
-    [quantum.core.error                :as err
-      :refer [>err err! TODO]]
-    [quantum.core.fn
-      :refer [aritoid fn1 fn-> fn']]
     [quantum.core.log                  :as log]
-    [quantum.core.logic                :as logic
+    [quantum.untyped.core.logic
       :refer [fn-and whenf1]]
-    [quantum.core.macros               :as macros
-      :refer [defnt #?@(:clj [defnt'])]]
-    [quantum.core.vars                 :as var
-      :refer [defalias defaliases]]
-    [quantum.core.numeric.convert   ]
-    [quantum.core.numeric.misc      ]
-    [quantum.core.numeric.operators    :as op
-      :include-macros true]
+    [quantum.core.numeric.convert]
+    [quantum.core.numeric.misc]
+    [quantum.core.numeric.operators    :as op]
     [quantum.core.numeric.predicates]
-    [quantum.core.numeric.trig      ]
-    [quantum.core.numeric.truncate     :as trunc
-      :include-macros true])
+    [quantum.core.numeric.trig]
+    [quantum.core.numeric.truncate     :as trunc]
+    [quantum.core.type                 :as t]
+    [quantum.core.vars
+      :refer [defalias defaliases]]
+    ;; TODO TYPED excise
+    [quantum.untyped.core.error
+      :refer [TODO]]
+    [quantum.untyped.core.fn
+      :refer [aritoid fn1 fn-> fn']])
 #?(:cljs
   (:require-macros
     [quantum.core.numeric              :as self]))
@@ -181,8 +178,6 @@
   ([form1 form2 & more]
      (cons 'do (map type-convert-form (list* form1 form2 more))))))
 
-(def num-ex (>err :overflow "Numeric overflow"))
-
 ; ===== NON-TRANSFORMATIVE OPERATIONS ===== ;
 
 (defalias numerator   dnum/numerator)
@@ -312,7 +307,7 @@
                ~@body)
       :nils  (binding [*+* nils+  *-* nils-  *** nils*  *div* nils-div ]
                ~@body)
-      (err! "Numeric operation not recognized" {:op k#})))))
+      (throw (ex-info "Numeric operation not recognized" {:op k#}))))))
 
 (defn whole-number? [n]
   (= n (trunc/floor n))) ; TODO use ==
@@ -347,7 +342,7 @@
           complex functions"}
   [f]
   (or (get inverse-map f)
-      (err! :undefined "|inverse| not defined for function" f)))
+      (throw (ex-info "|inverse| not defined for function" {:f f}))))
 
 (def ^{:doc "Base values for operators." :const true}
   base-map
@@ -366,7 +361,7 @@
             (base *) 1}}
   [f]
   (or (get base-map f)
-      (err! :undefined "|base| not defined for function" f)))
+      (throw (ex-info "|base| not defined for function" {:f f}))))
 
 (defn range?
   {:tests `{((range? 1 4) 3)
@@ -391,7 +386,7 @@
     :dollar
       (->> n display-num (str "$"))
     ;:accounting
-    (err! "Unrecognized format" type)))
+    (throw (ex-info "Unrecognized format" {:type type}))))
 
 (defn percentage-of [of total-n]
   (-> of (op// total-n) double (c/* 100) display-num (str "%"))) ; TODO use *-2

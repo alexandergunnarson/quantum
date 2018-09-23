@@ -1,4 +1,4 @@
-(ns quantum.core.refs
+(ns quantum.core.refs ; TODO TYPED move to `quantum.core.data.refs` and incorporate `nil?` and `val?` here
   (:refer-clojure :exclude
     [deref
      volatile!
@@ -36,7 +36,7 @@
   (set       [#?(:cljs this) v])
   (getAndSet [#?(:cljs this) v]))
 
-; TODO create for every primitive datatype as well
+;; TODO create for every primitive datatype as well
 (deftype MutableReference [#?(:clj ^:unsynchronized-mutable val :cljs ^:mutable val)]
   IMutableReference
   (get       [this] val)
@@ -120,16 +120,16 @@
 #?(:clj  (defnt deref
            ([#{clojure.lang.IDeref}         x] (.deref x))
            ([#{AtomicBoolean
-               #_AtomicByte
-               #_AtomicChar
-               #_AtomicShort
+             #_AtomicByte
+             #_AtomicChar
+             #_AtomicShort
                AtomicInteger
                AtomicLong
-               #_AtomicFloat
+             #_AtomicFloat
                AtomicDouble
                AtomicReference
                java.util.concurrent.Future
-               #_IMutableReference
+             #_IMutableReference
                IMutableBoolean
                IMutableByte
                IMutableChar
@@ -237,12 +237,12 @@
 
 ; ===== AGENTS ===== ;
 
-#?(:clj (defalias agent       core/agent))
-#?(:Clj (defalias restart-agent core/restart-agent))
-#?(:clj (defalias agent-error core/agent-error))
-#?(:clj (defalias await       core/await))
-#?(:clj (defalias await-for   core/await-for))
-#?(:clj (defalias commute     core/commute))
+#?(:clj (defalias agent                        core/agent))
+#?(:Clj (defalias restart-agent                core/restart-agent))
+#?(:clj (defalias agent-error                  core/agent-error))
+#?(:clj (defalias await                        core/await))
+#?(:clj (defalias await-for                    core/await-for))
+#?(:clj (defalias commute                      core/commute))
 #?(:clj (defalias send                         core/send))
 #?(:clj (defalias set-agent-send-executor!     core/set-agent-send-executor!))
 #?(:clj (defalias send-off                     core/send-off))
@@ -251,12 +251,12 @@
 
 ; ===== REFS ===== ;
 
-#?(:clj (defalias ref                          core/ref    ))
-#?(:clj (defalias alter                        core/alter  ))
-#?(:clj (defalias io!                          core/io!    ))
-#?(:clj (defalias sync                         core/sync   ))
-#?(:clj (defalias dosync                       core/dosync ))
-#?(:clj (defalias ensure                       core/ensure ))
+#?(:clj (defalias ref                          core/ref))
+#?(:clj (defalias alter                        core/alter))
+#?(:clj (defalias io!                          core/io!))
+#?(:clj (defalias sync                         core/sync))
+#?(:clj (defalias dosync                       core/dosync))
+#?(:clj (defalias ensure                       core/ensure))
 #?(:clj (defalias ref-set                      core/ref-set))
 #?(:clj (defalias error-handler                core/error-handler))
 #?(:clj (defalias set-error-handler!           core/set-error-handler!))

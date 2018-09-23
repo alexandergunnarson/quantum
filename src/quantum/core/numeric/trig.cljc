@@ -3,16 +3,12 @@
             [+ * /])
           (:require
             [quantum.core.error             :as err
-              :refer [TODO]                        ]
-            [quantum.core.macros
-              :refer        [#?@(:clj [defnt defnt'])]
-              :refer-macros [defnt]]
+              :refer [TODO]]
+            [quantum.core.type              :as t]
             [quantum.core.numeric.exponents :as exp
-              :refer        [#?@(:clj [log-e sqrt pow])]
-              :refer-macros [log-e sqrt pow]]
+              :refer [log-e sqrt pow]]
             [quantum.core.numeric.operators
-              :refer        [#?@(:clj [+ * / inc* dec*])]
-              :refer-macros [+ * / inc* dec*]])
+              :refer [+ * / inc* dec*]])
   #?(:clj (:import [net.jafama FastMath])))
 
 ; ===== SINE ===== ;

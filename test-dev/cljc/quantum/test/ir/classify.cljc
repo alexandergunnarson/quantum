@@ -21,10 +21,10 @@
                #?@(:clj [:refer-macros [condpc]])]
              [quantum.numeric.core
                :refer [∏ ∑ sum]]
-             [quantum.ir.classify :as this]
-             [quantum.core.log :as log])
+             [quantum.ir.classify :as self]
+             [quantum.core.log    :as log])
   #?(:cljs (:require-macros
-             [quantum.core.log :as log])))
+             [quantum.core.log    :as log])))
 
 (log/enable! :test)
 (log/pr :test "===== TESTING ======")
@@ -42,12 +42,12 @@
       test-doc ["Taiwan" "Taiwan" "Sapporo"]
       d' test-doc]
   (log/ppr :test "MULTINOMIAL IS"
-    [(->> (this/classifier-score+ D :multinomial d')
+    [(->> (self/classifier-score+ D :multinomial d')
           (join []) (sort-by second))
-     (this/multinomial-naive-bayes-classifier D d')])
+     (self/multinomial-naive-bayes-classifier D d')])
   (log/ppr :test "MULTIPLE BERNOULLI IS"
-     [(->> (this/classifier-score+ D :bernoulli d')
+     [(->> (self/classifier-score+ D :bernoulli d')
            (join []) (sort-by second))
-     (this/multiple-bernoulli-naive-bayes-classifier D d')]))
+     (self/multiple-bernoulli-naive-bayes-classifier D d')]))
 
 (log/pr :test "===== END TESTING ======")

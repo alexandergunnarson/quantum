@@ -1,8 +1,8 @@
 (ns quantum.core.data.string
   "A String is a special wrapper for a char array where different encodings, etc. are possible."
        (:require
-         [quantum.core.type         :as t
-           :refer [defnt]]
+         [quantum.core.data.meta    :as meta]
+         [quantum.core.type         :as t]
          [quantum.untyped.core.core :as ucore])
        (:import
 #?(:clj  [com.carrotsearch.hppc CharArrayDeque])
@@ -23,11 +23,11 @@
 
 (def str? (t/isa? #?(:clj java.lang.String :cljs js/String)))
 
-#_(defnt str ...) ; TODO TYPED
+#_(t/defn >str ...) ; TODO TYPED
 
 ;; ----- Metable immutable strings ----- ;;
 
-;; TODO TYPED `deftypet`
+;; TODO TYPED `t/deftype`
 #?(:clj
 (deftype MetableString [^String s ^clojure.lang.IPersistentMap _meta]
   clojure.lang.IObj
@@ -49,16 +49,16 @@
 
 (def metable-str? #?(:clj (t/isa? MetableString) :cljs str?))
 
-(defnt >metable-str
+(t/defn >metable-str
   > metable-str?
   ([s str?] #?(:clj (MetableString. s nil) :cljs s))
-  ([s str?, meta' ??/meta?] #?(:clj (MetableString. s meta') :cljs (??/with-meta s new-meta))))
+  ([s str?, meta' meta/meta?] #?(:clj (MetableString. s meta') :cljs (meta/with-meta s new-meta))))
 
 ;; ===== Mutable strings ===== ;;
 
 (def !str? (t/isa? #?(:clj java.lang.StringBuilder :cljs StringBuffer)))
 
-(defnt !str
+(t/defn ^:inline >!str
   "Creates a mutable string."
   > !str?
   ([]   #?(:clj (StringBuilder.)    :cljs (StringBuffer.)))
@@ -70,7 +70,7 @@
 #?(:clj (def !sync-str? (t/isa? java.lang.StringBuffer)))
 
 #?(:clj
-(defnt !sync-str
+(t/defn ^:inline >!sync-str
   "Creates a synchronized mutable string."
   > !sync-str?
   [] (StringBuffer.)))

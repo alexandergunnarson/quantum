@@ -20,7 +20,7 @@
       :refer [<- fn-> fn->>]]
     [quantum.untyped.core.form.evaluate     :as ufeval]
     [quantum.untyped.core.form.type-hint    :as ufth]
-    [quantum.untyped.core.identifers        :as uident
+    [quantum.untyped.core.identifiers       :as uident
       :refer [>symbol]]
     [quantum.untyped.core.log               :as log
       :refer [prl!]]

@@ -12,7 +12,7 @@
     [quantum.untyped.core.spec :as s])
 #?(:cljs
   (:require-macros
-    [quantum.untyped.core.specs :as this
+    [quantum.untyped.core.specs :as self
       :refer [quotable]])))
 
 ;;;; GENERAL

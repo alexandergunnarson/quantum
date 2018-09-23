@@ -147,7 +147,7 @@
       (red/reducei-sentinel
         (fn [a b i]
           (when-not (neg? (#?@(:clj  [.compare ^java.util.Comparator comparef]
-                         :cljs [comparef])
+                               :cljs [comparef])
                      (kf a) (kf b)))
             (conj! xs' [i b]))
           b) xs)

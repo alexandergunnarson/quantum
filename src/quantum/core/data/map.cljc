@@ -8,8 +8,7 @@
             ;; TODO TYPED
           #_[quantum.core.reducers         :as r
               :refer [reduce-pair]]
-            [quantum.core.type             :as t
-              :refer [defnt]]
+            [quantum.core.type             :as t]
             [quantum.untyped.core.data.map :as umap]
             ;; TODO TYPED
             [quantum.untyped.core.defnt
@@ -73,7 +72,7 @@
 
 (def +map-entry? (t/isa? #?(:clj clojure.lang.MapEntry :cljs cljs.core.MapEntry)))
 
-(defnt >map-entry
+(t/defn ^:inline >map-entry
   "A performant replacement for creating 2-tuples (vectors), e.g., as return values
    in a `kv-reduce` function.
 
@@ -92,7 +91,7 @@
    310.335998 ms (dotimes [n 1000000] (into m0 ms))"
   {:attribution "alexandergunnarson"}
   > +map-entry?
-  [k _, v _]
+  [k t/ref?, v t/ref?]
   #?(:clj  (clojure.lang.MapEntry. k v)
      :cljs (cljs.core.MapEntry. k v nil)))
 
@@ -108,7 +107,7 @@
          (def   identity-map? (t/or !identity-map? #?(:clj !!identity-map?)))
 
 ;; TODO generate this via macro?
-(defnt >!identity-map
+(t/defn >!identity-map
   "Creates a single-threaded, mutable identity map.
    On the JVM, this is a `java.util.IdentityHashMap`.
    On JS, this is a `js/Map` (ECMAScript 6 Map)."
@@ -348,7 +347,7 @@
 
          (def   array-map? (t/or ?!+array-map? !array-map? #?(:clj !!array-map?)))
 
-(defnt >array-map
+(t/defn >array-map
   "Creates a persistent array map. If any keys are equal, they are handled as if by repeated
    applications of `assoc`."
   > +array-map?
@@ -480,7 +479,7 @@
 
 (def ?!+hash-map? (t/or !+hash-map? +hash-map?))
 
-(defnt >hash-map
+(t/defn >hash-map
   "Creates a persistent hash map. If any keys are equal, they are handled as if by repeated
    applications of `assoc`.
 
@@ -811,7 +810,7 @@
         (def   hash-map? (t/or ?!+hash-map? !hash-map? #?(:clj !!hash-map?)))
 
 ;; TODO generate this function via macro?
-(defnt >!hash-map
+(t/defn >!hash-map
   "Creates a single-threaded, mutable hash map.
    On the JVM, this is a `java.util.HashMap`.
    On JS, this is a `quantum.untyped.core.data.map.HashMap`."
@@ -869,11 +868,11 @@
 
 ;; TODO generate these functions via macros
 ;; TODO this is incomplete
-#?(:clj (defnt >!hash-map|int->ref    > !hash-map|int->ref?    [] (Int2ReferenceOpenHashMap.)))
-#?(:clj (defnt >!hash-map|long->long  > !hash-map|long->long?  [] (Long2LongOpenHashMap.)))
-#?(:clj (defnt >!hash-map|long->ref   > !hash-map|long->ref?   [] (Long2ReferenceOpenHashMap.)))
-#?(:clj (defnt >!hash-map|double->ref > !hash-map|double->ref? [] (Double2ReferenceOpenHashMap.)))
-#?(:clj (defnt >!hash-map|ref->long   > !hash-map|ref->long?   [] (Reference2LongOpenHashMap.)))
+#?(:clj (t/defn >!hash-map|int->ref    > !hash-map|int->ref?    [] (Int2ReferenceOpenHashMap.)))
+#?(:clj (t/defn >!hash-map|long->long  > !hash-map|long->long?  [] (Long2LongOpenHashMap.)))
+#?(:clj (t/defn >!hash-map|long->ref   > !hash-map|long->ref?   [] (Long2ReferenceOpenHashMap.)))
+#?(:clj (t/defn >!hash-map|double->ref > !hash-map|double->ref? [] (Double2ReferenceOpenHashMap.)))
+#?(:clj (t/defn >!hash-map|ref->long   > !hash-map|ref->long?   [] (Reference2LongOpenHashMap.)))
 
 ;; ----- Unsorted Maps ----- ;; TODO Perhaps the concept of unsortedness is `(- map sorted?)`?
 
@@ -1064,7 +1063,7 @@
          (def   unsorted-map? (t/or ?!+unsorted-map? !unsorted-map? #?(:clj !!unsorted-map?)))
 
 #?(:clj
-(defnt >unsorted-map|long->ref
+(t/defn >unsorted-map|long->ref
   "Creates a persistent integer map that can only have non-negative integers as keys."
   > +unsorted-map|long->ref?
   ([] (clojure.data.int_map.PersistentIntMap. clojure.data.int_map.Nodes$Empty/EMPTY 0 nil))
@@ -1102,7 +1101,7 @@
                                         #?(:clj !!insertion-ordered-map?)))
 
 ;; TODO generate this function via macro
-(defnt >!insertion-ordered-map
+(t/defn >!insertion-ordered-map
   "Creates a single-threaded, mutable insertion-ordered map.
    On the JVM, this is a `java.util.LinkedHashMap`.
    On JS, this is a `goog.structs.LinkedMap`."
@@ -1351,7 +1350,7 @@
 
 ;; TODO generate this function via macro
 ;; TODO TYPED replaced `t/fn?` with a more specific `(t/fn [...])` named as e.g. `fn/comparator?`
-(defnt >!sorted-map-by
+(t/defn >!sorted-map-by
   "Creates a single-threaded, mutable sorted map with the specified comparator.
    On the JVM, this is a `java.util.TreeMap`.
    On JS, this is a `goog.structs.AvlTree`."
@@ -1410,7 +1409,7 @@
 
 ;; TODO generate this function via macro
 ;; TODO TYPED replace `compare` with typed version
-(defnt >!sorted-map
+(t/defn >!sorted-map
   "Creates a single-threaded, mutable sorted map.
    On the JVM, this is a `java.util.TreeMap`.
    On JS, this is a `goog.structs.AvlTree`."
@@ -1435,7 +1434,7 @@
     (apply >!sorted-map-by compare k0 v0 k1 v1 k2 v2 k3 v3 k4 v4 k5 v5 k6 v6 kvs)))
 
 ;; TODO TYPED `apply`, variadic
-#_(defnt !sorted-map-by-val > !sorted-map|ref->ref? [m & kvs]
+#_(t/defn !sorted-map-by-val > !sorted-map|ref->ref? [m & kvs]
   (apply !sorted-map-by (gen-compare-by-val m) kvs))
 
 ;; ----- General Maps ----- ;;

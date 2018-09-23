@@ -7,7 +7,7 @@
            [cuerdas.core              :as str+]
  #?@(:clj [[environ.core              :as env]]))
 #?(:cljs (:require-macros
-           [quantum.untyped.core.core :as this])))
+           [quantum.untyped.core.core :as self])))
 
 ;; ===== Environment ===== ;;
 

@@ -4,7 +4,7 @@
   (:refer-clojure :exclude
     [keyword? symbol?])
   (:require
-    [quantum.core.data.meta    :as dm
+    [quantum.core.data.meta
       :refer [>meta]]
     [quantum.core.data.string  :as dstr
       :refer [str? >str]]

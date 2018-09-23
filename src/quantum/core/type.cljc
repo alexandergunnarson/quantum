@@ -1,7 +1,7 @@
 (ns quantum.core.type
   "This is this the namespace upon which all other fully-typed namespaces rest."
   (:refer-clojure :exclude
-    [* - and any? fn fn? isa? not or ref seq? symbol? var?])
+    [* - and any? defn fn fn? isa? not or ref seq? symbol? var?])
   (:require
     [quantum.untyped.core.type.defnt :as udefnt]
     [quantum.untyped.core.type       :as ut]
@@ -9,12 +9,14 @@
     [quantum.untyped.core.vars
       :refer [defalias defaliases]]))
 
-(defalias udefnt/fnt)
-(defalias udefnt/defnt)
+(defalias udefnt/fnt) ; TODO TYPED rename
+(defalias udefnt/defn)
 
 (defaliases ut
   ;; Generators
-  ? * isa? fn value
+  ? * isa?
+  fn ; TODO TYPED rename
+  value
   ;; Combinators
   and or - if not
   ;; Metadata suppliers
@@ -25,11 +27,7 @@
   none?
   ref?
   fn?
-  metable?
-  seq?
-  symbol?
-  var?
-  with-metable?)
+  seq?)
 
 
 ;; TODO TYPED move

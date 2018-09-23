@@ -6,7 +6,7 @@
       :refer [fn->]]
     [quantum.core.logic
       :refer [fn-and]]
-    [quantum.core.defnt                :as this
+    [quantum.core.defnt                :as self
       :refer [!ref analyze defnt]]
     [quantum.core.macros.type-hint     :as th]
     [quantum.core.type.defs            :as tdef]
@@ -44,7 +44,7 @@
 ;; ===== End type predicates ===== ;;
 
 (deftest test|arg-types>split
-  (is= (this/arg-types>split
+  (is= (self/arg-types>split
          [(t/or byte? double? string?)
           (t/or t/map? byte?)])
        [[(t/isa? Byte)   (t/isa? clojure.lang.ITransientMap)]
@@ -65,7 +65,7 @@
 (deftest test|methods->spec
   (testing "Class hierarchy"
     (is=
-      (this/methods->spec
+      (self/methods->spec
         [{:rtype Object :argtypes [int? char?]}
          {:rtype Object :argtypes [String]}
          {:rtype Object :argtypes [CharSequence]}
@@ -82,7 +82,7 @@
                     t/char? (t/? t/object?))))))
   (testing "Complex dispatch based off of `Numeric/bitAnd`"
     (is=
-      (this/methods->spec
+      (self/methods->spec
         [{:rtype t/int?   :argtypes [t/int?   t/char?]}
          {:rtype t/int?   :argtypes [t/int?   t/byte?]}
          {:rtype t/int?   :argtypes [t/int?   t/short?]}
@@ -358,7 +358,7 @@
 
 ;; ----- Implicit compilation tests ----- ;;
 
-(this/defnt abcde "Documentation" {:metadata "fhgjik"}
+(self/defnt abcde "Documentation" {:metadata "fhgjik"}
   ([a number? > number?] (inc a))
   ([a pos-int?, b pos-int?
     | (> a b)
@@ -382,23 +382,23 @@
            a b c ca cb cc cca ccaa ccab ccabaa ccabab ccababa ccabb ccabc d da db ea f fa)
     > number?] 0))
 
-(this/defns basic [a number? > number?] (rand))
+(self/defns basic [a number? > number?] (rand))
 
 (defspec-test test|basic `basic)
 
-(this/defns equality [a number? > #(= % a)] a)
+(self/defns equality [a number? > #(= % a)] a)
 
 (defspec-test test|equality `equality)
 
-(this/defns pre-post [a number? | (> a 3) > #(> % 4)] (inc a))
+(self/defns pre-post [a number? | (> a 3) > #(> % 4)] (inc a))
 
 (defspec-test test|pre-post `pre-post)
 
-(this/defns gen|seq|0 [[a number? b number? :as b] ^:gen? (s/tuple double? double?)])
+(self/defns gen|seq|0 [[a number? b number? :as b] ^:gen? (s/tuple double? double?)])
 
 (defspec-test test|gen|seq|0 `gen|seq|0)
 
-(this/defns gen|seq|1
+(self/defns gen|seq|1
   [[a number? b number? :as b] ^:gen? (s/nonconforming (s/cat :a double? :b double?))])
 
 (defspec-test test|gen|seq|1 `gen|seq|1)

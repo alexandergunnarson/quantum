@@ -176,7 +176,7 @@
   [env    #_::env
    form   #_::t/form
    target #_::node
-   field  #_id/unqualified-symbol?
+   field  #_unqualified-symbol?
    type   #_t/type?]
   INode
   fipp.ednize/IOverride
@@ -192,7 +192,7 @@
   [env    #_::env
    form   #_::t/form
    target #_::node
-   method #_::id/unqualified-symbol?
+   method #_::unqualified-symbol?
    args   #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
    type   #_t/type?]
   INode

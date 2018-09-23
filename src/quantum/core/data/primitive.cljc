@@ -3,10 +3,7 @@
           [boolean? char? comparable? decimal? double? float? int? integer?])
         (:require
  #?(:cljs [com.gfredericks.goog.math.Integer :as int])
-          [quantum.core.type                 :as t
-            :refer [defnt]]
-          [quantum.core.vars
-            :refer [def-]])
+          [quantum.core.type                 :as t])
 #?(:clj (:import
           [java.nio ByteBuffer]
           [quantum.core Numeric Primitive])))
@@ -62,18 +59,18 @@
    Void      Void/TYPE}))
 
 #?(:clj
-(defnt box
-  ([x boolean? > (t/ref boolean?)] (Boolean/valueOf   x))
-  ([x byte?    > (t/ref byte?)]    (Byte/valueOf      x))
-  ([x char?    > (t/ref char?)]    (Character/valueOf x))
-  ([x short?   > (t/ref short?)]   (Short/valueOf     x))
-  ([x int?     > (t/ref int?)]     (Integer/valueOf   x))
-  ([x long?    > (t/ref long?)]    (Long/valueOf      x))
-  ([x float?   > (t/ref float?)]   (Float/valueOf     x))
-  ([x double?  > (t/ref double?)]  (Double/valueOf    x))))
+(t/defn ^:inline box
+  ([x boolean? > (t/assume (t/ref boolean?))] (Boolean/valueOf   x))
+  ([x byte?    > (t/assume (t/ref byte?))]    (Byte/valueOf      x))
+  ([x char?    > (t/assume (t/ref char?))]    (Character/valueOf x))
+  ([x short?   > (t/assume (t/ref short?))]   (Short/valueOf     x))
+  ([x int?     > (t/assume (t/ref int?))]     (Integer/valueOf   x))
+  ([x long?    > (t/assume (t/ref long?))]    (Long/valueOf      x))
+  ([x float?   > (t/assume (t/ref float?))]   (Float/valueOf     x))
+  ([x double?  > (t/assume (t/ref double?))]  (Double/valueOf    x))))
 
 #?(:clj
-(defnt unbox
+(t/defn ^:inline unbox
   ([x (t/ref boolean?) > boolean?] (.booleanValue x))
   ([x (t/ref byte?)    > byte?]    (.byteValue    x))
   ([x (t/ref char?)    > char?]    (.charValue    x))
@@ -85,7 +82,7 @@
 
 ;; ===== Extreme magnitudes and values ===== ;;
 
-(defnt ^:inline >min-magnitude
+(t/defn ^:inline >min-magnitude
   #?(:clj ([x byte?   > byte?]            (byte  0)))
   #?(:clj ([x short?  > short?]           (short 0)))
   #?(:clj ([x char?   > char?]            (char  0)))
@@ -95,11 +92,11 @@
           ([x double? > double?] #?(:clj  Double/MIN_VALUE
                                     :cljs js/Number.MIN_VALUE)))
 
-#?(:clj (def- min-float  (- Float/MAX_VALUE)))
-        (def- min-double (- #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
+#?(:clj (def ^:private min-float  (- Float/MAX_VALUE)))
+        (def ^:private min-double (- #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
 
 ;; TODO TYPED for some reason it's not figuring out the type of `min-float` and `min-double`
-#_(defnt ^:inline >min-value
+#_(t/defn ^:inline >min-value
   #?(:clj ([x byte?   > byte?]   Byte/MIN_VALUE))
   #?(:clj ([x short?  > short?]  Short/MIN_VALUE))
   #?(:clj ([x char?   > char?]   Character/MIN_VALUE))
@@ -108,7 +105,7 @@
   #?(:clj ([x float?  > float?]  min-float))
           ([x double? > double?] min-double))
 
-(defnt ^:inline >max-value
+(t/defn ^:inline >max-value
   #?@(:clj [([x byte?   > byte?]           Byte/MAX_VALUE)
             ([x short?  > short?]          Short/MAX_VALUE)
             ([x char?   > char?]           Character/MAX_VALUE)
@@ -119,17 +116,17 @@
 
 ;; ===== Primitive type properties ===== ;;
 
-(defnt ^:inline signed?
+(t/defn ^:inline signed?
           ([x (t/or char?    (t/value Character))]             false)
 #?@(:clj [([x (t/or byte?    (t/value Byte)
                     short?   (t/value Short)
                     int?     (t/value Integer)
                     long?    (t/value Long)
                     float?   (t/value Float)
-                    double?  #?(:clj Double :cljs js/Number))] true)))
+                    double?  #?(:clj Double :cljs js/Number))] true)]))
 
 ;; TODO TYPED `t/numerically-integer?`
-(defnt ^:inline >bit-size ; > t/numerically-integer?
+(t/defn ^:inline >bit-size ; > t/numerically-integer?
           ([x (t/or boolean? (t/value #?(:clj Boolean :cljs js/Boolean)))] 1) ; kind of
 #?@(:clj [([x (t/or byte?    (t/value Byte))]                              8)
           ([x (t/or short?   (t/value Short))]                             16)
@@ -142,11 +139,11 @@
 ;; ===== Conversion ===== ;;
 
 (def radix? (fnt [x integer?]
-              (<= #?(:clj Character/MIN_RADIX :cljs 2) x #?(:clj Character/MAX_RADIX :cljs 36)))
+              (<= #?(:clj Character/MIN_RADIX :cljs 2) x #?(:clj Character/MAX_RADIX :cljs 36))))
 
 ;; ----- Boolean ----- ;;
 
-(defnt ^:inline >boolean > boolean?
+(t/defn ^:inline >boolean > boolean?
   ([x boolean?] x)
   ([x (t/value "true")] true)
   ([x (t/value "false")] false)   ;; For purposes of intrinsics
@@ -157,12 +154,12 @@
 ;; Forward-declared so `radix?` coercion to `int` works
 
 #?(:clj
-(defnt ^:inline >int* > int?
+(t/defn ^:inline >int* > int?
   "May involve non-out-of-range truncation"
   ([x int?] x)                        ;; For purposes of intrinsics
   ([x (t/- primitive? int? boolean?)] (clojure.lang.RT/uncheckedIntCast x))))
 
-(defnt ^:inline >int > #?(:clj int? :cljs numerically-int?)
+(t/defn ^:inline >int > #?(:clj int? :cljs numerically-int?)
   "May involve non-out-of-range truncation"
        ([x #?(:clj int? :cljs numerically-int?)] x)
 #?(:clj  ([x (t/and (t/- primitive? int? boolean?) (range-of int?))] (>int* x))
@@ -333,14 +330,14 @@
 ;; ===== Unsigned ===== ;;
 
 #?(:clj
-(defnt >unsigned
+(t/defn >unsigned
   {:adapted-from #{'ztellman/primitive-math 'gloss.data.primitives}}
   ([x byte?]  (Numeric/bitAnd (short 0xFF)       x))
   ([x short?] (Numeric/bitAnd (int   0xFFFF)     x))
   ([x int?]   (Numeric/bitAnd (long  0xFFFFFFFF) x))
   ([x long?]  (BigInteger. 1 (-> (ByteBuffer/allocate 8) (.putLong x) .array))))) ; TODO reflection
 
-#?(:clj (defnt ubyte>byte   [x long?   > long?] (>long (>byte   x))))
-#?(:clj (defnt ushort>short [x long?   > long?] (>long (>short  x))))
-#?(:clj (defnt uint>int     [x long?   > long?] (>long (>int    x))))
-#?(:clj (defnt ulong>long   [x bigint? > long?] (>long (>bigint x))))
+#?(:clj (t/defn ubyte>byte   [x long?   > long?] (>long (>byte   x))))
+#?(:clj (t/defn ushort>short [x long?   > long?] (>long (>short  x))))
+#?(:clj (t/defn uint>int     [x long?   > long?] (>long (>int    x))))
+#?(:clj (t/defn ulong>long   [x bigint? > long?] (>long (>bigint x))))

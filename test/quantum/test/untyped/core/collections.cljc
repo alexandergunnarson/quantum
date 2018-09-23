@@ -2,14 +2,14 @@
   (:require
     [quantum.core.test
       :refer [deftest is is= testing]]
-    [quantum.untyped.core.collections :as this]))
+    [quantum.untyped.core.collections :as self]))
 
 (deftest test|flatten
-  (is= (this/flatten [[0 1] [2 3 4]] 0)
+  (is= (self/flatten [[0 1] [2 3 4]] 0)
        [[0 1] [2 3 4]])
 
-  (is= (this/flatten [[0 1] [2 3 4]] 1)
+  (is= (self/flatten [[0 1] [2 3 4]] 1)
        [0 1 2 3 4])
 
-  (is= (this/flatten [[[0 1]] [[2 3 4]]] 2)
+  (is= (self/flatten [[[0 1]] [[2 3 4]]] 2)
        [0 1 2 3 4]))

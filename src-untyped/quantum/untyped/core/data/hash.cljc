@@ -2,9 +2,9 @@
          (:refer-clojure :exclude
            [hash])
          (:require
-           [clojure.core :as core])
+           [clojure.core                   :as core])
 #?(:cljs (:require-macros
-           [quantum.untyped.core.data.hash :as this])))
+           [quantum.untyped.core.data.hash :as self])))
 
 (def ^:const default -1)
 
