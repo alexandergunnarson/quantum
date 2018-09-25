@@ -98,26 +98,6 @@
 
  (log/this-ns)
 
-; FastUtil is the best
-; http://java-performance.info/hashmap-overview-jdk-fastutil-goldman-sachs-hppc-koloboke-trove-january-2015/
-
-; TODO notify of changes to:
-; https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/RT.java
-; https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Util.java
-; https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Numbers.java
-; TODO Queues need support
-
-; TODO implement all these using wagjo/data-cljs
-; split-at [o index] - clojure.core/split-at
-; splice [o index n val] - fast remove and insert in one go
-; splice-arr [o index n val-arr] - fast remove and insert in one go
-; insert-before [o index val] - insert one item inside coll
-; insert-before-arr [o index val] - insert array of items inside coll
-; remove-at [o index] - remove one itfem from index pos
-; remove-n [o index n] - remove n items starting at index pos
-; rip [o index] - rips coll and returns [pre-coll item-at suf-coll]
-; sew [pre-coll item-arr suf-coll] - opposite of rip, but with arr
-
 ; Arbitrary.
 ; TODO test this on every permutation for inflection point.
 (def- parallelism-threshold 10000)
@@ -267,28 +247,6 @@
   {:performance "On non-counted collections, `count` is 71.542581 ms, whereas
                  `reduce-count` is 36.824665 ms - twice as fast"}
   [xs] (reduce count:rf xs))
-
-(defnt ^long count
-  "Incorporated `clojure.lang.RT/count` and `clojure.lang.RT/countFrom`"
-  {:todo #{"handle persistent maps"}}
-           ([^array?       x] (#?(:clj Array/count :cljs .-length) x))
-           ([^tuple?       x] (count (.-vs x)))
-  #?(:cljs ([^string?      x] (.-length   x)))
-  #?(:cljs ([^!string?     x] (.getLength x)))
-  #?(:clj  ([^char-seq?    x] (.length x)))
-           ([^keyword?     x] (count ^String (name x)))
-           ([^m2m-chan?    x] (count (#?(:clj .buf :cljs .-buf) x)))
-           ([^+vector?        x] (#?(:clj .count :cljs core/count) x))
-  #?(:clj  ([#{Collection Map} x] (.size x)))
-  #?(:clj  ([^Counted      x] (.count x)))
-  #?(:clj  ([^Map$Entry    x] (if (nil? x) 0 2))) ; TODO fix this potential null issue
-           ([^transformer? x] (reduce-count x))
-           ([^default      x] (if (nil? x)
-                                  0
-                                  (core/count x) ; TODO need to fix this so certain interfaces are preferred
-                                #_(throw (>ex-info "`count` not supported on type" {:type (type x)})))))
-
-; TODO `pcount`
 
 (defnt empty?
   {:todo #{"import clojure.lang.RT/seq"}}
