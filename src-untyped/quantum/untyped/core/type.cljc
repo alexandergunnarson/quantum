@@ -622,6 +622,15 @@
 #?(:clj  (-def  float?   (isa? Float)))
          (-def  double?  (isa? #?(:clj Double :cljs js/Number)))
 
+         ;; These are special for CLJS protocols
+#?(:cljs (-def  native?  (or (isa? js/Boolean)
+                             (isa? js/Number)
+                             (isa? js/Object)
+                             (isa? js/Array)
+                             (isa? js/String)
+                             (isa? js/Function)
+                             nil?)))
+
 ;; ===== Booleans ===== ;;
 
          (-def true?  (value true))

@@ -36,7 +36,21 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
                     ;; TODO TYPED automatically figure out that `inc` will never go out of bounds here
                     (recur (inc* i) ret)))
               v)))
+    - (let [xs' (seq xs)]
+        (if (dcomp/== (class xs') (class xs))
+            (reduce-seq rf ret xs')
+            ;; TODO TYPED automatically figure out that:
+            ;; - `(not (dcomp/== (class xs') (class xs)))`
+            ;; - What the possible types of xs' are as a result
+            (reduce rf init xs')))
+    - ([rf rf?, init t/any?, xs #?(:clj  (t/isa? clojure.core.protocols/CollReduce)
+                                   :cljs (t/isa|direct? cljs.core/IReduce))]
+        ;; TODO add `^not-native` to `xs` for CLJS
+        (#?(:clj  clojure.core.protocols/coll-reduce
+            :cljs cljs.core/-reduce) xs rf init))
   - t/- : multi-arity
+  - t/isa|direct?
+    - For CLJ, this is `instance?`; for CLJS, this is `instance?` for classes and `implements?` for protocols
   - t/value-of
     - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
   - t/numerically : e.g. a double representing exactly what a float is able to represent
