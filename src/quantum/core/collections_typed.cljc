@@ -150,22 +150,6 @@
 
 ;; ===== Reductive functions ===== ;;
 
-;; TODO excise
-#?(:cljs
-(defn- -reduce-seq
-  "For some reason |reduce| is not implemented in ClojureScript for certain types.
-   This is a |loop|-|recur| replacement for it."
-  {:todo #{"Check if this is really the case..."
-           "Improve performance with chunking, etc."}}
-  [xs f init]
-  (loop [xs (>seq xs) v init]
-    (if xs
-        (let [ret (f v (first xs))]
-          (if (reduced? ret)
-              @ret
-              (recur (next xs) ret)))
-        v))))
-
 ;; TODO: conditionally optional arities etc. for t/fn
 
 (var/def rf? "Reducing function"
@@ -332,30 +316,29 @@
   "`reduce`, indexed.
    Uses an unsynchronized mutable counter internally, but this cannot cause race conditions if
    `reduce` is implemented correctly (this includes single-threadedness)."
-  [f rfi?, init t/any?, xs dc/reducible?]
-  (let [f' (let [!i (ref/! -1)]
-             (t/fn ([ret ? x ...]       (f ret x   (ref/reset! !i (num/inc* (ref/deref !i)))))
-                   ([ret ? k ... v ...] (f ret k v (ref/reset! !i (num/inc* (ref/deref !i)))))))]
-    (reduce f' init xs)))
+  [rf rfi?, init t/any?, xs dc/reducible?]
+  (let [rf' (let [!i (ref/! -1)]
+              (fn/aritoid rf' rf'
+                (t/fn ([ret ?, x ?]
+                  (rf ret x   (ref/reset! !i (num/inc* (ref/deref !i))))))
+                (t/fn ([ret ?, k ?, v ?]
+                  (rf ret k v (ref/reset! !i (num/inc* (ref/deref !i))))))))]
+    (reduce rf' init xs)))
 
 (var/def xf? "Transforming function"
   (t/ftype [rf? :> rf?]))
 
 (t/defn ^:inline transduce >
-  ([        f rf?,              xs dc/reducible?] (transduce fn/identity f     xs))
-  ([xf xf?, f rf?,              xs dc/reducible?] (transduce xf          f (f) xs))
-  ([xf xf?, f rf?, init t/any?, xs dc/reducible?] (let [f' (xf f)] (f' (reduce f' init xs)))))
-
-;; TODO incorporate
-(... async-transduce
-  "async/reduces a channel with a transformation (xform f).
-  Returns a channel containing the result.  ch must close before
-  transduce produces a result."
-  [xform f init ch]
-  (let [f (xform f)]
-    (go
-     (let [ret (<! (reduce f init ch))]
-       (f ret)))))
+  ([        rf rf?,              xs (t/input-type reduce :_ :_ :?)]
+    (transduce fn/identity rf      xs))
+  ([xf xf?, rf rf?,              xs (t/input-type reduce :_ :_ :?)]
+    (transduce xf          rf (rf) xs))
+  ([xf xf?, rf rf?, init t/any?, x  dasync/read-chan?]
+    (let [rf' (xf rf)]
+      (async/go
+        (rf' (async/<! (reduce rf' init x))))))
+  ([xf xf?, rf rf?, init t/any?, xs dc/reducible?]
+    (let [rf' (xf rf)] (rf' (reduce rf' init xs)))))
 
 ;; ===== End reductive functions ===== ;;
 

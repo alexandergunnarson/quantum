@@ -51,7 +51,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - (if (A) ...) should be (if ^boolean (A) ...) if A returns a `p/boolean?`
   - t/- : multi-arity
   - t/isa|direct?
-    - For CLJ, this is `instance?`; for CLJS, this is `instance?` for classes and `implements?` for protocols
+    - For CLJ, this is `instance?` for classes and `instance?` on the underlying interface
+      associated with a protocol
+    - For CLJS, this is `instance?` for classes and `implements?` for protocols
   - t/value-of
     - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
   - t/numerically : e.g. a double representing exactly what a float is able to represent
@@ -65,7 +67,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - use logic programming and variable unification e.g. `?1` `?2` ?
   - t/extend-defnt!
   - t/input-type
-    - `(t/input-type >namespace t/?)` meaing the possible input types to the first input to `>namespace`
+    - `(t/input-type >namespace :?)` meaing the possible input types to the first input to `>namespace`
   - t/of
     - (t/of number?) ; implicitly the container is a `traversable?`
     - (t/of map/+map? symbol? dstr/string?)
