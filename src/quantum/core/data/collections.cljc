@@ -12,6 +12,41 @@
 
 (def record? (t/isa? #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
 
+;; TODO CLJS
+(def iseq? (t/isa? #?(:clj clojure.lang.ISeq :cljs ...)))
+
+;; TODO CLJS
+(def chunk-buffer? #?(:clj  (t/isa? clojure.lang.ChunkBuffer)
+                      :cljs ...))
+
+;; TODO CLJS
+(def chunk? #?(:clj  (t/isa? clojure.lang.IChunk)
+               :cljs ...))
+
+;; TODO CLJS
+(def chunked-seq? #?(:clj  (t/isa? clojure.lang.IChunkedSeq)
+                     :cljs ...))
+
+;; TODO CLJS
+#?(:clj
+(def string-seq? (t/isa? clojure.lang.StringSeq)))
+
+;; TODO CLJS
+#?(:clj
+(def range? (t/or (t/isa? clojure.lang.Range) (t/isa? clojure.lang.LongRange))))
+
+;; TODO CLJS
+#?(:clj
+(def array-seq?
+  (t/or (t/isa? clojure.lang.ArraySeq)
+        (t/isa? clojure.lang.ArraySeq$ArraySeq_byte)
+        (t/isa? clojure.lang.ArraySeq$ArraySeq_short)
+        (t/isa? clojure.lang.ArraySeq$ArraySeq_char)
+        (t/isa? clojure.lang.ArraySeq$ArraySeq_int)
+        (t/isa? clojure.lang.ArraySeq$ArraySeq_long)
+        (t/isa? clojure.lang.ArraySeq$ArraySeq_float)
+        (t/isa? clojure.lang.ArraySeq$ArraySeq_double))))
+
 (def sorted?
   (t/or (t/isa? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
         #?@(:clj  [(t/isa? java.util.SortedMap)
@@ -44,6 +79,7 @@
   (t/or (t/isa? #?(:clj clojure.lang.Sequential :cljs cljs.core/ISequential))
         list? indexed?))
 
+;; If something is `counted?`, it implements a constant-time `count`
 (def counted?
   (t/or (t/isa? #?(:clj clojure.lang.Counted :cljs cljs.core/ICounted))
         #?(:clj dstr/char-seq? :cljs dstr/string?) vec/vector? map/map? set/set? arr/array?))
