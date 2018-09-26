@@ -22,10 +22,20 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  - (if (dcoll/reduced? ret)
-        ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`
-        (ref/deref ret)
-        ...)
+  - Analysis
+    - (if (dcoll/reduced? ret)
+          ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`
+          (ref/deref ret)
+          ...)
+    - (let [ct (count arr)]
+        (loop [i 0 v init]
+          (if (comp/< i ct)
+              (let [ret (f v (get arr i))]
+                (if (reduced? ret)
+                    @ret
+                    ;; TODO TYPED automatically figure out that `inc` will never go out of bounds here
+                    (recur (inc* i) ret)))
+              v)))
   - t/- : multi-arity
   - t/value-of
     - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
@@ -57,6 +67,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - declare-fnt (a way to do protocols/interfaces)
     - extend-fnt!
   - defnt (t/defn)
+    - t/defn-
     - (t/and (t/or a b) c) should -> (t/or (t/and a c) (t/and b c)) for purposes of separating dispatches
     - t/extend-defn!
       - `(t/extend-defn! id/>name (^:inline [x namespace?] (-> x .getName id/>name)))`
@@ -213,6 +224,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - :todo #{<todo-string>}
     - :attribution <github-username-symbol | string-description>
     - :doc <string-documentation>
+    - :incorporated #{<namespace-or-class-symbol | <function-or-method-symbol>}
   - Instead of e.g. `ns-` or `var-` we can do `ns-val` and `var-val`
   - Should we type `when`, `let`?
 

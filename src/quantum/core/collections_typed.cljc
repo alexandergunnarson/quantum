@@ -1,10 +1,11 @@
 (ns quantum.core.collections-typed
   (:refer-clojure :exclude
-    [count empty? get reduce])
+    [count empty? get nth reduce])
   (:require
     [quantum.core.data.array       :as arr]
     [quantum.core.data.async       :as dasync]
     [quantum.core.data.collections :as dcoll]
+    [quantum.core.data.compare     :as dcomp]
     [quantum.core.data.identifiers :as id]
     [quantum.core.data.map         :as map]
     [quantum.core.data.numeric     :as dnum]
@@ -13,6 +14,8 @@
     [quantum.core.data.vector      :as vec]
     [quantum.core.data.tuple       :as tup]
     [quantum.core.fn               :as fn]
+    [quantum.core.numeric
+      :refer [inc*]]
     [quantum.core.type             :as t]
     [quantum.core.vars             :as var]))
 
@@ -39,6 +42,62 @@
 - TODO `(rreduce [f init o]) - like reduce but in reverse order = Equivalent to Scheme's `foldr`
 "
 
+;; ===== Access functions ===== ;;
+
+;; TODO for CLJS we should do !+vector
+(t/defn get
+  "Retrieve the value in `xs` associated with the key `k`.
+
+   The expectation, which is not enforced, is that this retrieval will take place in sublinear time.
+   O(1) is best; O(log32(n)) is common; and O(log(n)) is acceptable."
+  {:todo         {0 "Need to excise non-O(1) `nth`"}
+   :incorporated #{'clojure.lang.RT/get}}
+  #?(:clj  ([^clojure.lang.ILookup            x            k             ] (.valAt x k)))
+  #?(:clj  ([^clojure.lang.ILookup            x            k if-not-found] (.valAt x k if-not-found)))
+  #?(:clj  ([#{java.util.Map clojure.lang.IPersistentSet}
+                                              x            k             ] (.get x k)))
+  #?(:clj  ([#{!map|byte->any?}               x ^byte      k             ] (.get x k)))
+  #?(:clj  ([#{!map|char->any?}               x ^char      k             ] (.get x k)))
+  #?(:clj  ([#{!map|short->any?}              x ^short     k             ] (.get x k)))
+  #?(:clj  ([#{!map|int->any?}                x ^int       k             ] (.get x k)))
+  #?(:clj  ([#{!map|long->any?}               x ^long      k             ] (.get x k)))
+  #?(:clj  ([#{!map|float->ref?}              x ^float     k             ] (.get x k)))
+  #?(:clj  ([#{!map|double->ref?}             x ^double    k             ] (.get x k)))
+           ([^string?                         x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.charAt x i)))
+  #?(:clj  ([^!array-list?                    x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.get    x i))))
+           ([#{string? #?(:clj !array-list?)} x ^nat-long? i             ] (get      x i nil))
+
+           ([^array-1d? x #?(:clj #{int}) i1]
+            (#?(:clj  Array/get
+                :cljs core/aget) x i1))
+           #?(:clj ([#{array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x
+            ^int i1]
+            (Array/get x i1)))
+           ([^tuple?                          x ^nat-long? i             ] (get (.-vs x) i))
+           ([^seq?                            x            i             ] (core/nth x i nil         ))
+           ([^seq?                            x            i if-not-found] (core/nth x i if-not-found))
+           ; TODO look at clojure.lang.RT/get for how to handle these edge cases efficiently
+  #?(:cljs ([^nil?                            x            i             ] (core/get x i nil         )))
+  #?(:cljs ([^nil?                            x            i             ] (core/get x i nil         )))
+  #?(:cljs ([^nil?                            x            i if-not-found] (core/get x i if-not-found)))
+           ([^default                         x            i             ]
+              (if (nil? x)
+                  nil
+                  (throw (ex-info "`get` not supported on" {:type (type x)}))))
+         #_([                                 x            i if-not-found] (core/get x i if-not-found)))
+
+;; TODO implement
+(t/defn nth
+  "Retrieve the element from `xs` at the index `i`.
+
+   In contrast to `get`, this may or may not happen in sublinear time, but it is expected (though
+   not enforced) that a type-specialization of `nth` will provide the most efficient implementation
+   possible.
+
+   Prefer to `get` when retrieving elements at indices unless expectations of sublinear time are
+   necessary."
+  ...)
+
 ;; ===== Reductive functions ===== ;;
 
 #?(:cljs
@@ -64,109 +123,185 @@
            "reducing arity"         [t/any? t/any?]
            "reducing arity for kvs" [t/any? t/any? t/any?]))
 
+(t/defn- ^:inline string-seq>underlying-string
+  [xs (t/isa? clojure.lang.StringSeq) > (t/assume dstr/str?)] (.s xs))
+
+(defn- seq-reduce
+  ([coll f]
+     (if-let [s (seq coll)]
+       (internal-reduce (next s) f (first s))
+       (f)))
+  ([coll f val]
+     (let [s (seq coll)]
+       (internal-reduce s f val))))
+
+(defn- naive-seq-reduce
+  "Reduces a seq, ignoring any opportunities to switch to a more
+  specialized implementation."
+  [s f val]
+  (loop [s (seq s)
+         val val]
+    (if s
+      (let [ret (f val (first s))]
+        (if (reduced? ret)
+          @ret
+          (recur (next s) ret)))
+      val)))
+
+(extend-protocol InternalReduce
+  nil
+  (internal-reduce
+   [s f val]
+   val)
+
+  ;; handles vectors and ranges
+  clojure.lang.IChunkedSeq
+  (internal-reduce
+   [s f val]
+   (if-let [s (seq s)]
+     (if (chunked-seq? s)
+       (let [ret (.reduce (chunk-first s) f val)]
+         (if (reduced? ret)
+           @ret
+           (recur (chunk-next s)
+                  f
+                  ret)))
+       (if (instance? clojure.lang.IReduceInit s)
+         (.reduce ^clojure.lang.IReduceInit s f val)
+         (naive-seq-reduce s f val)))
+     val))
+
+  clojure.lang.StringSeq
+  (internal-reduce
+   [str-seq f val]
+   (let [s (.s str-seq)
+         len (.length s)]
+     (loop [i (.i str-seq)
+            val val]
+       (if (< i len)
+         (let [ret (f val (.charAt s i))]
+                (if (reduced? ret)
+                  @ret
+                  (recur (inc i) ret)))
+         val))))
+
+  java.lang.Object
+  (internal-reduce
+   [s f val]
+   (loop [cls (class s)
+          s s
+          f f
+          val val]
+     (if-let [s (seq s)]
+       (if (identical? (class s) cls)
+         (let [ret (f val (first s))]
+                (if (reduced? ret)
+                  @ret
+                  (recur cls (next s) f ret)))
+         (if (instance? clojure.lang.IReduceInit s)
+           (.reduce ^clojure.lang.IReduceInit s f val)
+           (naive-seq-reduce s f val)))
+       val))))
+
+(extend-protocol CollReduce
+  Object ; (default)
+  ;;aseqs are iterable, masking internal-reducers
+  clojure.lang.ASeq
+  ;;vector's chunked seq is faster than its iter
+  clojure.lang.PersistentVector
+  ;;for range
+  clojure.lang.LazySeq
+  (coll-reduce
+   ([coll f] (seq-reduce coll f))
+   ([coll f val] (seq-reduce coll f val)))
+)
+
+;; TODO TYPED do type inference based on the rf's. We can sometimes figure out what gets returned
+;; based on what is passed in
 (t/defn reduce
   "Like `core/reduce` except:
    - When init is not provided, (f) is used.
-   - Maps are reduced with `reduce-kv`.
+   - Maps are reduced as if with `reduce-kv`.
 
-   Equivalent to Scheme's `foldl`.
-
-   Much of this content taken from clojure.core.protocols for inlining and
-   type-checking purposes."
+   Equivalent to Scheme's `foldl`."
+   {:incorporated '{clojure.core/reduce    "9/25/2018"
+                    clojure.core/reduce-kv "9/25/2018"
+                    clojure.core.protocols "9/25/2018"
+                    cljs.core/reduce-kv    "9/25/2018"
+                    cljs.core/array-reduce "9/25/2018"}}
          ([rf rf?, xs ?] (reduce rf (rf) xs))
          ([rf rf?, init t/any?, xs p/nil?] init)
          ([rf rf?, init t/any?, z (t/isa? fast_zip.core.ZipperLocation)]
            (loop [xs (zip/down z), v init]
-             (if (val? z)
+             (if (p/val? z)
                  (let [ret (rf v z)]
                    (if (dcoll/reduced? ret)
                        ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`
                        (ref/deref ret)
                        (recur (zip/right xs) ret)))
                  v)))
-         ([f init ^array? arr] ; Adapted from `areduce`
-           #?(:clj  (let [ct (Array/count arr)]
-                      (loop [i 0 v init]
-                        (if (< i ct)
-                            (let [ret (f v (Array/get arr i))]
-                              (if (reduced? ret)
-                                  @ret
-                                  (recur (unchecked-inc i) ret)))
-                            v)))
-              :cljs (array-reduce arr f init)))
-         ([f init ^!+vector? xs] ; because transient vectors aren't reducible
-           (let [ct (#?(:clj .count :cljs count) xs)] ; TODO fix for CLJS
+         ;; - Adapted from `areduce`
+         ;; - `!+vector?` included because transient vectors aren't reducible
+         ([rf rf?, init t/any?, xs (t/or dstr/str? arr/array? vec/!+vector?)]
+           ;; TODO forward-declare `count`
+           (let [ct (count xs)]
              (loop [i 0 v init]
-               (if (< i ct)
-                   (let [ret (f v (#?(:clj .valAt :cljs get) xs i))] ; TODO fix for CLJS
-                     (if (reduced? ret)
-                         @ret
-                         (recur (unchecked-inc i) ret)))
+               (if (comp/< i ct)
+                   (let [ret (rf v (get xs i))]
+                     (if (dcoll/reduced? ret)
+                         (ref/deref ret)
+                         ;; TODO TYPED automatically figure out that `inc` will never go out of bounds here
+                         (recur (inc* i) ret)))
                    v))))
-         ([f init ^string? s]
-           (let [ct (#?(:clj .length :cljs .-length) s)]
-             (loop [i 0 v init]
-               (if (< i ct)
-                   (let [ret (f v (.charAt s i))]
-                     (if (reduced? ret)
-                         @ret
-                         (recur (unchecked-inc i) ret)))
-                   v))))
-#?(:clj  ([f init ^clojure.lang.StringSeq xs ]
-           (let [s (.s xs)]
-             (loop [i (.i xs) v init]
-               (if (< i (.length s))
-                   (let [ret (f v (.charAt s i))]
-                     (if (reduced? ret)
-                         @ret
-                         (recur (unchecked-inc i) ret)))
+#?(:clj  ([rf rf? init t/any?, xs (t/isa? clojure.lang.StringSeq)]
+           (let [s (string-seq>underlying-string xs)]
+             (loop [i (.index xs) v init]
+               (if (comp/< i (count s))
+                   (let [ret (rf v (get s i))]
+                     (if (dcoll/reduced? ret)
+                         (ref/deref ret)
+                         (recur (inc* i) ret)))
                    v)))))
-#?(:clj  ([f
+         ;; TODO refine
+#?(:clj  ([rf rf?
            #{clojure.lang.PersistentVector ; vector's chunked seq is faster than its iter
                         clojure.lang.LazySeq ; for range
                         clojure.lang.ASeq} xs] ; aseqs are iterable, masking internal-reducers
            (if-let [s (seq xs)]
              (clojure.core.protocols/internal-reduce (next s) f (first s))
              (f))))
+         ;; TODO refine
 #?(:clj  ([f init
            #{clojure.lang.PersistentVector ; vector's chunked seq is faster than its iter
              clojure.lang.LazySeq ; for range
              clojure.lang.ASeq} xs]  ; aseqs are iterable, masking internal-reducers
            (let [s (seq xs)]
              (clojure.core.protocols/internal-reduce s f init))))
+         ;; TODO refine
          ([f ^transformer? x]
            (let [rf ((.-xf x) f)]
              (rf (reduce* (.-prev x) rf (rf)))))
+         ;; TODO refine
          ([f init ^transformer? x]
            (let [rf ((.-xf x) f)]
              (rf (reduce* (.-prev x) rf init))))
-         ([f init ^chan?   x ] (async/reduce f init x))
+         ;; TODO refine
+         ([f init ^chan?   x]  (async/reduce f init x))
+         ;; TODO refine
 #?(:cljs ([f init ^+map?   xs] (#_(:clj  clojure.core.protocols/kv-reduce
                                    :cljs -kv-reduce) ; in order to use transducers...
                                 -reduce-seq xs f init)))
-#?(:cljs ([f init ^+set?   xs ] (-reduce-seq xs f init)))
-         ([f init #{#?(:clj integer? :cljs double?)} n]
+         ;; TODO refine
+#?(:cljs ([f init ^+set?   xs]  (-reduce-seq xs f init)))
+         ([rf rf?, init t/any?, n dnum/numerically-integer?]
            (loop [i 0 v init]
-             (if (< i n)
-                 (let [ret (f v i)]
-                   (if (reduced? ret)
-                       @ret
-                       (recur (unchecked-inc i) ret)))
+             (if (comp/< i n)
+                 (let [ret (rf v i)]
+                   (if (dcoll/reduced? ret)
+                       (ref/deref ret)
+                       (recur (inc* i) ret)))
                  v)))
-         ;; `iter-reduce`
-#?(:clj  ([f #{clojure.lang.APersistentMap$KeySeq
-               clojure.lang.APersistentMap$ValSeq
-               Iterable} xs]
-           (let [iter (.iterator xs)]
-             (if (.hasNext iter)
-                 (loop [ret (.next iter)]
-                   (if (.hasNext iter)
-                       (let [ret (f ret (.next iter))]
-                         (if (reduced? ret)
-                             @ret
-                             (recur ret)))
-                       ret))
-                 (f)))))
+         ;; TODO refine
          ;; `iter-reduce`
 #?(:clj  ([f init
            #{clojure.lang.APersistentMap$KeySeq
@@ -180,14 +315,40 @@
                          @ret
                          (recur ret)))
                    ret)))))
-#?(:clj  ([f      ^clojure.lang.IReduce     xs ] (.reduce   xs f)))
-#?(:clj  ([f init ^clojure.lang.IKVReduce   xs ] (.kvreduce xs f init)))
-#?(:clj  ([f init ^clojure.lang.IReduceInit xs ] (.reduce   xs f init)))
-         ([f init ^default              xs]
-           (if (val? xs)
-               (#?(:clj  clojure.core.protocols/coll-reduce
-                   :cljs -reduce) xs f init)
-               init)))
+#?(:clj  ([rf rf?, init t/any?, xs (t/isa? clojure.lang.IKVReduce)]   (.kvreduce xs rf init)))
+#?(:clj  ([rf rf?, init t/any?, xs (t/isa? clojure.lang.IReduceInit)] (.reduce   xs rf init)))
+         ;; TODO CLJS might be able to be done more efficiently with more specializations?
+         ([rf rf?, init t/any?, xs (t/isa? #?(:clj  clojure.core.protocols/IKVReduce
+                                              :cljs cljs.core/IKVReduce))]
+           (#?(:clj  clojure.core.protocols/kv-reduce
+               :cljs cljs.core/-kv-reduce) xs rf init))
+         ;; TODO CLJS might be able to be done more efficiently with more specializations?
+         ([rf rf?, init t/any?, xs (t/isa? #?(:clj  clojure.core.protocols/CollReduce
+                                              :cljs cljs.core/IReduce))]
+           (#?(:clj  clojure.core.protocols/coll-reduce
+               :cljs cljs.core/-reduce) xs rf init)))
+
+`cljs.core/reduce`
+;; TODO this probably shows that I need to research `^not-native`, `implements?`, `native-satisfies?`, and `satisfies?` in CLJS in order to do dispatch correctly
+([f val coll]
+     (cond
+       (implements? IReduce coll)
+       (-reduce ^not-native coll f val)
+
+       (array? coll)
+       (array-reduce coll f val)
+
+       (string? coll)
+       (array-reduce coll f val)
+
+       (native-satisfies? IReduce coll)
+       (-reduce coll f val)
+
+       (iterable? coll)
+       (iter-reduce coll f val)
+
+       :else
+       (seq-reduce f val coll)))
 
 (var/def rfi? "Reducing function, indexed"
   (t/ftype "seed arity"             []
@@ -215,6 +376,7 @@
 
 ;; ===== End reductive functions ===== ;;
 
+;; TODO make sure !+vector is handled for CLJS
 (t/defn count > dnum/integer?
   {:todo #{"handle persistent maps"}
    :incorporated #{'clojure.lang.RT/count
@@ -270,41 +432,3 @@
 #?(:clj ([x map/java-map?] (.isEmpty x)))
         ;; TODO TYPED
         ([^default          x] (core/empty? x)))
-
-
-(t/defn get
-  {:todo         {0 "Need to excise non-O(1) `nth`"}
-   :incorporated #{'clojure.lang.RT/get}}
-  #?(:clj  ([^clojure.lang.ILookup            x            k             ] (.valAt x k)))
-  #?(:clj  ([^clojure.lang.ILookup            x            k if-not-found] (.valAt x k if-not-found)))
-  #?(:clj  ([#{java.util.Map clojure.lang.IPersistentSet}
-                                              x            k             ] (.get x k)))
-  #?(:clj  ([#{!map|byte->any?}               x ^byte      k             ] (.get x k)))
-  #?(:clj  ([#{!map|char->any?}               x ^char      k             ] (.get x k)))
-  #?(:clj  ([#{!map|short->any?}              x ^short     k             ] (.get x k)))
-  #?(:clj  ([#{!map|int->any?}                x ^int       k             ] (.get x k)))
-  #?(:clj  ([#{!map|long->any?}               x ^long      k             ] (.get x k)))
-  #?(:clj  ([#{!map|float->ref?}              x ^float     k             ] (.get x k)))
-  #?(:clj  ([#{!map|double->ref?}             x ^double    k             ] (.get x k)))
-           ([^string?                         x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.charAt x i)))
-  #?(:clj  ([^!array-list?                    x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.get    x i))))
-           ([#{string? #?(:clj !array-list?)} x ^nat-long? i             ] (get      x i nil))
-
-           ([^array-1d? x #?(:clj #{int}) i1]
-            (#?(:clj  Array/get
-                :cljs core/aget) x i1))
-           #?(:clj ([#{array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x
-            ^int i1]
-            (Array/get x i1)))
-           ([^tuple?                          x ^nat-long? i             ] (get (.-vs x) i))
-           ([^seq?                            x            i             ] (core/nth x i nil         ))
-           ([^seq?                            x            i if-not-found] (core/nth x i if-not-found))
-           ; TODO look at clojure.lang.RT/get for how to handle these edge cases efficiently
-  #?(:cljs ([^nil?                            x            i             ] (core/get x i nil         )))
-  #?(:cljs ([^nil?                            x            i             ] (core/get x i nil         )))
-  #?(:cljs ([^nil?                            x            i if-not-found] (core/get x i if-not-found)))
-           ([^default                         x            i             ]
-              (if (nil? x)
-                  nil
-                  (throw (ex-info "`get` not supported on" {:type (type x)}))))
-         #_([                                 x            i if-not-found] (core/get x i if-not-found)))
