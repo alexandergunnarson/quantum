@@ -48,6 +48,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         ;; TODO add `^not-native` to `xs` for CLJS
         (#?(:clj  clojure.core.protocols/coll-reduce
             :cljs cljs.core/-reduce) xs rf init))
+    - (if (A) ...) should be (if ^boolean (A) ...) if A returns a `p/boolean?`
   - t/- : multi-arity
   - t/isa|direct?
     - For CLJ, this is `instance?`; for CLJS, this is `instance?` for classes and `implements?` for protocols

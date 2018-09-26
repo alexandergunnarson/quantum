@@ -124,19 +124,26 @@
 ;; ----- Sequences ----- ;;
 
 (t/defn ^:inline >seq
-  {:incorporated '{clojure.lang.RT/seq "9/26/2018"}}
+  {:incorporated '{clojure.lang.RT/seq "9/26/2018"
+                   clojure.core/seq    "9/26/2018"
+                   cljs.core/seq       "9/26/2018"}}
   > (t/? dc/iseq?)
-        ([x p/nil?] nil)
-#?(:clj ([x dc/aseq?] x))
-        ([x #?(:clj  (t/isa? clojure.lang.Seqable)
-               :cljs (t/isa|direct? cljs.core/ISeqable))]
-          (#?(:clj .seq :cljs cljs.core/-seq) x))
-#?(:clj ([x (t/isa? java.lang.Iterable)] (-> x >iterator clojure.lang.RT/chunkIteratorSeq)))
-#?(:clj ([x dstr/char-seq?] (clojure.lang.StringSeq/create x)))
-#?(:clj ([x dc/java-map?] (-> x .entrySet >seq)))
-        ;; NOTE `ArraySeq/createFromObject` is the slow path but has to be that way because the
-        ;; specialized ArraySeq constructors are private
-#?(:clj ([x arr/array?] (ArraySeq/createFromObject x))))
+         ([x p/nil?] nil)
+#?(:clj  ([xs dc/aseq?] x))
+         ([xs #?(:clj  (t/isa? clojure.lang.Seqable)
+                 :cljs (t/isa|direct? cljs.core/ISeqable))]
+           (#?(:clj .seq :cljs cljs.core/-seq) x))
+#?(:clj  ([xs (t/isa? java.lang.Iterable)] (-> x >iterator clojure.lang.RT/chunkIteratorSeq)))
+#?(:clj  ([xs dstr/char-seq?] (clojure.lang.StringSeq/create x))
+   :cljs ([xs dstr/string?] (when-not (zero? (count xs)) ; TODO use `empty?` instead
+                              (IndexedSeq. xs 0 nil))))
+#?(:clj  ([xs dc/java-map?] (-> x .entrySet >seq)))
+         ;; NOTE `ArraySeq/createFromObject` is the slow path but has to be that way because the
+         ;; specialized ArraySeq constructors are private
+         ([xs arr/array?]
+           #?(:clj  (ArraySeq/createFromObject xs)
+              :cljs (when-not (num/zero? (count xs)) ; TODO use `empty?` instead
+                      (cljs.core/IndexedSeq. xs 0 nil)))))
 
 (t/defn- ^:inline string-seq>underlying-string
   [xs (t/isa? clojure.lang.StringSeq) > (t/assume dstr/str?)] (.s xs))
