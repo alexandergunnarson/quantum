@@ -87,6 +87,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - t/deftype
   - t/dotyped
   - lazy compilation especially around `t/input-type`
+  - equivalence of typed predicates (i.e. that which is `t/<=` `(t/fn [x t/any? :> p/boolean?])`)
+    to types:
+    - [xs (t/fn [x (t/isa? clojure.lang.Range)] ...)]
+  - No return value means that it should infer
   - typed core fns
     - `apply`
       - especially with `t/defn` as the caller

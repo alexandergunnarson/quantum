@@ -197,11 +197,17 @@
 ;; TODO TYPED do type inference based on the rf's. We can sometimes figure out what gets returned
 ;; based on what is passed in
 (t/defn reduce
-  "Like `core/reduce` except:
+  "Prefer `transduce` to calling only `reduce`, as otherwise the completing arity of the reducing
+   function will not get called, which for certain transducers yields unexpected results.
+
+   Like `core/reduce` except:
    - When init is not provided, (f) is used.
    - Maps are reduced as if with `reduce-kv`.
 
-   Equivalent to Scheme's `foldl`."
+   Equivalent to Scheme's `foldl`.
+
+   We would specialize on `clojure.lang.Range` and `clojure.lang.LongRange` but they do not expose
+   their `step` field."
    {:incorporated '{clojure.core/reduce    "9/25/2018"
                     clojure.core/reduce-kv "9/25/2018"
                     clojure.core.protocols "9/25/2018"
@@ -229,57 +235,58 @@
          ;; Vector's chunked seq is faster than its iterator
 #?(:clj  ([rf rf?, init t/any?, xs (t/or (t/isa? clojure.lang.PersistentVector) chunked-seq?)]
            (reduce-chunked rf init xs)))
-         ;; TODO refine
-         ([f ^transformer? x]
-           (let [rf ((.-xf x) f)]
-             (rf (reduce* (.-prev x) rf (rf)))))
-         ;; TODO refine
-         ([f init ^transformer? x]
-           (let [rf ((.-xf x) f)]
-             (rf (reduce* (.-prev x) rf init))))
-         ;; TODO refine
-         ([f init ^chan? x] (async/reduce f init x))
-         ;; TODO refine
-#?(:clj  ([rf rf?, init t/any?
-           xs (t/or (t/isa? clojure.lang.LazySeq)
-                    (t/isa? clojure.lang.ASeq))]
-           (loop [c (class s), s s, rf rf, val init]
-             (if-let [s (seq s)]
-               (if (identical? (class s) c)
-                   (let [ret (rf val (first s))]
-                          (if (reduced? ret)
-                              @ret
-                              (recur c (next s) rf ret)))
-                   (if (instance? clojure.lang.IReduceInit s)
-                       (.reduce ^clojure.lang.IReduceInit s rf val)
-                       ;; Naive seq reduce
-                       ;; "Reduces a seq, ignoring any opportunities to switch to a more
-                       ;;  specialized implementation."
-                       (loop [s (seq s), val val]
-                         (if s
-                           (let [ret (rf val (first s))]
-                             (if (reduced? ret)
-                               @ret
-                               (recur (next s) ret)))
-                           val))))
-               val))))
          ([rf rf?, init t/any?, n dnum/numerically-integer?]
            (loop [i 0, ret init]
              (if (comp/< i n)
                  (let [ret' (rf ret i)]
                    (if (dc/reduced? ret')
                        (ref/deref ret')
-                       ;; TODO TYPED automatically figure out that `inc` will never go out of bounds ;; depending on the type of `n`
+                       ;; TODO TYPED automatically figure out that `inc` will never go out of bounds
+                       ;; depending on the type of `n`
                        (recur (inc i) ret')))
                  ret)))
-         ([rf rf?, init t/any?, ])
          ;; TODO refine
+         ([f init ^transformer? x]
+           (let [rf ((.-xf x) f)]
+             (rf (reduce* (.-prev x) rf init))))
 #?(:clj  ([rf rf?, init t/any?
            xs (t/or (t/isa? clojure.lang.APersistentMap$KeySeq)
-                    (t/isa? clojure.lang.APersistentMap$ValSeq))] (reduce-iter xs rf init)))
+                    (t/isa? clojure.lang.APersistentMap$ValSeq))] (reduce-iter rf init xs)))
+         ;; TODO refine
+#?(:clj  ([rf rf?, init t/any?, xs (t/or (t/isa? clojure.lang.LazySeq) (t/isa? clojure.lang.ASeq))]
+           (let [c (class xs)]
+             (loop [s xs, ret init]
+               (if-let [s (seq s)]
+                 (if (identical? (class s) c)
+                     (let [ret' (rf ret (first s))]
+                       (if (reduced? ret')
+                           @ret'
+                           (recur (next s) ret')))
+                     (if (instance? clojure.lang.IReduceInit s)
+                         (.reduce ^clojure.lang.IReduceInit s rf ret)
+                         ;; Naive seq reduce
+                         ;; "Reduces a seq, ignoring any opportunities to switch to a more
+                         ;;  specialized implementation."
+                         (loop [s (seq s), ret ret]
+                           (if s
+                             (let [ret (rf ret (first s))]
+                               (if (reduced? ret)
+                                 @ret
+                                 (recur (next s) ret)))
+                             ret))))
+                 ret)))))
+         ([rf rf?, init t/any?, x dasync/read-chan?]
+           (async/go-loop [ret init]
+             (let [v (async/<! ch)]
+               (if (p/nil? v)
+                   ret
+                   (let [ret' (rf ret v)]
+                     (if (ref/reduced? ret')
+                         (ref/deref ret')
+                         (recur ret')))))))
 #?(:clj  ([rf rf?, init t/any?, xs (t/isa? clojure.lang.IKVReduce)]   (.kvreduce xs rf init)))
 #?(:clj  ([rf rf?, init t/any?, xs (t/isa? clojure.lang.IReduceInit)] (.reduce   xs rf init)))
-#?(:clj  ([rf rf?, init t/any?, xs (t/isa? java.lang.Iterable)] (reduce-iter xs rf init)))
+#?(:clj  ([rf rf?, init t/any?, xs (t/isa? java.lang.Iterable)] (reduce-iter rf init xs)))
          ;; TODO CLJS might be able to be done more efficiently with more specializations?
          ([rf rf?, init t/any?, xs (t/isa? #?(:clj  clojure.core.protocols/IKVReduce
                                               :cljs cljs.core/IKVReduce))]
@@ -336,10 +343,21 @@
 (var/def xf? "Transforming function"
   (t/ftype [rf? :> rf?]))
 
-(t/defn transduce >
+(t/defn ^:inline transduce >
   ([        f rf?,              xs dc/reducible?] (transduce fn/identity f     xs))
   ([xf xf?, f rf?,              xs dc/reducible?] (transduce xf          f (f) xs))
   ([xf xf?, f rf?, init t/any?, xs dc/reducible?] (let [f' (xf f)] (f' (reduce f' init xs)))))
+
+;; TODO incorporate
+(... async-transduce
+  "async/reduces a channel with a transformation (xform f).
+  Returns a channel containing the result.  ch must close before
+  transduce produces a result."
+  [xform f init ch]
+  (let [f (xform f)]
+    (go
+     (let [ret (<! (reduce f init ch))]
+       (f ret)))))
 
 ;; ===== End reductive functions ===== ;;
 
