@@ -10,30 +10,16 @@
     [quantum.core.data.vector :as vec]
     [quantum.core.type :as t]))
 
-(def record? (t/isa? #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
+;; ===== Sequences and sequence-wrappers ===== ;;
+;; Sequential (generally not efficient Lookup / RandomAccess)
 
-;; TODO CLJS
-(def iseq? (t/isa? #?(:clj clojure.lang.ISeq :cljs ...)))
+(def iseq? (t/isa? #?(:clj clojure.lang.ISeq :cljs cljs.core/ISeq)))
 
-;; TODO CLJS
-(def chunk-buffer? #?(:clj  (t/isa? clojure.lang.ChunkBuffer)
-                      :cljs ...))
+#?(:clj (def aseq? (t/isa? clojure.lang.ASeq)))
 
-;; TODO CLJS
-(def chunk? #?(:clj  (t/isa? clojure.lang.IChunk)
-               :cljs ...))
+(def lseq? (t/isa? #?(:clj clojure.lang.LazySeq :cljs cljs.core/LazySeq)))
 
-;; TODO CLJS
-(def chunked-seq? #?(:clj  (t/isa? clojure.lang.IChunkedSeq)
-                     :cljs ...))
-
-;; TODO CLJS
-#?(:clj
-(def string-seq? (t/isa? clojure.lang.StringSeq)))
-
-;; TODO CLJS
-#?(:clj
-(def range? (t/or (t/isa? clojure.lang.Range) (t/isa? clojure.lang.LongRange))))
+(def cons? (t/isa? #?(:clj clojure.lang.Cons :cljs cljs.core/Cons)))
 
 ;; TODO CLJS
 #?(:clj
@@ -46,6 +32,50 @@
         (t/isa? clojure.lang.ArraySeq$ArraySeq_long)
         (t/isa? clojure.lang.ArraySeq$ArraySeq_float)
         (t/isa? clojure.lang.ArraySeq$ArraySeq_double))))
+
+;; TODO CLJS
+#?(:clj
+(def string-seq? (t/isa? clojure.lang.StringSeq)))
+
+;; TODO CLJS
+(def chunk-buffer? #?(:clj  (t/isa? clojure.lang.ChunkBuffer)
+                      :cljs ...))
+
+;; TODO CLJS
+(def chunk? #?(:clj  (t/isa? clojure.lang.IChunk)
+               :cljs ...))
+
+(def chunked-seq? (t/isa? #?(:clj clojure.lang.IChunkedSeq :cljs cljs.core/ChunkedSeq)))
+
+(def indexed-seq? (t/isa? #?(:clj clojure.lang.IndexedSeq :cljs cljs.core/IndexedSeq)))
+
+(def key-seq? (t/isa? #?(:clj clojure.lang.APersistentMap$KeySeq :cljs cljs.core/KeySeq)))
+
+(def val-seq? (t/isa? #?(:clj clojure.lang.APersistentMap$ValSeq :cljs cljs.core/ValSeq)))
+
+;; TODO CLJS
+#?(:clj
+(def range? (t/or (t/isa? clojure.lang.Range) (t/isa? clojure.lang.LongRange))))
+
+;; TODO excise — this is used later on elsewhere
+(def misc-seq? (t/or chunked-seq? indexed-seq? key-seq? val-seq?))
+
+;; ----- Lists ----- ;; Not extremely different from Sequences ; TODO clean this up
+
+(def cdlist? t/none? #_(:clj  (t/or (t/isa? clojure.data.finger_tree.CountedDoubleList)
+                                    (t/isa? quantum.core.data.finger_tree.CountedDoubleList))
+                        :cljs (t/isa? quantum.core.data.finger-tree/CountedDoubleList)))
+(def dlist?  t/none? #_(:clj  (t/or (t/isa? clojure.data.finger_tree.CountedDoubleList)
+                                    (t/isa? quantum.core.data.finger_tree.CountedDoubleList))
+                        :cljs (t/isa? quantum.core.data.finger-tree/CountedDoubleList)))
+
+(def +list?  (t/isa? #?(:clj clojure.lang.IPersistentList :cljs cljs.core/IList)))
+(def !list?  #?(:clj (t/isa? java.util.LinkedList) :cljs t/none?))
+(def  list?  #?(:clj (t/isa? java.util.List) :cljs +list?))
+
+;; ===== End sequences ===== ;;
+
+(def record? (t/isa? #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
 
 (def sorted?
   (t/or (t/isa? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))

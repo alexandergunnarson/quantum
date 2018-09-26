@@ -1,6 +1,6 @@
 (ns quantum.core.collections-typed
   (:refer-clojure :exclude
-    [chunk-first chunk-rest count empty? get nth reduce])
+    [chunk-first chunk-rest count empty? first get nth reduce seq])
   (:require
     [quantum.core.data.array       :as arr]
     [quantum.core.data.async       :as dasync]
@@ -145,19 +145,6 @@
 (t/defn- ^:inline string-seq>underlying-string
   [xs (t/isa? clojure.lang.StringSeq) > (t/assume dstr/str?)] (.s xs))
 
-(extend-protocol CollReduce
-  Object ; (default)
-  ;; aseqs are iterable, masking internal-reducers
-  clojure.lang.ASeq
-  ;; for range
-  clojure.lang.LazySeq
-  (coll-reduce
-   ([coll f init]
-     (let [s (seq coll)]
-       (cond )
-       )))
-)
-
 #?(:clj
 (t/defn reduce-chunked
   "Made public in case future specializations want to use it"
@@ -166,19 +153,6 @@
     (if (dc/reduced? ret)
         (ref/deref ret)
         (recur (chunk-next xs) rf ret)))))
-
-#?(:clj
-(t/defn reduce-iter
-  "Made public in case future specializations want to use it"
-  [rf rf?, init t/any?, xs (t/isa? java.lang.Iterable)]
-  (let [iter (.iterator xs)]
-    (loop [ret init]
-      (if (.hasNext iter)
-          (let [ret' (rf ret (.next iter))]
-            (if (dc/reduced? ret')
-                (ref/deref ret')
-                (recur ret')))
-          ret)))))
 
 #?(:clj
 (t/defn reduce-indexed
@@ -193,6 +167,30 @@
                   ;; TODO TYPED automatically figure out that `inc` will never go out of bounds here
                   (recur (inc* i) ret')))
             v))))))
+
+#?(:clj
+(t/defn reduce-iter
+  "Made public in case future specializations want to use it"
+  [rf rf?, init t/any?, xs (t/isa? java.lang.Iterable)]
+  (let [iter (.iterator xs)]
+    (loop [ret init]
+      (if (.hasNext iter)
+          (let [ret' (rf ret (.next iter))]
+            (if (dc/reduced? ret')
+                (ref/deref ret')
+                (recur ret')))
+          ret)))))
+
+(t/defn reduce-seq
+  "Reduces a seq, ignoring any opportunities to switch to a more specialized implementation."
+  [rf rf?, init t/any?, xs iseq?]
+  (loop [s (seq s), ret ret]
+    (if (nil? s)
+        ret
+        (let [ret (rf ret (first s))]
+          (if (reduced? ret)
+            @ret
+            (recur (next s) ret))))))
 
 ;; TODO TYPED do type inference based on the rf's. We can sometimes figure out what gets returned
 ;; based on what is passed in
@@ -252,29 +250,6 @@
 #?(:clj  ([rf rf?, init t/any?
            xs (t/or (t/isa? clojure.lang.APersistentMap$KeySeq)
                     (t/isa? clojure.lang.APersistentMap$ValSeq))] (reduce-iter rf init xs)))
-         ;; TODO refine
-#?(:clj  ([rf rf?, init t/any?, xs (t/or (t/isa? clojure.lang.LazySeq) (t/isa? clojure.lang.ASeq))]
-           (let [c (class xs)]
-             (loop [s xs, ret init]
-               (if-let [s (seq s)]
-                 (if (identical? (class s) c)
-                     (let [ret' (rf ret (first s))]
-                       (if (reduced? ret')
-                           @ret'
-                           (recur (next s) ret')))
-                     (if (instance? clojure.lang.IReduceInit s)
-                         (.reduce ^clojure.lang.IReduceInit s rf ret)
-                         ;; Naive seq reduce
-                         ;; "Reduces a seq, ignoring any opportunities to switch to a more
-                         ;;  specialized implementation."
-                         (loop [s (seq s), ret ret]
-                           (if s
-                             (let [ret (rf ret (first s))]
-                               (if (reduced? ret)
-                                 @ret
-                                 (recur (next s) ret)))
-                             ret))))
-                 ret)))))
          ([rf rf?, init t/any?, x dasync/read-chan?]
            (async/go-loop [ret init]
              (let [v (async/<! ch)]
@@ -286,6 +261,20 @@
                          (recur ret')))))))
 #?(:clj  ([rf rf?, init t/any?, xs (t/isa? clojure.lang.IKVReduce)]   (.kvreduce xs rf init)))
 #?(:clj  ([rf rf?, init t/any?, xs (t/isa? clojure.lang.IReduceInit)] (.reduce   xs rf init)))
+         ;; TODO refine
+#?(:clj  ([rf rf?, init t/any?, xs (t/or (t/isa? clojure.lang.LazySeq) (t/isa? clojure.lang.ASeq))]
+           (let [c (class xs)]
+             (loop [s xs, ret init]
+               (if-let [s (seq s)]
+                 (if (dcomp/== (class s) c)
+                     (let [ret' (rf ret (first s))]
+                       (if (reduced? ret')
+                           @ret'
+                           (recur (next s) ret')))
+                     (if (instance? clojure.lang.IReduceInit s)
+                         (.reduce ^clojure.lang.IReduceInit s rf ret)
+                         ...))
+                 ret)))))
 #?(:clj  ([rf rf?, init t/any?, xs (t/isa? java.lang.Iterable)] (reduce-iter rf init xs)))
          ;; TODO CLJS might be able to be done more efficiently with more specializations?
          ([rf rf?, init t/any?, xs (t/isa? #?(:clj  clojure.core.protocols/IKVReduce
@@ -296,9 +285,7 @@
          ([rf rf?, init t/any?, xs (t/isa? #?(:clj  clojure.core.protocols/CollReduce
                                               :cljs cljs.core/IReduce))]
            (#?(:clj  clojure.core.protocols/coll-reduce
-               :cljs cljs.core/-reduce) xs rf init))
-         ;; TODO things that are `seq`-able not already covered
-         ([rf rf?, init t/any?, xs ????] (reduce rf init (???/seq xs))))
+               :cljs cljs.core/-reduce) xs rf init)))
 
 ;; TODO clojure.lang.Range, clojure.lang.LongRange
 

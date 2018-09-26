@@ -641,31 +641,6 @@
          (isa? #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core/PersistentArrayMap))
          (isa? #?(:clj clojure.lang.PersistentTreeMap  :cljs cljs.core/PersistentTreeMap))))
 
-;; ===== Sequences ===== ;; Sequential (generally not efficient Lookup / RandomAccess)
-
-         (-def seq?             (isa? #?(:clj clojure.lang.ISeq    :cljs cljs.core/ISeq)))
-         (-def cons?            (isa? #?(:clj clojure.lang.Cons    :cljs cljs.core/Cons)))
-         (-def lseq?            (isa? #?(:clj clojure.lang.LazySeq :cljs cljs.core/LazySeq)))
-         (-def misc-seq?        (or (isa? #?(:clj clojure.lang.APersistentMap$KeySeq       :cljs cljs.core/KeySeq))
-                                    (isa? #?(:clj clojure.lang.APersistentMap$ValSeq       :cljs cljs.core/ValSeq))
-                                    (isa? #?(:clj clojure.lang.PersistentVector$ChunkedSeq :cljs cljs.core/ChunkedSeq))
-                                    (isa? #?(:clj clojure.lang.IndexedSeq                  :cljs cljs.core/IndexedSeq))))
-
-         (-def non-list-seq?    (or cons? lseq? misc-seq?))
-
-;; ----- Lists ----- ;; Not extremely different from Sequences ; TODO clean this up
-
-         (-def cdlist?          none? #_(:clj  (or (isa? clojure.data.finger_tree.CountedDoubleList)
-                                                   (isa? quantum.core.data.finger_tree.CountedDoubleList))
-                                         :cljs (isa? quantum.core.data.finger-tree/CountedDoubleList)))
-         (-def dlist?           none? #_(:clj  (or (isa? clojure.data.finger_tree.CountedDoubleList)
-                                                   (isa? quantum.core.data.finger_tree.CountedDoubleList))
-                                         :cljs (isa? quantum.core.data.finger-tree/CountedDoubleList)))
-         (-def +list?           (isa? #?(:clj clojure.lang.IPersistentList :cljs cljs.core/IList)))
-         (-def !list?           #?(:clj (isa? java.util.LinkedList) :cljs none?))
-         (-def  list?           #?(:clj  (isa? java.util.List)
-                                   :cljs +list?))
-
 ;; ===== Vectors ===== ;; Sequential, Associative (specifically, whose keys are sequential,
                        ;; dense integer values), extensible
 
