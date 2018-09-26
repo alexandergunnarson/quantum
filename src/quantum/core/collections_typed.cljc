@@ -135,8 +135,8 @@
            (#?(:clj .seq :cljs cljs.core/-seq) x))
 #?(:clj  ([xs (t/isa? java.lang.Iterable)] (-> x >iterator clojure.lang.RT/chunkIteratorSeq)))
 #?(:clj  ([xs dstr/char-seq?] (clojure.lang.StringSeq/create x))
-   :cljs ([xs dstr/string?] (when-not (zero? (count xs)) ; TODO use `empty?` instead
-                              (IndexedSeq. xs 0 nil))))
+   :cljs ([xs dstr/string?] (when-not (num/zero? (count xs)) ; TODO use `empty?` instead
+                              (cljs.core/IndexedSeq. xs 0 nil))))
 #?(:clj  ([xs dc/java-map?] (-> x .entrySet >seq)))
          ;; NOTE `ArraySeq/createFromObject` is the slow path but has to be that way because the
          ;; specialized ArraySeq constructors are private
@@ -382,7 +382,7 @@
               :cljs (-count ^not-native x)))
 #?(:cljs ([x dc/iseqable? > p/int?]
            ;; TODO TYPED
-           (loop [s (seq coll) acc 0]
+           (loop [s (>seq coll) acc 0]
              (if (counted? s) ; assumes nil is counted, which it currently is
                  (+ acc (-count s))
                  (recur (next s) (inc acc))))))
