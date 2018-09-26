@@ -1645,8 +1645,8 @@
 
 (t/def rf? "Reducing function"
   (t/fn "seed arity"       []
-        "completing arity" [_]
-        "reducing arity"   [_ _]))
+        "completing arity" [t/any?]
+        "reducing arity"   [t/any? t/any?]))
 
 (self/defn reduce
   "Much of this content taken from clojure.core.protocols for inlining and

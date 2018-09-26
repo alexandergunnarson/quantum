@@ -16,12 +16,16 @@ TODO:
 - `(or (and pred then) (and (not pred) else))` (which is not correct)
 - needs to equal `(t/and (t/or (t/not a) b) (t/or a c))` (which is correct)
 
-#_"
-LEFT OFF LAST TIME (9/3/2018):
+- conditionally optional arities etc. for t/fn
 
+#_"
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
+  - (if (dcoll/reduced? ret)
+        ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`
+        (ref/deref ret)
+        ...)
   - t/- : multi-arity
   - t/value-of
     - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`

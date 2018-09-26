@@ -12,6 +12,7 @@
     [quantum.core.data.string      :as dstr]
     [quantum.core.data.vector      :as vec]
     [quantum.core.data.tuple       :as tup]
+    [quantum.core.fn               :as fn]
     [quantum.core.type             :as t]
     [quantum.core.vars             :as var]))
 
@@ -34,6 +35,7 @@
   - rip [o index] - rips coll and returns [pre-coll item-at suf-coll]
   - sew [pre-coll item-arr suf-coll] - opposite of rip, but with arr
 - TODO `pcount`
+- TODO `transducei` ?
 - TODO `(rreduce [f init o]) - like reduce but in reverse order = Equivalent to Scheme's `foldr`
 "
 
@@ -62,21 +64,24 @@
            "reducing arity"         [t/any? t/any?]
            "reducing arity for kvs" [t/any? t/any? t/any?]))
 
-(defnt reduce
+(t/defn reduce
   "Like `core/reduce` except:
-   When init is not provided, (f) is used.
-   Maps are reduced with reduce-kv.
+   - When init is not provided, (f) is used.
+   - Maps are reduced with `reduce-kv`.
 
    Equivalent to Scheme's `foldl`.
 
    Much of this content taken from clojure.core.protocols for inlining and
    type-checking purposes."
-         ([f init ^fast_zip.core.ZipperLocation z]
-           (loop [xs (zip/down z) v init]
+         ([rf rf?, xs ?] (reduce rf (rf) xs))
+         ([rf rf?, init t/any?, xs p/nil?] init)
+         ([rf rf?, init t/any?, z (t/isa? fast_zip.core.ZipperLocation)]
+           (loop [xs (zip/down z), v init]
              (if (val? z)
-                 (let [ret (f v z)]
-                   (if (reduced? ret)
-                       @ret
+                 (let [ret (rf v z)]
+                   (if (dcoll/reduced? ret)
+                       ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`
+                       (ref/deref ret)
                        (recur (zip/right xs) ret)))
                  v)))
          ([f init ^array? arr] ; Adapted from `areduce`
@@ -178,10 +183,6 @@
 #?(:clj  ([f      ^clojure.lang.IReduce     xs ] (.reduce   xs f)))
 #?(:clj  ([f init ^clojure.lang.IKVReduce   xs ] (.kvreduce xs f init)))
 #?(:clj  ([f init ^clojure.lang.IReduceInit xs ] (.reduce   xs f init)))
-         ([f ^default              xs] (if (val? xs)
-                                           (#?(:clj  clojure.core.protocols/coll-reduce
-                                               :cljs -reduce) xs f)
-                                           (f)))
          ([f init ^default              xs]
            (if (val? xs)
                (#?(:clj  clojure.core.protocols/coll-reduce
@@ -199,20 +200,18 @@
    Uses an unsynchronized mutable counter internally, but this cannot cause race conditions if
    `reduce` is implemented correctly (this includes single-threadedness)."
   [f rfi?, init t/any?, xs dcoll/reducible?]
-  (let [f' (let [!i (! -1)]
-              (fn ([ret x]   (f ret x   (ref/reset! !i (num/inc* (ref/deref !i)))))
-                  ([ret k v] (f ret k v (ref/reset! !i (num/inc* (ref/deref !i)))))))]
+  (let [f' (let [!i (ref/! -1)]
+             (t/fn ([ret ? x ...]       (f ret x   (ref/reset! !i (num/inc* (ref/deref !i)))))
+                   ([ret ? k ... v ...] (f ret k v (ref/reset! !i (num/inc* (ref/deref !i)))))))]
     (reduce f' init xs)))
 
-#?(:clj
-; TODO unmacro when type inference is available
-(defmacro transduce
-  ([   f xs] `(transduce identity ~f      ~xs))
-  ([xf f xs] `(transduce ~xf      ~f (~f) ~xs))
-  ([xf f init xs]
-    `(let [f'# (~xf ~f)]
-       (f'# (reduce f'# ~init ~xs))))))
-; TODO `transducei` ?
+(var/def xf? "Transforming function"
+  (t/ftype [rf? :> rf?]))
+
+(t/defn transduce >
+  ([        f rf?,              xs dcoll/reducible?] (transduce fn/identity f     xs))
+  ([xf xf?, f rf?,              xs dcoll/reducible?] (transduce xf          f (f) xs))
+  ([xf xf?, f rf?, init t/any?, xs dcoll/reducible?] (let [f' (xf f)] (f' (reduce f' init xs)))))
 
 ;; ===== End reductive functions ===== ;;
 
