@@ -123,21 +123,21 @@
 
 ;; ----- Sequences ----- ;;
 
+;; TODO use `core/sequence` implementation to produce whatever is `reducible?` but not currently
+;; `seqable?`
 (t/defn ^:inline >seq
   {:incorporated '{clojure.lang.RT/seq "9/26/2018"
                    clojure.core/seq    "9/26/2018"
                    cljs.core/seq       "9/26/2018"}}
   > (t/? dc/iseq?)
-         ([x p/nil?] nil)
-#?(:clj  ([xs dc/aseq?] x))
-         ([xs #?(:clj  (t/isa? clojure.lang.Seqable)
-                 :cljs (t/isa|direct? cljs.core/ISeqable))]
-           (#?(:clj .seq :cljs cljs.core/-seq) x))
-#?(:clj  ([xs (t/isa? java.lang.Iterable)] (-> x >iterator clojure.lang.RT/chunkIteratorSeq)))
+         ([x  p/nil?]         nil)
+         ([xs dc/iseq?]       x)
+         ([xs dc/iseqable?]   (#?(:clj .seq :cljs cljs.core/-seq) x))
+#?(:clj  ([xs dc/iterable?]   (-> x >iterator clojure.lang.RT/chunkIteratorSeq)))
 #?(:clj  ([xs dstr/char-seq?] (clojure.lang.StringSeq/create x))
-   :cljs ([xs dstr/string?] (when-not (num/zero? (count xs)) ; TODO use `empty?` instead
-                              (cljs.core/IndexedSeq. xs 0 nil))))
-#?(:clj  ([xs dc/java-map?] (-> x .entrySet >seq)))
+   :cljs ([xs dstr/string?]   (when-not (num/zero? (count xs)) ; TODO use `empty?` instead
+                                (cljs.core/IndexedSeq. xs 0 nil))))
+#?(:clj  ([xs dc/java-map?]   (-> x .entrySet >seq)))
          ;; NOTE `ArraySeq/createFromObject` is the slow path but has to be that way because the
          ;; specialized ArraySeq constructors are private
          ([xs arr/array?]
@@ -145,6 +145,7 @@
               :cljs (when-not (num/zero? (count xs)) ; TODO use `empty?` instead
                       (cljs.core/IndexedSeq. xs 0 nil)))))
 
+;; TODO move to better place?
 (t/defn- ^:inline string-seq>underlying-string
   [xs (t/isa? clojure.lang.StringSeq) > (t/assume dstr/str?)] (.s xs))
 
@@ -283,7 +284,21 @@
            (.kvreduce xs rf init)))
 #?(:clj  (^:inline [rf rf?, init t/any?, xs (t/isa? clojure.lang.IReduceInit)]
            (.reduce xs rf init)))
-#?(:clj  ([rf rf?, init t/any?, xs (t/or dc/lseq? dc/aseq?)]
+         ;; NOTE We don't accept `xs` that implement `clojure.core.protocols/IKVReduce` only after
+         ;;      the fact because `IKVReduce` could inappropriately specialize on e.g. `Object`
+         (^:inline [rf rf?, init t/any?
+                    xs (t/isa|direct? #?(:clj  clojure.core.protocols/IKVReduce
+                                         :cljs cljs.core/IKVReduce))]
+           (#?(:clj  clojure.core.protocols/kv-reduce
+               :cljs cljs.core/-kv-reduce) xs rf init))
+         ;; NOTE We don't accept `xs` that implement `clojure.core.protocols/CollReduce` only after
+         ;;      the fact because `CollReduce` inappropriately specializes on `Object`
+         (^:inline [rf rf?, init t/any?
+                    xs (t/isa|direct? #?(:clj  clojure.core.protocols/CollReduce
+                                         :cljs cljs.core/IReduce))]
+           (#?(:clj  clojure.core.protocols/coll-reduce
+               :cljs cljs.core/-reduce) xs rf init))
+#?(:clj  ([rf rf?, init t/any?, xs dc/iseq?]
            (let [c (class xs)]
              (loop [xs' (>seq xs), ret init]
                (if (dcomp/== (class xs') c)
@@ -295,23 +310,11 @@
                    ;; - `(not (dcomp/== (class xs') (class xs)))`
                    ;; - What the possible types of xs' are as a result
                    (reduce rf init xs'))))))
-#?(:clj  (^:inline [rf rf?, init t/any?, xs (t/isa? java.lang.Iterable)] (reduce-iter rf init xs)))
-         ;; TODO CLJS might be able to be done more efficiently with more specializations?
-         (^:inline [rf rf?, init t/any?
-                    xs #?(:clj  (t/isa?        clojure.core.protocols/IKVReduce)
-                          :cljs (t/isa|direct? cljs.core/IKVReduce))]
-           (#?(:clj  clojure.core.protocols/kv-reduce
-               :cljs cljs.core/-kv-reduce) xs rf init))
-         ;; TODO CLJS might be able to be done more efficiently with more specializations?
-         (^:inline [rf rf?, init t/any?
-                    xs #?(:clj  (t/isa?        clojure.core.protocols/CollReduce)
-                          :cljs (t/isa|direct? cljs.core/IReduce))]
-           (#?(:clj  clojure.core.protocols/coll-reduce
-               :cljs cljs.core/-reduce) xs rf init))
-#?(:cljs (^:inline [rf rf?, init t/any?, xs (t/isa|direct? cljs.core/IIterable)]
-           (reduce-iter rf init xs)))
-#?(:cljs (^:inline [rf rf?, init t/any?, xs (t/isa|direct? cljs.core/ISeqable)]
-           (reduce-seq rf init (>seq xs)))))
+         ;; NOTE There's something about CLJS impl such that `cljs.core/reduce` suggests that the
+         ;;      class will never change in the middle of the seq as it might in CLJ
+#?(:cljs (^:inline [rf rf?, init t/any?, xs dc/iseq?]     (reduce-seq  rf init xs)))
+         (^:inline [rf rf?, init t/any?, xs dc/iseqable?] (reduce      rf init (>seq xs)))
+         (^:inline [rf rf?, init t/any?, xs dc/iterable?] (reduce-iter rf init xs)))
 
 (var/def rfi? "Reducing function, indexed"
   (t/ftype "seed arity"             []

@@ -10,8 +10,11 @@
     [quantum.core.data.vector :as vec]
     [quantum.core.type :as t]))
 
+;; TODO move to `quantum.core.data.sequence`
 ;; ===== Sequences and sequence-wrappers ===== ;;
 ;; Sequential (generally not efficient Lookup / RandomAccess)
+
+(def iseqable? (t/isa|direct? #?(:clj clojure.lang.Seqable :cljs cljs.core/ISeqable)))
 
 (def iseq? (t/isa? #?(:clj clojure.lang.ISeq :cljs cljs.core/ISeq)))
 
@@ -150,37 +153,24 @@
             :cljs (t/isa? cljs.core/ICollection))
         sequential? associative?))
 
-;; Whatever is `seqable?` is reducible via a call to `seq`.
-;; Reduction is nearly always preferable to seq-iteration if for no other reason than that
-;; it can take advantage of transducers and reducers. This predicate just answers whether
-;; it is more efficient to reduce than to seq-iterate (note that it should be at least as
-;; efficient as seq-iteration).
-;; TODO re-enable when dispatch enabled
-#_(def prefer-reduce?
-  (t/or (t/isa? #?(:clj clojure.lang.IReduceInit :cljs cljs.core/IReduce))
-        (t/isa? #?(:clj clojure.lang.IKVReduce   :cljs cljs.core/IKVReduce))
-        #?(:clj (t/isa? clojure.core.protocols/IKVReduce))
-        #?(:clj dstr/char-seq? :cljs dstr/string?)
-        arr/array?
-        record?
-        (t/isa? #?(:clj fast_zip.core.ZipperLocation :cljs fast-zip.core/ZipperLocation))
-        chan?))
+(def reducible?
+  (t/or p/nil? dstr/str? vec/!+vector? arr/array? dnum/numerically-integer?
+        ;; TODO what about `transformer?`
+        dasync/read-chan?
+        (t/isa? fast_zip.core.ZipperLocation)
+        #?(:clj (t/isa? clojure.lang.IKVReduce))
+        #?(:clj (t/isa? clojure.lang.IReduceInit))
+        ;; We're ignoring indirect implementation for reasons noted in the `reduce` impl
+        (t/isa|direct? #?(:clj  clojure.core.protocols/IKVReduce
+                          :cljs cljs.core/IKVReduce))
+        ;; We're ignoring indirect implementation for reasons noted in the `reduce` impl
+        (t/isa|direct? #?(:clj  clojure.core.protocols/CollReduce
+                          :cljs cljs.core/IReduce))
+        iseq?
+        iseqable?
+        iterable?))
 
-;; Whatever is `reducible?` is seqable via a call to `sequence`.
-(def seqable?
-  (t/or #?@(:clj  [(t/isa? clojure.lang.Seqable) iterable? dstr/char-seq? map/map? arr/array?]
-            :cljs [(t/isa? cljs.core/ISeqable) arr/array? dstr/string?])))
-
-;; Able to be traversed over in some fashion, whether by `first`/`next` seq-iteration,
-;; reduction, etc.
-;; TODO re-enable when dispatch enabled
-#_(def traversable?
-  (t/or (t/isa? #?(:clj clojure.lang.IReduceInit :cljs cljs.core/IReduce))
-        (t/isa? #?(:clj clojure.lang.IKVReduce :cljs cljs.core/IKVReduce))
-        #?(:clj (t/isa? clojure.core.protocols/IKVReduce))
-        (t/isa? #?(:clj clojure.lang.Seqable :cljs cljs.core/ISeqable))
-        iterable?
-        #?(:clj dstr/char-seq? :cljs dstr/string?)
-        arr/array?
-        (t/isa? #?(:clj fast_zip.core.ZipperLocation :cljs fast-zip.core/ZipperLocation))
-        chan?))
+;; Whatever is `seqable?` is reducible, and whatever is `reducible?` is `seqable?`.
+;; Since reduction is preferred to "manual" `first`/`next` seq traversal, we prefer `reducible?` to
+;; `seqable?` as the base type.
+(def seqable? reducible?)

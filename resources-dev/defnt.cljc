@@ -74,12 +74,12 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - t/input-type
     - `(t/input-type >namespace :?)` meaing the possible input types to the first input to `>namespace`
     - `(t/input-type reduce :_ :_ :?)`
-  - t/of
-    - (t/of number?) ; implicitly the container is a `traversable?`
-    - (t/of map/+map? symbol? dstr/string?)
-    - (t/of t/seq? namespace?)
-    - t/map-of
-    - t/seq-of
+  - dc/of
+    - (dc/of number?) ; implicitly the container is a `traversable?`
+    - (dc/of map/+map? symbol? dstr/string?)
+    - (dc/of t/seq? namespace?)
+    - dc/map-of
+    - dc/seq-of
   - t/defrecord
   - t/def-concrete-type (i.e. `t/deftype`)
   - expressions (`quantum.untyped.core.analyze.expr`)
