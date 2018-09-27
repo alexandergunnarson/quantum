@@ -75,7 +75,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - `(t/input-type >namespace :?)` meaing the possible input types to the first input to `>namespace`
     - `(t/input-type reduce :_ :_ :?)`
   - dc/of
-    - (dc/of number?) ; implicitly the container is a `traversable?`
+    - (dc/of number?) ; implicitly the container is a `reducible?`
     - (dc/of map/+map? symbol? dstr/string?)
     - (dc/of t/seq? namespace?)
     - dc/map-of
