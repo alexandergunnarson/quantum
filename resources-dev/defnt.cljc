@@ -102,7 +102,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       ([n dnum/std-integer?, xs ?] ...)
   - t/extend-defn!
   - t/input-type
-    - `(t/input-type >namespace :?)` meaing the possible input types to the first input to `>namespace`
+    - `(t/input-type >namespace :?)` meaning the possible input types to the first input to `>namespace`
     - `(t/input-type reduce :_ :_ :?)`
     - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
   - dc/of

@@ -253,27 +253,6 @@
           (value x))
        :cljs nil)))
 
-;; ===== Definition/Registration ===== ;;
-
-;; TODO clean up
-#?(:clj
-(defmacro define [sym t]
-  `(~'def ~sym (let [t# ~t]
-                 (assert (utr/type? t#) t#)
-                 t#))))
-
-;; TODO clean up
-(defn undef [reg sym]
-  (if-let [t (get reg sym)]
-    (let [reg' (dissoc reg sym)]
-      (if (instance? ClassType t)
-          (uc/dissoc-in reg' [:by-class (.-c ^ClassType t)])
-          (TODO)))
-    reg))
-
-;; TODO clean up
-(defn undef! [sym] (swap! *type-registry undef sym))
-
 (def type?          (isa? PType))
 (def not-type?      (isa? NotType))
 (def or-type?       (isa? OrType))
@@ -641,204 +620,208 @@
 
 ;; ===== Queues ===== ;; Particularly FIFO queues, as LIFO = stack = any vector
 
-         (-def   +queue? (isa? #?(:clj  clojure.lang.PersistentQueue
+         (def   +queue? (isa? #?(:clj  clojure.lang.PersistentQueue
                                   :cljs cljs.core/PersistentQueue)))
-         (-def  !+queue? none?)
-         (-def ?!+queue? (or +queue? !+queue?))
-#?(:clj  (-def  !!queue? (or (isa? java.util.concurrent.BlockingQueue)
+         (def  !+queue? none?)
+         (def ?!+queue? (or +queue? !+queue?))
+#?(:clj  (def  !!queue? (or (isa? java.util.concurrent.BlockingQueue)
                              (isa? java.util.concurrent.TransferQueue)
                              (isa? java.util.concurrent.ConcurrentLinkedQueue))))
 
-         (-def   !queue? #?(:clj  ;; Considered single-threaded mutable unless otherwise noted
+         (def   !queue? #?(:clj  ;; Considered single-threaded mutable unless otherwise noted
                                   (identity #_- (isa? java.util.Queue) #_(or ?!+queue? !!queue?)) ; TODO re-enable once `-` works
                             :cljs (isa? goog.structs.Queue)))
 
-         (-def    queue? (or ?!+queue? !queue? #?(:clj !!queue?)))
+         (def    queue? (or ?!+queue? !queue? #?(:clj !!queue?)))
 
 ;; ===== Sets ===== ;; Associative; A special type of Map whose keys and vals are identical
 
-#?(:clj  (-def    java-set?              (isa? java.util.Set)))
+#?(:clj  (def    java-set?              (isa? java.util.Set)))
 
 ;; ----- Identity Sets (identity-based equality) ----- ;;
 
-         (-def   !identity-set? #?(:clj  none? #_(isa? java.util.IdentityHashSet) ; TODO implement
+         (def   !identity-set? #?(:clj  none? #_(isa? java.util.IdentityHashSet) ; TODO implement
                                    :cljs (isa? js/Set)))
 
-         (-def   identity-set? !identity-set?)
+         (def   identity-set? !identity-set?)
 
 ;; ----- Hash Sets (value-based equality) ----- ;;
 
-         (-def   +hash-set?              (isa? #?(:clj  clojure.lang.PersistentHashSet
+         (def   +hash-set?              (isa? #?(:clj  clojure.lang.PersistentHashSet
                                                   :cljs cljs.core/PersistentHashSet)))
-         (-def  !+hash-set?              (isa? #?(:clj  clojure.lang.PersistentHashSet$TransientHashSet
+         (def  !+hash-set?              (isa? #?(:clj  clojure.lang.PersistentHashSet$TransientHashSet
                                                   :cljs cljs.core/TransientHashSet)))
-         (-def ?!+hash-set?              (or +hash-set? !+hash-set?))
+         (def ?!+hash-set?              (or +hash-set? !+hash-set?))
 
-         (-def   !hash-set|byte?         #?(:clj (isa? it.unimi.dsi.fastutil.bytes.ByteOpenHashSet)     :cljs none?))
-         (-def   !hash-set|char?         #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharOpenHashSet)     :cljs none?))
-         (-def   !hash-set|short?        #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortOpenHashSet)   :cljs none?))
-         (-def   !hash-set|int?          #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntOpenHashSet)       :cljs none?))
-         (-def   !hash-set|long?         #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongOpenHashSet)     :cljs none?))
-         (-def   !hash-set|float?        #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatOpenHashSet)   :cljs none?))
-         (-def   !hash-set|double?       #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet) :cljs none?))
-         (-def   !hash-set|ref?          #?(:clj  (or (isa? java.util.HashSet)
-                                                      (isa? it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet))
-                                            :cljs none?))
+         (def   !hash-set|byte?         #?(:clj (isa? it.unimi.dsi.fastutil.bytes.ByteOpenHashSet)     :cljs none?))
+         (def   !hash-set|char?         #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharOpenHashSet)     :cljs none?))
+         (def   !hash-set|short?        #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortOpenHashSet)   :cljs none?))
+         (def   !hash-set|int?          #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntOpenHashSet)       :cljs none?))
+         (def   !hash-set|long?         #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongOpenHashSet)     :cljs none?))
+         (def   !hash-set|float?        #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatOpenHashSet)   :cljs none?))
+         (def   !hash-set|double?       #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet) :cljs none?))
+         (def   !hash-set|ref?          #?(:clj  (or (isa? java.util.HashSet)
+                                                     (isa? it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet))
+                                           :cljs none?))
 
-         (-def   !hash-set?              (or !hash-set|ref?
-                                             !hash-set|byte? !hash-set|short? !hash-set|char?
-                                             !hash-set|int? !hash-set|long?
-                                             !hash-set|float? !hash-set|double?))
+         (def   !hash-set?              (or !hash-set|ref?
+                                            !hash-set|byte? !hash-set|short? !hash-set|char?
+                                            !hash-set|int? !hash-set|long?
+                                            !hash-set|float? !hash-set|double?))
 
          ;; CLJ technically can have via ConcurrentHashMap with same KVs but this hasn't been implemented yet
-#?(:clj  (-def  !!hash-set?              none?))
-         (-def    hash-set?              (or ?!+hash-set? !hash-set? #?(:clj !!hash-set?)))
+#?(:clj  (def  !!hash-set?              none?))
+         (def    hash-set?              (or ?!+hash-set? !hash-set? #?(:clj !!hash-set?)))
 
 ;; ----- Unsorted Sets ----- ;;
 
-         (-def   +unsorted-set?            +hash-set?)
-         (-def  !+unsorted-set?           !+hash-set?)
-         (-def ?!+unsorted-set?          ?!+hash-set?)
+         (def   +unsorted-set?            +hash-set?)
+         (def  !+unsorted-set?           !+hash-set?)
+         (def ?!+unsorted-set?          ?!+hash-set?)
 
-         (-def   !unsorted-set|byte?     !hash-set|byte?)
-         (-def   !unsorted-set|short?    !hash-set|char?)
-         (-def   !unsorted-set|char?     !hash-set|short?)
-         (-def   !unsorted-set|int?      !hash-set|int?)
-         (-def   !unsorted-set|long?     !hash-set|long?)
-         (-def   !unsorted-set|float?    !hash-set|float?)
-         (-def   !unsorted-set|double?   !hash-set|double?)
-         (-def   !unsorted-set|ref?      !hash-set|ref?)
+         (def   !unsorted-set|byte?     !hash-set|byte?)
+         (def   !unsorted-set|short?    !hash-set|char?)
+         (def   !unsorted-set|char?     !hash-set|short?)
+         (def   !unsorted-set|int?      !hash-set|int?)
+         (def   !unsorted-set|long?     !hash-set|long?)
+         (def   !unsorted-set|float?    !hash-set|float?)
+         (def   !unsorted-set|double?   !hash-set|double?)
+         (def   !unsorted-set|ref?      !hash-set|ref?)
 
-         (-def   !unsorted-set?          (or !unsorted-set|ref?
-                                             !unsorted-set|byte? !unsorted-set|short? !unsorted-set|char?
-                                             !unsorted-set|int? !unsorted-set|long?
-                                             !unsorted-set|float? !unsorted-set|double?))
+         (def   !unsorted-set?
+            (or !unsorted-set|ref?
+                !unsorted-set|byte? !unsorted-set|short? !unsorted-set|char?
+                !unsorted-set|int? !unsorted-set|long?
+                !unsorted-set|float? !unsorted-set|double?))
 
-#?(:clj  (-def  !!unsorted-set?          !!hash-set?))
-         (-def    unsorted-set?            hash-set?)
+#?(:clj  (def  !!unsorted-set?          !!hash-set?))
+         (def    unsorted-set?            hash-set?)
 
 ;; ----- Sorted Sets ----- ;;
 
-         (-def   +sorted-set?            (isa? #?(:clj  clojure.lang.PersistentTreeSet
-                                                  :cljs cljs.core/PersistentTreeSet)))
-         (-def  !+sorted-set?            none?)
-         (-def ?!+sorted-set?            (or +sorted-set? !+sorted-set?))
+         (def   +sorted-set?            (isa? #?(:clj  clojure.lang.PersistentTreeSet
+                                                 :cljs cljs.core/PersistentTreeSet)))
+         (def  !+sorted-set?            none?)
+         (def ?!+sorted-set?            (or +sorted-set? !+sorted-set?))
 
-         (-def   !sorted-set|byte?       #?(:clj  (isa? it.unimi.dsi.fastutil.bytes.ByteSortedSet)
-                                            :cljs none?))
-         (-def   !sorted-set|short?      #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortSortedSet)                                 :cljs none?))
-         (-def   !sorted-set|char?       #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharSortedSet)                                 :cljs none?))
-         (-def   !sorted-set|int?        #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntSortedSet)                                 :cljs none?))
-         (-def   !sorted-set|long?       #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongSortedSet)                                 :cljs none?))
-         (-def   !sorted-set|float?      #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatSortedSet)                                 :cljs none?))
-         (-def   !sorted-set|double?     #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleSortedSet)
-                                            :cljs none?))
+         (def   !sorted-set|byte?       #?(:clj  (isa? it.unimi.dsi.fastutil.bytes.ByteSortedSet)
+                                           :cljs none?))
+         (def   !sorted-set|short?      #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortSortedSet)                                 :cljs none?))
+         (def   !sorted-set|char?       #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharSortedSet)                                 :cljs none?))
+         (def   !sorted-set|int?        #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntSortedSet)                                 :cljs none?))
+         (def   !sorted-set|long?       #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongSortedSet)                                 :cljs none?))
+         (def   !sorted-set|float?      #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatSortedSet)                                 :cljs none?))
+         (def   !sorted-set|double?     #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleSortedSet)
+                                           :cljs none?))
          ;; CLJS technically can have via goog.structs.AVLTree with same KVs but this hasn't been implemented yet
-         (-def   !sorted-set|ref?        #?(:clj (isa? java.util.TreeSet) :cljs none?))
+         (def   !sorted-set|ref?        #?(:clj (isa? java.util.TreeSet) :cljs none?))
 
-         (-def   !sorted-set?            (or !sorted-set|ref?
-                                             !sorted-set|byte? !sorted-set|short? !sorted-set|char?
-                                             !sorted-set|int? !sorted-set|long?
-                                             !sorted-set|float? !sorted-set|double?))
+         (def   !sorted-set?            (or !sorted-set|ref?
+                                            !sorted-set|byte? !sorted-set|short? !sorted-set|char?
+                                            !sorted-set|int? !sorted-set|long?
+                                            !sorted-set|float? !sorted-set|double?))
 
          ;; CLJ technically can have via ConcurrentSkipListMap with same KVs but this hasn't been implemented yet
-#?(:clj  (-def  !!sorted-set?            none?))
-         (-def    sorted-set?            (or ?!+sorted-set? !sorted-set? #?@(:clj [!!sorted-set? (isa? java.util.SortedSet)])))
+#?(:clj  (def  !!sorted-set?            none?))
+         (def    sorted-set?            (or ?!+sorted-set? !sorted-set? #?@(:clj [!!sorted-set? (isa? java.util.SortedSet)])))
 
 ;; ----- Other Sets ----- ;;
 
-         (-def   +insertion-ordered-set? (or (isa? linked.set.LinkedSet)
-                                           ;; This is true, but we have replaced OrderedSet with LinkedSet
-                                           #_(:clj (isa? flatland.ordered.set.OrderedSet))))
-         (-def  !+insertion-ordered-set? none?
-                                         ;; This is true, but we have replaced OrderedSet with LinkedSet
-                                         #_(isa? flatland.ordered.set.TransientOrderedSet))
-         (-def ?!+insertion-ordered-set? (or +insertion-ordered-set? !+insertion-ordered-set?))
+         (def   +insertion-ordered-set? (or (isa? linked.set.LinkedSet)
+                                            ;; This is true, but we have replaced OrderedSet with LinkedSet
+                                          #_(:clj (isa? flatland.ordered.set.OrderedSet))))
+         (def  !+insertion-ordered-set? none?
+                                        ;; This is true, but we have replaced OrderedSet with LinkedSet
+                                      #_(isa? flatland.ordered.set.TransientOrderedSet))
+         (def ?!+insertion-ordered-set? (or +insertion-ordered-set? !+insertion-ordered-set?))
 
-         (-def   !insertion-ordered-set? #?(:clj (isa? java.util.LinkedHashSet) :cljs none?))
+         (def   !insertion-ordered-set? #?(:clj (isa? java.util.LinkedHashSet) :cljs none?))
 
          ;; CLJ technically can have via ConcurrentLinkedHashMap with same KVs but this hasn't been implemented yet
-#?(:clj  (-def  !!insertion-ordered-set? none?))
+#?(:clj  (def  !!insertion-ordered-set? none?))
 
-         (-def    insertion-ordered-set? (or ?!+insertion-ordered-set? !insertion-ordered-set? #?(:clj !!insertion-ordered-set?)))
+         (def    insertion-ordered-set? (or ?!+insertion-ordered-set? !insertion-ordered-set? #?(:clj !!insertion-ordered-set?)))
 
 ;; ----- General Sets ----- ;;
 
-         (-def  !+set?                   (isa? #?(:clj  clojure.lang.ITransientSet
-                                                  :cljs cljs.core/ITransientSet)))
+         (def  !+set?                   (isa? #?(:clj  clojure.lang.ITransientSet
+                                                 :cljs cljs.core/ITransientSet)))
 
-         (-def   +set|built-in?          (or (isa? #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet))
+         (def   +set|built-in?          (or (isa? #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet))
                                              (isa? #?(:clj clojure.lang.PersistentTreeSet :cljs cljs.core/PersistentTreeSet))))
 
-         (-def   +set?                   (isa? #?(:clj  clojure.lang.IPersistentSet
-                                                  :cljs cljs.core/ISet)))
-         (-def ?!+set?                   (or !+set? +set?))
+         (def   +set?                   (isa? #?(:clj  clojure.lang.IPersistentSet
+                                                 :cljs cljs.core/ISet)))
+         (def ?!+set?                   (or !+set? +set?))
 
-         (-def   !set|byte?              #?(:clj (isa? it.unimi.dsi.fastutil.bytes.ByteSet)     :cljs none?))
-         (-def   !set|short?             #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortSet)   :cljs none?))
-         (-def   !set|char?              #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharSet)     :cljs none?))
-         (-def   !set|int?               #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntSet)       :cljs none?))
-         (-def   !set|long?              #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongSet)     :cljs none?))
-         (-def   !set|float?             #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatSet)   :cljs none?))
-         (-def   !set|double?            #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleSet) :cljs none?))
-         (-def   !set|ref?               (or !unsorted-set|ref? !sorted-set|ref?))
+         (def   !set|byte?              #?(:clj (isa? it.unimi.dsi.fastutil.bytes.ByteSet)     :cljs none?))
+         (def   !set|short?             #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortSet)   :cljs none?))
+         (def   !set|char?              #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharSet)     :cljs none?))
+         (def   !set|int?               #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntSet)       :cljs none?))
+         (def   !set|long?              #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongSet)     :cljs none?))
+         (def   !set|float?             #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatSet)   :cljs none?))
+         (def   !set|double?            #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleSet) :cljs none?))
+         (def   !set|ref?               (or !unsorted-set|ref? !sorted-set|ref?))
 
-         (-def   !set?                   (or !set|ref?
-                                             !set|byte? !set|short? !set|char?
-                                             !set|int? !set|long?
-                                             !set|float? !set|double?))
+         (def   !set?                   (or !set|ref?
+                                            !set|byte? !set|short? !set|char?
+                                            !set|int? !set|long?
+                                            !set|float? !set|double?))
 
-#?(:clj  (-def  !!set?                   (or !!unsorted-set? !!sorted-set?)))
-         (-def    set?                   (or ?!+set? !set? #?@(:clj [!!set? (isa? java.util.Set)])))
+#?(:clj  (def  !!set?                   (or !!unsorted-set? !!sorted-set?)))
+         (def    set?                   (or ?!+set? !set? #?@(:clj [!!set? (isa? java.util.Set)])))
 
 ;; ===== Functions ===== ;;
 
-         (-def fn?          (isa? #?(:clj clojure.lang.Fn  :cljs js/Function)))
+         (def fn?          (isa? #?(:clj clojure.lang.Fn  :cljs js/Function)))
 
-         (-def ifn?         (isa? #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
+         (def ifn?         (isa? #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
 
-         (-def fnt?         (and fn? (>expr (fn-> c/meta ::type))))
+         (def fnt?         (and fn? (>expr (fn-> c/meta ::type))))
 
-         (-def multimethod? (isa? #?(:clj clojure.lang.MultiFn :cljs cljs.core/IMultiFn)))
+         (def multimethod? (isa? #?(:clj clojure.lang.MultiFn :cljs cljs.core/IMultiFn)))
 
          ;; I.e., can you call/invoke it by being in functor position (first element of an unquoted
          ;; list) within a typed context?
          ;; TODO should we allow java.lang.Runnable, java.util.concurrent.Callable, and other
          ;; functional interfaces to be `callable?`?
-         (-def callable?    (or ifn? fnt?))
+         (def callable?    (or ifn? fnt?))
 
 ;; ===== Miscellaneous ===== ;;
 
          ;; Used by `quantum.untyped.core.analyze.ast`
-         (-def with-metable? (isa? #?(:clj clojure.lang.IObj  :cljs cljs.core/IWithMeta)))
+         (def with-metable? (isa? #?(:clj clojure.lang.IObj  :cljs cljs.core/IWithMeta)))
 
-#?(:clj  (-def thread?       (isa? java.lang.Thread)))
+         ;; TODO move
+#?(:clj  (def thread?       (isa? java.lang.Thread)))
 
          ;; Used by `quantum.untyped.core.analyze`
          (def throwable? "Able to be used with `throw`"
            #?(:clj (isa? java.lang.Throwable) :cljs any?))
 
          ;; Used by `quantum.untyped.core.analyze`
-         (-def regex?        (isa? #?(:clj java.util.regex.Pattern :cljs js/RegExp)))
+         (def regex?        (isa? #?(:clj java.util.regex.Pattern :cljs js/RegExp)))
 
          ;; Used by `quantum.untyped.core.analyze`
-         (-def keyword?      (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
+         (def keyword?      (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
 
          ;; Used by `quantum.untyped.core.analyze` via `t/literal?`
-         (-def str?          (isa? #?(:clj java.lang.String :cljs js/String)))
+         (def str?          (isa? #?(:clj java.lang.String :cljs js/String)))
 
          ;; Used by `quantum.untyped.core.analyze` via `t/literal?`
-         (-def symbol?       (isa? #?(:clj clojure.lang.Symbol :cljs cljs.core/Symbol)))
-
-         ;; `js/File` isn't always available! Use an abstraction
-#?(:clj  (-def file?         (isa? java.io.File)))
+         (def symbol?       (isa? #?(:clj clojure.lang.Symbol :cljs cljs.core/Symbol)))
 
          ;; TODO move
-         (-def delay?        (isa? #?(:clj clojure.lang.Delay :cljs cljs.core/Delay)))
+         ;; `js/File` isn't always available! Use an abstraction
+#?(:clj  (def file?         (isa? java.io.File)))
 
-#?(:clj  (-def tagged-literal? (isa? clojure.lang.TaggedLiteral)))
+         ;; TODO move
+         (def delay?        (isa? #?(:clj clojure.lang.Delay :cljs cljs.core/Delay)))
+
+#?(:clj  (def tagged-literal? (isa? clojure.lang.TaggedLiteral)))
 
          ;; Used in `quantum.untyped.core.analyze`
-         (-def literal?
+         (def literal?
            (or nil? boolean? symbol? keyword? str? #?(:clj long?) double? #?(:clj tagged-literal?)))
-       #_(-def form?             (or literal? +list? +vector? ...))
+
+       #_(def form?             (or literal? +list? +vector? ...))

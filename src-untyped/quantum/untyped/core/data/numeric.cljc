@@ -24,17 +24,12 @@
   #?(:cljs goog.math.Long)
            [quantum.core.data.primitive       :as p]
            [quantum.core.data.string          :as dstr]
-           [quantum.core.logic
+         #_[quantum.core.logic
              :refer [whenf fn-not fn=]]
-           [quantum.core.type                 :as t
-             :refer [defnt]]
-           [quantum.core.vars                 :as var
-             :refer [defalias]])
-         (:import
-           [clojure.lang BigInt Numbers]
-           [java.math BigDecimal BigInteger])
-#?(:cljs (:require-macros
-           [quantum.core.data.numeric :as self])))
+           [quantum.core.type                 :as t]
+           ;; TODO TYPED excise reference
+           [quantum.core.untyped.vars         :as var
+             :refer [defalias]]))
 
 ;; ===== Integers ===== ;;
 
@@ -43,7 +38,7 @@
 (var/def fixint? "The set of all fixed-precision integers."
   (t/or #?@(:clj [p/byte? p/short?]) p/int? p/long?))
 
-#?(:clj (def java-bigint? (t/isa? BigInteger)))
+#?(:clj (def java-bigint? (t/isa? java.math.BigInteger)))
 #?(:clj (def clj-bigint?  (t/isa? clojure.lang.BigInt)))
 
 (var/def bigint? "The set of all 'big' (arbitrary-precision) integers."
@@ -83,6 +78,8 @@
            (t/isa? BigDecimal)
            ;; TODO bring in implementation per the ns docstring
      :cljs t/none?))
+
+(def decimal? (t/or fixdec? bigdec?))
 
 ;; ===== Precision ===== ;;
 
@@ -157,8 +154,6 @@
 (t/defn ^:inline denominator > numerically-integer?
         ([x numerically-integer? > (t/type x)] (>one-of-type x))
 #?(:clj ([x ratio?               > (t/assume java-bigint?)] (.denominator x))))
-
-(def decimal? (or #?(:clj p/float?) p/double? bigdec?))
 
 ;; ===== Likenesses ===== ;;
 
