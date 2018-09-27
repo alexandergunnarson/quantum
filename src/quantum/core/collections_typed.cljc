@@ -184,7 +184,7 @@
 
 (t/defn reduce-iter
   "Made public in case future specializations want to use it."
-  [rf rf?, init t/any?, xs (t/isa|direct? #?(:clj java.lang.Iterable :cljs cljs.core/IIterable))]
+  [rf rf?, init t/any?, xs dc/iterable?]
   (let [iter (>iterator xs)]
     (loop [ret init]
       (if #?(:clj (.hasNext iter) :cljs ^boolean (.hasNext iter))
@@ -198,7 +198,7 @@
   "Reduces a seq, ignoring any opportunities to switch to a more specialized implementation.
 
    Made public in case future specializations want to use it."
-  [rf rf?, init t/any?, xs iseq?]
+  [rf rf?, init t/any?, xs dc/iseq?]
   (loop [xs' xs, ret init]
     (if (nil? xs')
         ret
@@ -324,12 +324,13 @@
    Uses an unsynchronized mutable counter internally, but this cannot cause race conditions if
    `reduce` is implemented correctly (this includes single-threadedness)."
   [rf rfi?, init t/any?, xs dc/reducible?]
-  (let [rf' (let [!i (ref/! -1)]
-              (fn/aritoid rf' rf'
-                (t/fn ([ret ?, x ?]
-                  (rf ret x   (ref/reset! !i (num/inc* (ref/deref !i))))))
-                (t/fn ([ret ?, k ?, v ?]
-                  (rf ret k v (ref/reset! !i (num/inc* (ref/deref !i))))))))]
+  (let [^:inline rf'
+          (let [!i (ref/! -1)]
+            (fn/aritoid rf' rf'
+              (t/fn ([ret ?, x ?]
+                (rf ret x   (ref/reset! !i (num/inc* (ref/deref !i))))))
+              (t/fn ([ret ?, k ?, v ?]
+                (rf ret k v (ref/reset! !i (num/inc* (ref/deref !i))))))))]
     (reduce rf' init xs)))
 
 (var/def xf? "Transforming function (for transducers)"
@@ -346,19 +347,18 @@
 
 ;; ===== Count / length / size ===== ;;
 
-(def count|rf
-  (t/fn {:inline true}
-    ([] 0)
-    ([ct ?] ct)
-    ([ct ?, _ ?] (num/inc ct))))
+(def ^:inline count|rf
+  (t/fn ([] 0)
+        ([ct ?] ct)
+        ([ct ?, _ ?] (num/inc ct))))
 
 ;; TODO make sure !+vector is handled for CLJS
 (t/defn ^:inline count > dnum/std-integer?
   {:todo #{"handle persistent maps"}
-   :incorporated #{'clojure.lang.RT/count
-                   'clojure.lang.RT/countFrom
-                   'clojure.core/count
-                   'cljs.core/count}}
+   :incorporated {clojure.lang.RT/count     "9/2018"
+                  clojure.lang.RT/countFrom "9/2018"
+                  clojure.core/count        "9/2018"
+                  cljs.core/count           "9/26/2018"}}
          ;; Counted
          ([x  p/nil?           > #?(:clj p/long? :cljs dnum/nip?)] 0)
 #?(:cljs ([xs dstr/str?        > (t/assume dnum/nip?)] (.-length xs)))
@@ -392,14 +392,14 @@
   ([n dnum/std-integer?, xs dc/counted?] (count xs))
   ([n dnum/std-integer?, xs (t/input-type educe :_ :_ :?)] (educe (gen-bounded-count|rf n) xs)))
 
-(t/def empty?|rf
+(t/def ^:inline empty?|rf
   (fn/aritoid
     (t/fn [] true)
     fn/identity
     (t/fn [ret _, x _]      (dc/reduced false))
     (t/fn [ret _, k _, v _] (dc/reduced false))))
 
-(t/defn empty? > p/boolean?
+(t/defn ^:inline empty? > p/boolean?
   ([x p/nil?] true)
   ([xs dc/counted?] (-> xs count num/zero?))
   ([xs (t/input-type educe :_ :_ :?)] (educe empty?|rf x)))

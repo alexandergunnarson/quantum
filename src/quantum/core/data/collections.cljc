@@ -6,7 +6,7 @@
     [quantum.core.data.map    :as map]
     [quantum.core.data.set    :as set]
     [quantum.core.data.string :as dstr]
-    [quantum.core.data.tuple  :as tuple]
+    [quantum.core.data.tuple  :as tup]
     [quantum.core.data.vector :as vec]
     [quantum.core.type :as t]))
 
@@ -118,11 +118,16 @@
 (def icounted? (t/isa|direct? #?(:clj clojure.lang.Counted :cljs cljs.core/ICounted)))
 
 ;; If something is `counted?`, it is supposed to implement a constant-time `count`
+;; `nil` is counted but this type ignores that
 (def counted?
   (t/or icounted?
         ;; It's not guaranteed that `char-seq?`s have constant-time `.length`/`count` but it's very
         ;; reasonable to assume.
-        #?(:clj dstr/char-seq? :cljs dstr/string?)
+        #?(:clj dstr/char-seq? :cljs (t/or dstr/string? dstr/!string?))
+        tup/tuple?
+        ;; This kind of chan has a buffer which is countable
+        dasync/m2m-chan?
+        #?(:clj tup/map-entry?)
         ;; All enumerated vector types are all known to implement constant-time `count`.
         vec/vector?
         ;; It's not guaranteed that all `java.util.Map`s have constant-time `.size`/`count` but it's
@@ -133,7 +138,7 @@
         set/set?
         arr/array?))
 
-(def iterable? (t/isa? #?(:clj java.lang.Iterable :cljs cljs.core/IIterable)))
+(def iterable? (t/isa|direct? #?(:clj java.lang.Iterable :cljs cljs.core/IIterable)))
 
 #?(:clj (def java-coll? (t/isa? java.util.Collection)))
 
