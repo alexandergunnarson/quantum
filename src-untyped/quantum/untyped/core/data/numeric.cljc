@@ -28,7 +28,15 @@
 (def bigint? #?(:clj  (t/or clj-bigint? big-integer?)
                 :cljs (t/isa? com.gfredericks.goog.math.Integer)))
 
-(def integer? (t/or #?@(:clj [p/byte? p/short? p/int? p/long?]) bigint?))
+;; Incorporated `clojure.lang.Util/isInteger`
+;; Incorporated `clojure.core/integer?`
+;; Incorporated `cljs.core/integer?`
+(def integer? (t/or #?@(:clj [p/byte? p/short?]) p/int? p/long? bigint?))
+
+;; Incorporated `clojure.core/int?`
+;; Incorporated `cljs.core/int?`
+(var/def fixed-integer? "The set of all fixed-precision integers."
+  (t/or ?@(:clj [p/byte? p/short?]) p/int? p/long?))
 
 #?(:clj
 (defnt >big-integer > big-integer?
@@ -87,6 +95,16 @@
 (def decimal? (or #?(:clj p/float?) p/double? bigdec?))
 
 ;; ===== Likenesses ===== ;;
+
+
+;; TODO incorporate
+(defn ^boolean numerically-integer?
+  "Returns true if n is a JavaScript number with no decimal part."
+  [n]
+  (and (number? n)
+       (not ^boolean (js/isNaN n))
+       (not (identical? n js/Infinity))
+       (== (js/parseFloat n) (js/parseInt n 10))))
 
 #_(def numerically-integer?        (or integer? (and decimal? (>expr unum/integer-value?))))
 

@@ -3,10 +3,12 @@
           [boolean? char? comparable? decimal? double? false? float? int? integer? true?])
         (:require
  #?(:cljs [com.gfredericks.goog.math.Integer :as int])
+ #?(:cljs goog.math.Integer)
+ #?(:cljs goog.math.Long)
           [quantum.core.type                 :as t]
           [quantum.untyped.core.type         :as ut]
           ;; TODO TYPED excise reference
-          [quantum.untyped.core.vars
+          [quantum.untyped.core.vars         :as var
             :refer [defaliases]])
 #?(:clj (:import
           [java.nio ByteBuffer]
@@ -15,15 +17,30 @@
 ;; ===== Predicates ===== ;;
 
 #?(:clj (def boolean? (t/isa? #?(:clj Boolean :cljs js/Boolean))))
+
 #?(:clj (def byte?    (t/isa? Byte)))
+
 #?(:clj (def short?   (t/isa? Short)))
+
 #?(:clj (def char?    (t/isa? Character)))
-#?(:clj (def int?     (t/isa? Integer)))
-#?(:clj (def long?    (t/isa? Long)))
+
+        (var/def int?
+          "For CLJS, `int?` is not primitive even though it mimics the boxed version of the Java
+           `int` primitive. It is included in this namespace merely for cohesion."
+          (t/isa? #?(:clj Integer :cljs goog.math.Integer)))
+
+        (var/def long?
+          "For CLJS, `long?` is not primitive even though it mimics the boxed version of the Java
+           `long` primitive. It is included in this namespace merely for cohesion."
+          (t/isa? #?(:clj Long :cljs goog.math.Long)))
+
 #?(:clj (def float?   (t/isa? Float)))
+
         (def double?  (t/isa? #?(:clj Double :cljs js/Number)))
 
-        (def primitive? (t/or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
+        (var/def primitive?
+          "For CLJS, `int?` and `long?` are not primitive even though they mimic Java primitives."
+          (t/or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
 
         ;; Specifically primitive integers
         (def integer? (t/or #?@(:clj [byte? short? int? long?])))

@@ -52,10 +52,21 @@
 
 ; ===== `==`, `=`, `not=` ===== ;
 
+(defn identical?
+  "Tests if 2 arguments are the same object"
+  {:inline (fn [x y] `(. clojure.lang.Util identical ~x ~y))
+   :inline-arities #{2}
+   :added "1.0"}
+  ([x y] (clojure.lang.Util/identical x y)))
+
+
 ;; TODO TYPED
 (t/defn ^:inline ==
   "Tests identity-equality."
   > p/boolean?
+  {:incorporated '{clojure.lang.Util/identical "9/27/2018"
+                   clojure.core/identical?     "9/27/2018"
+                   cljs.core/identical?        "9/27/2018"}}
   ([x t/any?] true)
   ([a ..., b ...] (Util/identical a b)))
 
@@ -68,8 +79,21 @@
 
 ;; TODO .equals vs. .equiv vs. all the others?
 
+(defn =
+  ([x y] (clojure.lang.Util/equiv x y))
+  ([x y & more]
+   (if (clojure.lang.Util/equiv x y)
+     (if (next more)
+       (recur y (first more) (next more))
+       (clojure.lang.Util/equiv y (first more)))
+     false)))
+
+
 (t/defn ^:inline =
   "Tests value-equality."
+  {:incorporated '{clojure.lang.Util/equiv "9/27/2018"
+                   clojure.core/=          "9/27/2018"
+                   cljs.core/=             "9/27/2018"}}
   > p/boolean?
         ([x t/any?] true)
 #?(:clj ([a p/boolean?                   , b p/boolean?]                    (Numeric/eq a b)))
@@ -80,6 +104,8 @@
 (t/defn ^:inline not=
   "Tests value-inequality."
   > p/boolean?
+  {:incorporated '{clojure.core/not= "9/27/2018"
+                   cljs.core/not=    "9/27/2018"}}
         ([x t/any?] false)
 #?(:clj ([a p/boolean?                   , b p/boolean?]                    (Numeric/neq a b)))
 #?(:clj ([a (t/- p/primitive? t/boolean?), b (t/- p/primitive? t/boolean?)] (Numeric/neq a b)))

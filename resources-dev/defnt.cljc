@@ -173,32 +173,58 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     [.] : in progress
     [-] : done as far as possible but not truly complete
     [x] : actually done
+    [|] : not possible / N/A / refused
   - List of semi-approximately topologically ordered namespaces to make typed:
     - [.] clojure.core / cljs.core
           - [x x] =
           - [   ] ==
+          - [   ] any?
           - [. .] boolean
           - [x x] boolean?
           - [x x] byte
           - [x x] byte?
           - [x x] char
           - [x x] char?
+          - [  |] class
           - [x x] compare
           - [x x] double
           - [x x] double?
+          - [   ] even?
           - [x x] identical?
+          - [x x] integer?
           - [x x] float
           - [x x] float?
           - [x x] int
           - [x x] int?
           - [x x] long
           - [x x] long?
+          - [   ] nat-int?
+          - [   ] neg?
+          - [x x] not=
           - [x x] number?
+          - [   ] odd?
+          - [   ] pos?
           - [x x] short
           - [x x] short?
+          - [   ] some?
     - [.] clojure.lang.Numbers
     - [.] clojure.lang.RT
     - [.] clojure.lang.Util
+         - [ ] classOf
+         - [ ] clearCache
+         - [x] compare
+         - [x] equiv
+         - [ ] hash
+         - [ ] hashCombine
+         - [ ] hasheq
+         - [x] identical
+         - [x] isInteger
+         - [ ] isPrimitive
+         - [ ] loadWithClass
+         - [ ] pcequiv
+         - [|] ret1
+         - [|] runtimeException
+         - [|] sneakyThrow
     - [.] (TEMPORARY) collections-typed
          - [ ] `get`
          - [ ] `merge`
