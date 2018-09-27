@@ -720,7 +720,7 @@
         (testing "< , >"
           (test-comparison  <ident t/long? t/object?))
         (testing "<>"
-          (test-comparison <>ident t/long? t/thread?)))
+          (test-comparison <>ident t/long? (t/isa? Thread))))
       (testing "Boxed Primitive + Abstract"
         (test-comparison <>ident t/long? (t/isa? java.util.AbstractCollection)))
       (testing "Boxed Primitive + Interface"
@@ -743,14 +743,14 @@
         (testing "< , >"
           (test-comparison  <ident a t/object?))
         (testing "<>"
-          (test-comparison <>ident a t/thread?)))
+          (test-comparison <>ident a (t/isa? Thread))))
       (testing "Extensible Concrete + Abstract"
         (testing "< , >"
           (test-comparison  <ident (t/isa? java.util.AbstractCollection) t/object?)
           (test-comparison  <ident a (t/isa? java.util.AbstractCollection)))
         (testing "<>"
-          (test-comparison <>ident t/thread? (t/isa? java.util.AbstractCollection))
-          (test-comparison <>ident (t/isa? java.util.AbstractCollection) t/thread?)))
+          (test-comparison <>ident (t/isa? Thread) (t/isa? java.util.AbstractCollection))
+          (test-comparison <>ident (t/isa? java.util.AbstractCollection) (t/isa? Thread))))
       (testing "Extensible Concrete + Interface"
         (test-comparison ><ident a t/char-seq?))
       (testing "Abstract + Abstract"

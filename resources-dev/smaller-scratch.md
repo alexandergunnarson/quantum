@@ -1,3 +1,129 @@
+https://github.com/clojure/clojure/blob/f572a60262852af68cdb561784a517143a5847cf/src/clj/clojure/core/specs.clj
+
+
+
+
+(let [ignore? (fn-or fn? t/protocol? t/multimethod? t/unbound? var/namespace? dasync/thread?)]
+  (->> (all-ns)
+       (map+    ns-interns)
+       (join    {})
+       (map+    val)
+       (remove+ #{#'clojure.core/*1
+                  #'clojure.core/*2
+                  #'clojure.core/*3
+                  #'clojure.core/*data-readers*
+                  #'clojure.core/default-data-readers
+                  #'clojure.tools.reader/default-data-readers
+                  #'clojure.core.async.impl.timers/timeouts-queue
+                  #'clojure.tools.analyzer.jvm/default-passes
+                  #'aleph.http/default-connection-pool
+                  #'aleph.http/default-response-executor
+                  #'clojure.core.async.impl.ioc-macros/passes
+                  #'byte-streams/inverse-conversions
+                  #'byte-streams/conversions})
+       (remove+ (rcomp deref (fn-or ignore? (fn-and var? (fn-> deref ignore?)))))
+       (map+    (juxt identity (fn-> deref quantum.core.meta.bench/shallow-byte-size)))
+       (join    {})
+       (map+    val)
+       (reduce  +)
+       (#(quantum.measure.convert/convert % :bytes :MB))
+       double))
+
+(def-map 1)
+
+; -> 18.21 MB... there must be lots of data not referenced by vars
+
+; TODO log these stats when every namespace is compiled
+(->> (java.lang.management.ManagementFactory/getMemoryPoolMXBeans)
+     (mapv (juxt #(.getName %) #(.getType %) #(.getUsage %))))
+
+ {:code-cache 25.52099609375,
+ :metaspace 203.1375122070312, (some of this is definitely garbage collected)
+ :compressed-class-space 69.5936279296875}
+
+
+TODO make sure to set a global onerror handler for PhantomJS (via a flag of course)
+
+TODO decrease memory footprint? (it's huge!)
+TODO allow return types for `defnt` like `sequential?`
+TODO also allow return types like :whatever/validator
+
+TODO longs vs. long-array
+
+; TODO fn (params-match? ->double 1) -> true; (params-match? ->double "asd") -> false
+; TODO do fast-as-possible ops given math expr
+; (* a (- b c) v) -> (scale (* a (- b c)) v)
+
+; TODO:
+
+(fnt [^indexed? x a]
+  (conj' x a)) ; and have it know what function needs to be looked up
+
+(:abcde my-validated-map) ; and know what its type will be
+
+
+
+
+(defn dropr-digit
+  ([n] (quot n 10))
+  ([digits n]
+    (if (<= digits 0)
+        n
+        (recur (dec digits) (dropr-digit n)))))
+
+(defn count-digits-integral
+  "Counts the digits of a number `n` not having a decimal portion."
+  ([n] (count-digits-integral (dropr-digit n) 1))
+  ([n d] (if (zero? n)
+             d
+             (recur (dropr-digit n) (inc d)))))
+
+(defn ->integral [n] (- n (->decimal n)))
+
+(defn ->decimal [n] (rem n 1))
+
+(defn pow-10 [n] (long (Math/pow 10 (int n))))
+
+(defn decimal->integer-like-decimal
+  "E.g. 0.003812317M -> 1003812317N
+   `n` must be 0 ≤ n < 1
+   Returns a `bigint`."
+  [n]
+  (if (zero? n)
+      0
+      (bigint (str "1" (subs (str (.stripTrailingZeros (bigdec n))) 2)))))
+
+(defn integer-like-decimal->decimal
+  "E.g. 1003812317N -> 0.003812317M
+   `n` must be an integer.
+   Returns a `bigdec`."
+  [n]
+  (bigdec (str "0." (subs (str n) 1))))
+
+(->decimal 1/4)
+
+
+(defn num-decimal-places [n]
+  (-> n ->decimal bigdec (.stripTrailingZeros) (.scale) (max 0)))
+
+(defn truncate-digits
+  "Truncates an integer `n` the specified number of `digits`, replacing
+   the truncated portion with 0s."
+  [digits n]
+  (if (<= digits 0)
+      n
+      (* (dropr-digit digits n)
+         (pow-10 digits))))
+
+(defn exact [n]
+  (if (or (double?  n)
+          (float?   n)
+          (decimal? n))
+      (rationalize n)
+      n))
+
+
+
 Take a look at Claypoole. Example code:
 
 (require '[com.climate.claypoole :as cp])
@@ -33,66 +159,6 @@ http://eng.climate.com/2014/02/25/claypoole-threadpool-tools-for-clojure/
   (if (vector? xs)
       (subvec xs 1)
       (throw (ex-info "`view-rest` not supported on type" {:type (type xs)}))))
-
-
-(defprotocol InternalReduce
-  "Protocol for concrete seq types that can reduce themselves
-   faster than first/next recursion. Called by clojure.core/reduce."
-  (internal-reduce [seq f start]))
-
-(defn- naive-seq-reduce
-  "Reduces a seq, ignoring any opportunities to switch to a more
-  specialized implementation."
-  [s f val]
-  (loop [s (seq s)
-         val val]
-    (if s
-      (let [ret (f val (first s))]
-        (if (reduced? ret)
-          @ret
-          (recur (next s) ret)))
-      val)))
-
-(defn- interface-or-naive-reduce
-  "Reduces via IReduceInit if possible, else naively."
-  [coll f val]
-  (if (instance? clojure.lang.IReduceInit coll)
-    (.reduce ^clojure.lang.IReduceInit coll f val)
-    (naive-seq-reduce coll f val)))
-
-(extend-protocol InternalReduce
-  ;; handles vectors and ranges
-  clojure.lang.IChunkedSeq
-  (internal-reduce
-   [s f val]
-   (if-let [s (seq s)]
-     (if (chunked-seq? s)
-       (let [ret (.reduce (chunk-first s) f val)]
-         (if (reduced? ret)
-           @ret
-           (recur (chunk-next s)
-                  f
-                  ret)))
-       (interface-or-naive-reduce s f val))
-     val))
-
-
-  java.lang.Object
-  (internal-reduce
-   [s f val]
-   (loop [cls (class s)
-          s s
-          f f
-          val val]
-     (if-let [s (seq s)]
-       (if (identical? (class s) cls)
-         (let [ret (f val (first s))]
-                (if (reduced? ret)
-                  @ret
-                  (recur cls (next s) f ret)))
-         (interface-or-naive-reduce s f val))
-       val))))
-
 
 
 (defn num-integral-digits [^double n]
@@ -215,14 +281,6 @@ The core premise is that entities can be found to belong to one or more classes.
 
 TODO look at AtomicLong.accumulateAndGet(long x, LongBinaryOperator accumulatorFunction)
 TODO revisit whether transformers are necessary compared with transducers
-
-The power offered by spec is probably better compared against dependent type systems like Idris. True static type systems run analysis at compile-time, but spec allows you to perform very complex checks because you have the power of full blown language.
-
-For example, with spec you can write a function spec that says "Union is a function that takes two hashsets. The return value of this function is a hashset that contains all the values found in the hashset arguments". That's impossible to statically check in most languages. Some languages like Idris approach this level of expressibility, but when they fall short, you're sunk. In spec you can always pop the escape hatch and write a custom predicate in Clojure code.
-
-So for me that's the tradeoff. I lose compile-time checking, but gain a *ton* of power. And since types exist at run-time we can do cool things like introspect them and generate data, documentation, better error messages, or even run logic over them to write a static type checker.
-
-
 
 http://www.kdgregory.com/?page=java.byteBuffer — useful reading about off-heap memory
 https://www.akkadia.org/drepper/cpumemory.pdf — what every programmer should know about memory

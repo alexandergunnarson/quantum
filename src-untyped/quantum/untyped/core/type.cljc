@@ -903,13 +903,12 @@
 
 #?(:clj  (-def thread?       (isa? java.lang.Thread)))
 
-         ;; Able to be used with `throw`
-         (-def throwable?    #?(:clj (isa? java.lang.Throwable) :cljs any?))
+         ;; Used by `quantum.untyped.core.analyze`
+         (def throwable? "Able to be used with `throw`"
+           #?(:clj (isa? java.lang.Throwable) :cljs any?))
 
+         ;; Used by `quantum.untyped.core.analyze`
          (-def regex?        (isa? #?(:clj java.util.regex.Pattern :cljs js/RegExp)))
-
-         (-def chan?         (isa? #?(:clj  clojure.core.async.impl.protocols/Channel
-                                      :cljs cljs.core.async.impl.protocols/Channel)))
 
          ;; Used by `quantum.untyped.core.analyze`
          (-def keyword?      (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
@@ -920,8 +919,6 @@
          ;; Used by `quantum.untyped.core.analyze` via `t/literal?`
          (-def symbol?       (isa? #?(:clj clojure.lang.Symbol :cljs cljs.core/Symbol)))
 
-#?(:clj  (-def namespace?    (isa? clojure.lang.Namespace)))
-
          ;; `js/File` isn't always available! Use an abstraction
 #?(:clj  (-def file?         (isa? java.io.File)))
 
@@ -931,17 +928,12 @@
 
          (-def transformer?  (isa? quantum.untyped.core.reducers.Transformer))
 
+         ;; TODO move
          (-def delay?        (isa? #?(:clj clojure.lang.Delay :cljs cljs.core/Delay)))
 
-#?(:clj  (-def tagged-literal?   (isa? clojure.lang.TaggedLiteral)))
+#?(:clj  (-def tagged-literal? (isa? clojure.lang.TaggedLiteral)))
 
          ;; Used in `quantum.untyped.core.analyze`
-         (-def literal?          (or nil? boolean? symbol? keyword? str? #?(:clj long?) double? #?(:clj tagged-literal?)))
+         (-def literal?
+           (or nil? boolean? symbol? keyword? str? #?(:clj long?) double? #?(:clj tagged-literal?)))
        #_(-def form?             (or literal? +list? +vector? ...))
-
-;; ===== Generic ===== ;;
-
-         ;; TODO make into a type
-       #_(def  nneg-int?  #(c/and (integer? %) (c/>= % 0)))
-         ;; TODO make into a type
-       #_(def  index?     nneg-int?)

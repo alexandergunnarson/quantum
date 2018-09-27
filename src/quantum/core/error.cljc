@@ -9,17 +9,20 @@
     [quantum.core.data.map         :as map]
     [quantum.core.fn
       :refer [fnl fn1 rcomp fn']]
+    [quantum.core.type             :as t]
+    [quantum.core.vars             :as var
+      :refer [defalias defaliases]]
     [quantum.untyped.core.core     :as ucore]
     [quantum.untyped.core.form.evaluate
       :refer [case-env case-env*]]
-    [quantum.untyped.core.vars
-      :refer [defalias defaliases]]
     [quantum.untyped.core.error    :as u]))
 
 (ucore/log-this-ns)
 
 (def ^{:todo {0 "Finish up `conditions` fork" 1 "look at cljs.stacktrace / clojure.stacktrace"}}
   annotations)
+
+(defalias t/throwable?)
 
 ;; ===== Config ===== ;;
 

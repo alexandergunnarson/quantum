@@ -17,13 +17,15 @@ TODO:
 - needs to equal `(t/and (t/or (t/not a) b) (t/or a c))` (which is correct)
 - `(- (or ?!+vector? !vector? #?(:clj !!vector?)) (isa? clojure.lang.Counted))` is not right
 
-- conditionally optional arities etc. for t/fn
+TODO:
+- split up `quantum.core.untyped.type` predicates
 
 #_"
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
   - data.coll/reduced
+  - data.coll/reduced?
   - Analysis
     - (if (dcoll/reduced? ret)
           ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`
@@ -86,6 +88,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - comparison of `t/fn`s is probably possible?
   - t/def
   - t/fnt (t/fn; current t/fn might transition to t/fn-spec or whatever?)
+  - t/ftype
+    - conditionally optional arities etc.
   - t/declare
   - declare-fnt (a way to do protocols/interfaces)
     - extend-fnt!
@@ -144,21 +148,26 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - Conversion functions belong in the namespace that their destination types belong in
 - TODO transition the quantum.core.* namespaces:
   ->>>>>> TODO need to add *all* quantum namespaces in here
+  - Legend:
+    [.] : in progress
+    [-] : done as far as possible but not truly complete
+    [x] : actually done
   - List of semi-approximately topologically ordered namespaces to make typed:
     - [ ] quantum.core.core -> TODO just need to delete this from all references
     - [ ] quantum.core.type.core
+    - [x] quantum.core.data.async
     - [ ] quantum.core.type.defs
     - [ ] quantum.core.refs -> quantum.core.data.refs
     - [ ] quantum.core.logic
           - (def nneg?    (l/fn-not neg?))
           - (def pos-int? (l/fn-and dnum/integer? pos?))
-    - [ ] quantum.core.fn
+    - [.] quantum.core.fn
     - [ ] quantum.core.cache
     - [ ] quantum.core.type-old
-    - [ ] quantum.core.data.string
-    - [x] quantum.core.data.map
-    - [x] quantum.core.data.meta
-    - [x] quantum.core.ns ; TODO split up into data.ns?
+    - [.] quantum.core.data.string
+    - [.] quantum.core.data.map
+    - [.] quantum.core.data.meta
+    - [.] quantum.core.ns ; TODO split up into data.ns?
     - [ ] quantum.core.print
     - [ ] quantum.core.log
     - [ ] quantum.core.data.vector

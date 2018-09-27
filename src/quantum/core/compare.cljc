@@ -33,6 +33,66 @@
   (:import
     clojure.lang.BigInt quantum.core.Numeric)))
 
+;; TODO TYPED incorporate this commented code
+
+; (defnt ^boolean identical?
+;   [^Object k1, ^Object k2]
+;   (clojure.lang.RT/identical k1 k2))
+
+; static public boolean pcequiv(Object k1, Object k2){
+;   if(k1 instanceof IPersistentCollection)
+;     return ((IPersistentCollection)k1).equiv(k2);
+;   return ((IPersistentCollection)k2).equiv(k1);
+; }
+
+; static public boolean equals(Object k1, Object k2){
+;   if(k1 == k2)
+;     return true;
+;   return k1 != null && k1.equals(k2);
+; }
+
+; static public boolean equiv(Object k1, Object k2){
+;   if(k1 == k2)
+;     return true;
+;   if(k1 != null)
+;     {
+;     if(k1 instanceof Number && k2 instanceof Number)
+;       return Numbers.equal((Number)k1, (Number)k2);
+;     else if(k1 instanceof IPersistentCollection || k2 instanceof IPersistentCollection)
+;       return pcequiv(k1,k2);
+;     return k1.equals(k2);
+;     }
+;   return false;
+; }
+
+; equivNull   : boolean equiv(Object k1, Object k2) return k2 == null
+; equivEquals : boolean equiv(Object k1, Object k2) return k1.equals(k2)
+; equivNumber : boolean equiv(Object k1, Object k2)
+;             if(k2 instanceof Number)
+;                 return Numbers.equal((Number) k1, (Number) k2);
+;             return false
+
+; equivColl : boolean equiv(Object k1, Object k2)
+;             if(k1 instanceof IPersistentCollection || k2 instanceof IPersistentCollection)
+;                 return pcequiv(k1, k2);
+;             return k1.equals(k2);
+
+; ; equivPred:
+; ;     nil             : equivNull
+; ;     Number          : equivNumber
+; ;     String, Symbol  : equivEquals
+; ;     Collection, Map : equivColl
+; ;     :else           : equivEquals
+
+; (defnt equiv ^boolean
+;   ([^Object                a #{long double boolean} b] (clojure.lang.RT/equiv a b))
+;   ([#{long double boolean} a ^Object                b] (clojure.lang.RT/equiv a b))
+;   ([#{long double boolean} a #{long double boolean} b] (clojure.lang.RT/equiv a b))
+;   ([^char                  a ^char                  b] (clojure.lang.RT/equiv a b))
+
+;   )
+
+
 (defaliases ccomp
   compare
   min-key first-min-key second-min-key
