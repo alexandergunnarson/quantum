@@ -5,34 +5,28 @@
    A complete (w.r.t. the `quantum.core.data.*` namespaces) set of definitions for type overloads is
    found in `quantum.core.compare`."
         (:refer-clojure :exclude
-          ;; TODO TYPED enable
-        #_[= == compare]
+          [< <= = not= == not== > >= compare]
           ;; TODO TYPED remove
-          [= not= < > <= >= max min max-key min-key neg? pos? zero? - -' + inc compare])
+        #_[= not= < > <= >= max min max-key min-key neg? pos? zero? - -' + inc compare])
         (:require
           ;; TODO TYPED excise
           [clojure.core       :as core]
           ;; TODO TYPED excise
-          [quantum.core.error :as err
-            :refer [TODO]]
-          ;; TODO TYPED excise
-          [quantum.core.fn
-            :refer [fn&2]]
-          [quantum.core.vars
-            :refer [defalias]]
-          ;; TODO TYPED excise
-          [quantum.core.numeric.operators  :as op
+        #_[quantum.core.numeric.operators  :as op
             :refer [- -' + abs inc div:natural]]
           ;; TODO TYPED excise
-          [quantum.core.numeric.predicates :as pred
+        #_[quantum.core.numeric.predicates :as pred
             :refer [neg? pos? zero?]]
           ;; TODO TYPED excise
-          [quantum.core.numeric.convert
+        #_[quantum.core.numeric.convert
             :refer [->num ->num&]]
           ;; TODO TYPED excise
-          [quantum.core.data.numeric       :as dnum]
+        #_[quantum.core.data.numeric       :as dnum]
           [quantum.core.data.primitive     :as p]
-          [quantum.core.type               :as t])
+          [quantum.core.type               :as t]
+          ;; TODO TYPED excise
+          [quantum.untyped.core.logic
+            :refer [ifs]])
 #?(:clj (:import
           [quantum.core Numeric])))
 
@@ -52,14 +46,6 @@
 
 ; ===== `==`, `=`, `not=` ===== ;
 
-(defn identical?
-  "Tests if 2 arguments are the same object"
-  {:inline (fn [x y] `(. clojure.lang.Util identical ~x ~y))
-   :inline-arities #{2}
-   :added "1.0"}
-  ([x y] (clojure.lang.Util/identical x y)))
-
-
 ;; TODO TYPED
 (t/defn ^:inline ==
   "Tests identity-equality."
@@ -68,7 +54,11 @@
                    clojure.core/identical?     "9/27/2018"
                    cljs.core/identical?        "9/27/2018"}}
   ([x t/any?] true)
-  ([a ..., b ...] (Util/identical a b)))
+  ([a ..., b ...] (clojure.lang.Util/identical a b)))
+
+(t/defn ^:inline not==
+  "Tests identity-inequality."
+  ...)
 
 (defn ^boolean =
   ([x y]
@@ -112,9 +102,50 @@
         ([a p/boolean?                   , b (t/- p/primitive? t/boolean?)] true)
         ([a (t/- p/primitive? t/boolean?), b p/boolean?]                    true))
 
+; ===== `<` ===== ;
+
+(t/defn ^:inline <
+  "Numeric less-than comparison."
+  > p/boolean?
+  ([x p/numeric?] true)
+  ([a p/numeric?, b p/numeric?] (Numeric/lt a b))
+  ; TODO numbers, but not nil
+   )
+
+; ===== `<=` ===== ;
+
+(t/defn ^:inline <=
+  "Numeric less-than-or-value-equal comparison."
+  > p/boolean?
+  ([x p/numeric?] true)
+  ([a p/numeric?, b p/numeric?] (Numeric/lte a b))
+  ; TODO numbers, but not nil
+   )
+
+; ===== `>` ===== ;
+
+(t/defn ^:inline >
+  "Numeric greater-than comparison."
+  > p/boolean?
+  ([x p/numeric?] true)
+  ([a p/numeric?, b p/numeric?] (Numeric/gt a b))
+  ; TODO numbers, but not nil
+   )
+
+; ===== `>=` ===== ;
+
+(t/defn ^:inline >=
+  "Numeric greater-than-or-value-equal comparison."
+  > p/boolean?
+  ([x p/numeric?] true)
+  ([a p/numeric?, b p/numeric?] (Numeric/gte a b))
+  ; TODO numbers, but not nil
+   )
+
 ; ===== `compare` ===== ;
 
-(def icomparable?
+(var/def icomparable?
+  "That which is comparable to its own 'concrete type' (i.e. class)."
   #?(:clj  (t/isa? java.lang.Comparable)
            ;; TODO other things are comparable; really it depends on the two objects in question
      :cljs (t/or p/nil? (t/isa? cljs.core/IComparable))))
@@ -122,7 +153,9 @@
 (def comparison? #?(:clj p/int? :cljs p/double?))
 
 (t/defn ^:inline compare
-  "When ->`a` is logically 'less than'    ->`b`, outputs a negative number.
+  "Logical (not numeric) comparison.
+
+   When ->`a` is logically 'less than'    ->`b`, outputs a negative number.
    When ->`a` is logically 'equal to'     ->`b`, outputs zero.
    When ->`a` is logically 'greater than' ->`b`, outputs a positive number."
   {:incorporated '{clojure.lang.Util/compare "9/27/2018"
@@ -130,10 +163,10 @@
                    cljs.core/compare         "9/27/2018"}}
   > comparison?
   ;; TODO TYPED should we use `>int` here?
-  ([a p/nil?    , b p/val?] (int -1))
+  ([a p/nil?      , b p/val?] (int -1))
   ;; TODO TYPED should we use `>int` here?
-  ([a p/val?    , b p/nil?] (int  1))
-  ([a primitive?, b primitive?] )
+  ([a p/val?      , b p/nil?] (int  1))
+  ([a p/primitive?, b p/primitive?] (ifs (> a b) 1, (< a b) -1, 0))
   ([^Comparable a ^Comparable b] (.compareTo a b))
   ([^Comparable a ^prim?      b] (.compareTo a b))
   ([^prim?      a ^Comparable b] (int (.compareTo (p/box a) b))))
@@ -152,10 +185,6 @@ static public int compare(Object k1, Object k2){
   (cond
     (identical? x y) 0
 
-    (number? x) (if (number? y)
-                   (garray/defaultCompare x y)
-                   (throw (js/Error. (str "Cannot compare " x " to " y))))
-
    (satisfies? IComparable x)
    (-compare x y)
 
@@ -164,19 +193,6 @@ static public int compare(Object k1, Object k2){
             (identical? (type x) (type y)))
      (garray/defaultCompare x y)
      (throw (js/Error. (str "Cannot compare " x " to " y))))))
-
-; ===== `<` ===== ;
-
-#?(:clj  (defnt' ^boolean <-bin
-           ([#{byte char short int long float double} x] true)
-           ([#{byte char short int long float double} x
-             #{byte char short int long float double} y] (Numeric/lt x y))
-           ; TODO numbers, but not nil
-           )
-   :cljs (defn <-bin ([x] true) ([x y] (core/< x y))))
-
-#?(:clj (variadic-predicate-proxy < <-bin))
-#?(:clj (variadic-predicate-proxy <& <-bin&))
 
 
 ; ----- `comp<` ----- ;
@@ -198,19 +214,6 @@ static public int compare(Object k1, Object k2){
                   according to `compare`, otherwise false."}
           comp< comp<-bin))
 #?(:clj (variadic-predicate-proxy comp<& comp<-bin&))
-
-; ===== `<=` ===== ;
-
-#?(:clj  (defnt' ^boolean <=-bin
-           ([#{byte char short int long float double} x] true)
-           ([#{byte char short int long float double} x
-             #{byte char short int long float double} y] (Numeric/lte x y))
-           ; TODO numbers, but not nil
-           )
-   :cljs (defn <=-bin ([x] true) ([x y] (core/<= x y))))
-
-#?(:clj (variadic-predicate-proxy <= <=-bin))
-#?(:clj (variadic-predicate-proxy <=& <=-bin&))
 
 ; ----- `comp<=` ----- ;
 

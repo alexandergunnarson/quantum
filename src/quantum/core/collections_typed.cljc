@@ -144,7 +144,7 @@
          ;; NOTE `ArraySeq/createFromObject` is the slow path but has to be that way because the
          ;; specialized ArraySeq constructors are private
          ([xs arr/array?]
-           #?(:clj  (ArraySeq/createFromObject xs)
+           #?(:clj  (clojure.lang.ArraySeq/createFromObject xs)
               :cljs (when-not (num/zero? (count xs)) ; TODO use `empty?` instead
                       (cljs.core/IndexedSeq. xs 0 nil)))))
 

@@ -247,7 +247,7 @@
   #?(:clj  (^<0> [#{!map? !!map?}          x         k        v] (.put x k v) x))
            (^<0> [^transient?              x         k        v] (core/assoc! x k v))
   #?(:clj  (^<0> [^default                 x ^int    k        v]
-             (if (t/array? x)
+             (if (arr/array? x)
                  (java.lang.reflect.Array/set x k v)
                  (throw (>ex-info :not-supported "`assoc!` not supported on this object" {:type (type x)}))))))
 

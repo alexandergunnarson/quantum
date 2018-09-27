@@ -39,20 +39,21 @@
         (def double?  (t/isa? #?(:clj Double :cljs js/Number)))
 
         (var/def primitive?
-          "For CLJS, `int?` and `long?` are not primitive even though they mimic Java primitives."
+          "For CLJS, `int?` and `long?` are not primitive even though they mimic Java primitives.
+           For CLJS, does not include built-in platform types like js/String that are considered
+           'primitive' in some contexts."
           (t/or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
 
-        ;; Specifically primitive integers
-        (def integer? (t/or #?@(:clj [byte? short? int? long?])))
+        (var/def integer? "Specifically primitive integers."
+          (t/or #?@(:clj [byte? short? int? long?])))
 
-        ;; Specifically primitive decimals
-        (def decimal? (t/or #?(:clj float?) double?))
+        (var/def decimal? "Specifically primitive decimals."
+          (t/or #?(:clj float?) double?))
 
-        ;; Specifically primitive integrals
-        (def integral? (t/or integer? char?))
-
-        ;; Specifically comparable primitives
-        (def comparable? (t/- primitive? boolean?))
+        (var/def numeric?
+          "Specifically primitive numeric things.
+           Something 'numeric' is something that may be treated as a number but may not actually *be* one."
+          (t/- primitive? boolean?))
 
         (defaliases ut true? false?)
 

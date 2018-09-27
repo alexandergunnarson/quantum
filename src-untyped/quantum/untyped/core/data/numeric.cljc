@@ -163,7 +163,7 @@
   "Something 'numeric' is something that may be treated as a number but may not actually *be* one."
   (t/or number? #?(:clj p/char?)))
 
-(def numeric-primitive? (t/- p/primitive? p/boolean?))
+(def numeric-primitive? p/numeric?)
 
 (def numerically-integer-double? (t/and p/double? numerically-integer?))
 (def ni-double? numerically-integer-double?)

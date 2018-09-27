@@ -104,6 +104,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - t/input-type
     - `(t/input-type >namespace :?)` meaing the possible input types to the first input to `>namespace`
     - `(t/input-type reduce :_ :_ :?)`
+    - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
   - dc/of
     - (dc/of number?) ; implicitly the container is a `reducible?`
     - (dc/of map/+map? symbol? dstr/string?)
@@ -211,8 +212,95 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] short?
           - [x x] some?
     - [.] clojure.lang.Numbers
+          https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Numbers.java
+          - [ ] add
+          - [ ] addP
+          - [ ] and
+          - [ ] andNot
+          - [ ] boolean_array
+          - [ ] booleans
+          - [ ] byte_array
+          - [ ] bytes
+          - [ ] char_array
+          - [ ] chars
+          - [ ] clearBit
+          - [ ] compare
+          - [ ] dec
+          - [ ] decP
+          - [ ] denominator
+          - [ ] divide
+          - [ ] double_array
+          - [ ] doubles
+          - [ ] equal
+          - [ ] equiv
+          - [ ] flipBit
+          - [ ] float_array
+          - [ ] floats
+          - [ ] gt
+          - [ ] gte
+          - [ ] hasheq
+          - [ ] hasheqFrom
+          - [ ] inc
+          - [ ] incP
+          - [ ] int_array
+          - [ ] ints
+          - [ ] isNaN
+          - [ ] isNeg
+          - [ ] isPos
+          - [ ] isZero
+          - [ ] long_array
+          - [ ] longs
+          - [ ] lt
+          - [ ] lte
+          - [ ] max
+          - [ ] min
+          - [ ] minus
+          - [ ] minusP
+          - [ ] multiply
+          - [ ] multiplyP
+          - [ ] not
+          - [ ] num
+          - [ ] numerator
+          - [ ] or
+          - [ ] quotient
+          - [ ] rationalize
+          - [ ] reduceBigInt
+          - [ ] remainder
+          - [ ] shiftLeft
+          - [ ] shiftLeftInt
+          - [ ] shiftRight
+          - [ ] shiftRightInt
+          - [ ] short_array
+          - [ ] shorts
+          - [ ] setBit
+          - [ ] testBit
+          - [ ] toBigDecimal
+          - [ ] toBigInt
+          - [ ] toBigInteger
+          - [ ] toRatio
+          - [ ] unchecked_add
+          - [ ] unchecked_dec
+          - [ ] unchecked_divide
+          - [ ] unchecked_inc
+          - [ ] unchecked_minus
+          - [ ] unchecked_multiply
+          - [ ] unchecked_negate
+          - [ ] unchecked_remainder
+          - [ ] unchecked_int_add
+          - [ ] unchecked_int_dec
+          - [ ] unchecked_int_divide
+          - [ ] unchecked_int_inc
+          - [ ] unchecked_int_multiply
+          - [ ] unchecked_int_negate
+          - [ ] unchecked_int_remainder
+          - [ ] unchecked_int_subtract
+          - [ ] unsignedShiftRight
+          - [ ] unsignedShiftRightInt
+          - [ ] xor
     - [.] clojure.lang.RT
+          https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/RT.java
     - [.] clojure.lang.Util
+          https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Util.java
          - [ ] classOf
          - [ ] clearCache
          - [x] compare
@@ -265,6 +353,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [.] quantum.core.data.collections
     - [.] quantum.core.data.tuple
     - [x] quantum.core.data.time
+    - [.] quantum.core.compare.core
     - [ ] quantum.core.numeric.predicates
     - [ ] quantum.core.numeric.convert
     - [.] quantum.core.numeric.exponents
@@ -329,8 +418,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] (logical) and (?)
     - [ ] (logical) or (?)
     - [ ] (logical) not
-    - [ ] lt
-    - [ ] lte
+    - [x] lt
+    - [x] lte
     - [ ] gt
     - [ ] gte
     - [x] eq
