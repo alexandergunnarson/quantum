@@ -1,11 +1,9 @@
-(ns
-  ^{:doc "Useful function-related functions (one could say 'metafunctions').
+(ns quantum.core.fn
+  "Function-related functions ('metafunctions').
 
-          Higher-order functions, currying, monoids, reverse comp, arrow macros, inner partials, juxts, etc."
-    :attribution "alexandergunnarson"}
-  quantum.core.fn
+   Higher-order functions, currying, monoids, reversed comp, arrow macros, inner partials, juxts, etc."
   (:refer-clojure :exclude
-   [comp constantly, as->, trampoline])
+    [comp constantly, as->, identity, trampoline])
   (:require
     [clojure.core                :as core]
     [clojure.walk]
@@ -23,6 +21,8 @@
     [quantum.core.fn :as self
       :refer [aritoid gen-constantly gen-call gen-positional-nthas
               gen-ntha gen-conja gen-reversea gen-mapa]])))
+
+(t/defn ^:inline identity [x t/any? > (t/type x)] x)
 
 ;; ===== `fn<i>`: Positional functions ===== ;;
 
@@ -224,7 +224,40 @@
       ([arg1 arg2 arg3]                    (func (func arg1 arg2) arg3))
       ([arg1 arg2 arg3 & args] (apply func (func (func arg1 arg2) arg3) args))))
 
-#?(:clj (defalias u/aritoid))
+;; TODO finish and generalize based off `u/aritoid`
+(t/defn ^:inline aritoid
+  ;; TODO use `arity-builder`
+  "Combines fns as arity-callers."
+  {:equivalent `{(aritoid vector identity conj)
+                 (fn ([]      (vector))
+                     ([x0]    (identity x0))
+                     ([x0 x1] (conj x0 x1)))}}
+  ([f0 (t/ftype [])] f0)
+  ([f0 (t/ftype [])
+    f1 (t/ftype [t/any?])]
+    (t/fn {:inline true}
+          ([]                    (f0))
+          ([x0 (t/type-of f1 0)] (f1 x0))))
+  ([f0 (t/ftype [])
+    f1 (t/ftype [t/any?])
+    f2 (t/ftype [t/any? t/any?])]
+    (t/fn {:inline true}
+          ([]                    (f0))
+          ([x0 (t/type-of f1 0)] (f1 x0))
+          ([x0 (t/type-of f1 0)
+            x1 (t/type-of f1 1)] (f2 x0 x1))))
+  ([f0 (t/ftype [])
+    f1 (t/ftype [t/any?])
+    f2 (t/ftype [t/any? t/any?])
+    f3 (t/ftype [t/any? t/any? t/any?])]
+    (t/fn {:inline true}
+          ([]                    (f0))
+          ([x0 (t/type-of f1 0)] (f1 x0))
+          ([x0 (t/type-of f1 0)
+            x1 (t/type-of f1 1)] (f2 x0 x1))
+          ([x0 (t/type-of f2 0)
+            x1 (t/type-of f2 1)
+            x2 (t/type-of f2 2)] (f3 x0 x1 x2)))))
 
 (defn rf-fix
   "TODO remove when you figure out transduce vs. reduce"
@@ -254,17 +287,8 @@
 (defn call->> [& [func & args]] ((apply func    (butlast args)) (last args)))
 
 ; ---------------------------------------
-; ================ JUXTS ================ (possibly deprecate these?)
+; ================ JUXTS ================ (deprecate these)
 ; ---------------------------------------
-
-; (defn juxtm*
-;   [map-type args]
-;   (if (-> args count even?)
-;       (fn [arg] (->> arg ((apply juxt args)) (apply map-type)))
-;       (throw (#+clj  IllegalArgumentException.
-;               #+cljs js/Error.
-;               "juxtm requires an even number of arguments"))))
-
 (defn juxtm*
   [map-type args]
   (if (-> args count even?)

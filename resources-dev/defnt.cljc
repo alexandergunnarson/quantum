@@ -262,7 +262,13 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - :todo #{<todo-string>}
     - :attribution <github-username-symbol | string-description>
     - :doc <string-documentation>
-    - :incorporated #{<namespace-or-class-symbol | <function-or-method-symbol>}
+    - :incorporated (t/or (t/set-of (t/or <namespace-or-class-symbol> <function-or-method-symbol>))
+                          (t/map-of (t/or <namespace-or-class-symbol> <function-or-method-symbol>)
+                                    date))
+    - :equivalent `{(aritoid vector identity conj)
+                   (fn ([]      (vector))
+                       ([x0]    (identity x0))
+                       ([x0 x1] (conj x0 x1)))}}
   - Instead of e.g. `ns-` or `var-` we can do `ns-val` and `var-val`
   - Should we type `when`, `let`?
 
