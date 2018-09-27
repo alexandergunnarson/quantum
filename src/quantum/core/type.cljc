@@ -26,8 +26,7 @@
   nil?
   none?
   ref?
-  fn?
-  seq?)
+  fn?)
 
 
 ;; TODO TYPED move

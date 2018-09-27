@@ -5,20 +5,21 @@
     [vector vector?])
   (:require
     ;; TODO TYPED excise
-    [clojure.core             :as core]
-    [clojure.core.rrb-vector  :as svec]
+    [clojure.core              :as core]
+    [clojure.core.rrb-vector   :as svec]
 #?@(:clj
    [[clojure.core.rrb-vector.protocols
       :refer [PSliceableVector  slicev
               PSpliceableVector splicev]]
     [clojure.core.rrb-vector.rrbt
       :refer [AsRRBT as-rrbt]]])
-    [quantum.core.type        :as t]
-    [quantum.core.vars        :as var
+    [quantum.core.type         :as t]
+    [quantum.core.vars         :as var
       :refer [defalias]]
     ;; TODO TYPED excise
     [quantum.core.untyped.fn
-      :refer [rcomp]])
+      :refer [rcomp]]
+    [quantum.core.untyped.type :as ut])
 #?(:clj
   (:import
     java.util.ArrayList
@@ -51,8 +52,7 @@
 (def   +vector?          (t/isa? #?(:clj  clojure.lang.IPersistentVector
                                     :cljs cljs.core/IVector)))
 
-(def   +vector|built-in? (t/isa? #?(:clj  clojure.lang.PersistentVector
-                                    :cljs cljs.core/PersistentVector)))
+(defalias ut/+vector|built-in)
 
 (def  !+vector?          (t/isa? #?(:clj  clojure.lang.ITransientVector
                                     :cljs cljs.core/ITransientVector)))

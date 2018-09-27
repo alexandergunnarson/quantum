@@ -618,6 +618,10 @@
          (isa? #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core/PersistentArrayMap))
          (isa? #?(:clj clojure.lang.PersistentTreeMap  :cljs cljs.core/PersistentTreeMap))))
 
+;; Used in `quantum.untyped.core.analyze`
+(def +vector|built-in? (isa? #?(:clj  clojure.lang.PersistentVector
+                                :cljs cljs.core/PersistentVector)))
+
 ;; ===== Queues ===== ;; Particularly FIFO queues, as LIFO = stack = any vector
 
          (def   +queue? (isa? #?(:clj  clojure.lang.PersistentQueue

@@ -169,7 +169,10 @@
 
 ;; ----- Boolean ----- ;;
 
-(t/defn ^:inline >boolean > boolean?
+(t/defn ^:inline >boolean
+  "Converts input to a boolean.
+   Differs from asking whether something is truthy/falsey."
+  > boolean?
   ([x boolean?] x)
   ([x (t/value "true")] true)
   ([x (t/value "false")] false)   ;; For purposes of intrinsics
@@ -179,14 +182,17 @@
 ;; ----- Int ----- ;;
 ;; Forward-declared so `radix?` coercion to `int` works
 
+;; TODO figure out how to use with goog.math.Integer/Long
 #?(:clj
 (t/defn ^:inline >int*
-  "May involve non-out-of-range truncation"
+  "May involve non-out-of-range truncation."
   > int?
   ([x int?] x)                        ;; For purposes of intrinsics
   ([x (t/- primitive? int? boolean?)] (clojure.lang.RT/uncheckedIntCast x))))
 
-(t/defn ^:inline >int
+;; TODO TYPED `numerically`
+;; TODO figure out how to use with goog.math.Integer/Long
+#_(t/defn ^:inline >int
   "May involve non-out-of-range truncation"
   > #?(:clj int? :cljs numerically-int?)
          ([x #?(:clj int? :cljs numerically-int?)] x)
@@ -209,17 +215,21 @@
 
 ;; ----- Byte ----- ;;
 
+;; TODO figure out how to use with CLJS
 #?(:clj
-(defnt ^:inline >byte* > byte?
-  "May involve non-out-of-range truncation"
+(t/defn ^:inline >byte*
+  "May involve non-out-of-range truncation."
+  > byte?
   ([x byte?] x)
   ([x (t/- primitive? byte? boolean?)] (Primitive/uncheckedByteCast x))))
 
-(defnt ^:inline >byte > #?(:clj byte? :cljs numerically-byte?)
-  "May involve non-out-of-range truncation"
+;; TODO TYPED `numerically`
+;; TODO figure out how to use with goog.math.Integer/Long
+#_(defnt ^:inline >byte > #?(:clj byte? :cljs numerically-byte?)
+  "May involve non-out-of-range truncation."
          ([x #?(:clj byte? :cljs numerically-byte?)] x)
 #?(:clj  ([x (t/and (t/- primitive? byte? boolean?) numerically-byte?)] (>byte* x))
-   :cljs ([x (t/and double? (range-of byte?))] (js/Math.round x)))
+   :cljs ([x (t/and double? numerically-byte?)] (js/Math.round x)))
          ([x boolean?] (if x #?(:clj (byte 1) :cljs 1) #?(:clj (byte 0) :cljs 0)))
 #?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-byte?)] (>byte* (.lpart x))))
 #?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-byte?)] (.byteValue x)))
@@ -235,22 +245,25 @@
 
 ;; ----- Short ----- ;;
 
+;; TODO figure out how to use with CLJS
 #?(:clj
-(defnt ^:inline >short* > short?
-  "May involve non-out-of-range truncation"
+(t/defn ^:inline >short*
+  "May involve non-out-of-range truncation."
+  > short?
   ([x short?] x)
   ([x (t/- primitive? short? boolean?)] (Primitive/uncheckedShortCast x))))
 
-#?(:clj
-(defnt ^:inline >short > #?(:clj short? :cljs numerically-short?)
-  "May involve non-out-of-range truncation"
+;; TODO TYPED `numerically`
+;; TODO figure out how to use with goog.math.Integer/Long
+#_(t/defn ^:inline >short > #?(:clj short? :cljs numerically-short?)
+  "May involve non-out-of-range truncation."
          ([x #?(:clj short? :cljs numerically-short?)] x)
-#?(:clj  ([x (t/and (t/- primitive? short? boolean?) (range-of short?))] (>short* x))
-   :cljs ([x (t/and double? (range-of short?))] (js/Math.round x)))
+#?(:clj  ([x (t/and (t/- primitive? short? boolean?) numerically-short?)] (>short* x))
+   :cljs ([x (t/and double? numerically-short?)] (js/Math.round x)))
          ([x boolean?] (if x #?(:clj (short 1) :cljs 1) #?(:clj (short 0) :cljs 0)))
-#?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) (range-of short?))] (>short* (.lpart x))))
-#?(:clj  ([x (t/and (t/isa? java.math.BigInteger) (range-of short?))] (.shortValue x)))
-#?(:clj  ([x (t/and dnum/ratio? (range-of short?))] (-> x .bigIntegerValue .shortValue)))
+#?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-short?)] (>short* (.lpart x))))
+#?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-short?)] (.shortValue x)))
+#?(:clj  ([x (t/and dnum/ratio? numerically-short?)] (-> x .bigIntegerValue .shortValue)))
          ([x string?]
            #?(:clj  (Short/parseShort x)
                      ;; NOTE could use `js/parseInt` but it's very 'unsafe'
@@ -258,50 +271,59 @@
          ([x string?, radix radix?]
            #?(:clj  (Short/parseShort x (>int radix))
                     ;; NOTE could use `js/parseInt` but it's very 'unsafe'
-              :cljs (throw (ex-info "Parsing not implemented" {:string x}))))))
+              :cljs (throw (ex-info "Parsing not implemented" {:string x})))))
 
 ;; ----- Char ----- ;;
 
+;; TODO figure out how to use with CLJS
 #?(:clj
-(defnt ^:inline >char* > char?
-  "May involve non-out-of-range truncation"
+(t/defn ^:inline >char*
+  "May involve non-out-of-range truncation."
+  > char?
   ([x char?] x)
   ([x (t/- primitive? char? boolean?)] (Primitive/uncheckedCharCast x))))
 
-(defnt ^:inline >char > #?(:clj char? :cljs numerically-char?)
+;; TODO TYPED `numerically`
+;; TODO figure out how to use with goog.math.Integer/Long
+#_(t/defn ^:inline >char > #?(:clj char? :cljs numerically-char?)
   "May involve non-out-of-range truncation.
    For CLJS, returns not a String of length 1 but a numerically-char Number."
          ([x #?(:clj char? :cljs numerically-char?)] x)
-#?(:clj  ([x (t/and (t/- primitive? char? boolean?) (range-of char?))] (>char* x))
-   :cljs ([x (t/and double? (range-of char?))] (js/Math.round x)))
+#?(:clj  ([x (t/and (t/- primitive? char? boolean?) numerically-char?)] (>char* x))
+   :cljs ([x (t/and double? numerically-char?)] (js/Math.round x)))
          ([x boolean?] (if x #?(:clj (char 1) :cljs 1) #?(:clj (char 0) :cljs 0)))
-#?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) (range-of char?))] (>char* (.lpart x))))
-#?(:clj  ([x (t/and (t/isa? java.math.BigInteger) (range-of char?))] (.charValue x)))
-#?(:clj  ([x (t/and dnum/ratio? (range-of char?))] (-> x .bigIntegerValue .charValue))))
+#?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-char?)] (>char* (.lpart x))))
+#?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-char?)] (.charValue x)))
+#?(:clj  ([x (t/and dnum/ratio? numerically-char?)] (-> x .bigIntegerValue .charValue))))
 
 ;; ----- Long ----- ;;
 
+;; TODO figure out how to use with CLJS, including goog.math.Integer/Long
 #?(:clj
-(defnt ^:inline >long* > long?
-  "May involve non-out-of-range truncation"
-  ([x long?] x)                        ;; For purposes of intrinsics
-  ([x (t/- primitive? long? boolean?)] (clojure.lang.RT/uncheckedLongCast x))))
+(t/defn ^:inline >long*
+  "May involve non-out-of-range truncation."
+  > long?
+  ([x long?] x)
+  ([x char?] (Primitive/uncheckedLongCast x))  ;; For purposes of intrinsics
+  ([x (t/- primitive? long? boolean? char?)] (clojure.lang.RT/uncheckedLongCast x))))
 
-(defnt ^:inline >long > #?(:clj long? :cljs numerically-long?)
-  "May involve non-out-of-range truncation"
+;; TODO TYPED `numerically`
+;; TODO figure out how to use with goog.math.Integer/Long
+#_(t/defn ^:inline >long > #?(:clj long? :cljs numerically-long?)
+  "May involve non-out-of-range truncation."
          ([x #?(:clj long? :cljs numerically-long?)] x)
-#?(:clj  ([x (t/and (t/- primitive? long? boolean?) (range-of long?))] (>long* x))
+#?(:clj  ([x (t/and (t/- primitive? long? boolean?) numerically-long?)] (>long* x))
    :cljs ([x double?] (js/Math.round x)))
          ([x boolean?] (if x 1 0))
 #?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt)
-                    (range-of long?)
-                    ;; This might be faster than `(range-of long?)`
+                    numerically-long?
+                    ;; This might be faster than `numerically-long?`
                   #_(fnt [x ?] (nil? (.bipart x))))] (.lpart x)))
 #?(:clj  ([x (t/and (t/isa? java.math.BigInteger)
-                    (range-of long?)
-                    ;; This might be faster than `(range-of long?)`
+                    numerically-long?
+                    ;; This might be faster than `numerically-long?`
                   #_(fnt [x ?] (< (.bitLength x) 64)))] (.longValue x)))
-#?(:clj  ([x (t/and dnum/ratio? (range-of long?))] (-> x .bigIntegerValue .longValue)))
+#?(:clj  ([x (t/and dnum/ratio? numerically-long?)] (-> x .bigIntegerValue .longValue)))
          ([x string?]
            #?(:clj  (Long/parseLong x)
                      ;; NOTE could use `js/parseInt` but it's very 'unsafe'
@@ -313,21 +335,25 @@
 
 ;; ----- Float ----- ;;
 
+;; TODO figure out how to use with CLJS
 #?(:clj
-(defnt ^:inline >float* > float?
-  "May involve non-out-of-range truncation"
+(t/defn ^:inline >float*
+  "May involve non-out-of-range truncation."
+  > float?
   ([x float?] x)
   ([x (t/- primitive? float? boolean?)] (Primitive/uncheckedFloatCast x))))
 
-(defnt ^:inline >float > #?(:clj float? :cljs numerically-float?)
-  "May involve non-out-of-range truncation"
+;; TODO TYPED `numerically`
+;; TODO figure out how to use with goog.math.Integer/Long
+#_(t/defn ^:inline >float > #?(:clj float? :cljs numerically-float?)
+  "May involve non-out-of-range truncation."
          ([x #?(:clj float? :cljs numerically-float?)] x)
-#?(:clj  ([x (t/and (t/- primitive? float? boolean?) (range-of float?))] (>float* x))
-   :cljs ([x (t/and double? (range-of float?)) > (t/assume numerically-float?)] (js.Math/fround x)))
+#?(:clj  ([x (t/and (t/- primitive? float? boolean?) numerically-float?)] (>float* x))
+   :cljs ([x (t/and double? numerically-float?) > (t/assume numerically-float?)] (js.Math/fround x)))
          ([x boolean?] (if x #?(:clj (float 1) :cljs 1) #?(:clj (float 0) :cljs 0)))
-#?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) (range-of float?))] (>float* (.lpart x))))
-#?(:clj  ([x (t/and (t/isa? java.math.BigInteger) (range-of float?))] (.floatValue x)))
-#?(:clj  ([x (t/and dnum/ratio? (range-of float?))] (-> x .bigIntegerValue .floatValue)))
+#?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-float?)] (>float* (.lpart x))))
+#?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-float?)] (.floatValue x)))
+#?(:clj  ([x (t/and dnum/ratio? numerically-float?)] (-> x .bigIntegerValue .floatValue)))
          ([x string?]
            #?(:clj  (Float/parseFloat x)
                      ;; NOTE could use `js/parseFloat` but it's very 'unsafe'
@@ -335,25 +361,28 @@
 
 ;; ----- Double ----- ;;
 
-#?(:clj
-(defnt ^:inline >double* > double?
-  "May involve non-out-of-range truncation"
-  ([x double?] x)                        ;; For purposes of intrinsics
-  ([x (t/- primitive? double? boolean?)] (clojure.lang.RT/uncheckedDoubleCast x))))
-
-
-(defnt ^:inline >double > double?
-  "May involve non-out-of-range truncation"
+;; TODO figure out how to use with goog.math.Integer/Long
+(t/defn ^:inline >double*
+  "May involve non-out-of-range truncation."
+  > double?
         ([x double?] x)
-#?(:clj ([x (t/and (t/- primitive? double? boolean?) (range-of double?))] (>double* x)))
-        ([x boolean?] (if x #?(:clj (double 1) :cljs 1) #?(:clj (double 0) :cljs 0)))
-#?(:clj ([x (t/and (t/isa? clojure.lang.BigInt) (range-of double?))] (>double* (.lpart x))))
-#?(:clj ([x (t/and (t/isa? java.math.BigInteger) (range-of double?))] (.doubleValue x)))
-#?(:clj ([x (t/and dnum/ratio? (range-of double?))] (-> x .bigIntegerValue .doubleValue)))
+        ([x char?] (Primitive/uncheckedDoubleCast x))  ;; For purposes of intrinsics
+#?(:clj ([x (t/- primitive? double? boolean? char?)] (clojure.lang.RT/uncheckedDoubleCast x))))
+
+;; TODO TYPED `numerically`
+;; TODO figure out how to use with goog.math.Integer/Long
+#_(t/defn ^:inline >double > double?
+  "May involve non-out-of-range truncation."
+        ([x double?] x)
+#?(:clj ([x (t/and (t/- primitive? double? boolean?) numerically-double?)] (>double* x)))
+        ([x boolean?] (if x #?(:clj 1.0 :cljs 1) #?(:clj 1.0 :cljs 0)))
+#?(:clj ([x (t/and (t/isa? clojure.lang.BigInt) numerically-double?)] (>double* (.lpart x))))
+#?(:clj ([x (t/and (t/isa? java.math.BigInteger) numerically-double?)] (.doubleValue x)))
+#?(:clj ([x (t/and dnum/ratio? numerically-double?)] (-> x .bigIntegerValue .doubleValue)))
         ([x string?]
           #?(:clj  (Double/parseDouble x)
                    ;; NOTE could use `js/parseFloat` but it's very 'unsafe'
-             :cljs (throw (ex-info "Parsing not implemented" {:string x}))))))
+             :cljs (throw (ex-info "Parsing not implemented" {:string x})))))
 
 ;; ===== Unsigned ===== ;;
 
@@ -363,9 +392,12 @@
   ([x byte?]  (Numeric/bitAnd (short 0xFF)       x))
   ([x short?] (Numeric/bitAnd (int   0xFFFF)     x))
   ([x int?]   (Numeric/bitAnd (long  0xFFFFFFFF) x))
-  ([x long?]  (BigInteger. 1 (-> (ByteBuffer/allocate 8) (.putLong x) .array))))) ; TODO reflection
+              ;; TODO TYPED there is reflection here but there shouldn't be
+  ([x long?]  (java.math.BigInteger. (int 1)
+                (-> (ByteBuffer/allocate (int 8)) (.putLong x) .array))))) ; TODO reflection
 
-#?(:clj (t/defn ubyte>byte   [x long?   > long?] (>long (>byte   x))))
-#?(:clj (t/defn ushort>short [x long?   > long?] (>long (>short  x))))
-#?(:clj (t/defn uint>int     [x long?   > long?] (>long (>int    x))))
-#?(:clj (t/defn ulong>long   [x bigint? > long?] (>long (>bigint x))))
+;; TODO TYPED awaiting `>long`
+#_(:clj (t/defn ubyte>byte   [x long?   > long?] (-> x >byte   >long)))
+#_(:clj (t/defn ushort>short [x long?   > long?] (-> x >short  >long)))
+#_(:clj (t/defn uint>int     [x long?   > long?] (-> x >int    >long)))
+#_(:clj (t/defn ulong>long   [x bigint? > long?] (-> x >bigint >long)))

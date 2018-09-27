@@ -55,6 +55,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
   - Analysis
+    - This is accepted by the type system without knowing the type:
+      (java.math.BigInteger. 1 (-> (ByteBuffer/allocate (int 8)) (.putLong x) .array))
+
+      So, constructors need the same kind of lookup that dot calls have
     - (if (dcoll/reduced? ret)
           ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`
           (ref/deref ret)
