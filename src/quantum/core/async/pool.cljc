@@ -26,15 +26,14 @@
     [quantum.core.macros         :as macros
       :refer [defnt]]
     [quantum.core.reflect        :as refl]
-    [quantum.core.refs           :as refs
+    [quantum.core.refs           :as ref
       :refer [fref]]
     [quantum.core.spec           :as s
       :refer [validate]]
     [quantum.core.resources      :as res]
     [quantum.core.time.core      :as time]
     [quantum.measure.convert     :as uconv]
-    [quantum.core.type-old       :as t
-      :refer [atom?]]
+    [quantum.core.type-old       :as t]
     [quantum.core.vars           :as var])
 #?(:cljs
   (:require-macros
@@ -153,8 +152,8 @@
   ([^BusyWaitScheduler scheduler at f]
     (validate at (s/and number? (fn1 >= 0))
               f  fn?)
-    (let [shut-down? (-> scheduler :shut-down? (validate atom?) deref)
-          queue      (-> scheduler :queue      (validate atom?))]
+    (let [shut-down? (-> scheduler :shut-down? (validate ref/atom?) deref)
+          queue      (-> scheduler :queue      (validate ref/atom?))]
       (if shut-down?
           false
           (do (swap! queue update (long at) (fn-> (c/ensurec []) (conj f)))
@@ -450,9 +449,9 @@
    ;; TODO make `chan` the primary point of contact for components
    ;; It's used to ensure that resources are stopped being used before cleanup starts
    chan #_chan? stop-ch #_promise?
-   *tasks #_(t/of atom? (t/of map? ident?
-                          (t/and ::task
-                            (t/keys :req-un [(spec :stop-ch promise?)]))))]
+   *tasks #_(t/of ref/atom? (t/of map? ident?
+                              (t/and ::task
+                                (t/keys :req-un [(spec :stop-ch promise?)]))))]
   ([this]
     (let [chan'    (async/chan 100) ; `100` is arbitrary
           *tasks'  (atom {})

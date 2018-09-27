@@ -40,7 +40,7 @@
   [{:as opts :keys [file]
     {:keys [modified]} :handlers}
    {:as thread-opts :keys [close-reqs]}]
-  (with-throw (type/atom? file) "File must be an atom.")
+  (with-throw (ref/atom? file) "File must be an atom.")
   (let [^File file-0 (-> @file convert/->file)
         _ (with-throw (type/file? file-0) "File must be a java.io.File.")
         timestamp-0  (.lastModified file-0)

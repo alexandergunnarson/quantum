@@ -77,7 +77,7 @@
   mdb? (partial instance? datascript.db.DB))
 
 #?(:clj (def conn? (partial instance? datomic.Connection)))
-(defn mconn? [x] (and (t/atom? x) (mdb? @x)))
+(defn mconn? [x] (and (ref/atom? x) (mdb? @x)))
 
 (defn ->uri-string
   [{:keys [type host port db-name]
@@ -774,7 +774,7 @@
   ([^Database db]
     (let [history (-> db :ephemeral :history)
           conn    (-> db :ephemeral :conn   )]
-      (validate history t/atom?)
+      (validate history ref/atom?)
       (when (contains? @history)
         (let [prev   (peek @history)
               before (:db-before prev)

@@ -55,9 +55,7 @@
 ; Fixing it so the seqs are headless.
 ; Christophe Grand - https://groups.google.com/forum/#!searchin/clojure-dev/reducer/clojure-dev/t6NhGnYNH1A/2lXghJS5HywJ
 
-;___________________________________________________________________________________________________________________________________
-;=================================================={    REDUCING FUNCTIONS    }=====================================================
-;=================================================={       (Generalized)      }=====================================================
+;; TODO TYPED
 (defaliases ur transformer transformer? transducer->transformer)
 
 (defn conj-red

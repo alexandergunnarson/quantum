@@ -6,25 +6,25 @@
   (:refer-clojure :exclude [for reduce])
   (:require
   #?@(:cljs
-   [[reagent.core        :as rx]
+   [[reagent.core                :as rx]
     [re-frame.core
       :refer [subscribe dispatch dispatch-sync reg-event reg-sub]]])
-    [quantum.ui.revision :as rev]
-    [quantum.core.fn     :as fn
+    [quantum.ui.revision         :as rev]
+    [quantum.core.data.primitive :as p]
+    [quantum.core.fn             :as fn
       :refer [fn-> fn->> fn']]
     [quantum.core.logic
       :refer [whenf]]
-    [quantum.db.datomic  :as db]
-    [quantum.core.collections :as coll
+    [quantum.core.refs           :as ref]
+    [quantum.db.datomic          :as db]
+    [quantum.core.collections    :as coll
       :refer [for fori join kw-map reduce
               map-vals+ ensurec merge-deep]]
-    [quantum.core.error  :as err]
-    [quantum.core.log    :as log]
-    [quantum.core.system :as sys
+    [quantum.core.error          :as err]
+    [quantum.core.log            :as log]
+    [quantum.core.system         :as sys
       :refer  [#?@(:cljs [react-native])]]
-    [quantum.core.type-old :as t
-      :refer [val?]]
-    [quantum.core.async  :as async
+    [quantum.core.async          :as async
       :refer [go]]
     [quantum.ui.style.core
       :refer [layout-x layout-y layout layout-perp
@@ -73,7 +73,7 @@
 
 #?(:cljs (defn rx-adapt [super sub]
            (when super
-             (whenf (aget super sub) val? rx/adapt-react-class))))
+             (whenf (aget super sub) p/val? rx/adapt-react-class))))
 
 #?(:cljs (def text                (rx-adapt react-native "Text" )))
 #?(:cljs (def view                (rx-adapt react-native "View" )))
@@ -524,21 +524,21 @@
         handle-touch-start
           (fn [e]
             (println "TOUCH START")
-            (when (and (atom? scroller) (:touchable? props))
+            (when (and (ref/atom? scroller) (:touchable? props))
               (println "SCROLLING IN TOUCH START")
               (-> scroller deref (.doTouchStart (.-touches e) (.-timeStamp e)))
               (.preventDefault e)))
         handle-touch-move
           (fn [e]
             (println "TOUCH MOVE")
-            (when (and (atom? scroller) (:touchable? props))
+            (when (and (ref/atom? scroller) (:touchable? props))
               (println "SCROLLING IN TOUCH MOVE")
               (-> scroller deref (.doTouchMove (.-touches e) (.-timeStamp e) (.-scale e)))
               (.preventDefault e)))
         handle-touch-end
           (fn [e]
             (println "TOUCH END")
-            (when (and (atom? scroller) (:touchable? props))
+            (when (and (ref/atom? scroller) (:touchable? props))
               (println "SCROLLING IN TOUCH END")
               #_(-> scroller deref (.doTouchEnd (.-timeStamp e)))
               ; Without this the scroller was reset to top:0 left: 0 on touchEnd.
@@ -561,8 +561,8 @@
 
 (defn touch-wrapper
   [[child-tag {:keys [table-width table-height] :as child-props} & child-elems] ]
-  (assert (atom? table-width ))
-  (assert (atom? table-height))
+  (assert (ref/atom? table-width ))
+  (assert (ref/atom? table-height))
   (let [scroller (rx/atom nil)
         left     (rx/atom 0)
         top      (rx/atom 0)
@@ -622,8 +622,8 @@
 (defn fb-table-example
   [{:keys [data headers headers-widths
            style width height cell-props-fn fixed-header-key]}]
-  (assert (val? width ))
-  (assert (val? height))
+  (assert (p/val? width ))
+  (assert (p/val? height))
   (let [std-col-width (/ @width (count @headers))
         col-indices   (reaction (->> @headers ; TODO code pattern
                                      (map-indexed (fn [i x] [x i]))
@@ -707,9 +707,9 @@
     :or {row-height-getter      (fn [] row-height)
          scrolling-deceleration 0.97
          scrolling-acceleration 0.13}}]
-  (assert (atom? data  ))
-  (assert (val? width ))
-  (assert (val? height))
+  (assert (ref/atom? data  ))
+  (assert (p/val? width ))
+  (assert (p/val? height))
   (assert (fn? row-render-fn))
   (let []
     (fn []
@@ -771,9 +771,9 @@
 (defn ellipsis [{:keys [clamp-lines font-size line-height width]
                  :as style}
                 content]
-  (assert (val? clamp-lines))
-  (assert (val? font-size  ))
-  (assert (val? width      ))
+  (assert (p/val? clamp-lines))
+  (assert (p/val? font-size  ))
+  (assert (p/val? width      ))
   (fn []
     [:div.ellipsis {:style (merge (style/ellipsis clamp-lines font-size line-height)
                                   (dissoc style

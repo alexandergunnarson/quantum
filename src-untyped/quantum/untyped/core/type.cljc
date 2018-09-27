@@ -869,33 +869,6 @@
          ;; functional interfaces to be `callable?`?
          (-def callable?    (or ifn? fnt?))
 
-;; ===== References ===== ;;
-
-         (-def atom?     (isa? #?(:clj clojure.lang.IAtom :cljs cljs.core/IAtom)))
-
-         (-def volatile? (isa? #?(:clj clojure.lang.Volatile :cljs cljs.core/Volatile)))
-
-#?(:clj  (-def atomic?   (or atom? volatile?
-                             java.util.concurrent.atomic.AtomicReference
-                             ;; From the java.util.concurrent package:
-                             ;; "Additionally, classes are provided only for those
-                             ;;  types that are commonly useful in intended applications.
-                             ;;  For example, there is no atomic class for representing
-                             ;;  byte. In those infrequent cases where you would like
-                             ;;  to do so, you can use an AtomicInteger to hold byte
-                             ;;  values, and cast appropriately. You can also hold floats
-                             ;;  using Float.floatToIntBits and Float.intBitstoFloat
-                             ;;  conversions, and doubles using Double.doubleToLongBits
-                             ;;  and Double.longBitsToDouble conversions."
-                             java.util.concurrent.atomic.AtomicBoolean
-                           #_java.util.concurrent.atomic.AtomicByte
-                           #_java.util.concurrent.atomic.AtomicShort
-                             java.util.concurrent.atomic.AtomicInteger
-                             java.util.concurrent.atomic.AtomicLong
-                           #_java.util.concurrent.atomic.AtomicFloat
-                           #_java.util.concurrent.atomic.AtomicDouble
-                             com.google.common.util.concurrent.AtomicDouble)))
-
 ;; ===== Miscellaneous ===== ;;
 
          ;; Used by `quantum.untyped.core.analyze.ast`
@@ -925,8 +898,6 @@
          (-def comparable?   #?(:clj  (isa? java.lang.Comparable)
                                 ;; TODO other things are comparable; really it depends on the two objects in question
                                 :cljs (or nil? (isa? cljs.core/IComparable))))
-
-         (-def transformer?  (isa? quantum.untyped.core.reducers.Transformer))
 
          ;; TODO move
          (-def delay?        (isa? #?(:clj clojure.lang.Delay :cljs cljs.core/Delay)))

@@ -104,7 +104,7 @@
   {:in  "{:width 2 :font-size [[\"16px\" \"1px\"] [\"17px\"]]}"
    :out "width:2;font-size:16px 1px,17px" }
   [css-block]
-  (if (or (derefable? css-block)
+  (if (or (ref/derefable? css-block)
           (and (string? css-block)
                (str/starts-with? css-block "calc")))
       css-block

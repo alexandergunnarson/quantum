@@ -6,15 +6,16 @@
 #?(:clj
     [clojure.tools.namespace.repl :as repl
       :refer [refresh refresh-all
-              set-refresh-dirs]                ])
+              set-refresh-dirs]])
     [clojure.core.async           :as casync]
     [quantum.core.cache           :as cache
       :refer [callable-times]]
     [quantum.core.core            :as qcore]
+    [quantum.core.data.primitive  :as p]
     [quantum.core.data.set        :as set]
     [quantum.core.error           :as err
       :refer [>ex-info catch-all]]
-    [quantum.core.log             :as log      ]
+    [quantum.core.log             :as log]
     [quantum.core.fn
       :refer [fn1 fnl with-do fn->]]
     [quantum.core.logic           :as logic
@@ -22,8 +23,7 @@
     [quantum.core.macros          :as macros
       :refer [defnt]]
     [quantum.core.async           :as async]
-    [quantum.core.type-old        :as type
-      :refer [atom? val?]]
+    [quantum.core.refs            :as ref]
     [quantum.core.spec            :as s
       :refer [validate]])
 #?(:cljs
@@ -60,7 +60,7 @@
   ([^quantum.core.data.queue.LinkedBlockingQueue obj] (async/close! obj))])
   ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (casync/close! obj))
   ([                     obj]
-    (when (val? obj) (throw (>ex-info :not-implemented))))))
+    (when (p/val? obj) (throw (>ex-info :not-implemented))))))
 
 #?(:cljs (declare close!))
 
@@ -467,15 +467,15 @@
     (with-do (swap! systems assoc k (->system k config make-system))
              (log/pr ::debug "Registered system."))))
 
-(defn stop-registered-system! [system-kw] (swap! systems update system-kw (whenf1 val? stop!)))
+(defn stop-registered-system! [system-kw] (swap! systems update system-kw (whenf1 p/val? stop!)))
 
-(defn deregister-system! [system-kw] (swap! systems (fn-> (update system-kw (whenf1 val? stop!)) (dissoc system-kw))))
+(defn deregister-system! [system-kw] (swap! systems (fn-> (update system-kw (whenf1 p/val? stop!)) (dissoc system-kw))))
 
 (defn default-main
   [system-kw re-register? config]
   (when-not (async/web-worker?)
     (let [system (get @systems system-kw)
-          system (whenf system val? stop!)
+          system (whenf system p/val? stop!)
           system (if (or re-register? (nil? system))
                      (get (register-system! system-kw config) system-kw)
                      system)

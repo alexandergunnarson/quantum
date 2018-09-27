@@ -1644,9 +1644,9 @@
 ;; TODO: conditionally optional arities etc. for t/fn
 
 (t/def rf? "Reducing function"
-  (t/fn "seed arity"       []
-        "completing arity" [t/any?]
-        "reducing arity"   [t/any? t/any?]))
+  (t/ftype "seed arity"       []
+           "completing arity" [t/any?]
+           "reducing arity"   [t/any? t/any?]))
 
 ;; ----- expanded code ----- ;;
 

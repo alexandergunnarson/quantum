@@ -153,13 +153,9 @@
 
          (def map-entry? #?(:clj  core/map-entry?
                             :cljs (fn-and vector? (fn-> count (= 2)))))
-         (defalias atom? uref/atom?)
+
 #?(:clj  (defalias var?  core/var?))
          ; TODO `ref?`, `future?`
-
-         (defn derefable? [obj]
-           #?(:clj  (instance?  clojure.lang.IDeref obj)
-              :cljs (satisfies? cljs.core/IDeref    obj)))
 
 #?(:clj  (def throwable? (partial instance+? java.lang.Throwable )))
          (defnt error?  ([#{#?(:clj  Throwable

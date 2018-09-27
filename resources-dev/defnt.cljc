@@ -129,15 +129,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     to types:
     - [xs (t/fn [x (t/isa? clojure.lang.Range)] ...)]
   - No return value means that it should infer
-  - typed core fns
-    - `apply`
-      - especially with `t/defn` as the caller
-    - `merge`
-    - `str`
-    - `compare`
-    - `get`
-    - `concat`
-    - `repeat`
 - NOTE on namespace organization:
   - [quantum.untyped.core.ns :refer [namespace?]]
     instead of
@@ -153,38 +144,52 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     [-] : done as far as possible but not truly complete
     [x] : actually done
   - List of semi-approximately topologically ordered namespaces to make typed:
+    - [.] (TEMPORARY) collections-typed
+         - [ ] `get`
+         - [ ] `merge`
+         - [ ] `concat`
+         - [ ] `repeat`
     - [ ] quantum.core.core -> TODO just need to delete this from all references
     - [ ] quantum.core.type.core
     - [x] quantum.core.data.async
     - [ ] quantum.core.type.defs
-    - [ ] quantum.core.refs -> quantum.core.data.refs
+    - [.] quantum.core.refs -> quantum.core.data.refs ?
     - [ ] quantum.core.logic
           - (def nneg?    (l/fn-not neg?))
           - (def pos-int? (l/fn-and dnum/integer? pos?))
     - [.] quantum.core.fn
+          - [ ] `apply`
+                - especially with `t/defn` as the caller
     - [ ] quantum.core.cache
     - [ ] quantum.core.type-old
+    - [.] quantum.core.data.primitive
     - [.] quantum.core.data.string
+          - [ ] `>str`
     - [.] quantum.core.data.map
     - [.] quantum.core.data.meta
-    - [.] quantum.core.ns ; TODO split up into data.ns?
+    - [.] quantum.core.compare
+          - [ ] `compare`
+    - [x] quantum.core.ns ; TODO split up into data.ns?
+    - [.] quantum.core.vars
     - [ ] quantum.core.print
     - [ ] quantum.core.log
     - [ ] quantum.core.data.vector
     - [ ] quantum.core.spec
     - [ ] quantum.core.error
-    - [ ] quantum.core.data.string — this is where `>str` belongs
+    - [.] quantum.core.data.string
     - [ ] quantum.core.data.array
-    - [ ] quantum.core.data.collections
+    - [.] quantum.core.data.collections
     - [ ] quantum.core.data.tuple
     - [ ] quantum.core.numeric.predicates
     - [ ] quantum.core.numeric.convert
+    - [.] quantum.core.numeric.exponents
     - [ ] quantum.core.numeric.misc
     - [ ] quantum.core.numeric.operators
     - [ ] quantum.core.numeric.trig
     - [ ] quantum.core.numeric.truncate
+    - [.] quantum.core.numeric.types
     - [ ] quantum.core.data.numeric
-    - [ ] quantum.core.numeric
+    - [.] quantum.core.numeric
     - [ ] quantum.core.string.regex
     - [ ] quantum.core.data.set
     - [ ] quantum.core.macros.type-hint
@@ -197,14 +202,11 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] quantum.core.macros.reify
     - [ ] quantum.core.macros.defnt
     - [ ] quantum.core.macros
-    - [ ] quantum.core.reducers.reduce
+    - [.] quantum.core.reducers.reduce
     - [ ] quantum.core.collections.logic
     - [ ] quantum.core.collections.core
 
     - Worked through all we can for now:
-      -
-        - TODO delete this namespace?
-      - quantum.core.data.primitive (TODO make it compile)
       - quantum.core.data.bits
       - quantum.core.convert.primitive
   - List of corresponding untyped namespaces to incorporate:
@@ -214,6 +216,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] quantum.untyped.core.data.map
     - [ ] quantum.untyped.core.type.defs
     - [ ] quantum.untyped.core.data
+    - [ ] quantum.untyped.core.refs
     - [ ] quantum.untyped.core.data.bits
     - [x] quantum.untyped.core.identifiers
   - List of Array fns to implement:

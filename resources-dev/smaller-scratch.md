@@ -29,8 +29,6 @@ https://github.com/clojure/clojure/blob/f572a60262852af68cdb561784a517143a5847cf
        (#(quantum.measure.convert/convert % :bytes :MB))
        double))
 
-(def-map 1)
-
 ; -> 18.21 MB... there must be lots of data not referenced by vars
 
 ; TODO log these stats when every namespace is compiled

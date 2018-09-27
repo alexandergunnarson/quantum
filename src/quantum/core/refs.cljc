@@ -1,4 +1,4 @@
-(ns quantum.core.refs ; TODO TYPED move to `quantum.core.data.refs` and incorporate `nil?` and `val?` here
+(ns quantum.core.refs ; TODO TYPED move to `quantum.core.data.refs`?
   (:refer-clojure :exclude
     [deref
      volatile!
@@ -13,14 +13,12 @@
     [clojure.string                      :as str]
     [quantum.core.error                  :as err
       :refer [TODO]]
+    [quantum.core.identifiers            :as id]
     [quantum.core.macros
       :refer [case-env defnt #?(:clj defnt') env-lang]]
     [quantum.core.type-old               :as t
       :refer [val?]]
     [quantum.core.type.defs              :as tdefs]
-    [quantum.untyped.core.identifiers    :as uident]
-    [quantum.untyped.core.refs
-      :refer [atom?]]
     [quantum.core.vars                   :as var
       :refer [defalias]])
 #?(:clj
@@ -28,6 +26,30 @@
     [clojure.lang IDeref IAtom IPending]
     [java.util.concurrent.atomic AtomicReference AtomicBoolean AtomicInteger AtomicLong]
     [com.google.common.util.concurrent AtomicDouble])))
+
+(def atom?     (t/isa?|direct #?(:clj clojure.lang.IAtom :cljs cljs.core/IAtom)))
+
+(def volatile? (t/isa? #?(:clj clojure.lang.Volatile :cljs cljs.core/Volatile)))
+
+#?(:clj
+(var/def atomic?
+  "From the `java.util.concurrent` package:
+   'Additionally, classes are provided only for those types that are commonly useful in intended
+    applications. For example, there is no atomic class for representing byte. In those infrequent
+    cases where you would like to do so, you can use an `AtomicInteger` to hold byte values, and
+    cast appropriately. You can also hold floats using `Float.floatToIntBits` and
+    `Float.intBitstoFloat` conversions, and doubles using `Double.doubleToLongBits` and
+    `Double.longBitsToDouble` conversions.'"
+  (t/or atom?
+        java.util.concurrent.atomic.AtomicReference
+        java.util.concurrent.atomic.AtomicBoolean
+      #_java.util.concurrent.atomic.AtomicByte
+      #_java.util.concurrent.atomic.AtomicShort
+        java.util.concurrent.atomic.AtomicInteger
+        java.util.concurrent.atomic.AtomicLong
+      #_java.util.concurrent.atomic.AtomicFloat
+      #_java.util.concurrent.atomic.AtomicDouble
+        com.google.common.util.concurrent.AtomicDouble)))
 
 ; ===== UNSYNCHRONIZED MUTABILITY ===== ;
 
@@ -77,7 +99,7 @@
           [~(with-meta 'x {:tag kind})] (new ~deftype-sym ~'x))
         (defmacro  ~(symbol (str "!" kind))
           ([ ]            `(new ~'~deftype-sym (~'~kind 0)))
-          ([~macro-param] `(~'~(uident/qualify *ns* defnt-sym) ~~macro-param))))))
+          ([~macro-param] `(~'~(id/qualify *ns* defnt-sym) ~~macro-param))))))
 
 #?(:clj
 (defmacro gen-primitive-mutables []
@@ -117,6 +139,11 @@
 #?(:clj (defmacro setm!  "Set mutable" [x v] (case-env :cljs `(set! (.-val ~x) ~v) `(setm!*  ~x ~v))))
 #?(:clj (defmacro setm!& "Set mutable" [x v] (case-env :cljs `(set! (.-val ~x) ~v) `(setm!*& ~x ~v))))
 
+;; ===== Dereferencing ===== ;;
+
+(def derefable? (t/isa?|direct #?(:clj clojure.lang.IDeref :cljs cljs.core/IDeref)))
+
+;; TODO TYPED
 #?(:clj  (defnt deref
            ([#{clojure.lang.IDeref}         x] (.deref x))
            ([#{AtomicBoolean
@@ -149,10 +176,12 @@
 (defn ?deref [a] (when (val? a) (deref a))) ; TODO type this
 
 (defn ->derefable [x]
-  (if (t/derefable? x)
+  (if (derefable? x)
       x
       (reify #?(:clj clojure.lang.IDeref :cljs cljs.core/IDeref) ; TODO `reify-compatible`
          (#?(:clj deref :cljs -deref) [_] x))))
+
+;; ===== End dereferencing ===== ;;
 
 #?(:clj
 (defmacro swapm! [*x0 *x1]

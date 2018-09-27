@@ -28,6 +28,7 @@
       :refer [fn-and fn-or whenf condf default]]
     [quantum.core.process             :as proc]
     [quantum.core.resources           :as res]
+    [quantum.core.refs                :as ref]
     [quantum.core.string              :as str]
     [quantum.core.async               :as async
       :refer [go]]
@@ -164,7 +165,7 @@
               {:this this :err {:e e :stack #?(:clj (.getStackTrace e) :cljs (.-stack e))}})
             this))))
     (stop [this]
-      (when (t/atom? conn)
+      (when (ref/atom? conn)
         (reset! conn nil)) ; TODO is this wise? ; TODO unregister all listeners?
       this))
 
@@ -280,7 +281,7 @@
             set-main-conn?         (validate (default set-main-conn?         false) (fn1 p/boolean?))
             set-main-part?         (validate (default set-main-part?         false) (fn1 p/boolean?))
             default-partition      (validate (or default-partition :db.part/test)   (s/and keyword? (fn-> namespace (= "db.part"))))
-            conn                   (validate (or conn (atom nil))                   t/atom?)
+            conn                   (validate (or conn (atom nil))                   ref/atom?)
             connection-retries     (validate (or (if (= type :dynamo) 1 5))         integer?) ; DynamoDB auto-retries
             uri (case type
                       :free
@@ -344,7 +345,7 @@
           (c/assoc this :txr-process txr-process-f)
           (kw-map type uri name host port create-if-not-present? default-partition conn)))))
     (stop [this]
-      (when (and (t/atom? conn) (val? @conn))
+      (when (and (ref/atom? conn) (val? @conn))
         #?(:clj (bdb/release @conn))
         (swap! conn* #(if (identical? % @conn) nil %))
         (reset! conn nil))

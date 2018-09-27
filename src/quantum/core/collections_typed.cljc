@@ -42,6 +42,9 @@
 - TODO `(rreduce [f init o]) - like reduce but in reverse order = Equivalent to Scheme's `foldr`
 "
 
+;; TODO move or excise
+(def transformer? (t/isa? quantum.untyped.core.reducers.Transformer))
+
 ;; ===== Access functions ===== ;;
 
 ;; TODO for CLJS we should do !+vector
