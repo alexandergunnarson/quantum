@@ -158,6 +158,7 @@
 ;; TODO non-boxing `>reduced`
 (t/defn >reduced
   "Wraps ->`x` in a way such that a `reduce` will terminate with the value ->`x`."
+  > reduced?
   [x t/ref?] (#?(:clj clojure.lang.Reduced. :cljs cljs.core/Reduced.) x))
 
 (def reducible?
