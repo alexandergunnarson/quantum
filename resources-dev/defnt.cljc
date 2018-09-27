@@ -54,6 +54,8 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
+  - t/type >>>>>> (PRIORITY 1) <<<<<<
+    - dependent types: `[x arr/array? > (t/type x)]`
   - Analysis
     - This is accepted by the type system without knowing the type:
       (java.math.BigInteger. 1 (-> (ByteBuffer/allocate (int 8)) (.putLong x) .array))
@@ -85,7 +87,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         (#?(:clj  clojure.core.protocols/coll-reduce
             :cljs cljs.core/-reduce) xs rf init))
     - (if (A) ...) should be (if ^boolean (A) ...) if A returns a `p/boolean?`
-  - t/- : multi-arity
+  - t/- : fix
+    - (t/- (t/isa? java.util.Queue) (t/or ?!+queue? !!queue?))
   - t/isa|direct?
     - For CLJ, this is `instance?` for classes and `instance?` on the underlying interface
       associated with a protocol
@@ -95,10 +98,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - t/numerically : e.g. a double representing exactly what a float is able to represent
     - and variants thereof: `numerically-long?` etc.
     - t/numerically-integer?
-  - t/range-of : e.g. a double being between float max values but possibly representing a 'hole' in
-               possible float values
-  - t/type
-    - dependent types: `[x arr/array? > (t/type x)]`
   - ? : type inference
     - use logic programming and variable unification e.g. `?1` `?2` ?
     - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
@@ -340,6 +339,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] quantum.core.core -> TODO just need to delete this from all references
     - [ ] quantum.core.type.core
     - [x] quantum.core.data.async
+    - [.] quantum.core.data.queue
     - [ ] quantum.core.type.defs
     - [.] quantum.core.refs -> quantum.core.data.refs ?
     - [ ] quantum.core.logic

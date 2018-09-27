@@ -23,12 +23,11 @@
   #?(:cljs goog.math.Integer)
   #?(:cljs goog.math.Long)
            [quantum.core.data.primitive       :as p]
-           [quantum.core.data.string          :as dstr]
          #_[quantum.core.logic
              :refer [whenf fn-not fn=]]
            [quantum.core.type                 :as t]
            ;; TODO TYPED excise reference
-           [quantum.core.untyped.vars         :as var
+           [quantum.untyped.core.vars         :as var
              :refer [defalias]]))
 
 ;; ===== Integers ===== ;;
@@ -52,7 +51,8 @@
 ;; Incorporated `cljs.core/integer?`
 (def integer? (t/or fixint? bigint?))
 
-#?(:clj
+;; TODO TYPED `>long`
+#_(:clj
 (t/defn >java-bigint > java-bigint?
   ([x java-bigint?] x)
   ([x clj-bigint? > (t/assume java-bigint?)] (.toBigInteger x))
@@ -95,10 +95,11 @@
                      ;; TODO bring in implementation per the ns docstring
                :cljs t/none?))
 
-#?(:clj
-(defnt rationalize
+;; TODO TYPED >double
+#_(:clj
+(t/defn rationalize
   "Outputs the rational value of `n`."
-  {:adapted-from 'clojure.lang.Numbers/rationalize}
+  {:incorporated {'clojure.lang.Numbers/rationalize "9/2018"}}
   > (t/isa? java.lang.Number)
   ([x (t/or p/float? p/double?)]
     (rationalize (BigDecimal/valueOf (p/>double x))))
@@ -110,7 +111,8 @@
   			  (Numbers/divide bv (.pow BigInteger.TEN scale)))))
   ([x (t/isa? java.lang.Number)] x)))
 
-(t/defn >ratio > ratio?
+;; TODO TYPED finish
+#_(t/defn >ratio > ratio?
   #?(:clj ([x ??] (>ratio x 1)))
   #?(:clj ([x ??, y ??]
             (whenf (rationalize (/ x y))

@@ -622,22 +622,6 @@
 (def +vector|built-in? (isa? #?(:clj  clojure.lang.PersistentVector
                                 :cljs cljs.core/PersistentVector)))
 
-;; ===== Queues ===== ;; Particularly FIFO queues, as LIFO = stack = any vector
-
-         (def   +queue? (isa? #?(:clj  clojure.lang.PersistentQueue
-                                  :cljs cljs.core/PersistentQueue)))
-         (def  !+queue? none?)
-         (def ?!+queue? (or +queue? !+queue?))
-#?(:clj  (def  !!queue? (or (isa? java.util.concurrent.BlockingQueue)
-                             (isa? java.util.concurrent.TransferQueue)
-                             (isa? java.util.concurrent.ConcurrentLinkedQueue))))
-
-         (def   !queue? #?(:clj  ;; Considered single-threaded mutable unless otherwise noted
-                                  (identity #_- (isa? java.util.Queue) #_(or ?!+queue? !!queue?)) ; TODO re-enable once `-` works
-                            :cljs (isa? goog.structs.Queue)))
-
-         (def    queue? (or ?!+queue? !queue? #?(:clj !!queue?)))
-
 ;; ===== Sets ===== ;; Associative; A special type of Map whose keys and vals are identical
 
 #?(:clj  (def    java-set?              (isa? java.util.Set)))
