@@ -200,13 +200,16 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] long?
           - [   ] nat-int?
           - [   ] neg?
+          - [   ] neg-int?
+          - [x x] nil?
           - [x x] not=
           - [x x] number?
           - [   ] odd?
           - [   ] pos?
+          - [   ] pos-int?
           - [x x] short
           - [x x] short?
-          - [   ] some?
+          - [x x] some?
     - [.] clojure.lang.Numbers
     - [.] clojure.lang.RT
     - [.] clojure.lang.Util

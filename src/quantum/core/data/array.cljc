@@ -121,10 +121,12 @@
                                               (>array-nd-type 'object  9)
                                               (>array-nd-type 'object 10)])))
 
-         ;; TODO differentiate between "all supported n-D arrays" and "all n-D arrays"
-         (def array?          (t/or array-1d?
+         (def std-array?      (t/or array-1d?
                                     #?@(:clj [array-2d? array-3d? array-4d? array-5d?
                                               array-6d? array-7d? array-8d? array-9d? array-10d?])))
+
+         ;; TODO differentiate between "all supported n-D arrays" and "all n-D arrays"
+         (def array? (t/or std-array? #?(:clj (t/fn [x p/val?] (-> x ?/>class .isArray)))))
 
 ; TODO look at http://fastutil.di.unimi.it to complete this namespace
 ; TODO `fill!` <~> `Arrays/fill`, `lodash/fill`
