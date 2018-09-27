@@ -1350,6 +1350,7 @@
 
 ;; TODO generate this function via macro
 ;; TODO TYPED replaced `t/fn?` with a more specific `(t/fn [...])` named as e.g. `fn/comparator?`
+;; TODO somehow the `TreeMap` constructor is not right, probably because expecting a `Comparator`
 (t/defn >!sorted-map-by
   "Creates a single-threaded, mutable sorted map with the specified comparator.
    On the JVM, this is a `java.util.TreeMap`.

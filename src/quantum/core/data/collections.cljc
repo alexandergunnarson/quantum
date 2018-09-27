@@ -1,6 +1,6 @@
 (ns quantum.core.data.collections
   (:refer-clojure :exclude
-    [associative? indexed? list? sequential?])
+    [associative? indexed? list? reduced? sequential?])
   (:require
     [quantum.core.data.array  :as arr]
     [quantum.core.data.map    :as map]
@@ -152,6 +152,13 @@
                    (t/isa? clojure.lang.ITransientCollection)]
             :cljs (t/isa? cljs.core/ICollection))
         sequential? associative?))
+
+(def reduced? (t/isa? #?(:clj clojure.lang.Reduced :cljs cljs.core/Reduced)))
+
+;; TODO non-boxing `>reduced`
+(t/defn >reduced
+  "Wraps ->`x` in a way such that a `reduce` will terminate with the value ->`x`."
+  [x t/ref?] (#?(:clj clojure.lang.Reduced. :cljs cljs.core/Reduced.) x))
 
 (def reducible?
   (t/or p/nil? dstr/str? vec/!+vector? arr/array? dnum/numerically-integer?

@@ -54,8 +54,6 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  - data.coll/reduced
-  - data.coll/reduced?
   - Analysis
     - (if (dcoll/reduced? ret)
           ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`

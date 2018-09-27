@@ -1573,7 +1573,7 @@
                (defn seq
                  "Taken from `clojure.lang.RT/seq`"
                  {:quantum.core.type/type
-                   (t/fn > (t/? (t/isa? ISeq))
+                   (t/ftype :> (t/? (t/isa? ISeq))
                      [t/nil?]
                      [(t/isa? ASeq)]
                      [(t/or (t/isa? LazySeq) (t/isa? Seqable))]
