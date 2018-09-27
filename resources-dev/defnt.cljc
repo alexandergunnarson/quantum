@@ -144,7 +144,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           ([xs dc/counted?] (-> xs count num/zero?))
           ([xs (t/input-type educe :_ :_ :?)] (educe empty?|rf x)))
     - handle varargs
-      - [& args _] shouldn't result in `t/any?` but rather like `t/seqable?` or whatever
+      - [& args _] shouldn't result in `t/any?` but rather like `t/reducible?` or whatever
     - do the defnt-equivalences
     - a linting warning that you can narrow the type to whatever the deduced type is from whatever
       wider declared type there is

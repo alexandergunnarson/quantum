@@ -144,9 +144,10 @@
 
 ;; ===== Conversion ===== ;;
 
-            ;; TODO TYPED add t/fn
-(def radix? (t/fn [x integer?]
-              (<= #?(:clj Character/MIN_RADIX :cljs 2) x #?(:clj Character/MAX_RADIX :cljs 36))))
+;; TODO TYPED add t/fn
+(def radix? integer?
+  #_(t/fn [x integer?]
+    (<= #?(:clj Character/MIN_RADIX :cljs 2) x #?(:clj Character/MAX_RADIX :cljs 36))))
 
 ;; ----- Boolean ----- ;;
 

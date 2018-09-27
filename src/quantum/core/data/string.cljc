@@ -1,9 +1,13 @@
 (ns quantum.core.data.string
   "A String is a special wrapper for a char array where different encodings, etc. are possible."
+       (:refer-clojure :exclude
+         [string?])
        (:require
-         [quantum.core.data.meta    :as meta]
-         [quantum.core.type         :as t]
-         [quantum.untyped.core.core :as ucore])
+         [quantum.core.data.meta      :as meta]
+         [quantum.core.data.primitive :as p]
+         [quantum.core.type           :as t]
+         ;; TODO TYPED excise
+         [quantum.untyped.core.core   :as ucore])
        (:import
 #?(:clj  [com.carrotsearch.hppc CharArrayDeque])
 #?(:cljs [goog.string           StringBuffer])))
@@ -19,60 +23,25 @@
 
 #?(:clj (def char-seq? (t/isa? java.lang.CharSequence)))
 
-;; ===== Immutable strings ===== ;;
-
-(def str? (t/isa? #?(:clj java.lang.String :cljs js/String)))
-
-#_(t/defn >str ...) ; TODO TYPED
-
-;; ----- Metable immutable strings ----- ;;
-
-;; TODO TYPED `t/deftype`
-#?(:clj
-(deftype MetableString [^String s ^clojure.lang.IPersistentMap _meta]
-  clojure.lang.IObj
-    (meta        [this]       _meta)
-    (withMeta    [this meta'] (MetableString. s meta'))
-  CharSequence
-    (charAt      [this i]     (.charAt s i))
-    (length      [this]       (.length s))
-    (subSequence [this a b]   (.subSequence s a b))
-  Object
-    (toString    [this]       s)
-  fipp.ednize/IOverride
-  fipp.ednize/IEdn
-    (-edn [this] s)))
-
-#?(:clj
-(defmethod print-method MetableString [^MetableString x ^java.io.Writer w]
-  (print-method (.toString x) w)))
-
-(def metable-str? #?(:clj (t/isa? MetableString) :cljs str?))
-
-(t/defn >metable-str
-  > metable-str?
-  ([s str?] #?(:clj (MetableString. s nil) :cljs s))
-  ([s str?, meta' meta/meta?] #?(:clj (MetableString. s meta') :cljs (meta/with-meta s new-meta))))
-
 ;; ===== Mutable strings ===== ;;
 
-(def !str? (t/isa? #?(:clj java.lang.StringBuilder :cljs StringBuffer)))
+(def !string? (t/isa? #?(:clj java.lang.StringBuilder :cljs StringBuffer)))
 
-(t/defn ^:inline >!str
+(t/defn ^:inline >!string
   "Creates a mutable string."
-  > !str?
+  > !string?
   ([]   #?(:clj (StringBuilder.)    :cljs (StringBuffer.)))
   ;; TODO
   #_([x0] #?(:clj (StringBuilder. x0) :cljs (StringBuffer. x0))))
 
 ;; ----- Synchronously mutable strings ----- ;;
 
-#?(:clj (def !sync-str? (t/isa? java.lang.StringBuffer)))
+#?(:clj (def !sync-string? (t/isa? java.lang.StringBuffer)))
 
 #?(:clj
-(t/defn ^:inline >!sync-str
+(t/defn ^:inline >!sync-string
   "Creates a synchronized mutable string."
-  > !sync-str?
+  > !sync-string?
   [] (StringBuffer.)))
 
 ;; ----- Mutable char deques ----- ;;
@@ -140,3 +109,63 @@
       (conjl! sb arg)
       (when (< n (-> args count dec))
         (conjl! sb " "))))))
+
+;; ===== Immutable strings ===== ;;
+
+(def string? (t/isa? #?(:clj java.lang.String :cljs js/String)))
+
+(t/defn >string
+  "Creates an immutable string."
+  {:incorporated '{clojure.core/str "9/27/2018"
+                   cljs.core/str    "9/27/2018"}}
+  > string?
+         ([] "")
+         ([x p/nil?] "")
+         ([x string?] x)
+#?(:cljs ([x !string?] (.toString x)))
+#?(:clj  ([x p/boolean? > (t/assume string?)] (Boolean/toString   x)))
+#?(:clj  ([x p/byte?    > (t/assume string?)] (Byte/toString      x)))
+#?(:clj  ([x p/short?   > (t/assume string?)] (Short/toString     x)))
+#?(:clj  ([x p/char?    > (t/assume string?)] (Character/toString x)))
+#?(:clj  ([x p/int?     > (t/assume string?)] (Integer/toString   x)))
+#?(:clj  ([x p/long?    > (t/assume string?)] (Long/toString      x)))
+#?(:clj  ([x p/float?   > (t/assume string?)] (Float/toString     x)))
+#?(:clj  ([x p/double?  > (t/assume string?)] (Double/toString    x)))
+#?(:clj  ([x t/ref?] (-> x .toString >string))
+   :cljs ([x t/any? > (t/assume string?)] (.join #js [x] "")))
+         ;; TODO refine this
+       #_([x ? & xs ...]
+           (loop [sb (-> x >string >!string) more ys]
+             (if more
+                 (recur (.append sb (str (first more))) (next more))
+                 (>string sb)))))
+
+;; ----- Metable immutable strings ----- ;;
+
+;; TODO TYPED `t/deftype`
+#?(:clj
+(deftype MetableString [^String s ^clojure.lang.IPersistentMap _meta]
+  clojure.lang.IObj
+    (meta        [this]       _meta)
+    (withMeta    [this meta'] (MetableString. s meta'))
+  CharSequence
+    (charAt      [this i]     (.charAt s i))
+    (length      [this]       (.length s))
+    (subSequence [this a b]   (.subSequence s a b))
+  Object
+    (toString    [this]       s)
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] s)))
+
+#?(:clj
+(defmethod print-method MetableString [^MetableString x ^java.io.Writer w]
+  (print-method (.toString x) w)))
+
+(def metable-string? #?(:clj (t/isa? MetableString) :cljs string?))
+
+(t/defn >metable-string
+  > metable-stingr?
+  ([s string?] #?(:clj (MetableString. s nil) :cljs s))
+  ([s string?, meta' meta/meta?]
+    #?(:clj (MetableString. s meta') :cljs (meta/with-meta s new-meta))))
