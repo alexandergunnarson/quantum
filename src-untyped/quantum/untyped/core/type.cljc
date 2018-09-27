@@ -627,15 +627,9 @@
 
 ;; ===== Booleans ===== ;;
 
-         ;; Used in `quantum.untyped.core.analyze`
-         (def true?  (value true))
-         (def false? (value false))
-
-;; ===== Numbers ===== ;;
-
-;; ----- General ----- ;;
-
-         (def primitive-number? (or #?@(:clj [short? int? long? float?]) double?))
+;; Used in `quantum.untyped.core.analyze`
+(def true?  (value true))
+(def false? (value false))
 
 ;; ========== Collections ========== ;;
 

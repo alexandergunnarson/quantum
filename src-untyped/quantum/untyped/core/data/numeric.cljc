@@ -125,6 +125,8 @@
 (def number? (t/or #?@(:clj  [(t/isa? java.lang.Number)]
                        :cljs [integer? decimal? ratio?])))
 
+(def primitive-number? (t/or #?@(:clj [p/short? t/int? t/long? t/float?]) t/double?))
+
 (var/def numeric?
   "Something 'numeric' is something that may be treated as a number but may not actually *be* one."
   (t/or number? #?(:clj p/char?)))
