@@ -80,7 +80,7 @@
         ([] 0)
         ([x numeric-primitive? > (t/type x)] (#?(:clj Numeric/negate :cljs cljs.core/-) x))
 #?(:clj ([x clj-bigint?        > (t/type x)] ...))
-#?(:clj ([x big-integer?       > (t/type x)] (.negate x)))
+#?(:clj ([x java-bigint?       > (t/type x)] (.negate x)))
         ([x numeric-primitive?, y numeric-primitive? > ?]
           (#?(:clj Numeric/subtract :cljs cljs.core/-) x y))))
 
@@ -322,4 +322,4 @@
        ([a# b# c#] (when (and a# b# c#) (~core-op a# b# c#)))
        ([a# b# c# & args#]
          (let [argsf# (conj args# c# b# a#)]
-           (when (every? t/val? argsf#) (reduce ~core-op argsf#))))))))
+           (when (every? p/val? argsf#) (reduce ~core-op argsf#))))))))

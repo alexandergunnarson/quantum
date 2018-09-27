@@ -16,10 +16,12 @@
    `ratio?` for CLJS:
    - Fraction.js is the best contender as of 9/27/2018. https://github.com/infusion/Fraction.js"
          (:refer-clojure :exclude
-           [#?@(:cljs [-compare]) decimal? denominator integer? number? numerator ratio?])
+           [decimal? denominator integer? number? numerator ratio?])
          (:require
            [clojure.core                      :as core]
            [clojure.string                    :as str]
+  #?(:cljs goog.math.Integer)
+  #?(:cljs goog.math.Long)
            [quantum.core.data.primitive       :as p]
            [quantum.core.data.string          :as dstr]
            [quantum.core.logic
@@ -34,46 +36,34 @@
 #?(:cljs (:require-macros
            [quantum.core.data.numeric :as self])))
 
-
-#?(:clj  (defalias numerator core/numerator)
-   :cljs (t/defn numerator))
-
-#?(:clj  (defalias denominator core/denominator)
-   :cljs (t/defn denominator))
-
-#?(:clj  (defalias ratio? core/ratio?)
-   :cljs (defn ratio? [x] (instance? Ratio x)))
-
-
-
-
 ;; ===== Integers ===== ;;
 
-#?(:clj (def big-integer? (t/isa? BigInteger)))
+;; Incorporated `clojure.core/int?`
+;; Incorporated `cljs.core/int?`
+(var/def fixint? "The set of all fixed-precision integers."
+  (t/or #?@(:clj [p/byte? p/short?]) p/int? p/long?))
 
-#?(:clj (def clj-bigint? (t/isa? clojure.lang.BigInt)))
+#?(:clj (def java-bigint? (t/isa? BigInteger)))
+#?(:clj (def clj-bigint?  (t/isa? clojure.lang.BigInt)))
 
-(def bigint? #?(:clj  (t/or clj-bigint? big-integer?)
-                      ;; TODO bring in implementation per the ns docstring
-                :cljs t/none?))
+(var/def bigint? "The set of all 'big' (arbitrary-precision) integers."
+  #?(:clj  ;; TODO bring in a better implementation per the ns docstring?
+           (t/or clj-bigint? java-bigint?)
+           ;; TODO bring in implementation per the ns docstring
+     :cljs t/none?))
 
 ;; Incorporated `clojure.lang.Util/isInteger`
 ;; Incorporated `clojure.core/integer?`
 ;; Incorporated `cljs.core/integer?`
-(def integer? (t/or #?@(:clj [p/byte? p/short?]) p/int? p/long? bigint?))
-
-;; Incorporated `clojure.core/int?`
-;; Incorporated `cljs.core/int?`
-(var/def fixed-integer? "The set of all fixed-precision integers."
-  (t/or ?@(:clj [p/byte? p/short?]) p/int? p/long?))
+(def integer? (t/or fixint? bigint?))
 
 #?(:clj
-(t/defn >big-integer > big-integer?
-  ([x big-integer?] x)
-  ([x clj-bigint? > (t/* big-integer?)] (.toBigInteger x))
+(t/defn >java-bigint > java-bigint?
+  ([x java-bigint?] x)
+  ([x clj-bigint? > (t/assume java-bigint?)] (.toBigInteger x))
   ([;; TODO TYPED `(- number? BigInteger BigInt)`
-    x (t/or p/short? p/int? p/long?) > (t/* big-integer?)] ; TODO BigDecimal
-    (-> x p/>long (BigInteger/valueOf)))))
+    x (t/or p/short? p/int? p/long?) > (t/assume java-bigint?)] ; TODO BigDecimal
+    (-> x p/>long BigInteger/valueOf))))
 
 #?(:cljs
 (t/defn >bigint > bigint?
@@ -82,14 +72,31 @@
 
 ;; ===== Decimals ===== ;;
 
-(def bigdec? #?(:clj  ;; TODO bring in a better implementation per the ns docstring?
-                      (t/isa? BigDecimal)
-                      ;; TODO bring in implementation per the ns docstring
-                :cljs t/none?))
+;; Incorporated `clojure.core/float?`
+;; Incorporated `cljs.core/float?`
+(var/def fixdec? "The set of all fixed-precision decimals."
+  (t/or #?(:clj p/float?) p/double?))
+
+;; Incorporated `clojure.core/decimal?`
+(var/def bigdec? "The set of all 'big' (arbitrary-precision) decimals."
+  #?(:clj  ;; TODO bring in a better implementation per the ns docstring?
+           (t/isa? BigDecimal)
+           ;; TODO bring in implementation per the ns docstring
+     :cljs t/none?))
+
+;; ===== Precision ===== ;;
+
+(var/def fixnum? "The set of all fixed-precision numbers."
+  (t/or fixint? fixdec?))
+
+(var/def bignum? "The set of all 'big' (arbitrary-precision) numbers."
+  (t/or fixint? fixdec?))
 
 ;; ===== Ratios ===== ;;
 
-(def ratio? (t/isa? #?(:clj clojure.lang.Ratio :cljs quantum.core.data.numeric.Ratio)))
+(def ratio? #?(:clj  (t/isa? clojure.lang.Ratio)
+                     ;; TODO bring in implementation per the ns docstring
+               :cljs t/none?))
 
 #?(:clj
 (defnt rationalize
@@ -106,22 +113,50 @@
   			  (Numbers/divide bv (.pow BigInteger.TEN scale)))))
   ([x (t/isa? java.lang.Number)] x)))
 
-(defnt >ratio > ratio?
-  ([x ??] (>ratio x #?(:clj 1 :cljs int/ONE)))
-  ([x ??, y ??]
-    #?(:clj  (whenf (rationalize (/ x y))
-                    (fn-not core/ratio?)
-                    #(clojure.lang.Ratio. (->big-integer %) java.math.BigInteger/ONE))
-       :cljs (let [x  (>bigint x)
-                   y  (>bigint y)
-                   d  (gcd x y)
-                   x' (.divide x d)
-                   y' (.divide y d)]
-               (if (.isNegative y')
-                   (Ratio. (.negate x') (.negate y'))
-                   (Ratio. x' y'))))))
+(t/defn >ratio > ratio?
+  #?(:clj ([x ??] (>ratio x 1)))
+  #?(:clj ([x ??, y ??]
+            (whenf (rationalize (/ x y))
+              (fn-not core/ratio?)
+              #(clojure.lang.Ratio. (->big-integer %) java.math.BigInteger/ONE)))))
 
 ;; ===== General ===== ;;
+
+(t/defn ^:inline >zero-of-type #_> #_zero?
+        ([x p/byte?        > (t/type x)] Numeric/byte0)
+        ([x p/short?       > (t/type x)] Numeric/short0)
+        ([x p/char?        > (t/type x)] Numeric/char0)
+        ([x p/int?         > #?(:clj (type x) :cljs (t/assume (t/type x)))]
+           #?(:clj Numeric/int0 :cljs goog.math.Integer/ZERO))
+        ([x p/long?        > #?(:clj (type x) :cljs (t/assume (t/type x)))]
+           #?(:clj 0 :cljs goog.math.Long/ZERO))
+        ([x p/float?       > (t/type x)] Numeric/float0)
+        ([x p/double?      > (t/type x)] 0.0)
+#?(:clj ([x p/java-bigint? > (t/type x)] java.math.BigInteger/ZERO))
+#?(:clj ([x p/clj-bigint?  > (t/type x)] clojure.lang.BigInt/ZERO)))
+
+(t/defn ^:inline >one-of-type #_> #_one?
+        ([x p/byte?        > (t/type x)] Numeric/byte1)
+        ([x p/short?       > (t/type x)] Numeric/short1)
+        ([x p/char?        > (t/type x)] Numeric/char1)
+        ([x p/int?         > #?(:clj (type x) :cljs (t/assume (t/type x)))]
+           #?(:clj Numeric/int1 :cljs goog.math.Integer/ONE))
+        ([x p/long?        > #?(:clj (type x) :cljs (t/assume (t/type x)))]
+           #?(:clj 1 :cljs goog.math.Long/ONE))
+        ([x p/float?       > (t/type x)] Numeric/float1)
+        ([x p/double?      > (t/type x)] 1.0)
+#?(:clj ([x p/java-bigint? > (t/type x)] java.math.BigInteger/ONE))
+#?(:clj ([x p/clj-bigint?  > (t/type x)] clojure.lang.BigInt/ONE)))
+
+(t/defn >one-of-type)
+
+(t/defn ^:inline numerator > numerically-integer?
+        ([x numerically-integer? > (t/type x)] x)
+#?(:clj ([x ratio?               > (t/assume java-bigint?)] (.numerator x))))
+
+(t/defn ^:inline denominator > numerically-integer?
+        ([x numerically-integer? > (t/type x)] (>one-of-type x))
+#?(:clj ([x ratio?               > (t/assume java-bigint?)] (.denominator x))))
 
 (def decimal? (or #?(:clj p/float?) p/double? bigdec?))
 

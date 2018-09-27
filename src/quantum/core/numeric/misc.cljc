@@ -16,8 +16,7 @@
 
 #?(:clj  (defmacro rem [n div] `(Numeric/rem ~n ~div)) ; TODO `defnt`
    :cljs (defnt rem
-           ([^double? x n] (core/rem x n))
-           ([^bigint? x n] (.modulo  x n))))
+           ([^double? x n] (core/rem x n))))
 
 #?(:clj  (defalias mod core/mod) ; TODO fix
    :cljs (defnt mod

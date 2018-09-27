@@ -13,10 +13,12 @@ public class Numeric {
     public static final short short0 = (short)0;
     public static final char  char0  = (char) 0;
     public static final int   int0   = 0;
+    public static final float float0 = 0.0f;
     public static final byte  byte1  = (byte) 1;
     public static final short short1 = (short)1;
     public static final char  char1  = (char) 1;
     public static final int   int1   = 1;
+    public static final float float1 = 1.0f;
 
     // ================================= Boolean Operations ===================================== //
 

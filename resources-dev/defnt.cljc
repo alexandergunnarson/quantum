@@ -190,6 +190,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] char?
           - [  |] class
           - [x x] compare
+          - [   ] conj
+          - [   ] contains?
+          - [x |] decimal?
+          - [x |] denominator
           - [x x] double
           - [x x] double?
           - [   ] even?
@@ -197,19 +201,25 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] integer?
           - [x x] float
           - [x x] float?
+          - [   ] infinite?
           - [x x] int
           - [x x] int?
           - [x x] long
           - [x x] long?
+          - [   ] mod
           - [   ] nat-int?
           - [   ] neg?
           - [   ] neg-int?
           - [x x] nil?
           - [x x] not=
           - [x x] number?
+          - [x |] numerator
           - [   ] odd?
           - [   ] pos?
           - [   ] pos-int?
+          - [x |] ratio?
+          - [   ] rational?
+          - [   ] rem
           - [x x] short
           - [x x] short?
           - [x x] some?
@@ -262,7 +272,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] multiplyP
           - [ ] not
           - [ ] num
-          - [ ] numerator
+          - [x] numerator
           - [ ] or
           - [ ] quotient
           - [ ] rationalize
