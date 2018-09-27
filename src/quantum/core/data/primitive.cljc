@@ -1,9 +1,13 @@
 (ns quantum.core.data.primitive
         (:refer-clojure :exclude
-          [boolean? char? comparable? decimal? double? float? int? integer?])
+          [boolean? char? comparable? decimal? double? false? float? int? integer? true?])
         (:require
  #?(:cljs [com.gfredericks.goog.math.Integer :as int])
-          [quantum.core.type                 :as t])
+          [quantum.core.type                 :as t]
+          [quantum.untyped.core.type         :as ut]
+          ;; TODO TYPED excise reference
+          [quantum.untyped.core.vars
+            :refer [defaliases]])
 #?(:clj (:import
           [java.nio ByteBuffer]
           [quantum.core Numeric Primitive])))
@@ -32,6 +36,8 @@
 
         ;; Specifically comparable primitives
         (def comparable? (t/- primitive? boolean?))
+
+        (defaliases ut true? false?)
 
 ;; ===== Boxing/unboxing ===== ;;
 
@@ -138,7 +144,8 @@
 
 ;; ===== Conversion ===== ;;
 
-(def radix? (fnt [x integer?]
+            ;; TODO TYPED add t/fn
+(def radix? (t/fn [x integer?]
               (<= #?(:clj Character/MIN_RADIX :cljs 2) x #?(:clj Character/MAX_RADIX :cljs 36))))
 
 ;; ----- Boolean ----- ;;

@@ -1,11 +1,10 @@
-(ns
-  ^{:doc "Vector operations. Includes relaxed radix-balanced vectors (RRB vectors)
-          my Michal Marczyk. Also includes |conjl| (for now)."
-    :attribution "alexandergunnarson"}
-  quantum.core.data.vector
+(ns quantum.core.data.vector
+  "A vector is Sequential, Associative (specifically, whose keys are sequential, dense
+   integer values), and extensible."
   (:refer-clojure :exclude
-    [vector])
+    [vector vector?])
   (:require
+    ;; TODO TYPED excise
     [clojure.core             :as core]
     [clojure.core.rrb-vector  :as svec]
 #?@(:clj
@@ -14,10 +13,12 @@
               PSpliceableVector splicev]]
     [clojure.core.rrb-vector.rrbt
       :refer [AsRRBT as-rrbt]]])
-    [quantum.core.fn
-      :refer [rcomp]]
+    [quantum.core.type        :as t]
     [quantum.core.vars        :as var
-      :refer [defalias]])
+      :refer [defalias]]
+    ;; TODO TYPED excise
+    [quantum.core.untyped.fn
+      :refer [rcomp]])
 #?(:clj
   (:import
     java.util.ArrayList
@@ -34,6 +35,62 @@
 ; TO EXPLORE
 ; - michalmarczyk/devec: double-ended vector
 ; =======================================
+
+(def !array-list?
+  #?(:clj  (t/or (t/isa? java.util.ArrayList)
+                 ;; indexed and associative, but not extensible
+                 (t/isa? java.util.Arrays$ArrayList))
+     :cljs (t/or ;; not used
+                 #_(t/isa? cljs.core/ArrayList)
+                 ;; because supports .push etc.
+                 (t/isa? js/Array))))
+
+;; svec = "spliceable vector"
+(def   svector?          (t/isa? clojure.core.rrb_vector.rrbt.Vector))
+
+(def   +vector?          (t/isa? #?(:clj  clojure.lang.IPersistentVector
+                                    :cljs cljs.core/IVector)))
+
+(def   +vector|built-in? (t/isa? #?(:clj  clojure.lang.PersistentVector
+                                    :cljs cljs.core/PersistentVector)))
+
+(def  !+vector?          (t/isa? #?(:clj  clojure.lang.ITransientVector
+                                    :cljs cljs.core/ITransientVector)))
+
+(def ?!+vector?          (t/or +vector? !+vector?))
+
+(def !vector|byte?   #?(:clj (t/isa? it.unimi.dsi.fastutil.bytes.ByteArrayList)     :cljs t/none?))
+(def !vector|short?  #?(:clj (t/isa? it.unimi.dsi.fastutil.shorts.ShortArrayList)   :cljs t/none?))
+(def !vector|char?   #?(:clj (t/isa? it.unimi.dsi.fastutil.chars.CharArrayList)     :cljs t/none?))
+(def !vector|int?    #?(:clj (t/isa? it.unimi.dsi.fastutil.ints.IntArrayList)       :cljs t/none?))
+(def !vector|long?   #?(:clj (t/isa? it.unimi.dsi.fastutil.longs.LongArrayList)     :cljs t/none?))
+(def !vector|float?  #?(:clj (t/isa? it.unimi.dsi.fastutil.floats.FloatArrayList)   :cljs t/none?))
+(def !vector|double? #?(:clj (t/isa? it.unimi.dsi.fastutil.doubles.DoubleArrayList) :cljs t/none?))
+
+(def !vector|ref?
+  #?(:clj  (t/or (t/isa? java.util.ArrayList)
+                 (t/isa? it.unimi.dsi.fastutil.objects.ReferenceArrayList))
+     ;; because supports .push etc.
+     :cljs (t/isa? js/Array)))
+
+(def !vector?
+  (t/or !vector|ref?
+        !vector|byte? !vector|short? !vector|char? !vector|int? !vector|long?
+        !vector|float? !vector|double?))
+
+         ;; java.util.Vector is deprecated, because you can
+         ;; just create a synchronized wrapper over an ArrayList
+         ;; via java.util.Collections
+#?(:clj  (def !!vector? t/none?))
+
+;; We could maybe duck-type as `(t/and (isa? java.util.RandomAccess) (isa? java.util.List))` but
+;; it's not really sufficient as that doesn't really capture all the properties we want out of a
+;; vector
+(def vector? (t/or ?!+vector? !vector? #?(:clj !!vector?)))
+
+
+;; TODO TYPED below
+
 
 (defalias vector core/vector)
 (defalias +vector vector)

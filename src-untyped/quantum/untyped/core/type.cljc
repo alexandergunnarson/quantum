@@ -62,7 +62,7 @@
              :refer [def- defmacro- update-meta]])
 #?(:cljs (:require-macros
            [quantum.untyped.core.type :as self
-             :refer [-def def-preds|map|any def-preds|map|same-types]]))
+             :refer [def-preds|map|any def-preds|map|same-types]]))
 #?(:clj  (:import
            [quantum.untyped.core.analyze.expr Expression]
            [quantum.untyped.core.type.reifications
@@ -274,23 +274,17 @@
 ;; TODO clean up
 (defn undef! [sym] (swap! *type-registry undef sym))
 
-#_(:clj
-(defmacro defalias [sym t]
-  `(~'def ~sym (>type ~t))))
-
-#?(:clj (uvar/defalias -def define))
-
-(-def type?          (isa? PType))
-(-def not-type?      (isa? NotType))
-(-def or-type?       (isa? OrType))
-(-def and-type?      (isa? AndType))
-(-def protocol-type? (isa? ProtocolType))
-(-def class-type?    (isa? ClassType))
-(-def value-type?    (isa? ValueType))
+(def type?          (isa? PType))
+(def not-type?      (isa? NotType))
+(def or-type?       (isa? OrType))
+(def and-type?      (isa? AndType))
+(def protocol-type? (isa? ProtocolType))
+(def class-type?    (isa? ClassType))
+(def value-type?    (isa? ValueType))
 
 ;; For use in logical operators
-(-def nil?           (value nil))
-(-def object?        (isa? #?(:clj java.lang.Object :cljs js/Object)))
+(def nil?           (value nil))
+(def object?        (isa? #?(:clj java.lang.Object :cljs js/Object)))
 
 ;; ===== Type metadata ===== ;;
 
@@ -587,119 +581,69 @@
 
 ;; ===== General ===== ;;
 
-         (-def none?         empty-set)
-         (-def any?          universal-set)
+         (def none?         empty-set)
+         (def any?          universal-set)
 
-                              ;; TODO this is incomplete for CLJS base classes, I think
-         (-def val|by-class? (or object? #?@(:cljs [(isa? js/String) (isa? js/Symbol)])))
-         (-def val?          (not nil?))
+                            ;; TODO this is incomplete for CLJS base classes, I think
+         (def val|by-class? (or object? #?@(:cljs [(isa? js/String) (isa? js/Symbol)])))
+         (def val?          (not nil?))
 
-         (-def ref?          (ref any?))
+         (def ref?          (ref any?))
 
 ;; ===== Meta ===== ;;
 
-#?(:clj  (-def class?           (isa? java.lang.Class)))
-#?(:clj  (-def primitive-class? (or (value Boolean/TYPE)
-                                    (value Byte/TYPE)
-                                    (value Character/TYPE)
-                                    (value Short/TYPE)
-                                    (value Integer/TYPE)
-                                    (value Long/TYPE)
-                                    (value Float/TYPE)
-                                    (value Double/TYPE))))
+#?(:clj  (def class?           (isa? java.lang.Class)))
+#?(:clj  (def primitive-class? (or (value Boolean/TYPE)
+                                   (value Byte/TYPE)
+                                   (value Character/TYPE)
+                                   (value Short/TYPE)
+                                   (value Integer/TYPE)
+                                   (value Long/TYPE)
+                                   (value Float/TYPE)
+                                   (value Double/TYPE))))
          ;; TODO for CLJS
-#?(:clj  (-def protocol?        (>expr (ufn/fn-> :on-interface class?))))
+#?(:clj  (def protocol?        (>expr (ufn/fn-> :on-interface class?))))
 
 ;; ===== Primitives ===== ;;
 ;; NOTE these are kept here because they're used in both type analysis and various test namespaces
 
-         (-def  boolean? (isa? #?(:clj Boolean :cljs js/Boolean)))
-#?(:clj  (-def  byte?    (isa? Byte)))
-#?(:clj  (-def  char?    (isa? Character)))
-#?(:clj  (-def  short?   (isa? Short)))
-#?(:clj  (-def  int?     (isa? Integer)))
-#?(:clj  (-def  long?    (isa? Long)))
-#?(:clj  (-def  float?   (isa? Float)))
-         (-def  double?  (isa? #?(:clj Double :cljs js/Number)))
+         (def  boolean? (isa? #?(:clj Boolean :cljs js/Boolean)))
+#?(:clj  (def  byte?    (isa? Byte)))
+#?(:clj  (def  char?    (isa? Character)))
+#?(:clj  (def  short?   (isa? Short)))
+#?(:clj  (def  int?     (isa? Integer)))
+#?(:clj  (def  long?    (isa? Long)))
+#?(:clj  (def  float?   (isa? Float)))
+         (def  double?  (isa? #?(:clj Double :cljs js/Number)))
 
          ;; These are special for CLJS protocols
-#?(:cljs (-def  native?  (or (isa? js/Boolean)
-                             (isa? js/Number)
-                             (isa? js/Object)
-                             (isa? js/Array)
-                             (isa? js/String)
-                             (isa? js/Function)
-                             nil?)))
+#?(:cljs (def  native?  (or (isa? js/Boolean)
+                            (isa? js/Number)
+                            (isa? js/Object)
+                            (isa? js/Array)
+                            (isa? js/String)
+                            (isa? js/Function)
+                            nil?)))
 
 ;; ===== Booleans ===== ;;
 
-         (-def true?  (value true))
-         (-def false? (value false))
+         ;; Used in `quantum.untyped.core.analyze`
+         (def true?  (value true))
+         (def false? (value false))
 
 ;; ===== Numbers ===== ;;
 
 ;; ----- General ----- ;;
 
-         (-def primitive-number? (or #?@(:clj [short? int? long? float?]) double?))
+         (def primitive-number? (or #?@(:clj [short? int? long? float?]) double?))
 
 ;; ========== Collections ========== ;;
 
-;; Necessary for `quantum.untyped.core.analyze`
+;; Used in `quantum.untyped.core.analyze`
 (def +map|built-in?
      (or (isa? #?(:clj clojure.lang.PersistentHashMap  :cljs cljs.core/PersistentHashMap))
          (isa? #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core/PersistentArrayMap))
          (isa? #?(:clj clojure.lang.PersistentTreeMap  :cljs cljs.core/PersistentTreeMap))))
-
-;; ===== Vectors ===== ;; Sequential, Associative (specifically, whose keys are sequential,
-                       ;; dense integer values), extensible
-
-         (-def !array-list?      #?(:clj  (or (isa? java.util.ArrayList)
-                                              ;; indexed and associative, but not extensible
-                                              (isa? java.util.Arrays$ArrayList))
-                                    :cljs (or ;; not used
-                                              #_(isa? cljs.core/ArrayList)
-                                              ;; because supports .push etc.
-                                              (isa? js/Array))))
-         ;; svec = "spliceable vector"
-         (-def   svector?          (isa? clojure.core.rrb_vector.rrbt.Vector))
-
-         (-def   +vector?          (isa? #?(:clj  clojure.lang.IPersistentVector
-                                            :cljs cljs.core/IVector)))
-
-         (-def   +vector|built-in? (isa? #?(:clj  clojure.lang.PersistentVector
-                                            :cljs cljs.core/PersistentVector)))
-
-         (-def  !+vector?          (isa? #?(:clj  clojure.lang.ITransientVector
-                                            :cljs cljs.core/ITransientVector)))
-         (-def ?!+vector?          (or +vector? !+vector?))
-
-         (-def  !vector|byte?     #?(:clj (isa? it.unimi.dsi.fastutil.bytes.ByteArrayList)     :cljs none?))
-         (-def  !vector|short?    #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortArrayList)   :cljs none?))
-         (-def  !vector|char?     #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharArrayList)     :cljs none?))
-         (-def  !vector|int?      #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntArrayList)       :cljs none?))
-         (-def  !vector|long?     #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongArrayList)     :cljs none?))
-         (-def  !vector|float?    #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatArrayList)   :cljs none?))
-         (-def  !vector|double?   #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleArrayList) :cljs none?))
-
-         (-def  !vector|ref?      #?(:clj  (or (isa? java.util.ArrayList)
-                                               (isa? it.unimi.dsi.fastutil.objects.ReferenceArrayList))
-                                     ;; because supports .push etc.
-                                     :cljs (isa? js/Array)))
-
-         (-def  !vector?          (or !vector|ref?
-                                      !vector|byte?  !vector|short? !vector|char?
-                                      !vector|int?   !vector|long?
-                                      !vector|float? !vector|double?))
-
-                                   ;; java.util.Vector is deprecated, because you can
-                                   ;; just create a synchronized wrapper over an ArrayList
-                                   ;; via java.util.Collections
-#?(:clj  (-def !!vector?           none?))
-                                   ;; We could maybe duck-type as
-                                   ;; `(t/and (isa? java.util.RandomAccess) (isa? java.util.List))`
-                                   ;; but it's not really sufficient as that doesn't really capture
-                                   ;; all the properties we want out of a vector
-         (-def   vector?           (or ?!+vector? !vector? #?(:clj !!vector?)))
 
 ;; ===== Queues ===== ;; Particularly FIFO queues, as LIFO = stack = any vector
 

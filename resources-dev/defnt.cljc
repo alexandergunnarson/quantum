@@ -115,6 +115,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - expressions (`quantum.untyped.core.analyze.expr`)
   - comparison of `t/fn`s is probably possible?
   - t/def
+    - TODO what would this even look like?
   - t/fnt (t/fn; current t/fn might transition to t/fn-spec or whatever?)
   - t/ftype
     - conditionally optional arities etc.
@@ -201,9 +202,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [.] quantum.core.vars
     - [ ] quantum.core.print
     - [ ] quantum.core.log
-    - [ ] quantum.core.data.vector
+    - [.] quantum.core.data.vector
     - [ ] quantum.core.spec
-    - [ ] quantum.core.error
+    - [.] quantum.core.error
     - [.] quantum.core.data.string
     - [ ] quantum.core.data.array
     - [.] quantum.core.data.collections
