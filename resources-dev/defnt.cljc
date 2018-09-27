@@ -1,3 +1,33 @@
+;; TO MOVE
+
+;; ===== quantum.core.system
+
+#?(:clj
+(defnt pid [> (? t/string?)]
+  (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
+       (.getName))))
+
+;; TODO TYPED
+(defalias u/*registered-components)
+
+;; ===== UNKNOWN ===== ;;
+
+(defnt >sentinel [> t/object?] #?(:clj (Object.) :cljs #js {}))
+(defalias >object >sentinel)
+
+;; TODO TYPED
+#?(:clj
+(defmacro with
+  "Evaluates @expr, then @body, then returns @expr.
+   For (side) effects."
+  [expr #_t/form?, & body #_(? (t/seq-of t/form?))]
+  `(let [expr# ~expr] ~@body expr#)))
+
+
+
+
+
+
 ;; Truncation is different from safe coercion
 `>integer` is for e.g.:
 - truncation e.g. js/Math.trunc
@@ -205,6 +235,14 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [.] quantum.core.reducers.reduce
     - [ ] quantum.core.collections.logic
     - [ ] quantum.core.collections.core
+    - [ ] quantum.core.form
+          - [ ] `(t/def langs #{:clj :cljs :clr})`
+          - [ ] `(t/def lang "The language this code is compiled under" #?(:clj :clj :cljs :cljs))`
+    - [ ] quantum.core.form.generate
+          - [ ] ```
+                ;; TODO TYPED
+                (defalias u/externs?)
+                ```
 
     - Worked through all we can for now:
       - quantum.core.data.bits

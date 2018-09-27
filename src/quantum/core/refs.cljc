@@ -51,12 +51,18 @@
       #_java.util.concurrent.atomic.AtomicDouble
         com.google.common.util.concurrent.AtomicDouble)))
 
+;; TODO TYPED
+(defprotocol IValue
+  (get [this])
+  (set [this newv]))
+
 ; ===== UNSYNCHRONIZED MUTABILITY ===== ;
 
-(#?(:clj definterface :cljs defprotocol) IMutableReference
-  (get       [#?(:cljs this)])
-  (set       [#?(:cljs this) v])
-  (getAndSet [#?(:cljs this) v]))
+;; TODO TYPED (was interface in CLJ, not protocol)
+(defprotocol IMutableReference
+  (get       [this])
+  (set       [this v])
+  (getAndSet [this v]))
 
 ;; TODO create for every primitive datatype as well
 (deftype MutableReference [#?(:clj ^:unsynchronized-mutable val :cljs ^:mutable val)]

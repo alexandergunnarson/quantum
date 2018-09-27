@@ -16,6 +16,7 @@
       :refer [defrecord+]]
     [quantum.core.macros.optimization
       :refer [identity*]]
+    [quantum.core.refs                     :as ref]
     [quantum.core.spec                     :as s
       :refer [validate]]
     [quantum.untyped.core.collections      :as ucoll
@@ -264,7 +265,7 @@
                          {~'hash     ([_#] (int (bit-xor ~type-hash (~(case-env :clj '.hashEq :cljs '-hash) ~'v))))}
                        ~'?Deref
                          {~'deref    ([_#] ~'v)}
-                       quantum.core.core/IValue
+                       refs/IValue
                          {~'get      ([_#] ~'v)
                           ~'set      ([_# v#] (new ~sym (-> v# ~(if-not conformer `identity* conformer-sym)
                                                             (s/validate ~spec-name))))}})
@@ -479,7 +480,7 @@
                {~'pr          ([_# w# opts#] (~'-pr-writer ~'v w# opts#))}
              ~'?Hash
                {~'hash        ([_#] (int (bit-xor ~type-hash (~(case-env :clj '.hashEq :cljs '-hash) ~'v))))}
-             quantum.core.core/IValue
+             refs/IValue
                {~'get         ([_#] ~'v)
                 ~'set         ([_# v#] (if (instance? ~sym v#) v# (new ~sym (~create v#))))}})
           (defn ~constructor-sym [m#] (new ~qualified-sym (~create m#)))
