@@ -833,10 +833,6 @@
          ;; `js/File` isn't always available! Use an abstraction
 #?(:clj  (-def file?         (isa? java.io.File)))
 
-         (-def comparable?   #?(:clj  (isa? java.lang.Comparable)
-                                ;; TODO other things are comparable; really it depends on the two objects in question
-                                :cljs (or nil? (isa? cljs.core/IComparable))))
-
          ;; TODO move
          (-def delay?        (isa? #?(:clj clojure.lang.Delay :cljs cljs.core/Delay)))
 

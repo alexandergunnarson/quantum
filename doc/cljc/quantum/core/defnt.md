@@ -262,7 +262,6 @@ I think the best approach is not inference, but rather being able to at least do
 - Conditional specs
 
 Thus the code turns into:
-*(TODO: conditionally optional arities etc.)*
 
 ```clojure
 (def rf? "Reducing function"

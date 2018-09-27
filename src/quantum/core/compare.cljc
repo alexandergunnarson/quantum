@@ -1,9 +1,13 @@
 (ns quantum.core.compare
   (:refer-clojure :exclude
+    ;; TODO enable
+  #_[= == compare]
+    ;; TODO clean up
     [= not= < > <= >= max min max-key min-key neg? pos? zero? - -' + inc compare
      reduce, transduce, first])
   (:require
     [clojure.core                    :as core]
+    [goog.array                      :as garray]
     [quantum.core.log                :as log
       :refer [prl!]]
     [quantum.core.collections.core   :as ccoll
@@ -22,6 +26,7 @@
     [quantum.core.numeric.predicates :as pred
       :refer [neg? pos? zero?]]
     [quantum.core.data.numeric       :as dnum]
+    [quantum.core.data.time          :as dtime]
     [quantum.core.reducers           :as red
       :refer [reduce, transduce]]
     [quantum.core.vars
@@ -92,13 +97,44 @@
 
 ;   )
 
+;; TODO TYPED; also incorporate `core/fn->comparator`
+(defn fn->comparator [f]
+  #?(:clj  (cast java.util.Comparator f)
+     :cljs (core/fn->comparator f)))
+
+#?(:clj
+(defnt' ^int compare-1d-arrays-lexicographically ; TODO reflection
+  "Arrays are not `Comparable`, so we need a custom
+   comparator which we can pass to `sort`."
+  {:from       "clojure.tools.nrepl.bencode"
+   :adapted-by "Alex Gunnarson"}
+  ([^array-1d? a ^array-1d? b]
+    (let [alen (alength a)
+          blen (alength b)
+          len  (core/min alen blen)]
+      (loop [i 0]
+        (if (== i len) ; TODO = ?
+            (- alen blen)
+            (let [x (p/>long (- (->num (aget a i)) (->num (aget b i))))] ; TODO remove protocol
+              (if (zero? x)
+                  (recur (core/inc i))
+                  x))))))))
+
+(def compare ccomp/compare)
+
+;; TODO TYPED define variadic arity
+(t/extend-defn! compare
+#?(:cljs ([a js/Date      , b js/Date]       (compare (dtime/date>value a) (dtime/date>value b))))
+         ([a arr/array-1d?, b arr/array-1d?] (compare-1d-arrays-lexicographically a b)))
+
+;; TODO TYPED define variadic arity
+(t/extend-defn! =
+#?(:cljs ([a js/Date, b js/Date] (== (dtime/date>value o) (dtime/date>value other)))))
 
 (defaliases ccomp
-  compare
   min-key first-min-key second-min-key
   max-key first-max-key second-max-key
-  #?@(:clj [compare-1d-arrays-lexicographically
-            =   =&   not=     not=&
+  #?@(:clj [=   =&   not=     not=&
             <   <&   comp<    comp<&
             <=  <=&  comp<=   comp<=&
             >   >&   comp>    comp>&
@@ -203,7 +239,7 @@
   ([kf xs] (unsorted-by kf core/compare xs))
   ([kf comparef xs]
     (let [xs'      (transient [])
-          comparef (ccomp/fn->comparator comparef)]
+          comparef (fn->comparator comparef)]
       (red/reducei-sentinel
         (fn [a b i]
           (when-not (neg? (#?@(:clj  [.compare ^java.util.Comparator comparef]

@@ -1,104 +1,143 @@
 (ns quantum.core.compare.core
-  (:refer-clojure :exclude
-    [= not= < > <= >= max min max-key min-key neg? pos? zero? - -' + inc compare])
-  (:require
-    [clojure.core       :as core]
-    [quantum.core.error :as err
-      :refer [TODO]]
-    [quantum.core.fn
-      :refer [fn&2]]
-    [quantum.core.macros
-      :refer [defnt #?@(:clj [defnt' variadic-proxy variadic-predicate-proxy])]]
-    [quantum.core.vars
-      :refer [defalias]]
-    [quantum.core.numeric.operators  :as op
-      :refer [- -' + abs inc div:natural]]
-    [quantum.core.numeric.predicates :as pred
-      :refer [neg? pos? zero?]]
-    [quantum.core.numeric.convert
-      :refer [->num ->num&]]
-    [quantum.core.data.numeric       :as dnum]
-    [quantum.core.data.primitive     :as p])
-#?(:cljs
-  (:require-macros
-    [quantum.core.compare.core       :as self
-      :refer [< > <= >=]]))
-#?(:clj
-  (:import
-    clojure.lang.BigInt quantum.core.Numeric)))
+  "Defines fundamental comparison operators but does not necessarily provide definitions for all
+   type overloads.
+
+   A complete (w.r.t. the `quantum.core.data.*` namespaces) set of definitions for type overloads is
+   found in `quantum.core.compare`."
+        (:refer-clojure :exclude
+          ;; TODO TYPED enable
+        #_[= == compare]
+          ;; TODO TYPED remove
+          [= not= < > <= >= max min max-key min-key neg? pos? zero? - -' + inc compare])
+        (:require
+          ;; TODO TYPED excise
+          [clojure.core       :as core]
+          ;; TODO TYPED excise
+          [quantum.core.error :as err
+            :refer [TODO]]
+          ;; TODO TYPED excise
+          [quantum.core.fn
+            :refer [fn&2]]
+          [quantum.core.vars
+            :refer [defalias]]
+          ;; TODO TYPED excise
+          [quantum.core.numeric.operators  :as op
+            :refer [- -' + abs inc div:natural]]
+          ;; TODO TYPED excise
+          [quantum.core.numeric.predicates :as pred
+            :refer [neg? pos? zero?]]
+          ;; TODO TYPED excise
+          [quantum.core.numeric.convert
+            :refer [->num ->num&]]
+          ;; TODO TYPED excise
+          [quantum.core.data.numeric       :as dnum]
+          [quantum.core.data.primitive     :as p]
+          [quantum.core.type               :as t])
+#?(:clj (:import
+          [quantum.core Numeric])))
 
 ;; TODO `==` from Numeric/equals
 
-; Some of the ideas here adapted from gfredericks/compare
-; TODO include diffing
-; TODO use -compare in CLJS
-; TODO do `defnt` `compare` for different types
-; TODO = vs. == vs. RT/equiv vs. etc.
-; TODO bring in from clojure.lang.RT
-; TODO comp< vs. <; comp< should include arrays
-; `=`  <- `==`, `=`: permissive
-; `='` <- `=`: strict like `core/=` with numbers
-; `==` <- `identical?`
-; `hash=`
+;; Some of the ideas here adapted from gfredericks/compare
+;; TODO include diffing
+;; TODO use -compare in CLJS
+;; TODO do `defnt` `compare` for different types
+;; TODO = vs. == vs. RT/equiv vs. etc.
+;; TODO bring in from clojure.lang.RT
+;; TODO comp< vs. <; comp< should include arrays
+;; `=`  <- `==`, `=`: permissive
+;; `='` <- `=`: strict like `core/=` with numbers
+;; `==` <- `identical?`
+;; TODO `hash=`
+
+; ===== `==`, `=`, `not=` ===== ;
+
+;; TODO TYPED
+(t/defn ^:inline ==
+  "Tests identity-equality."
+  > p/boolean?
+  ([x t/any?] true)
+  ([a ..., b ...] (Util/identical a b)))
+
+(defn ^boolean =
+  ([x y]
+    (if (nil? x)
+      (nil? y)
+      (or (identical? x y)
+        ^boolean (-equiv x y)))))
+
+;; TODO .equals vs. .equiv vs. all the others?
+
+(t/defn ^:inline =
+  "Tests value-equality."
+  > p/boolean?
+        ([x t/any?] true)
+#?(:clj ([a p/boolean?                   , b p/boolean?]                    (Numeric/eq a b)))
+#?(:clj ([a (t/- p/primitive? t/boolean?), b (t/- p/primitive? t/boolean?)] (Numeric/eq a b)))
+        ([a p/boolean?                   , b (t/- p/primitive? t/boolean?)] false)
+        ([a (t/- p/primitive? t/boolean?), b p/boolean?]                    false))
+
+(t/defn ^:inline not=
+  "Tests value-inequality."
+  > p/boolean?
+        ([x t/any?] false)
+#?(:clj ([a p/boolean?                   , b p/boolean?]                    (Numeric/neq a b)))
+#?(:clj ([a (t/- p/primitive? t/boolean?), b (t/- p/primitive? t/boolean?)] (Numeric/neq a b)))
+        ([a p/boolean?                   , b (t/- p/primitive? t/boolean?)] true)
+        ([a (t/- p/primitive? t/boolean?), b p/boolean?]                    true))
 
 ; ===== `compare` ===== ;
 
-(defn fn->comparator [f]
-  #?(:clj  (cast java.util.Comparator f)
-     :cljs (core/fn->comparator f)))
+(def icomparable?
+  #?(:clj  (t/isa? java.lang.Comparable)
+           ;; TODO other things are comparable; really it depends on the two objects in question
+     :cljs (t/or p/nil? (t/isa? cljs.core/IComparable))))
 
-#?(:clj
-(defnt' ^int compare-1d-arrays-lexicographically ; TODO reflection
-  "Arrays are not `Comparable`, so we need a custom
-   comparator which we can pass to `sort`."
-  {:from       "clojure.tools.nrepl.bencode"
-   :adapted-by "Alex Gunnarson"}
-  ([^array-1d? a ^array-1d? b]
-    (let [alen (alength a)
-          blen (alength b)
-          len  (core/min alen blen)]
-      (loop [i 0]
-        (if (== i len) ; TODO = ?
-            (- alen blen)
-            (let [x (p/>long (- (->num (aget a i)) (->num (aget b i))))] ; TODO remove protocol
-              (if (zero? x)
-                  (recur (core/inc i))
-                  x))))))))
+(def comparison? #?(:clj p/int? :cljs p/double?))
 
-#?(:clj  (defnt' ^int compare
-           {:todo #{"Handle nil values"}}
-           ([^Comparable a ^Comparable b] (int (.compareTo a b)))
-           ([^Comparable a ^prim?      b] (int (.compareTo a b)))
-           ([^prim?      a ^Comparable b] (int (.compareTo (p/box a) b)))
-           ([^array-1d?  a ^array-1d?  b] (compare-1d-arrays-lexicographically a b)))
-   :cljs (defalias compare core/compare))
+(t/defn ^:inline compare
+  "When ->`a` is logically 'less than'    ->`b`, outputs a negative number.
+   When ->`a` is logically 'equal to'     ->`b`, outputs zero.
+   When ->`a` is logically 'greater than' ->`b`, outputs a positive number."
+  {:incorporated '{clojure.lang.Util/compare "9/27/2018"
+                   clojure.core/compare      "9/27/2018"
+                   cljs.core/compare         "9/27/2018"}}
+  > comparison?
+  ;; TODO TYPED should we use `>int` here?
+  ([a p/nil?    , b p/val?] (int -1))
+  ;; TODO TYPED should we use `>int` here?
+  ([a p/val?    , b p/nil?] (int  1))
+  ([a primitive?, b primitive?] )
+  ([^Comparable a ^Comparable b] (.compareTo a b))
+  ([^Comparable a ^prim?      b] (.compareTo a b))
+  ([^prim?      a ^Comparable b] (int (.compareTo (p/box a) b))))
 
-; ===== `=`, `not=` ===== ;
+static public int compare(Object k1, Object k2){
+	if(k1 == k2)
+		return 0;
 
-#?(:clj  (defnt' ^boolean =-bin
-           ([#{byte char short int long float double} x
-             #{byte char short int long float double} y] (Numeric/eq x y))
-           ([^boolean x ^boolean y] (Numeric/eq x y))
-           ([^boolean x #{byte char short int long float double} y] false)
-           ([#{byte char short int long float double} x ^boolean y] false)
-           ([         x          y] (.equals ^Object x y))
-           ([         x ^prim?   y] (.equals ^Object x y))
-           ([^prim?   x          y] (.equals ^Object y x)))
-   :cljs (defn =-bin
-           ([x] true)
-           ([x y] (TODO "fix") (core/zero? (dnum/-compare x y)))))
+  if(k1 instanceof Number)
+    return Numbers.compare((Number) k1, (Number) k2);
+  return ((Comparable) k1).compareTo(k2);
+}
 
-#?(:clj (variadic-predicate-proxy =  =-bin ))
-#?(:clj (variadic-predicate-proxy =& =-bin&))
+(defn ^number compare
+  [x y]
+  (cond
+    (identical? x y) 0
 
-#?(:clj  (defnt' ^boolean not=-bin
-           ([#{#_Object prim?} x #{#_Object prim?} y] (Numeric/not (=-bin& x y)))) ; TODO make this one operation; TODO can only work with inline
-   :cljs (defn not=-bin
-           ([x] false)
-           ([x y] (TODO "fix") (not (core/zero? (dnum/-compare x y))))))
+    (number? x) (if (number? y)
+                   (garray/defaultCompare x y)
+                   (throw (js/Error. (str "Cannot compare " x " to " y))))
 
-#?(:clj (variadic-predicate-proxy not=  not=-bin ))
-#?(:clj (variadic-predicate-proxy not=& not=-bin&))
+   (satisfies? IComparable x)
+   (-compare x y)
+
+   :else
+   (if (and (or (string? x) (array? x) (boolean? x))
+            (identical? (type x) (type y)))
+     (garray/defaultCompare x y)
+     (throw (js/Error. (str "Cannot compare " x " to " y))))))
 
 ; ===== `<` ===== ;
 
@@ -112,6 +151,7 @@
 
 #?(:clj (variadic-predicate-proxy < <-bin))
 #?(:clj (variadic-predicate-proxy <& <-bin&))
+
 
 ; ----- `comp<` ----- ;
 

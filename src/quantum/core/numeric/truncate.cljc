@@ -18,7 +18,8 @@
   #?(:clj (:import java.math.BigDecimal clojure.lang.Ratio)))
 
 #?(:clj
-(defnt' rint "The double value that is closest in value to @x and is equal to a mathematical integer."
+(defnt' rint
+  "The double value that is closest in value to ->`x` and is equal to a mathematical integer."
   (^double [^double x] (Math/rint x))))
 
 #?(:clj (defalias round-double rint))

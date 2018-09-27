@@ -88,24 +88,38 @@
 
 ;; ===== Likenesses ===== ;;
 
-#_(-def integer-value?              (or integer? (and decimal? (>expr unum/integer-value?))))
+#_(def numerically-integer?        (or integer? (and decimal? (>expr unum/integer-value?))))
 
-#_(-def numeric-primitive?          (and primitive? (not boolean?)))
+#_(def numeric-primitive?          (and primitive? (not boolean?)))
 
-#_(-def numerically-byte?           (and integer-value? (>expr (c/fn [x] (c/<= -128                 x 127)))))
-#_(-def numerically-short?          (and integer-value? (>expr (c/fn [x] (c/<= -32768               x 32767)))))
-#_(-def numerically-char?           (and integer-value? (>expr (c/fn [x] (c/<=  0                   x 65535)))))
-#_(-def numerically-unsigned-short? numerically-char?)
-#_(-def numerically-int?            (and integer-value? (>expr (c/fn [x] (c/<= -2147483648          x 2147483647)))))
-#_(-def numerically-long?           (and integer-value? (>expr (c/fn [x] (c/<= -9223372036854775808 x 9223372036854775807)))))
-#_(-def numerically-float?          (and number?
-                                          (>expr (c/fn [x] (c/<= -3.4028235E38 x 3.4028235E38)))
-                                          (>expr (c/fn [x] (-> x #?(:clj clojure.lang.RT/floatCast :cljs c/float) (c/== x))))))
-#_(-def numerically-double?         (and number?
-                                          (>expr (c/fn [x] (c/<= -1.7976931348623157E308 x 1.7976931348623157E308)))
-                                          (>expr (c/fn [x] (-> x clojure.lang.RT/doubleCast (c/== x))))))
+#_(def numerically-byte?
+    (and numerically-integer? (>expr (c/fn [x] (c/<= -128                 x 127)))))
 
-#_(-def int-like?                   (and integer-value? numerically-int?))
+#_(def numerically-short?
+    (and numerically-integer? (>expr (c/fn [x] (c/<= -32768               x 32767)))))
+
+#_(def numerically-char?
+    (and numerically-integer?  (>expr (c/fn [x] (c/<=  0                   x 65535)))))
+
+#_(def numerically-unsigned-short? numerically-char?)
+
+#_(def numerically-int?
+    (and numerically-integer? (>expr (c/fn [x] (c/<= -2147483648          x 2147483647)))))
+
+#_(def numerically-long?
+    (and numerically-integer? (>expr (c/fn [x] (c/<= -9223372036854775808 x 9223372036854775807)))))
+
+#_(def numerically-float?
+    (and number?
+         (>expr (c/fn [x] (c/<= -3.4028235E38 x 3.4028235E38)))
+         (>expr (c/fn [x] (-> x #?(:clj clojure.lang.RT/floatCast :cljs c/float) (c/== x))))))
+
+#_(def numerically-double?
+    (and number?
+         (>expr (c/fn [x] (c/<= -1.7976931348623157E308 x 1.7976931348623157E308)))
+         (>expr (c/fn [x] (-> x clojure.lang.RT/doubleCast (c/== x))))))
+
+#_(-def int-like? (and numerically-integer? numerically-int?))
 
 #_(defn numerically
   [t]
@@ -133,4 +147,9 @@
 
 (def numeric-primitive? (t/- p/primitive? p/boolean?))
 
-(def std-integer? (t/or integer? #?(:cljs double?)))
+(def numerically-integer-double? (t/and p/double? numerically-integer?))
+(def ni-double? numerically-integer-double?)
+
+(def numerically-integer-primitive? (t/and p/primitive? numerically-integer?))
+
+(def std-integer? (t/or integer? #?(:cljs numerically-integer-double?)))

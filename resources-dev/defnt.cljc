@@ -132,6 +132,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         we do the `let*`-binding approach to typing vars?
       - should be able to be per-arity like so:
         (^:inline [] ...)
+      - ^:inline set on a function should propagate to all overloads, including ones added after the fact
       - A good example of inlining:
         (t/def empty?|rf
           (fn/aritoid
@@ -173,6 +174,31 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     [-] : done as far as possible but not truly complete
     [x] : actually done
   - List of semi-approximately topologically ordered namespaces to make typed:
+    - [.] clojure.core / cljs.core
+          - [x x] =
+          - [   ] ==
+          - [. .] boolean
+          - [x x] boolean?
+          - [x x] byte
+          - [x x] byte?
+          - [x x] char
+          - [x x] char?
+          - [x x] compare
+          - [x x] double
+          - [x x] double?
+          - [x x] identical?
+          - [x x] float
+          - [x x] float?
+          - [x x] int
+          - [x x] int?
+          - [x x] long
+          - [x x] long?
+          - [x x] number?
+          - [x x] short
+          - [x x] short?
+    - [.] clojure.lang.Numbers
+    - [.] clojure.lang.RT
+    - [.] clojure.lang.Util
     - [.] (TEMPORARY) collections-typed
          - [ ] `get`
          - [ ] `merge`
@@ -206,9 +232,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] quantum.core.spec
     - [.] quantum.core.error
     - [.] quantum.core.data.string
-    - [ ] quantum.core.data.array
+    - [.] quantum.core.data.array
     - [.] quantum.core.data.collections
-    - [ ] quantum.core.data.tuple
+    - [.] quantum.core.data.tuple
+    - [x] quantum.core.data.time
     - [ ] quantum.core.numeric.predicates
     - [ ] quantum.core.numeric.convert
     - [.] quantum.core.numeric.exponents
@@ -233,7 +260,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] quantum.core.macros
     - [.] quantum.core.reducers.reduce
     - [ ] quantum.core.collections.logic
-    - [ ] quantum.core.collections.core
+    - [.] quantum.core.collections.core
     - [ ] quantum.core.form
           - [ ] `(t/def langs #{:clj :cljs :clr})`
           - [ ] `(t/def lang "The language this code is compiled under" #?(:clj :clj :cljs :cljs))`
@@ -277,8 +304,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] lte
     - [ ] gt
     - [ ] gte
-    - [ ] eq
-    - [ ] neq
+    - [x] eq
+    - [x] neq
     - [ ] inc
     - [ ] dec
     - [ ] isZero

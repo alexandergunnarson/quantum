@@ -162,23 +162,25 @@
 ;; Forward-declared so `radix?` coercion to `int` works
 
 #?(:clj
-(t/defn ^:inline >int* > int?
+(t/defn ^:inline >int*
   "May involve non-out-of-range truncation"
+  > int?
   ([x int?] x)                        ;; For purposes of intrinsics
   ([x (t/- primitive? int? boolean?)] (clojure.lang.RT/uncheckedIntCast x))))
 
-(t/defn ^:inline >int > #?(:clj int? :cljs numerically-int?)
+(t/defn ^:inline >int
   "May involve non-out-of-range truncation"
-       ([x #?(:clj int? :cljs numerically-int?)] x)
-#?(:clj  ([x (t/and (t/- primitive? int? boolean?) (range-of int?))] (>int* x))
-   :cljs ([x (t/and double? (range-of int?))] (js/Math.round x)))
+  > #?(:clj int? :cljs numerically-int?)
+         ([x #?(:clj int? :cljs numerically-int?)] x)
+#?(:clj  ([x (t/and (t/- primitive? int? boolean?) numerically-int?)] (>int* x))
+   :cljs ([x (t/and double? numerically-int?) > (t/assume numerically-int?)] (js/Math.round x)))
          ([x boolean?] (if x #?(:clj (int 1) :cljs 1) #?(:clj (int 0) :cljs 0)))
-#?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) (range-of int?))] (>int* (.lpart x))))
-#?(:clj  ([x (t/and (t/isa? java.math.BigInteger) (range-of int?))] (.intValue x)))
-#?(:clj  ([x (t/and dnum/ratio? (range-of int?))] (-> x .bigIntegerValue .intValue)))
+#?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-int?)] (>int* (.lpart x))))
+#?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-int?)] (.intValue x)))
+#?(:clj  ([x (t/and dnum/ratio? numerically-int?)] (-> x .bigIntegerValue .intValue)))
          ([x string?]
            #?(:clj  (Integer/parseInteger x)
-                     ;; NOTE could use `js/parseInt` but it's very 'unsafe'
+                    ;; NOTE could use `js/parseInt` but it's very 'unsafe'
               :cljs (throw (ex-info "Parsing not implemented" {:string x}))))
          ([x string?, radix radix?]
            #?(:clj  (Integer/parseInteger x (>int radix))
@@ -198,12 +200,12 @@
 (defnt ^:inline >byte > #?(:clj byte? :cljs numerically-byte?)
   "May involve non-out-of-range truncation"
          ([x #?(:clj byte? :cljs numerically-byte?)] x)
-#?(:clj  ([x (t/and (t/- primitive? byte? boolean?) (range-of byte?))] (>byte* x))
+#?(:clj  ([x (t/and (t/- primitive? byte? boolean?) numerically-byte?)] (>byte* x))
    :cljs ([x (t/and double? (range-of byte?))] (js/Math.round x)))
          ([x boolean?] (if x #?(:clj (byte 1) :cljs 1) #?(:clj (byte 0) :cljs 0)))
-#?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) (range-of byte?))] (>byte* (.lpart x))))
-#?(:clj  ([x (t/and (t/isa? java.math.BigInteger) (range-of byte?))] (.byteValue x)))
-#?(:clj  ([x (t/and dnum/ratio? (range-of byte?))] (-> x .bigIntegerValue .byteValue)))
+#?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-byte?)] (>byte* (.lpart x))))
+#?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-byte?)] (.byteValue x)))
+#?(:clj  ([x (t/and dnum/ratio? numerically-byte?)] (-> x .bigIntegerValue .byteValue)))
          ([x string?]
            #?(:clj  (Byte/parseByte x)
                      ;; NOTE could use `js/parseInt` but it's very 'unsafe'
