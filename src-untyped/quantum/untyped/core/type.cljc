@@ -671,7 +671,7 @@
 
          (-def  !+vector?          (isa? #?(:clj  clojure.lang.ITransientVector
                                             :cljs cljs.core/ITransientVector)))
-         (-def ?!+vector?          (or +vector? ?!+vector?))
+         (-def ?!+vector?          (or +vector? !+vector?))
 
          (-def  !vector|byte?     #?(:clj (isa? it.unimi.dsi.fastutil.bytes.ByteArrayList)     :cljs none?))
          (-def  !vector|short?    #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortArrayList)   :cljs none?))
@@ -695,6 +695,10 @@
                                    ;; just create a synchronized wrapper over an ArrayList
                                    ;; via java.util.Collections
 #?(:clj  (-def !!vector?           none?))
+                                   ;; We could maybe duck-type as
+                                   ;; `(t/and (isa? java.util.RandomAccess) (isa? java.util.List))`
+                                   ;; but it's not really sufficient as that doesn't really capture
+                                   ;; all the properties we want out of a vector
          (-def   vector?           (or ?!+vector? !vector? #?(:clj !!vector?)))
 
 ;; ===== Queues ===== ;; Particularly FIFO queues, as LIFO = stack = any vector

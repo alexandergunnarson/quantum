@@ -130,3 +130,5 @@
   (t/or number? #?(:clj p/char?)))
 
 (def numeric-primitive? (t/- p/primitive? p/boolean?))
+
+(def std-integer? (t/or integer? #?(:cljs double?)))

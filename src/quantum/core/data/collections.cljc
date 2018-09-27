@@ -91,28 +91,47 @@
 (def editable? (t/isa? #?(:clj  clojure.lang.IEditableCollection
                           :cljs cljs.core/IEditableCollection)))
 
+(def iindexed? (t/isa|direct? #?(:clj clojure.lang.Indexed :cljs cljs.core/IIndexed)))
+
 ;; Indicates efficient lookup by (integer) index (via `get`)
 (def indexed?
-  (t/or (t/isa? #?(:clj clojure.lang.Indexed :cljs cljs.core/IIndexed))
+  (t/or iindexed?
         ;; Doesn't guarantee `java.util.List` is implemented, except by convention
         #?(:clj (t/isa? java.util.RandomAccess))
         #?(:clj dstr/char-seq? :cljs dstr/string?)
         arr/array?))
 
+(def  +associative? (t/isa? #?(:clj  clojure.lang.Associative
+                               :cljs cljs.core/IAssociative)))
+
+(def !+associative? (t/isa? #?(:clj  clojure.lang.ITransientAssociative
+                               :cljs cljs.core/ITransientAssociative)))
+
 ;; Indicates whether `assoc?!` is supported
 (def associative?
-  (t/or (t/isa? #?(:clj  clojure.lang.Associative           :cljs cljs.core/IAssociative))
-        (t/isa? #?(:clj  clojure.lang.ITransientAssociative :cljs cljs.core/ITransientAssociative))
-        (t/or map/map? indexed?)))
+  (t/or +associative? !+associative? (t/or map/map? indexed?)))
 
 (def sequential?
   (t/or (t/isa? #?(:clj clojure.lang.Sequential :cljs cljs.core/ISequential))
         list? indexed?))
 
-;; If something is `counted?`, it implements a constant-time `count`
+(def icounted? (t/isa|direct? #?(:clj clojure.lang.Counted :cljs cljs.core/ICounted)))
+
+;; If something is `counted?`, it is supposed to implement a constant-time `count`
 (def counted?
-  (t/or (t/isa? #?(:clj clojure.lang.Counted :cljs cljs.core/ICounted))
-        #?(:clj dstr/char-seq? :cljs dstr/string?) vec/vector? map/map? set/set? arr/array?))
+  (t/or icounted?
+        ;; It's not guaranteed that `char-seq?`s have constant-time `.length`/`count` but it's very
+        ;; reasonable to assume.
+        #?(:clj dstr/char-seq? :cljs dstr/string?)
+        ;; All enumerated vector types are all known to implement constant-time `count`.
+        vec/vector?
+        ;; It's not guaranteed that all `java.util.Map`s have constant-time `.size`/`count` but it's
+        ;; about as reasonable to assume so as with `char-seq?`s.
+        map/map?
+        ;; It's not guaranteed that all `java.util.Set`s have constant-time `.size`/`count` but it's
+        ;; about as reasonable to assume so as with `java.util.Map`s.
+        set/set?
+        arr/array?))
 
 (def iterable? (t/isa? #?(:clj java.lang.Iterable :cljs cljs.core/IIterable)))
 

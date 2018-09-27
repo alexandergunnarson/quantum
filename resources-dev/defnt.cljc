@@ -15,6 +15,7 @@ These two should be defined in the (whatever) data namespace:
 TODO:
 - `(or (and pred then) (and (not pred) else))` (which is not correct)
 - needs to equal `(t/and (t/or (t/not a) b) (t/or a c))` (which is correct)
+- `(- (or ?!+vector? !vector? #?(:clj !!vector?)) (isa? clojure.lang.Counted))` is not right
 
 - conditionally optional arities etc. for t/fn
 
@@ -22,6 +23,7 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
+  - data.coll/reduced
   - Analysis
     - (if (dcoll/reduced? ret)
           ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`
@@ -65,9 +67,13 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - dependent types: `[x arr/array? > (t/type x)]`
   - ? : type inference
     - use logic programming and variable unification e.g. `?1` `?2` ?
+    - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
+      ([n dnum/std-integer?, xs dc/counted?] (count xs))
+      ([n dnum/std-integer?, xs ?] ...)
   - t/extend-defnt!
   - t/input-type
     - `(t/input-type >namespace :?)` meaing the possible input types to the first input to `>namespace`
+    - `(t/input-type reduce :_ :_ :?)`
   - t/of
     - (t/of number?) ; implicitly the container is a `traversable?`
     - (t/of map/+map? symbol? dstr/string?)
@@ -93,6 +99,17 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         we do the `let*`-binding approach to typing vars?
       - should be able to be per-arity like so:
         (^:inline [] ...)
+      - A good example of inlining:
+        (t/def empty?|rf
+          (fn/aritoid
+            (t/fn [] true)
+            fn/identity
+            (t/fn [ret _, x _]      (dc/reduced false))
+            (t/fn [ret _, k _, v _] (dc/reduced false))))
+        (t/defn empty? > p/boolean?
+          ([x p/nil?] true)
+          ([xs dc/counted?] (-> xs count num/zero?))
+          ([xs (t/input-type educe :_ :_ :?)] (educe empty?|rf x)))
     - handle varargs
       - [& args _] shouldn't result in `t/any?` but rather like `t/seqable?` or whatever
     - do the defnt-equivalences

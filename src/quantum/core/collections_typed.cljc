@@ -162,17 +162,18 @@
 (t/defn reduce-chunked
   "Made public in case future specializations want to use it."
   [rf rf?, init t/any?, xs dc/chunked-seq?]
-  (let [ret (.reduce (chunk-first xs) rf init)]
-    (if (dc/reduced? ret)
-        (ref/deref ret)
-        (recur (chunk-next xs) rf ret)))))
+  (loop [ret init, xs' xs]
+    (let [ret' (.reduce (chunk-first xs') rf init)]
+      (if (dc/reduced? ret')
+          (ref/deref ret')
+          (recur ret' (chunk-next xs')))))))
 
 #?(:clj
 (t/defn reduce-indexed
   "Made public in case future specializations want to use it."
   ([rf rf?, init t/any?, xs (t/or dstr/str? vec/!+vector? arr/array?), i0 t/numerically-integer?]
     (let [ct (count xs)]
-      (loop [i (p/>int i0) ret init]
+      (loop [i (p/>int i0), ret init]
         (if (comp/< i ct)
             (let [ret' (rf ret (get xs i))]
               (if (dc/reduced? ret')
@@ -228,18 +229,19 @@
                     cljs.core/array-reduce "9/25/2018"
                     cljs.core/iter-reduce  "9/26/2018"
                     cljs.core/seq-reduce   "9/26/2018"}}
-         ([rf rf?, xs ?] (reduce rf (rf) xs))
-         ([rf rf?, init t/any?, xs p/nil?] init)
+         (^:inline [rf rf?, xs ?] (reduce rf (rf) xs))
+         (^:inline [rf rf?, init t/any?, xs p/nil?] init)
          ;; - Adapted from `areduce`
          ;; - `!+vector?` included because they aren't reducible or seqable by default
-         ([rf rf?, init t/any?, xs (t/or dstr/str? vec/!+vector? arr/array?)]
+         (^:inline [rf rf?, init t/any?, xs (t/or dstr/str? vec/!+vector? arr/array?)]
            (reduce-indexed rf init xs 0))
-#?(:clj  ([rf rf?, init t/any?, xs dc/string-seq?]
+#?(:clj  (^:inline [rf rf?, init t/any?, xs dc/string-seq?]
            (reduce-indexed rf init (string-seq>underlying-string xs) (.index xs))))
-#?(:clj  ([rf rf?, init t/any?, xs dc/array-seq?]
+#?(:clj  (^:inline [rf rf?, init t/any?, xs dc/array-seq?]
            (reduce-indexed rf init (.array xs) (.index xs))))
          ;; Vector's chunked seq is faster than its iterator
-#?(:clj  ([rf rf?, init t/any?, xs (t/or (t/isa? clojure.lang.PersistentVector) chunked-seq?)]
+#?(:clj  (^:inline [rf rf?, init t/any?
+                    xs (t/or (t/isa? clojure.lang.PersistentVector) chunked-seq?)]
            (reduce-chunked rf init xs)))
          ([rf rf?, init t/any?, n dnum/numerically-integer?]
            (loop [i 0, ret init]
@@ -252,7 +254,7 @@
                        (recur (inc i) ret')))
                  ret)))
          ;; TODO refine
-         ([f init ^transformer? x]
+         (^:inline [f init ^transformer? x]
            (let [rf ((.-xf x) f)]
              (rf (reduce* (.-prev x) rf init))))
          ([rf rf?, init t/any?, x dasync/read-chan?]
@@ -273,12 +275,14 @@
                        (ref/deref ret')
                        (recur (zip/right xs') ret')))
                  v)))
-#?(:clj  ([rf rf?, init t/any?
-           xs (t/or (t/isa? clojure.lang.APersistentMap$KeySeq)
-                    (t/isa? clojure.lang.APersistentMap$ValSeq))] (reduce-iter rf init xs)))
-#?(:clj  ([rf rf?, init t/any?, xs (t/isa? clojure.lang.IKVReduce)]   (.kvreduce xs rf init)))
-#?(:clj  ([rf rf?, init t/any?, xs (t/isa? clojure.lang.IReduceInit)] (.reduce   xs rf init)))
-         ;; TODO refine
+#?(:clj  (^:inline [rf rf?, init t/any?
+                    xs (t/or (t/isa? clojure.lang.APersistentMap$KeySeq)
+                             (t/isa? clojure.lang.APersistentMap$ValSeq))]
+           (reduce-iter rf init xs)))
+#?(:clj  (^:inline [rf rf?, init t/any?, xs (t/isa? clojure.lang.IKVReduce)]
+           (.kvreduce xs rf init)))
+#?(:clj  (^:inline [rf rf?, init t/any?, xs (t/isa? clojure.lang.IReduceInit)]
+           (.reduce xs rf init)))
 #?(:clj  ([rf rf?, init t/any?, xs (t/or dc/lseq? dc/aseq?)]
            (let [c (class xs)]
              (loop [xs' (>seq xs), ret init]
@@ -291,19 +295,22 @@
                    ;; - `(not (dcomp/== (class xs') (class xs)))`
                    ;; - What the possible types of xs' are as a result
                    (reduce rf init xs'))))))
-#?(:clj  ([rf rf?, init t/any?, xs (t/isa? java.lang.Iterable)] (reduce-iter rf init xs)))
+#?(:clj  (^:inline [rf rf?, init t/any?, xs (t/isa? java.lang.Iterable)] (reduce-iter rf init xs)))
          ;; TODO CLJS might be able to be done more efficiently with more specializations?
-         ([rf rf?, init t/any?, xs #?(:clj  (t/isa?        clojure.core.protocols/IKVReduce)
-                                      :cljs (t/isa|direct? cljs.core/IKVReduce))]
+         (^:inline [rf rf?, init t/any?
+                    xs #?(:clj  (t/isa?        clojure.core.protocols/IKVReduce)
+                          :cljs (t/isa|direct? cljs.core/IKVReduce))]
            (#?(:clj  clojure.core.protocols/kv-reduce
                :cljs cljs.core/-kv-reduce) xs rf init))
          ;; TODO CLJS might be able to be done more efficiently with more specializations?
-         ([rf rf?, init t/any?, xs #?(:clj  (t/isa?        clojure.core.protocols/CollReduce)
-                                      :cljs (t/isa|direct? cljs.core/IReduce))]
+         (^:inline [rf rf?, init t/any?
+                    xs #?(:clj  (t/isa?        clojure.core.protocols/CollReduce)
+                          :cljs (t/isa|direct? cljs.core/IReduce))]
            (#?(:clj  clojure.core.protocols/coll-reduce
                :cljs cljs.core/-reduce) xs rf init))
-#?(:cljs ([rf rf?, init t/any?, xs (t/isa|direct? cljs.core/IIterable)] (reduce-iter rf init xs)))
-#?(:cljs ([rf rf?, init t/any?, xs (t/isa|direct? cljs.core/ISeqable)]
+#?(:cljs (^:inline [rf rf?, init t/any?, xs (t/isa|direct? cljs.core/IIterable)]
+           (reduce-iter rf init xs)))
+#?(:cljs (^:inline [rf rf?, init t/any?, xs (t/isa|direct? cljs.core/ISeqable)]
            (reduce-seq rf init (>seq xs)))))
 
 (var/def rfi? "Reducing function, indexed"
@@ -325,76 +332,74 @@
                   (rf ret k v (ref/reset! !i (num/inc* (ref/deref !i))))))))]
     (reduce rf' init xs)))
 
-(var/def xf? "Transforming function"
+(var/def xf? "Transforming function (for transducers)"
   (t/ftype [rf? :> rf?]))
 
-(t/defn ^:inline transduce >
-  ([        rf rf?,              xs (t/input-type reduce :_ :_ :?)]
-    (transduce fn/identity rf      xs))
-  ([xf xf?, rf rf?,              xs (t/input-type reduce :_ :_ :?)]
-    (transduce xf          rf (rf) xs))
-  ([xf xf?, rf rf?, init t/any?, x  dasync/read-chan?]
-    (let [rf' (xf rf)]
-      (async/go
-        (rf' (async/<! (reduce rf' init x))))))
-  ([xf xf?, rf rf?, init t/any?, xs dc/reducible?]
-    (let [rf' (xf rf)] (rf' (reduce rf' init xs)))))
+(t/defn ^:inline educe
+  "A blending of `transduce` and `reduce`.
+   Like `reduce`, does not have a notion of a transforming function (unlike `transduce`). Like
+   `transduce`, uses the seed (0-arity) and completing (1-arity) arities of the reducing function
+   `rf` when performing a reduction (unlike `reduce`)."
+  ([rf rf?,              xs (t/input-type reduce :_ :_ :?)] (educe rf (rf) xs))
+  ([rf rf?, init t/any?, x  dasync/read-chan?] (async/go (rf (async/<! (reduce rf init x)))))
+  ([rf rf?, init t/any?, xs (t/input-type reduce :_ :_ :?)] (rf (reduce rf init xs))))
 
-;; ===== End reductive functions ===== ;;
+;; ===== Count / length / size ===== ;;
+
+(def count|rf
+  (t/fn {:inline true}
+    ([] 0)
+    ([ct ?] ct)
+    ([ct ?, _ ?] (num/inc ct))))
 
 ;; TODO make sure !+vector is handled for CLJS
-(t/defn count > dnum/integer?
+(t/defn ^:inline count > dnum/std-integer?
   {:todo #{"handle persistent maps"}
    :incorporated #{'clojure.lang.RT/count
                    'clojure.lang.RT/countFrom
+                   'clojure.core/count
                    'cljs.core/count}}
-         ;; Concrete classes
-         ([x p/nil?         > #?(:clj p/long? :cljs dnum/nip?)] 0)
-         ([x ?/transformer? > ????] (reduce-count x))
-#?(:cljs ([x dstr/str?      > (t/assume dnum/nip?)] (.-length x)))
-#?(:cljs ([x dstr/!str?     > (t/assume dnum/nip?)] (.getLength x)))
-         ([x tup/tuple?     > p/int?] (-> x .-vs count))
-         ([x arr/std-array? > #?(:clj p/int? :cljs (t/assume dnum/nip?))]
-           (#?(:clj Array/count :cljs .-length) x))
-         ;; TODO `cljs.core/count` is not right here
-         ([x vec/+vector?] (#?(:clj .count :cljs core/count) x))
-         ([x dasync/m2m-chan?] (-> x #?(:clj .buf :cljs .-buf) count))
-         ;; Abstract classes
-         ([x dc/icounted? > #?(:clj p/int? :cljs (t/* dnum/nip?))]
-           #?(:clj  (.count x)
-              :cljs (-count ^not-native x)))
-#?(:cljs ([x dc/iseqable? > p/int?]
-           ;; TODO TYPED
-           (loop [s (>seq coll) acc 0]
-             (if (counted? s) ; assumes nil is counted, which it currently is
-                 (+ acc (-count s))
-                 (recur (next s) (inc acc))))))
-#?(:clj  ([x dc/ipersistentcollection? > p/int?]
-           ;; TODO TYPED
-           ISeq s = seq(o);
-       		 o = null;
-       		 int i = 0;
-       		 for(/ s != null / s = s.next()) {
-       		 	 if(s instanceof Counted)
-       		 	   return i + s.count();
-       		 	 i++;
-       		 }
-       		 return i;
+         ;; Counted
+         ([x  p/nil?           > #?(:clj p/long? :cljs dnum/nip?)] 0)
+#?(:cljs ([xs dstr/str?        > (t/assume dnum/nip?)] (.-length xs)))
+#?(:cljs ([xs dstr/!str?       > (t/assume dnum/nip?)] (.getLength xs)))
+         ([xs dc/icounted?     > #?(:clj p/int? :cljs (t/* dnum/nip?))]
+           (#?(:clj .count :cljs cljs.core/-count) xs))
+#?(:clj  ([xs dstr/char-seq?   > p/int?] (.length xs)))
+         ([xs tup/tuple?       > #?(:clj p/int? :cljs (t/assume dnum/nip?))]
+           (-> xs .-vs count))
+         ([xs dasync/m2m-chan? > #?(:clj p/int? :cljs dnum/nip?)]
+           (-> xs #?(:clj .buf :cljs .-buf) count))
+#?(:clj  ([xs tup/map-entry?   > p/long?] 2))
+         ([xs arr/std-array?   > #?(:clj p/int? :cljs (t/assume dnum/nip?))]
+           (#?(:clj Array/count :cljs .-length) xs))
+#?(:clj  ([xs arr/array?       > p/int?] (java.lang.reflect.Array/getLength xs)))
+         ;; Possibly counted
+         ;; TODO figure out whether there are certain non-counted `java-coll?`s in here that would
+         ;;      have increased performance from an eduction rather than a `.size`
+#?(:clj  ([xs dc/java-coll?    > p/int?] (.size xs)))
+#?(:clj  ([xs dc/java-map?     > p/int?] (.size xs)))
+         ;; Not counted
+         ([xs (t/input-type educe :_ :_ :?)] (educe count|rf xs)))
 
-           ))
-#?(:clj  ([x dstr/char-seq?   > p/int?] (.length x)))
-#?(:clj  ([x dc/java-coll? > p/int?] (.size x)))
-#?(:clj  ([x map/java-map?    > p/int?] (.size x)))
-#?(:clj  ([x tup/map-entry?   > p/long?] 2))
-#?(:clj  ([x arr/array?       > p/int?] (java.lang.reflect.Array/getLength x))))
+(t/defn ^:inline gen-bounded-count|rf [n dnum/std-integer?]
+  (t/fn {:inline true}
+    ([] 0)
+    ([ct ?] ct)
+    ([ct ?, _ ?] (if (dcomp/< ct n) (num/inc ct) (?/reduced ct)))))
+
+(t/defn ^:inline bounded-count > dnum/std-integer?
+  ([n dnum/std-integer?, xs dc/counted?] (count xs))
+  ([n dnum/std-integer?, xs (t/input-type educe :_ :_ :?)] (educe (gen-bounded-count|rf n) xs)))
+
+(t/def empty?|rf
+  (fn/aritoid
+    (t/fn [] true)
+    fn/identity
+    (t/fn [ret _, x _]      (dc/reduced false))
+    (t/fn [ret _, k _, v _] (dc/reduced false))))
 
 (t/defn empty? > p/boolean?
-  {:todo #{"import clojure.lang.RT/seq"}}
-        ;; TODO re-evaluate this arity
-      #_([x ?] (-> x count num/zero?))
-        ([x p/nil?] true)
-        ([x ?/transformer?] (->> x (reduce (fn' (reduced false)) true)))
-#?(:clj ([x dc/java-coll?] (.isEmpty x)))
-#?(:clj ([x map/java-map?] (.isEmpty x)))
-        ;; TODO TYPED
-        ([^default          x] (core/empty? x)))
+  ([x p/nil?] true)
+  ([xs dc/counted?] (-> xs count num/zero?))
+  ([xs (t/input-type educe :_ :_ :?)] (educe empty?|rf x)))
