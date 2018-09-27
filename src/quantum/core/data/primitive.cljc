@@ -14,6 +14,9 @@
           [java.nio ByteBuffer]
           [quantum.core Numeric Primitive])))
 
+(def nil? ut/nil?)
+(def val? ut/val?)
+
 ;; ===== Predicates ===== ;;
 
 #?(:clj (def boolean? (t/isa? #?(:clj Boolean :cljs js/Boolean))))

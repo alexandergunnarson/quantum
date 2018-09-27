@@ -31,7 +31,7 @@
   "Creates a mutable string."
   > !string?
   ([]   #?(:clj (StringBuilder.)    :cljs (StringBuffer.)))
-  ;; TODO
+  ;; TODO TYPED
   #_([x0] #?(:clj (StringBuilder. x0) :cljs (StringBuffer. x0))))
 
 ;; ----- Synchronously mutable strings ----- ;;
@@ -41,8 +41,9 @@
 #?(:clj
 (t/defn ^:inline >!sync-string
   "Creates a synchronized mutable string."
+  {:todo #{"Do the same arity structure as >!string and >string"}}
   > !sync-string?
-  [] (StringBuffer.)))
+  ([] (StringBuffer.))))
 
 ;; ----- Mutable char deques ----- ;;
 
@@ -132,8 +133,8 @@
 #?(:clj  ([x p/float?   > (t/assume string?)] (Float/toString     x)))
 #?(:clj  ([x p/double?  > (t/assume string?)] (Double/toString    x)))
 #?(:clj  ([x t/ref?] (-> x .toString >string))
-   :cljs ([x t/any? > (t/assume string?)] (.join #js [x] "")))
-         ;; TODO refine this
+   :cljs ([x t/any?     > (t/assume string?)] (.join #js [x] "")))
+         ;; TODO TYPED refine this
        #_([x ? & xs ...]
            (loop [sb (-> x >string >!string) more ys]
              (if more
@@ -165,7 +166,7 @@
 (def metable-string? #?(:clj (t/isa? MetableString) :cljs string?))
 
 (t/defn >metable-string
-  > metable-stingr?
+  > metable-string?
   ([s string?] #?(:clj (MetableString. s nil) :cljs s))
   ([s string?, meta' meta/meta?]
     #?(:clj (MetableString. s meta') :cljs (meta/with-meta s new-meta))))
