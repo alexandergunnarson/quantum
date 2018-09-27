@@ -109,7 +109,8 @@
   > p/boolean?
   ([x p/numeric?] true)
   ([a p/numeric?, b p/numeric?] (Numeric/lt a b))
-  ; TODO numbers, but not nil
+  ;; TODO numbers, but not nil
+  ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
    )
 
 ; ===== `<=` ===== ;
@@ -119,7 +120,8 @@
   > p/boolean?
   ([x p/numeric?] true)
   ([a p/numeric?, b p/numeric?] (Numeric/lte a b))
-  ; TODO numbers, but not nil
+  ;; TODO numbers, but not nil
+  ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
    )
 
 ; ===== `>` ===== ;
@@ -129,7 +131,8 @@
   > p/boolean?
   ([x p/numeric?] true)
   ([a p/numeric?, b p/numeric?] (Numeric/gt a b))
-  ; TODO numbers, but not nil
+  ;; TODO numbers, but not nil
+  ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
    )
 
 ; ===== `>=` ===== ;
@@ -140,6 +143,7 @@
   ([x p/numeric?] true)
   ([a p/numeric?, b p/numeric?] (Numeric/gte a b))
   ; TODO numbers, but not nil
+  ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
    )
 
 ; ===== `compare` ===== ;
@@ -166,7 +170,10 @@
   ([a p/nil?      , b p/val?] (int -1))
   ;; TODO TYPED should we use `>int` here?
   ([a p/val?      , b p/nil?] (int  1))
-  ([a p/primitive?, b p/primitive?] (ifs (> a b) 1, (< a b) -1, 0))
+  ([a p/primitive?, b p/primitive?]
+    (ifs (> a b) (int  1)
+         (< a b) (int -1)
+         (int 0)))
   ([^Comparable a ^Comparable b] (.compareTo a b))
   ([^Comparable a ^prim?      b] (.compareTo a b))
   ([^prim?      a ^Comparable b] (int (.compareTo (p/box a) b))))

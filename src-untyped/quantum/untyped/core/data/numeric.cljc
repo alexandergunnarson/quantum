@@ -1,10 +1,25 @@
 (ns quantum.core.data.numeric
+  "Better `bigint?` for CLJ:
+   - There are almost certainly faster ones but whether they will be as correct is unknown
+
+   Better `bigdec?` for CLJ:
+   - There are almost certainly faster ones
+
+   `bigint?` for CLJS:
+   - `BigInt` is a built-in JS object in Chrome as of 5/2018. It's faster than bn.js. https://developers.google.com/web/updates/2018/05/bigint
+   - As of 5/2018, the best current substitute for `BigInt` is bn.js, but there apparently is a
+     polyfill available for BigInt so maybe that's better.
+
+   `bigdec?` for CLJS:
+   - decimal.js is the best contender as of 9/27/2018. https://github.com/MikeMcl/decimal.js
+
+   `ratio?` for CLJS:
+   - Fraction.js is the best contender as of 9/27/2018. https://github.com/infusion/Fraction.js"
          (:refer-clojure :exclude
            [#?@(:cljs [-compare]) decimal? denominator integer? number? numerator ratio?])
          (:require
            [clojure.core                      :as core]
            [clojure.string                    :as str]
-  #?(:cljs [com.gfredericks.goog.math.Integer :as int])
            [quantum.core.data.primitive       :as p]
            [quantum.core.data.string          :as dstr]
            [quantum.core.logic
@@ -19,6 +34,19 @@
 #?(:cljs (:require-macros
            [quantum.core.data.numeric :as self])))
 
+
+#?(:clj  (defalias numerator core/numerator)
+   :cljs (t/defn numerator))
+
+#?(:clj  (defalias denominator core/denominator)
+   :cljs (t/defn denominator))
+
+#?(:clj  (defalias ratio? core/ratio?)
+   :cljs (defn ratio? [x] (instance? Ratio x)))
+
+
+
+
 ;; ===== Integers ===== ;;
 
 #?(:clj (def big-integer? (t/isa? BigInteger)))
@@ -26,7 +54,8 @@
 #?(:clj (def clj-bigint? (t/isa? clojure.lang.BigInt)))
 
 (def bigint? #?(:clj  (t/or clj-bigint? big-integer?)
-                :cljs (t/isa? com.gfredericks.goog.math.Integer)))
+                      ;; TODO bring in implementation per the ns docstring
+                :cljs t/none?))
 
 ;; Incorporated `clojure.lang.Util/isInteger`
 ;; Incorporated `clojure.core/integer?`
@@ -39,22 +68,24 @@
   (t/or ?@(:clj [p/byte? p/short?]) p/int? p/long?))
 
 #?(:clj
-(defnt >big-integer > big-integer?
+(t/defn >big-integer > big-integer?
   ([x big-integer?] x)
   ([x clj-bigint? > (t/* big-integer?)] (.toBigInteger x))
-  ([; TODO TYPED `(- number? BigInteger BigInt)`
+  ([;; TODO TYPED `(- number? BigInteger BigInt)`
     x (t/or p/short? p/int? p/long?) > (t/* big-integer?)] ; TODO BigDecimal
     (-> x p/>long (BigInteger/valueOf)))))
 
 #?(:cljs
-(defnt >bigint > bigint?
+(t/defn >bigint > bigint?
   ([x bigint?] x)
-  ([x dstr/string?] (int/fromString x))
   ([x p/double?] (-> x (.toString) >bigint))))
 
 ;; ===== Decimals ===== ;;
 
-(def bigdec? #?(:clj (t/isa? BigDecimal) :cljs t/none?))
+(def bigdec? #?(:clj  ;; TODO bring in a better implementation per the ns docstring?
+                      (t/isa? BigDecimal)
+                      ;; TODO bring in implementation per the ns docstring
+                :cljs t/none?))
 
 ;; ===== Ratios ===== ;;
 
@@ -171,3 +202,39 @@
 (def numerically-integer-primitive? (t/and p/primitive? numerically-integer?))
 
 (def std-integer? (t/or integer? #?(:cljs numerically-integer-double?)))
+
+;; TODO TYPED
+(t/defn read-rational
+  "Create cross-platform literal rational numbers from decimal, without intermediate inexact
+   (e.g. float/double) representation.
+
+   Example:
+   #r 2.712 -> (rationalize 2.712M)"
+  {:todo #{"Support exponent notation e.g. 2.313E7 | 2.313e7"}}
+  [r string?]
+  (let [r-str (cond (string? r)
+                    r
+                    (symbol? r)
+                    (do (assert (-> r namespace nil?))
+                        (assert (-> r name first (= \r)))
+                        (->> r name rest (apply str))))
+        minus-ct (->> r-str (filter #(= % \-)) count)
+        _        (assert (#{0 1} minus-ct))
+        r-str    (case minus-ct
+                   0 r-str
+                   1 (do (assert (-> r-str first (= \-)))
+                         (->> r-str rest (apply str))))
+        [integral-str decimal-str :as split] (str/split r-str #"\.")
+        _ (when (-> split count (> 2))
+            (throw (ex-info "Number cannot have more than one decimal point" {:num r-str})))
+        _ (doseq [s split]
+            (when-not (every? #{\0 \1 \2 \3 \4 \5 \6 \7 \8 \9} s)
+              (throw (ex-info "Number must have only numeric characters" {:num s}))))
+        integral (read-string integral-str)
+        decimal  (read-string decimal-str)
+        scale    (if decimal
+                     (#?(:clj Math/pow :cljs js/Math.pow) 10 (count decimal-str))
+                     1)]
+    (* (if (= minus-ct 1) -1 1)
+       (->ratio (+ (* scale integral) (or decimal 0))
+                scale))))

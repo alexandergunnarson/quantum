@@ -91,7 +91,6 @@
             [quantum.test.core.numeric.predicates]
             [quantum.test.core.numeric.trig]
             [quantum.test.core.numeric.truncate]
-            [quantum.test.core.numeric.types]
             [quantum.test.core.paths]
             [quantum.test.core.print]
             [quantum.test.core.process]

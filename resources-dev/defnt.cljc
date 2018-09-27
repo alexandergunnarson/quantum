@@ -100,7 +100,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
       ([n dnum/std-integer?, xs dc/counted?] (count xs))
       ([n dnum/std-integer?, xs ?] ...)
-  - t/extend-defnt!
+  - t/extend-defn!
   - t/input-type
     - `(t/input-type >namespace :?)` meaing the possible input types to the first input to `>namespace`
     - `(t/input-type reduce :_ :_ :?)`
@@ -124,6 +124,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - declare-fnt (a way to do protocols/interfaces)
     - extend-fnt!
   - defnt (t/defn)
+    - Arity elision: if any type in an arity is `t/none?` then elide it and emit a warning
+      - `([x bigint?] x)`
     - t/defn-
     - (t/and (t/or a b) c) should -> (t/or (t/and a c) (t/and b c)) for purposes of separating dispatches
     - t/extend-defn!
@@ -361,7 +363,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] quantum.core.numeric.operators
     - [ ] quantum.core.numeric.trig
     - [ ] quantum.core.numeric.truncate
-    - [.] quantum.core.numeric.types
+    - [x] quantum.core.numeric.types
     - [ ] quantum.core.data.numeric
     - [.] quantum.core.numeric
     - [ ] quantum.core.string.regex
