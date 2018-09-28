@@ -191,11 +191,11 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     [|] : not possible / N/A
     [!] : refused
   - List of semi-approximately topologically ordered namespaces to make typed:
-    - [.] clojure.core / cljs.core
+    - [.] clojure.core / cljs.core (note that many things unexpectedly have associated macros)
           - [! !] ..
           - [. .] <
           - [. .] <=
-          - [x x] =
+          - [. .] = — look at coercive-=
           - [. .] ==
           - [. .] >
           - [. .] >=
@@ -209,13 +209,13 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [. .] *'
           - [. .] /
           - [! |] accessor
-          - [   ] aclone
+          - [x  ] aclone
           - [   ] add-tap
           - [   ] add-watch
           - [  |] agent
           - [   ] agent-error
-          - [   ] aget — TODO check out unchecked-aget, checked-aget, checked-aget'
-          - [. x] alength
+          - [   ] aget — TODO check out unchecked-aget, checked-aget, checked-aget' and CLJS macro
+          - [x x] alength
           - [   ] alias
           - [   ] all-ns
           - [   ] alter
@@ -223,7 +223,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] alter-var-root
           - [   ] amap
           - [   ] ancestors
-          - [   ] and
+          - [   ] and — NOTE that CLJS macro has some secrets
           - [   ] any?
           - [   ] apply
           - [   ] areduce
@@ -238,7 +238,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] array-map
           - [|  ] array-seq
           - [! !] as->
-          - [   ] aset — TODO check out unchecked-aset, checked-aset, checked-aset'
+          - [   ] aset — TODO check out unchecked-aset, checked-aset, checked-aset' and CLJS macro
           - [   ] aset-boolean
           - [   ] aset-byte
           - [   ] aset-char
@@ -273,6 +273,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x .] bit-set
           - [x .] bit-shift-left
           - [x .] bit-shift-right
+          - [|  ] bit-shift-right-zero-fill
           - [x .] bit-test
           - [. .] bit-xor
           - [x .] boolean
@@ -284,7 +285,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] bound-fn*
           - [   ] bounded-count
           - [   ] butlast
-          - [. .] byte
+          - [x .] byte
           - [x x] byte?
           - [   ] byte-array
           - [   ] bytes
@@ -292,7 +293,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] case
           - [  |] cast
           - [   ] cat
-          - [. .] char — TODO (.fromCharCode js/String <number>) might be useful
+          - [x .] char — TODO (.fromCharCode js/String <number>) might be useful
           - [x x] char?
           - [   ] char-array
           - [   ] chars
@@ -312,6 +313,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [! |] clojure-version
           - [|  ] clone
           - [|  ] cloneable?
+          - [|  ] coercive-=
+          - [|  ] coercive-not
+          - [|  ] coercive-not=
           - [   ] coll?
           - [   ] commute
           - [   ] comp
@@ -329,9 +333,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] condp
           - [   ] conj
           - [   ] conj!
-          - [   ] cons
+          - [x  ] cons
           - [   ] constantly
-          - [   ] contains?
+          - [x  ] contains?
+          - [|  ] copy-arguments
           - [x x] count
           - [x x] counted?
           - [   ] create-ns
@@ -350,6 +355,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [. .] defn
           - [. .] defn-
           - [   ] defonce
+          - [! !] defprotocol
           - [   ] defrecord
           - [! !] defstruct
           - [   ] deftype
@@ -375,7 +381,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] dosync
           - [   ] dotimes
           - [   ] doto
-          - [. .] double
+          - [x .] double
           - [x x] double?
           - [   ] double-array
           - [   ] doubles
@@ -395,6 +401,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] error-handler
           - [   ] error-mode
           - [|  ] es6-entries-iterator
+          - [| !] es6-iterable
           - [|  ] es6-iterator
           - [|  ] es6-set-entries-iterator
           - [   ] eval
@@ -405,13 +412,16 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] ex-data
           - [   ] ex-info
           - [|  ] ex-message
+          - [|  ] exists?
           - [|  ] extend-object!
+          - [! !] extend-protocol
+          - [! !] extend-type
           - [x x] false?
           - [   ] file-seq
           - [   ] filter
           - [! |] filter-key
           - [   ] filterv
-          - [   ] find
+          - [x  ] find
           - [  |] find-keyword
           - [|  ] find-macros-ns
           - [x  ] find-ns
@@ -422,7 +432,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x  ] first
           - [   ] flatten
           - [|  ] flatten1
-          - [. .] float
+          - [x .] float
           - [x x] float?
           - [   ] float-array
           - [   ] floats
@@ -442,8 +452,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] future-cancel
           - [   ] future-cancelled?
           - [   ] future-done?
+          - [|  ] gen-apply-to
+          - [|  ] gen-apply-to-simple
           - [   ] gensym
-          - [   ] get
+          - [x  ] get
           - [   ] get-in
           - [   ] get-method
           - [   ] get-thread-bindings
@@ -463,13 +475,14 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [|  ] hash-string*
           - [|  ] hash-string
           - [x x] ident?
-          - [x x] identical?
+          - [x .] identical? — NOTE CLJS has macro
           - [x x] identity
           - [   ] if-let
           - [   ] if-not (not as performant as we thought)
           - [   ] if-some
           - [|  ] ifind?
           - [x x] ifn?
+          - [| !] implements?
           - [   ] import
           - [|  ] imul
           - [x  ] inc
@@ -478,7 +491,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [|  ] infinite?
           - [   ] inst?
           - [   ] inst-ms
-          - [   ] instance?
+          - [   ] instance? — NOTE CLJS has macro
           - [x .] int
           - [x x] int?
           - [   ] int-array
@@ -498,19 +511,25 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] iterate
           - [   ] iterator-seq
           - [   ] io!
+          - [|  ] js-arguments
+          - [|  ] js-comment
+          - [|  ] js-debugger
           - [|  ] js-delete
+          - [|  ] js-in
+          - [|  ] js-inline-comment
           - [|  ] js-invoke
           - [|  ] js-keys
           - [|  ] js-mod
           - [|  ] js-obj
           - [|  ] js-reserved-arr
+          - [|  ] js-str
           - [|  ] js->clj
           - [   ] juxt
           - [   ] keep
           - [   ] keep-indexed
           - [   ] key
           - [|  ] key->js
-          - [   ] keys
+          - [x  ] keys
           - [x x] keyword
           - [x x] keyword?
           - [|  ] keyword-identical?
@@ -528,7 +547,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] load-string
           - [   ] loaded-libs
           - [  |] locking
-          - [. .] long
+          - [x .] long
           - [x x] long?
           - [   ] long-array
           - [   ] longs
@@ -575,14 +594,14 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] newline
           - [x  ] next
           - [   ] nfirst
-          - [x x] nil?
+          - [x .] nil? — NOTE `nil?` macro in CLJS has some secrets
           - [|  ] nil-iter
           - [   ] nnext
-          - [   ] not
+          - [   ] not — look at `coercive-not`
           - [   ] not-any?
           - [   ] not-empty
           - [   ] not-every?
-          - [x x] not=
+          - [x .] not= — look at `coercive-not=`
           - [   ] ns
           - [x |] ns-aliases
           - [x |] ns-imports
@@ -594,7 +613,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] ns-resolve
           - [  |] ns-unalias
           - [x |] ns-unmap
-          - [   ] nth
+          - [x  ] nth
           - [   ] nthnext
           - [   ] nthrest
           - [   ] num
@@ -602,20 +621,20 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x |] numerator
           - [|  ] obj-map
           - [| x] object?
-          - [   ] object-array
+          - [x  ] object-array
           - [   ] odd?
-          - [   ] or
+          - [   ] or — NOTE that CLJS macro has some secrets
           - [   ] parents
           - [   ] partial
           - [   ] partition
           - [   ] partition-all
           - [   ] partition-by
           - [   ] pcalls
-          - [   ] peek
+          - [x  ] peek
           - [   ] persistent!
           - [|  ] persistent-array-map-seq
           - [   ] pmap
-          - [   ] pop
+          - [x  ] pop
           - [   ] pop!
           - [   ] pop-thread-bindings
           - [   ] pos?
@@ -679,6 +698,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] reduce-kv
           - [|  ] reduceable?
           - [x x] reduced
+          - [x x] reduced?
           - [! |] reduce1
           - [   ] reductions
           - [   ] ref
@@ -689,6 +709,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] refer
           - [   ] refer-clojure
           - [| x] regexp?
+          - [|  ] reify
           - [   ] release-pending-sends
           - [   ] rem
           - [   ] remove
@@ -701,6 +722,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] repeatedly
           - [   ] replace
           - [   ] require
+          - [| !] require-macros
           - [   ] reset!
           - [   ] reset-meta!
           - [   ] reset-vals!
@@ -713,6 +735,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] rseq
           - [   ] rsubseq
           - [   ] run!
+          - [! !] satisfies?
           - [   ] second
           - [   ] select-keys
           - [   ] send
@@ -736,12 +759,13 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [|  ] set-print-fn!
           - [   ] set-validator!
           - [   ] setup-reference
-          - [. .] short
+          - [x .] short
           - [x x] short?
           - [   ] short-array
           - [   ] shorts
           - [   ] shuffle
           - [   ] shutdown-agents
+          - [| !] simple-benchmark
           - [x x] simple-ident?
           - [x x] simple-keyword?
           - [x x] simple-symbol?
@@ -759,6 +783,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] sorted-set
           - [   ] sorted-set-by
           - [   ] special-symbol?
+          - [|  ] specify
+          - [|  ] specify!
           - [   ] spread
           - [   ] spit
           - [   ] split-at
@@ -791,6 +817,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] tap>
           - [   ] test
           - [x |] the-ns
+          - [| !] this-as
           - [   ] thread-bound?
           - [   ] throw-if
           - [   ] time
@@ -806,38 +833,40 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [|  ] type->str
           - [x  ] unchecked-add
           - [x  ] unchecked-add-int
-          - [. .] unchecked-byte
-          - [. .] unchecked-char
+          - [x .] unchecked-byte
+          - [x .] unchecked-char
           - [x  ] unchecked-dec
           - [x  ] unchecked-dec-int
           - [x  ] unchecked-divide
           - [x  ] unchecked-divide-int
-          - [. .] unchecked-double
-          - [. .] unchecked-float
+          - [x .] unchecked-double
+          - [x .] unchecked-float
           - [x  ] unchecked-inc
           - [x  ] unchecked-inc-int
-          - [. .] unchecked-int
-          - [. .] unchecked-long
+          - [x .] unchecked-int
+          - [x .] unchecked-long
           - [x  ] unchecked-multiply
           - [x  ] unchecked-multiply-int
           - [x  ] unchecked-negate
           - [x  ] unchecked-negate-int
           - [x  ] unchecked-remainder-int
-          - [. .] unchecked-short
+          - [x .] unchecked-short
           - [x  ] unchecked-subtract
           - [x  ] unchecked-subtract-int
-          - [|  ] undefined?
+          - [|  ] undefined? — NOTE has macro too
           - [   ] underive
           - [   ] unreduced
+          - [| !] unsafe-cast
           - [x .] unsigned-bit-shift-right
           - [   ] update
           - [   ] update-in
           - [   ] uri?
           - [! !] use
+          - [| !] use-macros
           - [|  ] uuid
           - [x x] uuid?
           - [   ] val
-          - [   ] vals
+          - [x  ] vals
           - [x x] var?
           - [   ] var-get
           - [   ] var-set
@@ -870,6 +899,59 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] xml-seq
           - [x  ] zero?
           - [   ] zipmap
+    - [.] clojure.lang.RT
+          https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/RT.java
+          - [ ] aclone
+          - [ ] addURL
+          - [ ] aget
+          - [.] alength
+          - [ ] aset
+          - [ ] assoc
+          - [ ] baseLoader
+          - [.] booleanCast
+          - [.] byteCast
+          - [ ] canSeq
+          - [.] charCast
+          - [ ] chunkIteratorSeq
+          - [ ] conj
+          - [ ] cons
+          - [ ] contains
+          - [x] count
+          - [x] countFrom
+          - [ ] dissoc
+          - [.] doubleCast
+          - [ ] find
+          - [ ] first
+          - [.] floatCast
+          - [ ] get
+          - [.] intCast
+          - [x] isReduced
+          - [ ] iter
+          - [ ] keys
+          - [ ] load
+          - [.] longCast
+          - [ ] more
+          - [ ] nextID
+          - [ ] nth
+          - [ ] object_array
+          - [ ] peek
+          - [ ] pop
+          - [ ] readString
+          - [ ] rest
+          - [x] seq
+          - [ ] seqToTypedArray
+          - [.] shortCast
+          - [ ] subvec
+          - [ ] toArray
+          - [.] uncheckedByteCast
+          - [.] uncheckedShortCast
+          - [.] uncheckedCharCast
+          - [.] uncheckedIntCast
+          - [.] uncheckedLongCast
+          - [.] uncheckedFloatCast
+          - [.] uncheckedDoubleCast
+          - [ ] vals
+          - [ ] vector
     - [.] clojure.lang.Numbers
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Numbers.java
           - [ ] add
@@ -956,29 +1038,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] unsignedShiftRight
           - [ ] unsignedShiftRightInt
           - [ ] xor
-    - [.] clojure.lang.RT
-          https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/RT.java
-          - [ ] assoc
-          - [.] booleanCast
-          - [ ] chunkIteratorSeq
-          - [ ] conj
-          - [x] count
-          - [x] countFrom
-          - [.] doubleCast
-          - [ ] first
-          - [.] floatCast
-          - [.] intCast
-          - [x] isReduced
-          - [ ] iter
-          - [.] longCast
-          - [ ] more
-          - [ ] nextID
-          - [ ] rest
-          - [x] seq
-          - [ ] seqToTypedArray
-          - [ ] subvec
-          - [ ] toArray
-          - [.] uncheckedIntCast
     - [.] clojure.lang.Util
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Util.java
          - [ ] classOf

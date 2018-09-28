@@ -115,6 +115,7 @@
 
 (def string? (t/isa? #?(:clj java.lang.String :cljs js/String)))
 
+;; TODO TYPED — `str` macro in CLJS has some secrets
 (t/defn >string
   "Creates an immutable string."
   {:incorporated '{clojure.core/str "9/27/2018"
