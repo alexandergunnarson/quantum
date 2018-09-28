@@ -28,8 +28,8 @@
     [com.google.common.util.concurrent AtomicDouble])))
 
 ;; TODO technically this belongs in like `quantum.core.data.effects` or something
-(defprotocol PAtomic
-  (atomically-apply [target f]
+(defprotocol IAtomic
+  (atomic-apply [target f]
     "Atomically applies `f` to `target`, with the following caveats:
      - Atomicity here means only that the effects of `f` on `target` are guaranteed to be rolled
        back or undone in the case of a failed application of `f` (e.g. in the case of an exception).
@@ -60,9 +60,12 @@
                    of modifications made to it within an atomic function application and rolls them
                    back in the case of a failed application (e.g. in the case of an exception).
 
-     This differs from `swap!` in that `swap!`, by convention, only supports case B), and that only
-     for concurrency-safe `target`s (if in a concurrent environment)."))
+     It is also the burden of the implementation to handle nested atomic applications on at least a
+     per-thread basis. That is, if `atomic-apply` is called inside of another `atomic-apply`, the
+     implementation must ensure that both calls are atomic, usually by making the inner one a no-op.
 
+     This differs from `core/swap!` in that `swap!`, by convention, only supports case B), and that
+     only for concurrency-safe `target`s (if in a concurrent environment)."))
 
 (def atom?     (t/isa?|direct #?(:clj clojure.lang.IAtom :cljs cljs.core/IAtom)))
 
