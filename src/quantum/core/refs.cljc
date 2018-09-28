@@ -27,6 +27,42 @@
     [java.util.concurrent.atomic AtomicReference AtomicBoolean AtomicInteger AtomicLong]
     [com.google.common.util.concurrent AtomicDouble])))
 
+(defprotocol PAtomic
+  (atomically-apply [target f]
+    "Atomically applies `f` to `target`, with the following caveats:
+     - Atomicity here means only that the effects of `f` on `target` are guaranteed to be rolled
+       back or undone in the case of a failed application of `f` (e.g. in the case of an exception).
+       This implies concurrency-safety only for concurrency-safe `target`s, not for `target`s safe
+       only for single-threaded use.
+     - Some implementations may run `f` multiple times in an effort to atomically apply it, so in
+       those cases `f` must be free of side-effects not applied to the `target`.
+
+     It is the burden of the implementation to call the 1-arity function `f` in one of the following
+     ways:
+
+     A) Given an immutable `target`, the `target` is supplied to `f`, and `f` returns an updated
+        immutable version of it. The original `target` is by definition unaffected.
+        - Example: Any built-in Clojure immutable data structure like a map, vector, set, etc.
+     B) Given a `target` consisting of a container for an immutable value, the immutable value in
+        question is supplied to `f`, and `f` returns an updated immutable value which is atomically
+        applied to the container.
+        - Example: A Clojure atom wrapping e.g. an immutable Clojure map
+        - Example: A 'box' type having a mutable, thread-unsafe field which may be set any number of
+                   times to refer only to immutable values.
+     C) Given a `target` consisting of an 'opaque' structure that supports atomic modification, the
+        `target` is supplied to `f`, and `f` returns the modified/updated `target`.
+        - Example: A JDBC connection, in which the connection *itself* might not be modified but a
+                   caller may request modifications to be transactionally (and thus atomically)
+                   applied to the underlying DB.
+        - Example: A Redis cache to which transactional (and thus atomic) updates may be applied.
+        - Example: A version of (the mutable, thread-unsafe) `java.util.HashMap` which keeps track
+                   of modifications made to it within an atomic function application and rolls them
+                   back in the case of a failed application (e.g. in the case of an exception).
+
+     This differs from `swap!` in that `swap!`, by convention, only supports case B), and that only
+     for concurrency-safe `target`s (if in a concurrent environment)."))
+
+
 (def atom?     (t/isa?|direct #?(:clj clojure.lang.IAtom :cljs cljs.core/IAtom)))
 
 (def volatile? (t/isa? #?(:clj clojure.lang.Volatile :cljs cljs.core/Volatile)))
