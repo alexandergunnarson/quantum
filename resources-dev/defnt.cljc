@@ -232,7 +232,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [|  ] array-chunk
           - [|  ] array-copy
           - [|  ] array-copy-downward
+          - [|  ] array-index-of
           - [|  ] array-iter
+          - [| !] array-list
           - [   ] array-map
           - [|  ] array-seq
           - [! !] as->
@@ -303,8 +305,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] chunk-next
           - [x x] chunk-rest
           - [x x] chunked-seq?
+          - [|  ] chunkIteratorSeq
           - [  |] class
           - [x |] class?
+          - [|  ] clj->js
           - [! |] clojure-version
           - [|  ] clone
           - [|  ] cloneable?
@@ -330,7 +334,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] contains?
           - [x x] count
           - [x x] counted?
-          - [  |] create-ns
+          - [   ] create-ns
           - [! !] create-struct
           - [   ] cycle
           - [x  ] dec
@@ -338,6 +342,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] declare
           - [x |] decimal?
           - [   ] dedupe
+          - [|  ] default-dispatch-val
           - [! |] definline
           - [   ] defmacro
           - [! !] defmethod — rejected because t/defn supersedes
@@ -351,6 +356,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] delay
           - [x x] delay?
           - [   ] deliver
+          - [|  ] demunge
           - [x |] denominator
           - [   ] deref
           - [   ] derive
@@ -358,6 +364,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] destructure
           - [   ] disj
           - [   ] disj!
+          - [|  ] dispatch-fn
           - [   ] dissoc
           - [   ] dissoc!
           - [   ] distinct
@@ -383,16 +390,21 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] enumeration-seq
           - [   ] ensure
           - [   ] ensure-reduced
+          - [|  ] equiv-map
           - [|  ] equiv-sequential
           - [   ] error-handler
           - [   ] error-mode
+          - [|  ] es6-entries-iterator
           - [|  ] es6-iterator
+          - [|  ] es6-set-entries-iterator
           - [   ] eval
           - [   ] even?
           - [   ] every?
           - [   ] every-pred
+          - [|  ] ex-cause
           - [   ] ex-data
           - [   ] ex-info
+          - [|  ] ex-message
           - [|  ] extend-object!
           - [x x] false?
           - [   ] file-seq
@@ -401,12 +413,15 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] filterv
           - [   ] find
           - [  |] find-keyword
-          - [x |] find-ns
+          - [|  ] find-macros-ns
+          - [x  ] find-ns
+          - [|  ] find-ns-obj
           - [  |] find-var
           - [|  ] fix
           - [   ] ffirst
           - [x  ] first
           - [   ] flatten
+          - [|  ] flatten1
           - [. .] float
           - [x x] float?
           - [   ] float-array
@@ -478,6 +493,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [  |] is-annotation?
           - [  |] is-runtime-annotation?
           - [   ] isa?
+          - [|  ] iter
           - [| x] iterable?
           - [   ] iterate
           - [   ] iterator-seq
@@ -487,10 +503,13 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [|  ] js-keys
           - [|  ] js-mod
           - [|  ] js-obj
+          - [|  ] js-reserved-arr
+          - [|  ] js->clj
           - [   ] juxt
           - [   ] keep
           - [   ] keep-indexed
           - [   ] key
+          - [|  ] key->js
           - [   ] keys
           - [x x] keyword
           - [x x] keyword?
@@ -543,9 +562,12 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] min
           - [   ] min-key
           - [   ] mix-collection-hash
+          - [|  ] mk-bound-fn
           - [   ] mod
+          - [|  ] munge
           - [x x] name
           - [x x] namespace
+          - [x  ] namespace?
           - [! |] nary-inline
           - [   ] nat-int?
           - [   ] neg?
@@ -564,9 +586,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] ns
           - [x |] ns-aliases
           - [x |] ns-imports
-          - [x |] ns-interns
+          - [x  ] ns-interns
           - [x |] ns-map
-          - [x |] ns-name
+          - [x  ] ns-name
           - [x |] ns-publics
           - [x |] ns-refers
           - [   ] ns-resolve
@@ -578,6 +600,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] num
           - [x x] number?
           - [x |] numerator
+          - [|  ] obj-map
           - [| x] object?
           - [   ] object-array
           - [   ] odd?
@@ -590,6 +613,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] pcalls
           - [   ] peek
           - [   ] persistent!
+          - [|  ] persistent-array-map-seq
           - [   ] pmap
           - [   ] pop
           - [   ] pop!
@@ -598,21 +622,27 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] pos-int?
           - [   ] pr
           - [   ] pr-on
+          - [| !] pr-seq-writer
+          - [| !] pr-sequential-writer
           - [   ] pr-str
           - [|  ] pr-str*
-          - [   ] preserving-reduced
-          - [|  ] prim-seq
-          - [   ] print-str
-          - [   ] println-str
-          - [   ] prn-str
+          - [|  ] pr-str-with-opts
           - [   ] prefer-method
           - [   ] prefers
+          - [   ] preserving-reduced
+          - [|  ] prn-str-with-opts
+          - [|  ] prim-seq
           - [   ] print
+          - [! |] print-dup
+          - [| !] print-meta?
+          - [! |] print-method
+          - [| !] print-prefix-map
+          - [   ] print-str
           - [   ] printf
           - [   ] println
-          - [! |] print-dup
-          - [! |] print-method
+          - [   ] println-str
           - [   ] prn
+          - [   ] prn-str
           - [   ] promise
           - [   ] push-thread-bindings
           - [   ] pvalues
@@ -620,11 +650,14 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] qualified-keyword?
           - [x x] qualified-symbol?
           - [   ] quot
+          - [|  ] quote-string
           - [   ] rand
           - [   ] rand-int
           - [   ] rand-nth
           - [   ] random-sample
+          - [|  ] random-uuid
           - [   ] range
+          - [|  ] ranged-iterator
           - [x |] ratio?
           - [   ] rational?
           - [   ] rationalize
@@ -655,6 +688,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] ref-set
           - [   ] refer
           - [   ] refer-clojure
+          - [| x] regexp?
           - [   ] release-pending-sends
           - [   ] rem
           - [   ] remove
@@ -686,6 +720,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] send-via
           - [x x] seq
           - [x x] seq?
+          - [|  ] seq-iter
           - [   ] seqable?
           - [   ] seque
           - [   ] sequence
@@ -696,6 +731,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] set-agent-send-off-executor!
           - [   ] set-error-handler!
           - [   ] set-error-mode!
+          - [|  ] set-from-indexed-seq
           - [|  ] set-print-err-fn!
           - [|  ] set-print-fn!
           - [   ] set-validator!
@@ -731,6 +767,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [. .] str
           - [x x] string?
           - [|  ] string-iter
+          - [| !] string-print
+          - [|  ] strip-ns
           - [! |] struct
           - [! |] struct-map
           - [   ] subs
@@ -760,6 +798,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] to-array-2d
           - [   ] trampoline
           - [. .] transduce
+          - [|  ] transformer-iterator
           - [   ] transient
           - [   ] tree-seq
           - [x x] true?
@@ -795,6 +834,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] update-in
           - [   ] uri?
           - [! !] use
+          - [|  ] uuid
           - [x x] uuid?
           - [   ] val
           - [   ] vals
@@ -826,6 +866,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] with-precision
           - [   ] with-redefs
           - [   ] with-redefs-fn
+          - [| !] write-all
           - [   ] xml-seq
           - [x  ] zero?
           - [   ] zipmap
