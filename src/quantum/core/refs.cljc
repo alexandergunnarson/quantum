@@ -61,8 +61,9 @@
                    back in the case of a failed application (e.g. in the case of an exception).
 
      It is also the burden of the implementation to handle nested atomic applications on at least a
-     per-thread basis. That is, if `atomic-apply` is called inside of another `atomic-apply`, the
-     implementation must ensure that both calls are atomic, usually by making the inner one a no-op.
+     per-thread basis. That is, if `atomic-apply` is called inside of another `atomic-apply` on the
+     same thread, the implementation must ensure that both calls are atomic, usually by making the
+     inner one a no-op.
 
      This differs from `core/swap!` in that `swap!`, by convention, only supports case B), and that
      only for concurrency-safe `target`s (if in a concurrent environment)."))
