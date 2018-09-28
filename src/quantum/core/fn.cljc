@@ -26,7 +26,7 @@
 ;; TODO TYPED move to `data.fn`?
 (def multimethod? (t/isa? #?(:clj clojure.lang.MultiFn :cljs cljs.core/IMultiFn)))
 
-(t/defn ^:inline identity [x t/any? > (t/type x)] x)
+(t/defn ^:inline identity [x t/any? > (t/== x)] x)
 
 ;; ===== `fn<i>`: Positional functions ===== ;;
 

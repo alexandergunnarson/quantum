@@ -61,6 +61,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
 - TODO implement the following:
   - t/type >>>>>> (PRIORITY 1) <<<<<<
     - dependent types: `[x arr/array? > (t/type x)]`
+  - (t/== x)
+    - dependent type such that the passed input must be identical to x
   - Analysis
     - This is accepted by the type system without knowing the type:
       (java.math.BigInteger. 1 (-> (ByteBuffer/allocate (int 8)) (.putLong x) .array))
@@ -188,23 +190,55 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     [!] : refused
   - List of semi-approximately topologically ordered namespaces to make typed:
     - [.] clojure.core / cljs.core
+          - [! !] ..
+          - [. .] <
+          - [. .] <=
           - [x x] =
           - [. .] ==
-          - [. .] <
+          - [. .] >
+          - [. .] >=
+          - [. .] +
+          - [. .] +'
+          - [. .] -
+          - [. .] -'
+          - [! !] ->
+          - [! !] ->>
+          - [. .] *
+          - [. .] *'
+          - [. .] /
+          - [   ] add-watch
+          - [  |] agent
           - [   ] and
           - [   ] any?
           - [   ] apply
+          - [! |] assert-args
           - [   ] assoc
           - [   ] assoc!
           - [x x] associative?
-          - [. .] boolean
+          - [   ] binding
+          - [   ] binding-conveyor-fn
+          - [. .] bit-and
+          - [. .] bit-and-not
+          - [x .] bit-clear
+          - [x .] bit-flip
+          - [x .] bit-not
+          - [. .] bit-or
+          - [x .] bit-set
+          - [x .] bit-shift-left
+          - [x .] bit-shift-right
+          - [x .] bit-test
+          - [. .] bit-xor
+          - [x .] boolean
           - [x x] boolean?
+          - [   ] bound-fn
+          - [   ] bound-fn*
           - [   ] butlast
           - [x x] byte
           - [x x] byte?
           - [x x] char
           - [x x] char?
           - [  |] cast
+          - [! |] check-valid-options
           - [x x] chunk
           - [x x] chunk-append
           - [x x] chunk-buffer
@@ -215,50 +249,71 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] chunked-seq?
           - [  |] class
           - [x x] compare
+          - [   ] complement
           - [   ] concat
           - [   ] cond
-          - [   ] cons
           - [   ] conj
+          - [   ] cons
+          - [   ] constantly
           - [   ] contains?
           - [x x] count
           - [x x] counted?
+          - [x  ] dec
+          - [x  ] dec'
           - [x |] decimal?
           - [   ] defmacro
+          - [! !] defmethod — rejected because t/defn supersedes
+          - [! !] defmulti — rejected because t/defn supersedes
           - [. .] defn
           - [   ] defrecord
           - [   ] deftype
           - [   ] delay
           - [x x] delay?
           - [x |] denominator
+          - [   ] disj
+          - [   ] disj!
+          - [   ] dissoc
+          - [   ] dissoc!
           - [x x] double
           - [x x] double?
           - [. .] empty?
           - [   ] even?
-          - [   ] force
-          - [x x] identical?
-          - [   ] if-not (not as performant as we thought)
-          - [x x] indexed?
-          - [. .] int
-          - [x x] integer?
           - [x x] false?
           - [   ] filter
+          - [   ] find
           - [  |] find-keyword
+          - [  |] find-var
           - [   ] ffirst
-          - [   ] first
+          - [x  ] first
           - [x x] float
           - [x x] float?
           - [. .] fn
           - [x x] fn?
           - [   ] fnext
+          - [   ] force
           - [   ] gensym
+          - [   ] get
+          - [   ] get-method
+          - [   ] get-thread-bindings
           - [   ] hash-map
           - [   ] hash-set
           - [x x] ident?
+          - [x x] identical?
+          - [x x] identity
+          - [   ] if-let
+          - [   ] if-not (not as performant as we thought)
+          - [   ] if-some
           - [x x] ifn?
+          - [x  ] inc
+          - [x  ] inc'
+          - [x x] indexed?
           - [|  ] infinite?
           - [   ] instance?
-          - [x x] int
+          - [x .] int
           - [x x] int?
+          - [x x] integer?
+          - [   ] key
+          - [   ] keys
           - [x x] keyword
           - [x x] keyword?
           - [   ] last
@@ -274,14 +329,18 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] map
           - [x x] map?
           - [x x] map-entry?
+          - [   ] max
           - [x x] meta
+          - [   ] methods
+          - [   ] min
           - [   ] mod
           - [x x] name
           - [x x] namespace
+          - [! |] nary-inline
           - [   ] nat-int?
           - [   ] neg?
           - [   ] neg-int?
-          - [   ] next
+          - [x  ] next
           - [   ] nfirst
           - [x x] nil?
           - [   ] nnext
@@ -295,22 +354,41 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] or
           - [   ] peek
           - [   ] pop
+          - [   ] pop-thread-bindings
           - [   ] pos?
           - [   ] pos-int?
+          - [   ] prefer-method
+          - [   ] prefers
+          - [   ] push-thread-bindings
           - [x x] qualified-ident?
           - [x x] qualified-keyword?
           - [x x] qualified-symbol?
+          - [   ] quot
           - [x |] ratio?
           - [   ] rational?
+          - [   ] rationalize
           - [x x] record?
           - [x x] reduce
+          - [! |] reduce1
+          - [   ] release-pending-sends
           - [   ] rem
           - [   ] remove
-          - [   ] rest
+          - [   ] remove-all-methods
+          - [   ] remove-method
+          - [x  ] rest
+          - [   ] reverse
+          - [   ] rseq
           - [   ] second
-          - [   ] seq
+          - [   ] select-keys
+          - [   ] send
+          - [   ] send-off
+          - [   ] send-via
+          - [x x] seq
           - [x x] seq?
           - [x x] set?
+          - [   ] set-agent-send-executor!
+          - [   ] set-agent-send-off-executor!
+          - [   ] setup-reference
           - [x x] short
           - [x x] short?
           - [x x] simple-ident?
@@ -325,18 +403,41 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] spread
           - [. .] str
           - [x x] string?
+          - [   ] subvec
           - [x x] symbol
           - [x x] symbol?
-          - [   ] to-array
+          - [x  ] to-array
           - [. .] transduce
           - [x x] true?
+          - [x  ] unchecked-add
+          - [x  ] unchecked-add-int
+          - [x  ] unchecked-dec
+          - [x  ] unchecked-dec-int
+          - [x  ] unchecked-divide
+          - [x  ] unchecked-divide-int
+          - [x  ] unchecked-inc
+          - [x  ] unchecked-inc-int
+          - [x  ] unchecked-multiply
+          - [x  ] unchecked-multiply-int
+          - [x  ] unchecked-negate
+          - [x  ] unchecked-negate-int
+          - [x  ] unchecked-remainder-int
+          - [x  ] unchecked-subtract
+          - [x  ] unchecked-subtract-int
+          - [x .] unsigned-bit-shift-right
           - [x x] uuid?
+          - [   ] val
+          - [   ] vals
           - [. .] vary-meta
           - [   ] vec
           - [   ] vector
           - [x x] vector?
           - [! !] when
+          - [   ] when-let
           - [! !] when-not
+          - [   ] when-some
+          - [   ] with-bindings
+          - [   ] with-bindings*
           - [x x] with-meta
           - [x  ] zero?
     - [.] clojure.lang.Numbers
@@ -427,8 +528,27 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] xor
     - [.] clojure.lang.RT
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/RT.java
+          - [ ] assoc
+          - [.] booleanCast
+          - [ ] chunkIteratorSeq
+          - [ ] conj
           - [x] count
           - [x] countFrom
+          - [.] doubleCast
+          - [ ] first
+          - [.] floatCast
+          - [.] intCast
+          - [x] isReduced
+          - [ ] iter
+          - [.] longCast
+          - [ ] more
+          - [ ] nextID
+          - [ ] rest
+          - [x] seq
+          - [ ] seqToTypedArray
+          - [ ] subvec
+          - [ ] toArray
+          - [.] uncheckedIntCast
     - [.] clojure.lang.Util
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Util.java
          - [ ] classOf
