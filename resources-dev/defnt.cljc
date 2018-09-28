@@ -900,6 +900,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x  ] zero?
           - [   ] zipmap
     - [.] Intrinsics
+          https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Intrinsics.java
+          -
     - [ ] Java intrinsics
     - [.] clojure.lang.RT
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/RT.java
