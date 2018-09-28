@@ -212,6 +212,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] identical?
           - [x x] indexed?
           - [x x] integer?
+          - [   ] filter
           - [  |] find-keyword
           - [x x] float
           - [x x] float?
@@ -221,9 +222,11 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] int?
           - [x x] keyword
           - [x x] keyword?
+          - [x x] list?
           - [  |] locking
           - [x x] long
           - [x x] long?
+          - [   ] map
           - [x x] map?
           - [x x] map-entry?
           - [   ] mod
@@ -238,6 +241,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] number?
           - [x |] numerator
           - [   ] odd?
+          - [   ] peek
+          - [   ] pop
           - [   ] pos?
           - [   ] pos-int?
           - [x x] qualified-ident?
@@ -245,7 +250,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] qualified-symbol?
           - [x |] ratio?
           - [   ] rational?
+          - [x x] reduce
           - [   ] rem
+          - [   ] remove
           - [x x] set?
           - [x x] short
           - [x x] short?
@@ -256,6 +263,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] string?
           - [x x] symbol
           - [x x] symbol?
+          - [. .] transduce
           - [x x] uuid?
     - [.] clojure.lang.Numbers
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Numbers.java

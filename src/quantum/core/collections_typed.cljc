@@ -48,6 +48,7 @@
 ;; ===== Access functions ===== ;;
 
 ;; TODO for CLJS we should do !+vector
+;; TODO TYPED
 (t/defn get
   "Retrieve the value in `xs` associated with the key `k`.
 
@@ -154,8 +155,7 @@
 
 ;; ===== Reductive functions ===== ;;
 
-;; TODO: conditionally optional arities etc. for t/fn
-
+;; TODO TYPED conditionally optional arities etc. for t/fn
 (var/def rf? "Reducing function"
   (t/ftype "seed arity"             []
            "completing arity"       [t/any?]
@@ -175,6 +175,7 @@
 #?(:clj
 (t/defn reduce-indexed
   "Made public in case future specializations want to use it."
+  {:incorporated '{cljs.core/ci-reduce "9/25/2018"}}
   ([rf rf?, init t/any?, xs (t/or dstr/string? vec/!+vector? arr/array?), i0 t/numerically-integer?]
     (let [ct (count xs)]
       (loop [i (p/>int i0), ret init]
@@ -225,7 +226,7 @@
 
    We would specialize on `clojure.lang.Range` and `clojure.lang.LongRange` but they do not expose
    their `step` field so we have to use their implementation of `reduce`."
-   {:incorporated '{clojure.core/reduce    "9/25/2018"
+    :incorporated '{clojure.core/reduce    "9/25/2018"
                     clojure.core/reduce-kv "9/25/2018"
                     clojure.core.protocols "9/25/2018"
                     cljs.core/reduce       "9/26/2018"
