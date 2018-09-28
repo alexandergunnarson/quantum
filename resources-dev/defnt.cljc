@@ -283,7 +283,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] bound?
           - [   ] bound-fn
           - [   ] bound-fn*
-          - [   ] bounded-count
+          - [x x] bounded-count
           - [   ] butlast
           - [x .] byte
           - [x x] byte?
@@ -899,49 +899,104 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] xml-seq
           - [x  ] zero?
           - [   ] zipmap
+    - [.] Intrinsics
+    - [ ] Java intrinsics
     - [.] clojure.lang.RT
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/RT.java
           - [ ] aclone
           - [ ] addURL
           - [ ] aget
           - [.] alength
+          - [ ] arrayToList
           - [ ] aset
           - [ ] assoc
+          - [ ] assocN
           - [ ] baseLoader
           - [.] booleanCast
+          - [x] boundedLength
+          - [x] box
           - [.] byteCast
           - [ ] canSeq
           - [.] charCast
-          - [ ] chunkIteratorSeq
+          - [!] chunkIteratorSeq
+          - [ ] classForName
+          - [ ] classForNameNonLoading
+          - [!] compile
           - [ ] conj
           - [ ] cons
           - [ ] contains
           - [x] count
           - [x] countFrom
           - [ ] dissoc
+          - [ ] doFormat
           - [.] doubleCast
+          - [!] errPrintWriter
           - [ ] find
+          - [ ] findKey
           - [ ] first
           - [.] floatCast
+          - [ ] format
+          - [ ] formatAesthetic
+          - [ ] formatStandard
+          - [!] fourth
           - [ ] get
+          - [ ] getColumnNumber
+          - [ ] getFrom
+          - [ ] getLineNumber
+          - [ ] getLineNumberingReader
+          - [ ] getResource
+          - [ ] hasTag
+          - [!] init
           - [.] intCast
+          - [ ] isLineNumberingReader
           - [x] isReduced
           - [ ] iter
           - [ ] keys
-          - [ ] load
+          - [x] keyword
+          - [!] lastModified
+          - [x] length
+          - [ ] list
+          - [ ] listStar
+          - [!] load
+          - [ ] loadClassForName
+          - [!] loadLibrary
+          - [!] loadResourceScript
           - [.] longCast
+          - [ ] makeClassLoader
+          - [ ] map
+          - [ ] mapUniqueKeys
+          - [!] maybeLoadResourceScript
+          - [x] meta
           - [ ] more
           - [ ] nextID
           - [ ] nth
+          - [ ] nthFrom
           - [ ] object_array
           - [ ] peek
+          - [ ] peekChar
           - [ ] pop
+          - [ ] print
+          - [ ] printInnerSeq
+          - [ ] printString
+          - [!] processCommandLine
+          - [ ] readChar
           - [ ] readString
+          - [ ] resolveClassNameInContext
+          - [ ] resourceAsStream
           - [ ] rest
+          - [!] second
           - [x] seq
+          - [x] seqFrom
+          - [!] seqOrElse
+          - [ ] seqToArray
+          - [ ] seqToPassedArray
           - [ ] seqToTypedArray
+          - [ ] set
+          - [!] setValues
           - [.] shortCast
           - [ ] subvec
+          - [ ] suppressRead
+          - [!] third
           - [ ] toArray
           - [.] uncheckedByteCast
           - [.] uncheckedShortCast
@@ -951,6 +1006,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [.] uncheckedFloatCast
           - [.] uncheckedDoubleCast
           - [ ] vals
+          - [!] var
           - [ ] vector
     - [.] clojure.lang.Numbers
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Numbers.java

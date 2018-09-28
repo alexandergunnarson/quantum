@@ -94,7 +94,8 @@
   ([x int?     > (t/assume (t/ref int?))]     (Integer/valueOf   x))
   ([x long?    > (t/assume (t/ref long?))]    (Long/valueOf      x))
   ([x float?   > (t/assume (t/ref float?))]   (Float/valueOf     x))
-  ([x double?  > (t/assume (t/ref double?))]  (Double/valueOf    x))))
+  ([x double?  > (t/assume (t/ref double?))]  (Double/valueOf    x))
+  ([x t/ref?] x)))
 
 #?(:clj
 (t/defn ^:inline unbox
