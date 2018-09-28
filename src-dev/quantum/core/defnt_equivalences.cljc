@@ -59,7 +59,7 @@
 (deftest test|pid
   (let [actual
           (macroexpand '
-            (self/defn pid|test [> (? t/str?)]
+            (self/defn pid|test [> (? t/string?)]
               (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
                    (.getName))))
         expected
@@ -69,13 +69,13 @@
                        ~(STR '(. (. java.lang.management.ManagementFactory getRuntimeMXBean)
                                  getName)))))
                  (defn ~'pid|test
-                   {:quantum.core.type/type (t/fn t/any? ~'[:> (? t/str?)])}
+                   {:quantum.core.type/type (t/fn t/any? ~'[:> (? t/string?)])}
                    ([] (.invoke ~(tag (str `>Object)
                                 'pid|test|__0|0))))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
-      (eval '(do (is (t/str? (pid|test)))
+      (eval '(do (is (t/string? (pid|test)))
                  (throws (pid|test 1))))))))
 
 ;; TODO test `:inline`
@@ -135,10 +135,10 @@
 (deftest test|name
   (let [actual
           (macroexpand '
-            (self/defn #_:inline name|test > t/str?
-                       ([x t/str?] x)
-              #?(:clj  ([x (t/isa? Named)  > (* t/str?)] (.getName x))
-                 :cljs ([x (t/isa? INamed) > (* t/str?)] (-name x)))))
+            (self/defn #_:inline name|test > t/string?
+                       ([x t/string?] x)
+              #?(:clj  ([x (t/isa? Named)  > (* t/string?)] (.getName x))
+                 :cljs ([x (t/isa? INamed) > (* t/string?)] (-name x)))))
         expected
           (case (env-lang)
             :clj
@@ -146,7 +146,7 @@
                      ;; Return value can be primitive; in this case it's not
                      ;; The macro in a typed context will find the right dispatch at compile time
 
-                     ;; [t/str?]
+                     ;; [t/string?]
 
                      (def ~(tag "[Ljava.lang.Object;" 'name|test|__0|input0|types)
                        (*<> (t/isa? java.lang.String)))
@@ -164,13 +164,13 @@
                          (~(tag "java.lang.Object" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)]
                            (let* [~(tag "clojure.lang.Named" 'x) ~'x]
                              (t/validate ~(STR '(. x getName))
-                                         ~'(* t/str?))))))
+                                         ~'(* t/string?))))))
 
                      (defn ~'name|test
                        {:quantum.core.type/type
-                         (t/fn ~'t/str?
-                               ~'[t/str?]
-                               ~'[(t/isa? Named) :> (* t/str?)])}
+                         (t/fn ~'t/string?
+                               ~'[t/string?]
+                               ~'[(t/isa? Named) :> (* t/string?)])}
                        ([~'x00__]
                          (ifs ((Array/get ~'name|test|__0|input0|types 0) ~'x00__)
                                 (.invoke ~(tag (str `Object>Object)
@@ -181,7 +181,7 @@
                               (unsupported! `name|test [~'x00__] 0))))))
             :cljs
               ($ (do (defn ~'name|test [~'x00__]
-                     (ifs (t/str? x)         x
+                     (ifs (t/string? x)         x
                           (satisfies? INamed x) (-name x)
                           (unsupported! `name|test [~'x00__] 0))))))]
     (testing "code equivalence" (is-code= actual expected))
@@ -394,7 +394,7 @@
                  (is= (>boolean nil)   (boolean nil))
                  (is= (>boolean 123)   (boolean 123)))))))
 
-;; Let's say you have (t/| t/str? t/number?) in one `fnt` overload.
+;; Let's say you have (t/| t/string? t/number?) in one `fnt` overload.
 ;; This means that you *can't* have a reify with two Object>Object overloads and expect it to work
 ;; at all.
 ;; Therefore, each `fnt` overload necessarily has a one-to-many relationship with `reify`s.
@@ -1062,8 +1062,8 @@
               ([x ratio?] (-> x >big-integer >long-checked))
               ([x (t/value true)]  1)
               ([x (t/value false)] 0)
-              ([x t/str?] (Long/parseLong x))
-              ([x t/str?, radix int?] (Long/parseLong x radix))))
+              ([x t/string?] (Long/parseLong x))
+              ([x t/string?, radix int?] (Long/parseLong x radix))))
         expected
           (case (env-lang)
             :clj ($ (do #_[x (t/- primitive? boolean? float? double?)]
@@ -1168,7 +1168,7 @@
                                 ;; - `ratio?`                                    -> t/<>
                                 ;; - `(t/value true)`                            -> t/<>
                                 ;; - `(t/value false)`                           -> t/<>
-                                ;; - `t/str?`                                    -> t/<>
+                                ;; - `t/string?`                                    -> t/<>
                                 ;;
                                 ;; Since there is no overload that results in t/<, no compile-time match can
                                 ;; be found, but a possible runtime match lies in the overload that results in
@@ -1196,19 +1196,19 @@
                           (reify boolean>long
                             (~(tag "long" 'invoke) [_## ~(tag "boolean" 'x)] 0)))
 
-                        #_[x t/str?]
+                        #_[x t/string?]
 
                         #_(def ~'>long|__12|input-types
-                          (*<> t/str?))
+                          (*<> t/string?))
                         (def ~'>long|__12
                           (reify Object>long
                             (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
                               ~'(Long/parseLong x))))
 
-                        #_[x t/str?]
+                        #_[x t/string?]
 
                         #_(def ~'>long|__13|input-types
-                          (*<> t/str? int?))
+                          (*<> t/string? int?))
                         (def ~'>long|__13
                           (reify Object+int>long
                             (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x) ~(tag "int" 'radix)]
@@ -1228,8 +1228,8 @@
                               [ratio?]
                               [(t/value true)]
                               [(t/value false)]
-                              [t/str?]
-                              [t/str? int?])}
+                              [t/string?]
+                              [t/string? int?])}
                           ([x0##] (ifs ((Array/get >long|__0|input-types 0) x0##)
                                          (.invoke >long|__0 x0##)
                                        ((Array/get >long|__1|input-types 0) x0##)
@@ -1259,9 +1259,9 @@
             (self/defn !str > #?(:clj  (t/isa? StringBuilder)
                              :cljs (t/isa? StringBuffer))
                     ([] #?(:clj (StringBuilder.) :cljs (StringBuffer.)))
-                    ;; If we had combined this arity, `t/or`ing the `t/str?` means it wouldn't have been
+                    ;; If we had combined this arity, `t/or`ing the `t/string?` means it wouldn't have been
                     ;; handled any differently than `t/char-seq?`
-            #?(:clj ([x t/str?] (StringBuilder. x)))
+            #?(:clj ([x t/string?] (StringBuilder. x)))
                     ([x #?(:clj  (t/or t/char-seq? int?)
                            :cljs t/val?)]
                       #?(:clj (StringBuilder. x) :cljs (StringBuffer. x)))))
@@ -1300,7 +1300,7 @@
                           {:quantum.core.type/type
                             (t/fn ~'(t/isa? StringBuilder)
                                   ~'[]
-                                  ~'[t/str?]
+                                  ~'[t/string?]
                                   ~'[(t/or t/char-seq? int?)])}
                           ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.>Object"
                                              '!str|__0|0)))
@@ -1331,7 +1331,7 @@
        (t/fn :> #?(:clj  (t/isa? StringBuilder)
                    :cljs (t/isa? StringBuffer))
          []
- #?(:clj [t/str?])
+ #?(:clj [t/string?])
          [#?(:clj  (t/or t/char-seq? t/int?)
              :cljs t/val?)]))
 
@@ -1340,8 +1340,8 @@
                      (reify >Object
                        (^java.lang.Object invoke [_#]
                          (StringBuilder.))))
-                   ;; `t/str?`
-                   (def ^Object>Object !str|__1 ; `t/str?`
+                   ;; `t/string?`
+                   (def ^Object>Object !str|__1 ; `t/string?`
                      (reify Object>Object
                        (^java.lang.Object invoke [_# ^java.lang.Object ~'x]
                          (let* [^String x x] (StringBuilder. x)))))
@@ -1355,7 +1355,7 @@
                        (StringBuilder. x))))
 
                    (defn !str ([  ] (.invoke !str|__0))
-                              ([a0] (ifs (t/str? a0)      (.invoke !str|__1 a0)
+                              ([a0] (ifs (t/string? a0)      (.invoke !str|__1 a0)
                                          (t/char-seq? a0) (.invoke !str|__2 a0)
                                          (t/int? a0)      (.invoke !str|__3 a0)))))
         :cljs `(do (defn !str ([]   (StringBuffer.))
@@ -1365,20 +1365,20 @@
 
 ;; TODO handle inline
 (macroexpand '
-(self/defn #_:inline str|test > t/str?
+(self/defn #_:inline str|test > t/string?
            ([] "")
            ([x t/nil?] "")
            ;; could have inferred but there may be other objects who have overridden .toString
-  #?(#_:clj  #_([x (t/isa? Object) > (* t/str?)] (.toString x))
+  #?(#_:clj  #_([x (t/isa? Object) > (* t/string?)] (.toString x))
            ;; Can't infer that it returns a string (without a pre-constructed list of built-in fns)
            ;; As such, must explicitly mark
-     :cljs ([x t/any? > (t/assume t/str?)] (.join #js [x] "")))
+     :cljs ([x t/any? > (t/assume t/string?)] (.join #js [x] "")))
            ;; TODO only one variadic arity allowed currently; theoretically could dispatch on at
            ;; least pre-variadic args, if not variadic
            ;; TODO should have automatic currying?
            ;; TODO need to handle varargs
            #_([x (t/fn> str|test t/any?) & xs (? (t/seq-of t/any?))
-            #?@(:cljs [> (t/assume t/str?)])]
+            #?@(:cljs [> (t/assume t/string?)])]
              (let* [sb (-> x str|test !str)] ; determined to be StringBuilder
                ;; TODO is `doseq` the right approach, or using reduction?
                (doseq [x' xs] (.append sb (str x')))
@@ -1397,12 +1397,12 @@
 
                    (defn str
                      {:quantum.core.type/type
-                       (t/fn :> t/str?
+                       (t/fn :> t/string?
                          []
                          [t/nil?]
                 #?(:clj  [(t/isa? Object)])
-                #?(:cljs [t/any? :> (t/assume t/str?)])
-                         [(t/fn> str t/any?) :& (? (t/seq-of t/any?)) #?@(:cljs [:> (t/assume t/str?)])])}
+                #?(:cljs [t/any? :> (t/assume t/string?)])
+                         [(t/fn> str t/any?) :& (? (t/seq-of t/any?)) #?@(:cljs [:> (t/assume t/string?)])])}
                      ([  ] (.invoke !str|__0))
                      ([a0] (ifs (nil? x) (.invoke !str|__1)
                                 (.invoke !str|__2 a0)))
@@ -1425,7 +1425,7 @@
 (macroexpand '
 (self/defn #_:inline count #_> #_t/nneg-integer?
   ([xs t/array?  #_> #_t/nneg-int?] (.length xs))
-  #_([xs t/str? > #?(:clj t/nneg-int? :cljs (t/assume t/nneg-int?))]
+  #_([xs t/string? > #?(:clj t/nneg-int? :cljs (t/assume t/nneg-int?))]
     (#?(:clj .length :cljs .-length) xs))
   #_([xs !+vector? > t/nneg-int?] (#?(:clj count :cljs (do (TODO) 0)) xs)))
 )
@@ -1435,7 +1435,7 @@
 `(do (swap! fn->spec assoc #'count
        (t/fn :> t/pos-integer?
          [t/array?  :> t/nneg-int?]
-         [t/str?    :> #?(:clj t/nneg-int? :cljs (t/assume t/nneg-int?))]
+         [t/string?    :> #?(:clj t/nneg-int? :cljs (t/assume t/nneg-int?))]
          [!+vector? :> t/nneg-int?]))
 
      ~(case-env
@@ -1450,7 +1450,7 @@
 (self/defn #_:inline get
   ;; TODO `t/numerically
   ([xs t/array? , k #_(t/numerically t/int?)] (#?(:clj Array/get :cljs aget) xs k))
-  ([xs t/str?   , k #_(t/numerically t/int?)] (.charAt xs k))
+  ([xs t/string?, k #_(t/numerically t/int?)] (.charAt xs k))
   ([xs !+vector?, k t/any?] #?(:clj (.valAt xs k) :cljs (TODO))))
 )
 ;; ----- expanded code ----- ;;
@@ -1458,7 +1458,7 @@
 `(do (swap! fn->spec assoc #'count
        (t/fn :> t/pos-integer?
          [t/array?  (t/numerically t/int?)]
-         [t/str?    (t/numerically t/int?)]
+         [t/string? (t/numerically t/int?)]
          [!+vector? t/any?]))
 
      ...)

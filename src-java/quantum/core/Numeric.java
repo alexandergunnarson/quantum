@@ -22,8 +22,8 @@ public class Numeric {
 
     // ================================= Boolean Operations ===================================== //
 
-    public static boolean isTrue  (final boolean a                 ) { return a == true; }
-    public static boolean isFalse (final boolean a                 ) { return a == false; }
+    public static boolean isTrue  (final boolean a                 ) { return a; }
+    public static boolean isFalse (final boolean a                 ) { return !a; }
     public static boolean isNil   (final Object  a                 ) { return a == null; }
     public static boolean not     (final boolean a                 ) { return !a; }
     public static boolean and     (final boolean a, final boolean b) { return a && b; }

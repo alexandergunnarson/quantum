@@ -8,6 +8,7 @@
     [clojure.core                :as core]
     [clojure.walk]
     [quantum.core.core           :as qcore]
+    [quantum.core.typed          :as t]
     [quantum.untyped.core.form.evaluate
       :refer [case-env compile-if]]
     [quantum.untyped.core.form.generate
@@ -21,6 +22,9 @@
     [quantum.core.fn :as self
       :refer [aritoid gen-constantly gen-call gen-positional-nthas
               gen-ntha gen-conja gen-reversea gen-mapa]])))
+
+;; TODO TYPED move to `data.fn`?
+(def multimethod? (t/isa? #?(:clj clojure.lang.MultiFn :cljs cljs.core/IMultiFn)))
 
 (t/defn ^:inline identity [x t/any? > (t/type x)] x)
 

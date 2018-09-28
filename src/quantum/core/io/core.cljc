@@ -30,6 +30,7 @@
                :refer [defalias]]
              [quantum.core.spec          :as s
                :refer [validate]]
+             [quantum.core.type          :as t]
              [quantum.core.macros        :as macros
                :refer [defnt]])
   #?(:clj  (:import
@@ -38,6 +39,10 @@
                       DataInputStream DataOutputStream
                       FileInputStream FileOutputStream
                       FileNotFoundException))))
+
+        ;; TODO TYPED move?
+        ;; `js/File` isn't always available! Use an abstraction
+#?(:clj (def file? (t/isa? java.io.File)))
 
 (defonce clj-ext (atom :cljd)) ; Clojure data
 

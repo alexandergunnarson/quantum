@@ -1,5 +1,15 @@
 ;; TO MOVE
 
+#?(:clj  (def thread?       (isa? java.lang.Thread)))
+
+(def delay?        (isa? #?(:clj clojure.lang.Delay :cljs cljs.core/Delay)))
+
+#?(:clj  (def class?           (isa? java.lang.Class)))
+
+;; TODO for CLJS based on untyped impl
+#?(:clj  (def protocol?        (>expr (ufn/fn-> :on-interface class?))))
+
+
 ;; ===== quantum.core.system
 
 #?(:clj
@@ -46,9 +56,6 @@ TODO:
 - `(or (and pred then) (and (not pred) else))` (which is not correct)
 - needs to equal `(t/and (t/or (t/not a) b) (t/or a c))` (which is correct)
 - `(- (or ?!+vector? !vector? #?(:clj !!vector?)) (isa? clojure.lang.Counted))` is not right
-
-TODO:
-- split up `quantum.core.untyped.type` predicates
 
 #_"
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
@@ -183,8 +190,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - List of semi-approximately topologically ordered namespaces to make typed:
     - [.] clojure.core / cljs.core
           - [x x] =
-          - [   ] ==
+          - [. .] ==
           - [   ] any?
+          - [x x] associative?
           - [. .] boolean
           - [x x] boolean?
           - [x x] byte
@@ -195,37 +203,60 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] compare
           - [   ] conj
           - [   ] contains?
+          - [x x] counted?
           - [x |] decimal?
           - [x |] denominator
           - [x x] double
           - [x x] double?
           - [   ] even?
           - [x x] identical?
+          - [x x] indexed?
           - [x x] integer?
+          - [  |] find-keyword
           - [x x] float
           - [x x] float?
-          - [   ] infinite?
+          - [x x] ident?
+          - [|  ] infinite?
           - [x x] int
           - [x x] int?
+          - [x x] keyword
+          - [x x] keyword?
+          - [  |] locking
           - [x x] long
           - [x x] long?
+          - [x x] map?
+          - [x x] map-entry?
           - [   ] mod
+          - [x x] name
+          - [x x] namespace
           - [   ] nat-int?
           - [   ] neg?
           - [   ] neg-int?
           - [x x] nil?
           - [x x] not=
+          - [x |] ns-name
           - [x x] number?
           - [x |] numerator
           - [   ] odd?
           - [   ] pos?
           - [   ] pos-int?
+          - [x x] qualified-ident?
+          - [x x] qualified-keyword?
+          - [x x] qualified-symbol?
           - [x |] ratio?
           - [   ] rational?
           - [   ] rem
+          - [x x] set?
           - [x x] short
           - [x x] short?
+          - [x x] simple-ident?
+          - [x x] simple-keyword?
+          - [x x] simple-symbol?
           - [x x] some?
+          - [x x] string?
+          - [x x] symbol
+          - [x x] symbol?
+          - [x x] uuid?
     - [.] clojure.lang.Numbers
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Numbers.java
           - [ ] add
@@ -339,7 +370,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] quantum.core.core -> TODO just need to delete this from all references
     - [ ] quantum.core.type.core
     - [x] quantum.core.data.async
-    - [.] quantum.core.data.queue
+    - [-] quantum.core.data.queue
     - [ ] quantum.core.type.defs
     - [.] quantum.core.refs -> quantum.core.data.refs ?
     - [ ] quantum.core.logic
@@ -366,22 +397,23 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [.] quantum.core.error
     - [.] quantum.core.data.string
     - [.] quantum.core.data.array
+    - [.] quantum.core.data.list
     - [.] quantum.core.data.collections
     - [.] quantum.core.data.tuple
     - [x] quantum.core.data.time
     - [.] quantum.core.compare.core
-    - [ ] quantum.core.numeric.predicates
-    - [ ] quantum.core.numeric.convert
+    - [.] quantum.core.data.numeric
+    - [.] quantum.core.numeric.predicates
+    - [.] quantum.core.numeric.convert
     - [.] quantum.core.numeric.exponents
-    - [ ] quantum.core.numeric.misc
-    - [ ] quantum.core.numeric.operators
-    - [ ] quantum.core.numeric.trig
-    - [ ] quantum.core.numeric.truncate
+    - [.] quantum.core.numeric.misc
+    - [.] quantum.core.numeric.operators
+    - [.] quantum.core.numeric.trig
+    - [.] quantum.core.numeric.truncate
     - [x] quantum.core.numeric.types
-    - [ ] quantum.core.data.numeric
     - [.] quantum.core.numeric
+    - [.] quantum.core.data.set
     - [ ] quantum.core.string.regex
-    - [ ] quantum.core.data.set
     - [ ] quantum.core.macros.type-hint
     - [ ] quantum.core.analyze.clojure.core
     - [ ] quantum.core.analyze.clojure.predicates

@@ -487,6 +487,7 @@
 
 ;; ===== Etc. ===== ;;
 
+;; TODO figure out the best place to put this
 #?(:clj
 (def boxed-class->unboxed-symbol
   {Boolean   'boolean
@@ -500,6 +501,7 @@
 
 (uvar/defalias utdef/unboxed-symbol->type-meta)
 
+;; TODO figure out the best place to put this
 #?(:clj (def primitive-classes (->> unboxed-symbol->type-meta vals (uc/map+ :unboxed) (join #{}))))
 
 (defns- -type>classes
@@ -556,14 +558,13 @@
 ;; ===== Predicates ===== ;;
 ;; ---------------------- ;;
 
-;; TODO TYPED — split the below predicate definitions into appropriate namespaces
-
 ;; ===== General ===== ;;
 
          (def none?         empty-set)
          (def any?          universal-set)
 
-                            ;; TODO this is incomplete for CLJS base classes, I think
+                            ;; TODO this is incomplete for CLJS base classes
+                            ;; TODO is this necessary?
          (def val|by-class? (or object? #?@(:cljs [(isa? js/String) (isa? js/Symbol)])))
          (def val?          (not nil?))
 
@@ -571,7 +572,7 @@
 
 ;; ===== Meta ===== ;;
 
-#?(:clj  (def class?           (isa? java.lang.Class)))
+         ;; TODO probably move, but this is used by `quantum.untyped.core.type` etc.
 #?(:clj  (def primitive-class? (or (value Boolean/TYPE)
                                    (value Byte/TYPE)
                                    (value Character/TYPE)
@@ -580,8 +581,6 @@
                                    (value Long/TYPE)
                                    (value Float/TYPE)
                                    (value Double/TYPE))))
-         ;; TODO for CLJS
-#?(:clj  (def protocol?        (>expr (ufn/fn-> :on-interface class?))))
 
 ;; ===== Primitives ===== ;;
 ;; NOTE these are kept here because they're used in both type analysis and various test namespaces
@@ -590,12 +589,13 @@
 #?(:clj  (def  byte?    (isa? Byte)))
 #?(:clj  (def  char?    (isa? Character)))
 #?(:clj  (def  short?   (isa? Short)))
-#?(:clj  (def  int?     (isa? Integer)))
-#?(:clj  (def  long?    (isa? Long)))
+#?(:clj  (def  int?     (isa? Integer))) ; only primitive int, not goog.math.Integer
+#?(:clj  (def  long?    (isa? Long))) ; only primitive long, not goog.math.Long
 #?(:clj  (def  float?   (isa? Float)))
          (def  double?  (isa? #?(:clj Double :cljs js/Number)))
 
          ;; These are special for CLJS protocols
+         ;; Possibly planned to be used by `quantum.untyped.core.analyze`
 #?(:cljs (def  native?  (or (isa? js/Boolean)
                             (isa? js/Number)
                             (isa? js/Object)
@@ -606,210 +606,83 @@
 
 ;; ===== Booleans ===== ;;
 
-;; Used in `quantum.untyped.core.analyze`
+;; Used by `quantum.untyped.core.analyze`
 (def true?  (value true))
 (def false? (value false))
 
 ;; ========== Collections ========== ;;
 
-;; Used in `quantum.untyped.core.analyze`
+;; Possibly planned to be used by `quantum.untyped.core.analyze`
+(def +list|built-in?
+  (or (isa? #?(:clj clojure.lang.PersistentList$EmptyList :cljs cljs.core/EmptyList))
+      (isa? #?(:clj clojure.lang.PersistentList           :cljs cljs.core/List))))
+
+;; Used by `quantum.untyped.core.analyze`
+(def +vector|built-in? (t/isa? #?(:clj  clojure.lang.PersistentVector
+                                  :cljs cljs.core/PersistentVector)))
+
+;; Used by `quantum.untyped.core.analyze`
 (def +map|built-in?
      (or (isa? #?(:clj clojure.lang.PersistentHashMap  :cljs cljs.core/PersistentHashMap))
          (isa? #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core/PersistentArrayMap))
          (isa? #?(:clj clojure.lang.PersistentTreeMap  :cljs cljs.core/PersistentTreeMap))))
 
-;; Used in `quantum.untyped.core.analyze`
-(def +vector|built-in? (isa? #?(:clj  clojure.lang.PersistentVector
-                                :cljs cljs.core/PersistentVector)))
-
-;; ===== Sets ===== ;; Associative; A special type of Map whose keys and vals are identical
-
-#?(:clj  (def    java-set?              (isa? java.util.Set)))
-
-;; ----- Identity Sets (identity-based equality) ----- ;;
-
-         (def   !identity-set? #?(:clj  none? #_(isa? java.util.IdentityHashSet) ; TODO implement
-                                   :cljs (isa? js/Set)))
-
-         (def   identity-set? !identity-set?)
-
-;; ----- Hash Sets (value-based equality) ----- ;;
-
-         (def   +hash-set?              (isa? #?(:clj  clojure.lang.PersistentHashSet
-                                                  :cljs cljs.core/PersistentHashSet)))
-         (def  !+hash-set?              (isa? #?(:clj  clojure.lang.PersistentHashSet$TransientHashSet
-                                                  :cljs cljs.core/TransientHashSet)))
-         (def ?!+hash-set?              (or +hash-set? !+hash-set?))
-
-         (def   !hash-set|byte?         #?(:clj (isa? it.unimi.dsi.fastutil.bytes.ByteOpenHashSet)     :cljs none?))
-         (def   !hash-set|char?         #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharOpenHashSet)     :cljs none?))
-         (def   !hash-set|short?        #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortOpenHashSet)   :cljs none?))
-         (def   !hash-set|int?          #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntOpenHashSet)       :cljs none?))
-         (def   !hash-set|long?         #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongOpenHashSet)     :cljs none?))
-         (def   !hash-set|float?        #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatOpenHashSet)   :cljs none?))
-         (def   !hash-set|double?       #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet) :cljs none?))
-         (def   !hash-set|ref?          #?(:clj  (or (isa? java.util.HashSet)
-                                                     (isa? it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet))
-                                           :cljs none?))
-
-         (def   !hash-set?              (or !hash-set|ref?
-                                            !hash-set|byte? !hash-set|short? !hash-set|char?
-                                            !hash-set|int? !hash-set|long?
-                                            !hash-set|float? !hash-set|double?))
-
-         ;; CLJ technically can have via ConcurrentHashMap with same KVs but this hasn't been implemented yet
-#?(:clj  (def  !!hash-set?              none?))
-         (def    hash-set?              (or ?!+hash-set? !hash-set? #?(:clj !!hash-set?)))
-
-;; ----- Unsorted Sets ----- ;;
-
-         (def   +unsorted-set?            +hash-set?)
-         (def  !+unsorted-set?           !+hash-set?)
-         (def ?!+unsorted-set?          ?!+hash-set?)
-
-         (def   !unsorted-set|byte?     !hash-set|byte?)
-         (def   !unsorted-set|short?    !hash-set|char?)
-         (def   !unsorted-set|char?     !hash-set|short?)
-         (def   !unsorted-set|int?      !hash-set|int?)
-         (def   !unsorted-set|long?     !hash-set|long?)
-         (def   !unsorted-set|float?    !hash-set|float?)
-         (def   !unsorted-set|double?   !hash-set|double?)
-         (def   !unsorted-set|ref?      !hash-set|ref?)
-
-         (def   !unsorted-set?
-            (or !unsorted-set|ref?
-                !unsorted-set|byte? !unsorted-set|short? !unsorted-set|char?
-                !unsorted-set|int? !unsorted-set|long?
-                !unsorted-set|float? !unsorted-set|double?))
-
-#?(:clj  (def  !!unsorted-set?          !!hash-set?))
-         (def    unsorted-set?            hash-set?)
-
-;; ----- Sorted Sets ----- ;;
-
-         (def   +sorted-set?            (isa? #?(:clj  clojure.lang.PersistentTreeSet
-                                                 :cljs cljs.core/PersistentTreeSet)))
-         (def  !+sorted-set?            none?)
-         (def ?!+sorted-set?            (or +sorted-set? !+sorted-set?))
-
-         (def   !sorted-set|byte?       #?(:clj  (isa? it.unimi.dsi.fastutil.bytes.ByteSortedSet)
-                                           :cljs none?))
-         (def   !sorted-set|short?      #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortSortedSet)                                 :cljs none?))
-         (def   !sorted-set|char?       #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharSortedSet)                                 :cljs none?))
-         (def   !sorted-set|int?        #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntSortedSet)                                 :cljs none?))
-         (def   !sorted-set|long?       #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongSortedSet)                                 :cljs none?))
-         (def   !sorted-set|float?      #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatSortedSet)                                 :cljs none?))
-         (def   !sorted-set|double?     #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleSortedSet)
-                                           :cljs none?))
-         ;; CLJS technically can have via goog.structs.AVLTree with same KVs but this hasn't been implemented yet
-         (def   !sorted-set|ref?        #?(:clj (isa? java.util.TreeSet) :cljs none?))
-
-         (def   !sorted-set?            (or !sorted-set|ref?
-                                            !sorted-set|byte? !sorted-set|short? !sorted-set|char?
-                                            !sorted-set|int? !sorted-set|long?
-                                            !sorted-set|float? !sorted-set|double?))
-
-         ;; CLJ technically can have via ConcurrentSkipListMap with same KVs but this hasn't been implemented yet
-#?(:clj  (def  !!sorted-set?            none?))
-         (def    sorted-set?            (or ?!+sorted-set? !sorted-set? #?@(:clj [!!sorted-set? (isa? java.util.SortedSet)])))
-
-;; ----- Other Sets ----- ;;
-
-         (def   +insertion-ordered-set? (or (isa? linked.set.LinkedSet)
-                                            ;; This is true, but we have replaced OrderedSet with LinkedSet
-                                          #_(:clj (isa? flatland.ordered.set.OrderedSet))))
-         (def  !+insertion-ordered-set? none?
-                                        ;; This is true, but we have replaced OrderedSet with LinkedSet
-                                      #_(isa? flatland.ordered.set.TransientOrderedSet))
-         (def ?!+insertion-ordered-set? (or +insertion-ordered-set? !+insertion-ordered-set?))
-
-         (def   !insertion-ordered-set? #?(:clj (isa? java.util.LinkedHashSet) :cljs none?))
-
-         ;; CLJ technically can have via ConcurrentLinkedHashMap with same KVs but this hasn't been implemented yet
-#?(:clj  (def  !!insertion-ordered-set? none?))
-
-         (def    insertion-ordered-set? (or ?!+insertion-ordered-set? !insertion-ordered-set? #?(:clj !!insertion-ordered-set?)))
-
-;; ----- General Sets ----- ;;
-
-         (def  !+set?                   (isa? #?(:clj  clojure.lang.ITransientSet
-                                                 :cljs cljs.core/ITransientSet)))
-
-         (def   +set|built-in?          (or (isa? #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet))
-                                             (isa? #?(:clj clojure.lang.PersistentTreeSet :cljs cljs.core/PersistentTreeSet))))
-
-         (def   +set?                   (isa? #?(:clj  clojure.lang.IPersistentSet
-                                                 :cljs cljs.core/ISet)))
-         (def ?!+set?                   (or !+set? +set?))
-
-         (def   !set|byte?              #?(:clj (isa? it.unimi.dsi.fastutil.bytes.ByteSet)     :cljs none?))
-         (def   !set|short?             #?(:clj (isa? it.unimi.dsi.fastutil.shorts.ShortSet)   :cljs none?))
-         (def   !set|char?              #?(:clj (isa? it.unimi.dsi.fastutil.chars.CharSet)     :cljs none?))
-         (def   !set|int?               #?(:clj (isa? it.unimi.dsi.fastutil.ints.IntSet)       :cljs none?))
-         (def   !set|long?              #?(:clj (isa? it.unimi.dsi.fastutil.longs.LongSet)     :cljs none?))
-         (def   !set|float?             #?(:clj (isa? it.unimi.dsi.fastutil.floats.FloatSet)   :cljs none?))
-         (def   !set|double?            #?(:clj (isa? it.unimi.dsi.fastutil.doubles.DoubleSet) :cljs none?))
-         (def   !set|ref?               (or !unsorted-set|ref? !sorted-set|ref?))
-
-         (def   !set?                   (or !set|ref?
-                                            !set|byte? !set|short? !set|char?
-                                            !set|int? !set|long?
-                                            !set|float? !set|double?))
-
-#?(:clj  (def  !!set?                   (or !!unsorted-set? !!sorted-set?)))
-         (def    set?                   (or ?!+set? !set? #?@(:clj [!!set? (isa? java.util.Set)])))
+;; Used by `quantum.untyped.core.analyze`
+(def +set|built-in?
+  (or (isa? #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet))
+      (isa? #?(:clj clojure.lang.PersistentTreeSet :cljs cljs.core/PersistentTreeSet))))
 
 ;; ===== Functions ===== ;;
 
-         (def fn?          (isa? #?(:clj clojure.lang.Fn  :cljs js/Function)))
+;; Used by `quantum.untyped.core.analyze`
+(def fn?  (isa? #?(:clj clojure.lang.Fn  :cljs js/Function)))
 
-         (def ifn?         (isa? #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
+;; Used by `quantum.untyped.core.analyze` via `t/callable?`
+(def ifn? (isa? #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
 
-         (def fnt?         (and fn? (>expr (fn-> c/meta ::type))))
+;; Used by `quantum.untyped.core.analyze` via `t/callable?`
+(def fnt? (and fn? (>expr (fn-> c/meta ::type))))
 
-         (def multimethod? (isa? #?(:clj clojure.lang.MultiFn :cljs cljs.core/IMultiFn)))
+;; TODO should we allow java.lang.Runnable, java.util.concurrent.Callable, and other
+;; functional interfaces to be `callable?`?
+;; Used by `quantum.untyped.core.analyze`
+(uvar/def callable?
+  "The set of all objects that are able to called/invoked by being in functor position
+   (first element of an unquoted list) within a typed context."
+  (or ifn? fnt?))
 
-         ;; I.e., can you call/invoke it by being in functor position (first element of an unquoted
-         ;; list) within a typed context?
-         ;; TODO should we allow java.lang.Runnable, java.util.concurrent.Callable, and other
-         ;; functional interfaces to be `callable?`?
-         (def callable?    (or ifn? fnt?))
+;; ===== Metadata ===== ;;
 
-;; ===== Miscellaneous ===== ;;
+;; Used by `quantum.untyped.core.analyze.ast`
+(def with-metable? (isa? #?(:clj clojure.lang.IObj :cljs cljs.core/IWithMeta)))
 
-         ;; Used by `quantum.untyped.core.analyze.ast`
-         (def with-metable? (isa? #?(:clj clojure.lang.IObj  :cljs cljs.core/IWithMeta)))
+;; ===== Errors ===== ;;
 
-         ;; TODO move
-#?(:clj  (def thread?       (isa? java.lang.Thread)))
+;; Used by `quantum.untyped.core.analyze`
+(def throwable? "Able to be used with `throw`" #?(:clj (isa? java.lang.Throwable) :cljs any?))
 
-         ;; Used by `quantum.untyped.core.analyze`
-         (def throwable? "Able to be used with `throw`"
-           #?(:clj (isa? java.lang.Throwable) :cljs any?))
+;; ===== Literals ===== ;;
 
-         ;; Used by `quantum.untyped.core.analyze`
-         (def regex?        (isa? #?(:clj java.util.regex.Pattern :cljs js/RegExp)))
+;; Used by `quantum.untyped.core.analyze`, including via `t/literal?`
+(def regex?   (isa? #?(:clj java.util.regex.Pattern :cljs js/RegExp)))
 
-         ;; Used by `quantum.untyped.core.analyze`
-         (def keyword?      (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
+;; Used by `quantum.untyped.core.analyze`, including via `t/literal?`
+(def keyword? (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
 
-         ;; Used by `quantum.untyped.core.analyze` via `t/literal?`
-         (def str?          (isa? #?(:clj java.lang.String :cljs js/String)))
+;; Used by `quantum.untyped.core.analyze` via `t/literal?`
+(def string?  (isa? #?(:clj java.lang.String :cljs js/String)))
 
-         ;; Used by `quantum.untyped.core.analyze` via `t/literal?`
-         (def symbol?       (isa? #?(:clj clojure.lang.Symbol :cljs cljs.core/Symbol)))
+;; Used by `quantum.untyped.core.analyze` via `t/literal?`
+(def symbol?  (isa? #?(:clj clojure.lang.Symbol :cljs cljs.core/Symbol)))
 
-         ;; TODO move
-         ;; `js/File` isn't always available! Use an abstraction
-#?(:clj  (def file?         (isa? java.io.File)))
+        ;; Used by `quantum.untyped.core.analyze` via `t/literal?`
+#?(:clj (def tagged-literal? (isa? clojure.lang.TaggedLiteral)))
 
-         ;; TODO move
-         (def delay?        (isa? #?(:clj clojure.lang.Delay :cljs cljs.core/Delay)))
+;; Used by `quantum.untyped.core.analyze`
+(def literal?
+  (or nil? boolean? symbol? keyword? str? #?(:clj long?) double? regex? #?(:clj tagged-literal?)))
 
-#?(:clj  (def tagged-literal? (isa? clojure.lang.TaggedLiteral)))
-
-         ;; Used in `quantum.untyped.core.analyze`
-         (def literal?
-           (or nil? boolean? symbol? keyword? str? #?(:clj long?) double? #?(:clj tagged-literal?)))
-
-       #_(def form?             (or literal? +list? +vector? ...))
+;; TODO this might not be right — quite possibly any seq is a valid form
+;; TODO this has to be recursively true for seq, vector, map, and set
+;; Possibly planned to be used by `quantum.untyped.core.analyze`
+#_(def form? (or literal? +list|built-in? +vector|built-in? +map|built-in? +set|built-in?))

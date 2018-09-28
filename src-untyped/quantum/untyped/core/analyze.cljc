@@ -48,7 +48,7 @@
 #?(:clj (defns method? [x _] (instance? Method x)))
 
 #?(:clj
-(defns class->methods [^Class c t/class? > map?]
+(defns class->methods [^Class c class? > map?]
   (->> (.getMethods c)
        (c/remove+  (fn [^java.lang.reflect.Method x]
                      (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
@@ -70,7 +70,7 @@
   fipp.ednize/IOverride
   fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "F") (into (array-map) this))))
 
-(defns class->fields [^Class c t/class? > map?]
+(defns class->fields [^Class c class? > map?]
   (->> (.getFields c)
        (c/remove+ (fn [^java.lang.reflect.Field x]
                     (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
@@ -249,7 +249,7 @@
 
    Unchecked fns could be assumed to actually *want* to shift the range over if the
    range hits a certain point, but we do not make that assumption here."
-  [c t/class?, method symbol? > (? t/type?)]
+  [c class?, method symbol? > (? t/type?)]
   (when (identical? c clojure.lang.RT)
     (case method
       (uncheckedBooleanCast booleanCast) t/boolean?
@@ -266,7 +266,7 @@
   "A note will be made of what methods match the argument types.
    If only one method is found, that is noted too. If no matching method is found, an
    exception is thrown."
-  [env ::env, form _, target uast/node?, target-class t/class?, static? t/boolean?
+  [env ::env, form _, target uast/node?, target-class class?, static? t/boolean?
    method-form simple-symbol?, args-forms _ #_(seq-of form?) > uast/method-call?]
   ;; TODO cache type by method
   (if-not-let [methods-for-name (-> target-class class->methods|with-cache
@@ -324,7 +324,7 @@
 (defns classes>class
   "Ensure that given a set of classes, that set consists of at most a class C and nil.
    If so, returns C. Otherwise, throws."
-  [cs (s/set-of (? t/class?)) > t/class?]
+  [cs (s/set-of (s/? class?)) > class?]
   (let [cs' (disj cs nil)]
     (if (-> cs' count (= 1))
         (first cs')
@@ -396,7 +396,7 @@
   (uast/quoted env form (tcore/most-primitive-class-of body)))
 
 (defns- analyze-seq|new
-  [env ::env, [_ _ & [c|form _ #_t/class? & args _ :as body] _ :as form] _ > uast/new-node?]
+  [env ::env, [_ _ & [c|form _ #_class? & args _ :as body] _ :as form] _ > uast/new-node?]
   (let [c|analyzed (analyze* env c|form)]
     (if-not (and (-> c|analyzed :type t/value-type?)
                  (-> c|analyzed :type utr/value-type>value class?))
@@ -620,7 +620,7 @@
     (uast/symbol env form resolved
       (ifs (uast/node? resolved)
              (:type resolved)
-           (or (t/literal? resolved) (t/class? resolved))
+           (or (t/literal? resolved) (class? resolved))
              (t/value resolved)
            (var? resolved)
              (or (-> resolved meta :quantum.core.type/type) (t/value @resolved))

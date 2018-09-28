@@ -7,7 +7,7 @@
     [quantum.core.data.meta
       :refer [>meta]]
     [quantum.core.data.string  :as dstr
-      :refer [str? >str]]
+      :refer [>string]]
     [quantum.core.type         :as t]
     [quantum.untyped.core.core :as ucore]))
 
@@ -23,10 +23,10 @@
 
 ;; ===== Nameability ===== ;;
 
-(def named? (t/isa? #?(:clj clojure.lang.Named :cljs cljs.core/INamed)))
+(def named? (t/isa|direct? #?(:clj clojure.lang.Named :cljs cljs.core/INamed)))
 
-(t/defn demunged>namespace [s str?] TODO TYPED #_(subs s 0 (.lastIndexOf s "/")))
-(t/defn demunged>name      [s str?] TODO TYPED #_(subs s (inc (.lastIndexOf s "/"))))
+(t/defn demunged>namespace [s dstr/string?] TODO TYPED #_(subs s 0 (.lastIndexOf s "/")))
+(t/defn demunged>name      [s dstr/string?] TODO TYPED #_(subs s (inc (.lastIndexOf s "/"))))
 
 (defn... ?ns>name [?ns]
   (name #?(:clj (if (namespace? ?ns)
@@ -36,9 +36,9 @@
 
 (t/defn >name
   "Computes the nilable name (the unqualified string identifier) of `x`."
-  > (t/? str?)
-        (^:inline [x (t/or t/nil? str?)] x)
-        (^:inline [x named?] #?(:clj (.getName x) :cljs (-name ^not-native x)))
+  > (t/? dstr/string?)
+        (^:inline [x (t/or t/nil? dstr/string?)] x)
+        (^:inline [x named?] #?(:clj (.getName x) :cljs (cljs.core/-name x)))
 #?(:clj (^:inline [x ??/class?] (.getName x)))
         (         [x ??/fn?]
           #?(:clj  (or (some-> (-> >meta :name) >name)
@@ -48,9 +48,9 @@
 
 (t/defn >namespace
   "Computes the nilable identifier-namespace (the string identifier-qualifier) of `x`."
-  > (t/? str?)
-        (^:inline [x (t/or t/nil? str? #?(:clj ??/class?) #?(:clj ??/namespace?))] nil)
-        (^:inline [x named?] #?(:clj (.getNamespace x) :cljs (-namespace ^not-native x)))
+  > (t/? dstr/string?)
+        (^:inline [x (t/or t/nil? dstr/string? #?(:clj ??/class?) #?(:clj ??/namespace?))] nil)
+        (^:inline [x named?] #?(:clj (.getNamespace x) :cljs (cljs.core/-namespace x)))
         (         [x ??/fn?]
           #?(:clj  (or (some-> (-> x >meta :ns) >name)
                        (-> x ??/>class .getName clojure.lang.Compiler/demunge demunged>namespace))
@@ -100,16 +100,16 @@
   ([x keyword?] x)
   ([x symbol?] #?(:clj  (clojure.lang.Keyword/intern x)
                   :cljs (cljs.core/Keyword. (>namespace x) (>name x) (.-str x) nil)))
-  ([x str?] #?(:clj  (clojure.lang.Keyword/intern x)
-                     ;; TODO TYPED below
-               :cljs (let [parts (.split x "/")]
-                       (if (== (alength parts) 2)
-                           (cljs.core/Keyword. (aget parts 0) (aget parts 1) x nil)
-                           (cljs.core/Keyword. nil (aget parts 0) x nil)))))
-  ([ns-str t/nil?, name-str str?]
+  ([x dstr/string?] #?(:clj  (clojure.lang.Keyword/intern x)
+                             ;; TODO TYPED below
+                       :cljs (let [parts (.split x "/")]
+                               (if (== (alength parts) 2)
+                                   (cljs.core/Keyword. (aget parts 0) (aget parts 1) x nil)
+                                   (cljs.core/Keyword. nil (aget parts 0) x nil)))))
+  ([ns-str t/nil?, name-str dstr/string?]
     #?(:clj  (clojure.lang.Keyword/intern ns-str name-str)
        :cljs (cljs.core/Keyword. ns-str name-str name-str nil)))
-  ([ns-str str?, name-str str?]
+  ([ns-str dstr/string?, name-str dstr/string?]
     #?(:clj  (clojure.lang.Keyword/intern ns-str name-str)
        :cljs (cljs.core/Keyword. ns-str name-str (>str ns-str "/" name-str) nil))))
 
@@ -117,18 +117,18 @@
   "Outputs a symbol (possibly qualified, meta-able identifier)."
   > symbol?
   ([x symbol?] x)
-  ([x str?] #?(:clj  (clojure.lang.Symbol/intern x)
-                     ;; TODO TYPED below
-               :cljs (let [i (.indexOf x "/")]
-                       (if (< i 1)
-                           (>symbol nil x)
-                           (>symbol (.substring x 0 i)
-                                    (.substring x (inc i) (.-length x)))))))
+  ([x dstr/string?] #?(:clj  (clojure.lang.Symbol/intern x)
+                       ;; TODO TYPED below
+                       :cljs (let [i (.indexOf x "/")]
+                         (if (< i 1)
+                             (>symbol nil x)
+                             (>symbol (.substring x 0 i)
+                                      (.substring x (inc i) (.-length x)))))))
   ([x keyword?] (>symbol (>namespace x) (>name x)))
-  ([ns-str t/nil?, name-str str?]
+  ([ns-str t/nil?, name-str dstr/string?]
     #?(:clj  (clojure.lang.Symbol/intern ns-str name-str)
        :cljs (cljs.core/Symbol. ns-str name-str name-str nil nil)))
-  ([ns-str str?, name-str str?]
+  ([ns-str dstr/string?, name-str dstr/string?]
     #?(:clj  (clojure.lang.Symbol/intern ns-str name-str)
        :cljs (cljs.core/Symbol. ns-str name-str (>str ns-str "/" name-str) nil nil)))
 
@@ -145,7 +145,7 @@
 
 ;; ===== UUIDs ===== ;;
 
-(def uuid? (t/isa? #?(:clj java.util.UUID :cljs cljs.core/UUID)))
+(def uuid? (t/isa|direct? #?(:clj java.util.UUID :cljs cljs.core/UUID)))
 
 (t/defn >uuid > uuid?
   ([]
@@ -162,7 +162,7 @@
                       (hex) (hex) (hex) (hex)
                       (hex) (hex) (hex) (hex)
                       (hex) (hex) (hex) (hex)))))))
-  #?(:cljs ([x str?] (cljs.core/UUID. (.toLowerCase s) nil))))
+  #?(:cljs ([x dstr/string?] (cljs.core/UUID. (.toLowerCase s) nil))))
 
 ;; ===== Delimited identifiers  ===== ;;
 
@@ -170,7 +170,7 @@
 (defrecord
   ^{:doc "A delimited identifier.
           Defaults to delimiting all qualifiers by the pipe symbol instead of slashes or dots."}
-  DelimitedIdent [qualifiers #_(t/of (t/and str? (t/not (fn1 contains? \|))))]
+  DelimitedIdent [qualifiers #_(t/of (t/and dstr/string? (t/not (fn1 contains? \|))))]
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (tagged-literal '| (>symbol (??str/join "|" qualifiers)))))
@@ -180,7 +180,7 @@
 (t/defn >delim-ident
   "Computes the delimited identifier of `x`."
         ([x delim-ident?] x)
-        ([x str?] (-> x (??str/split #"\.|\||/") (DelimitedIdent.)))
+        ([x dstr/string?] (-> x (??str/split #"\.|\||/") (DelimitedIdent.)))
         ([x named?] (DelimitedIdent.
                       (??/concat (some-> (>namespace x) (??str/split #"\.|\||/"))
                                  (-> x >name (??str/split #"\.|\||/")))))
@@ -193,8 +193,8 @@
                    (concat (-> x >namespace (str/split #"\.|\||/"))
                            (-> x >name      (str/split #"\.|\||/"))))
 (fn?          x) (DelimitedIdent.
-                             #?(:clj  (or (some-> (-> x >meta :name) >name (str/split #"\.|\||/"))
-                                          (-> x class .getName clojure.lang.Compiler/demunge (str/split #"\.|\||/")))
-                                :cljs (if (-> x .-name str/blank?)
-                                          ["<anonymous>"]
-                                          (-> x .-name demunge-str (str/split #"\.|\||/")))))
+                   #?(:clj  (or (some-> (-> x >meta :name) >name (str/split #"\.|\||/"))
+                                (-> x class .getName clojure.lang.Compiler/demunge (str/split #"\.|\||/")))
+                      :cljs (if (-> x .-name str/blank?)
+                                ["<anonymous>"]
+                                (-> x .-name demunge-str (str/split #"\.|\||/")))))

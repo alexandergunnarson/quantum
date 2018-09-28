@@ -2,13 +2,16 @@
   (:refer-clojure :exclude
     [associative? indexed? list? reduced? sequential?])
   (:require
-    [quantum.core.data.array  :as arr]
-    [quantum.core.data.map    :as map]
-    [quantum.core.data.set    :as set]
-    [quantum.core.data.string :as dstr]
-    [quantum.core.data.tuple  :as tup]
-    [quantum.core.data.vector :as vec]
-    [quantum.core.type :as t]))
+    [quantum.core.data.array   :as arr]
+    [quantum.core.data.map     :as map]
+    [quantum.core.data.set     :as set]
+    [quantum.core.data.string  :as dstr]
+    [quantum.core.data.tuple   :as tup]
+    [quantum.core.data.vector  :as vec]
+    [quantum.core.type         :as t]
+    [quantum.core.vars         :as var]
+    ;; TODO TYPED excise
+    [quantum.untyped.core.type :as ut]))
 
 ;; TODO move to `quantum.core.data.sequence`
 ;; ===== Sequences and sequence-wrappers ===== ;;
@@ -16,7 +19,7 @@
 
 (def iseqable? (t/isa|direct? #?(:clj clojure.lang.Seqable :cljs cljs.core/ISeqable)))
 
-(def iseq? (t/isa? #?(:clj clojure.lang.ISeq :cljs cljs.core/ISeq)))
+(def iseq? (t/isa|direct? #?(:clj clojure.lang.ISeq :cljs cljs.core/ISeq)))
 
 #?(:clj (def aseq? (t/isa? clojure.lang.ASeq)))
 
@@ -72,7 +75,10 @@
                                     (t/isa? quantum.core.data.finger_tree.CountedDoubleList))
                         :cljs (t/isa? quantum.core.data.finger-tree/CountedDoubleList)))
 
+(var/defalias ut/+list|built-in?)
+
 (def +list?  (t/isa? #?(:clj clojure.lang.IPersistentList :cljs cljs.core/IList)))
+
 (def !list?  #?(:clj (t/isa? java.util.LinkedList) :cljs t/none?))
 (def  list?  #?(:clj (t/isa? java.util.List) :cljs +list?))
 
@@ -104,15 +110,14 @@
         #?(:clj dstr/char-seq? :cljs dstr/string?)
         arr/array?))
 
-(def  +associative? (t/isa? #?(:clj  clojure.lang.Associative
-                               :cljs cljs.core/IAssociative)))
+(def  +associative? (t/isa|direct? #?(:clj  clojure.lang.Associative
+                                      :cljs cljs.core/IAssociative)))
 
-(def !+associative? (t/isa? #?(:clj  clojure.lang.ITransientAssociative
-                               :cljs cljs.core/ITransientAssociative)))
+(def !+associative? (t/isa|direct? #?(:clj  clojure.lang.ITransientAssociative
+                                      :cljs cljs.core/ITransientAssociative)))
 
 ;; Indicates whether `assoc?!` is supported
-(def associative?
-  (t/or +associative? !+associative? (t/or map/map? indexed?)))
+(def associative? (t/or +associative? !+associative? (t/or map/map? indexed?)))
 
 (def sequential?
   (t/or (t/isa? #?(:clj clojure.lang.Sequential :cljs cljs.core/ISequential))
@@ -162,7 +167,7 @@
   [x t/ref?] (#?(:clj clojure.lang.Reduced. :cljs cljs.core/Reduced.) x))
 
 (def reducible?
-  (t/or p/nil? dstr/str? vec/!+vector? arr/array? dnum/numerically-integer?
+  (t/or p/nil? dstr/string? vec/!+vector? arr/array? dnum/numerically-integer?
         ;; TODO what about `transformer?`
         dasync/read-chan?
         (t/isa? fast_zip.core.ZipperLocation)

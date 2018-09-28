@@ -1,4 +1,6 @@
 (ns quantum.core.data.tuple
+  (:refer-clojure :exclude
+    [map-entry?])
   (:require
     [quantum.core.type               :as t]
     [quantum.core.vars
@@ -6,9 +8,9 @@
     ;; TODO TYPED excise
     [quantum.untyped.core.data.tuple :as u]))
 
-        ;; clojure.lang.Tuple was discontinued; we won't support it for now
-        (def tuple? (t/isa? quantum.untyped.core.data.tuple.Tuple))
+;; clojure.lang.Tuple was discontinued; we won't support it for now
+(def tuple? (t/isa? quantum.untyped.core.data.tuple.Tuple))
 
-#?(:clj (def map-entry? (t/isa? java.util.Map$Entry)))
+(def map-entry? (t/isa|direct? #?(:clj java.util.Map$Entry :cljs cljs.core/IMapEntry)))
 
 #?(:clj (defalias u/tuple))

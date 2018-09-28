@@ -150,7 +150,7 @@
 
 ;; TODO move to better place?
 (t/defn- ^:inline string-seq>underlying-string
-  [xs (t/isa? clojure.lang.StringSeq) > (t/assume dstr/str?)] (.s xs))
+  [xs (t/isa? clojure.lang.StringSeq) > (t/assume dstr/string?)] (.s xs))
 
 ;; ===== Reductive functions ===== ;;
 
@@ -175,7 +175,7 @@
 #?(:clj
 (t/defn reduce-indexed
   "Made public in case future specializations want to use it."
-  ([rf rf?, init t/any?, xs (t/or dstr/str? vec/!+vector? arr/array?), i0 t/numerically-integer?]
+  ([rf rf?, init t/any?, xs (t/or dstr/string? vec/!+vector? arr/array?), i0 t/numerically-integer?]
     (let [ct (count xs)]
       (loop [i (p/>int i0), ret init]
         (if (comp/< i ct)
@@ -237,7 +237,7 @@
          (^:inline [rf rf?, init t/any?, xs p/nil?] init)
          ;; - Adapted from `areduce`
          ;; - `!+vector?` included because they aren't reducible or seqable by default
-         (^:inline [rf rf?, init t/any?, xs (t/or dstr/str? vec/!+vector? arr/array?)]
+         (^:inline [rf rf?, init t/any?, xs (t/or dstr/string? vec/!+vector? arr/array?)]
            (reduce-indexed rf init xs 0))
 #?(:clj  (^:inline [rf rf?, init t/any?, xs dc/string-seq?]
            (reduce-indexed rf init (string-seq>underlying-string xs) (.index xs))))
@@ -367,8 +367,8 @@
                   cljs.core/count           "9/26/2018"}}
          ;; Counted
          ([x  p/nil?           > #?(:clj p/long? :cljs dnum/nip?)] 0)
-#?(:cljs ([xs dstr/str?        > (t/assume dnum/nip?)] (.-length xs)))
-#?(:cljs ([xs dstr/!str?       > (t/assume dnum/nip?)] (.getLength xs)))
+#?(:cljs ([xs dstr/string?     > (t/assume dnum/nip?)] (.-length xs)))
+#?(:cljs ([xs dstr/!string?    > (t/assume dnum/nip?)] (.getLength xs)))
          ([xs dc/icounted?     > #?(:clj p/int? :cljs (t/* dnum/nip?))]
            (#?(:clj .count :cljs cljs.core/-count) xs))
 #?(:clj  ([xs dstr/char-seq?   > p/int?] (.length xs)))
