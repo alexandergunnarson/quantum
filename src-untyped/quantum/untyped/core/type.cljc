@@ -8,13 +8,10 @@
             boolean? byte? bytes? char? short? int? long? float? double?
             isa?
             nil? any? class? tagged-literal? #?(:cljs object?)
-            number? decimal? bigdec? integer? ratio?
             true? false? keyword? symbol?
-            array? associative? coll? counted? indexed? iterable? list? map? map-entry? record?
-            seq? seqable? sequential? set? sorted? vector?
             fn? ifn?
             meta
-            delay? ref volatile?
+            ref
             fn])
          (:require
            [clojure.core                               :as c]
@@ -635,10 +632,14 @@
 ;; ===== Functions ===== ;;
 
 ;; Used by `quantum.untyped.core.analyze`
-(def fn?  (isa? #?(:clj clojure.lang.Fn  :cljs js/Function)))
+(def fn? #?(:clj  (isa? clojure.lang.Fn)
+            :cljs (or (isa? js/Function) (isa|direct? cljs.core/Fn))))
 
 ;; Used by `quantum.untyped.core.analyze` via `t/callable?`
-(def ifn? (isa? #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
+(uvar/def ifn?
+  "Note that in CLJS, `cljs.core/ifn?` checks if something is either `fn?` or if it satisfies
+   `cljs.core/IFn`. By contrast, this type encompasses only direct implementers of `cljs.core/IFn`."
+  (isa|direct? #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
 
 ;; Used by `quantum.untyped.core.analyze` via `t/callable?`
 (def fnt? (and fn? (>expr (fn-> c/meta ::type))))
@@ -649,7 +650,7 @@
 (uvar/def callable?
   "The set of all objects that are able to called/invoked by being in functor position
    (first element of an unquoted list) within a typed context."
-  (or ifn? fnt?))
+  (or fn? ifn? fnt?))
 
 ;; ===== Metadata ===== ;;
 

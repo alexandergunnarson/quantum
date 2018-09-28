@@ -2,8 +2,6 @@
 
 #?(:clj  (def thread?       (isa? java.lang.Thread)))
 
-(def delay?        (isa? #?(:clj clojure.lang.Delay :cljs cljs.core/Delay)))
-
 #?(:clj  (def class?           (isa? java.lang.Class)))
 
 ;; TODO for CLJS based on untyped impl
@@ -186,61 +184,115 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     [.] : in progress
     [-] : done as far as possible but not truly complete
     [x] : actually done
-    [|] : not possible / N/A / refused
+    [|] : not possible / N/A
+    [!] : refused
   - List of semi-approximately topologically ordered namespaces to make typed:
     - [.] clojure.core / cljs.core
           - [x x] =
           - [. .] ==
+          - [. .] <
+          - [   ] and
           - [   ] any?
+          - [   ] apply
+          - [   ] assoc
+          - [   ] assoc!
           - [x x] associative?
           - [. .] boolean
           - [x x] boolean?
+          - [   ] butlast
           - [x x] byte
           - [x x] byte?
           - [x x] char
           - [x x] char?
+          - [  |] cast
+          - [x x] chunk
+          - [x x] chunk-append
+          - [x x] chunk-buffer
+          - [x x] chunk-cons
+          - [x x] chunk-first
+          - [x x] chunk-next
+          - [x x] chunk-rest
+          - [x x] chunked-seq?
           - [  |] class
           - [x x] compare
+          - [   ] concat
+          - [   ] cond
+          - [   ] cons
           - [   ] conj
           - [   ] contains?
+          - [x x] count
           - [x x] counted?
           - [x |] decimal?
+          - [   ] defmacro
+          - [. .] defn
+          - [   ] defrecord
+          - [   ] deftype
+          - [   ] delay
+          - [x x] delay?
           - [x |] denominator
           - [x x] double
           - [x x] double?
+          - [. .] empty?
           - [   ] even?
+          - [   ] force
           - [x x] identical?
+          - [   ] if-not (not as performant as we thought)
           - [x x] indexed?
+          - [. .] int
           - [x x] integer?
+          - [x x] false?
           - [   ] filter
           - [  |] find-keyword
+          - [   ] ffirst
+          - [   ] first
           - [x x] float
           - [x x] float?
+          - [. .] fn
+          - [x x] fn?
+          - [   ] fnext
+          - [   ] gensym
+          - [   ] hash-map
+          - [   ] hash-set
           - [x x] ident?
+          - [x x] ifn?
           - [|  ] infinite?
+          - [   ] instance?
           - [x x] int
           - [x x] int?
           - [x x] keyword
           - [x x] keyword?
+          - [   ] last
+          - [   ] lazy-seq
+          - [   ] let
+          - [   ] list
+          - [   ] list*
           - [x x] list?
           - [  |] locking
           - [x x] long
           - [x x] long?
+          - [   ] loop
           - [   ] map
           - [x x] map?
           - [x x] map-entry?
+          - [x x] meta
           - [   ] mod
           - [x x] name
           - [x x] namespace
           - [   ] nat-int?
           - [   ] neg?
           - [   ] neg-int?
+          - [   ] next
+          - [   ] nfirst
           - [x x] nil?
+          - [   ] nnext
+          - [   ] nth
+          - [   ] not
           - [x x] not=
           - [x |] ns-name
           - [x x] number?
           - [x |] numerator
           - [   ] odd?
+          - [   ] or
           - [   ] peek
           - [   ] pop
           - [   ] pos?
@@ -250,9 +302,14 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] qualified-symbol?
           - [x |] ratio?
           - [   ] rational?
+          - [x x] record?
           - [x x] reduce
           - [   ] rem
           - [   ] remove
+          - [   ] rest
+          - [   ] second
+          - [   ] seq
+          - [x x] seq?
           - [x x] set?
           - [x x] short
           - [x x] short?
@@ -260,11 +317,28 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] simple-keyword?
           - [x x] simple-symbol?
           - [x x] some?
+          - [x x] sorted?
+          - [   ] sorted-map
+          - [   ] sorted-map-by
+          - [   ] sorted-set
+          - [   ] sorted-set-by
+          - [   ] spread
+          - [. .] str
           - [x x] string?
           - [x x] symbol
           - [x x] symbol?
+          - [   ] to-array
           - [. .] transduce
+          - [x x] true?
           - [x x] uuid?
+          - [. .] vary-meta
+          - [   ] vec
+          - [   ] vector
+          - [x x] vector?
+          - [! !] when
+          - [! !] when-not
+          - [x x] with-meta
+          - [x  ] zero?
     - [.] clojure.lang.Numbers
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Numbers.java
           - [ ] add
@@ -353,6 +427,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] xor
     - [.] clojure.lang.RT
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/RT.java
+          - [x] count
+          - [x] countFrom
     - [.] clojure.lang.Util
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Util.java
          - [ ] classOf
@@ -387,7 +463,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [.] quantum.core.fn
           - [ ] `apply`
                 - especially with `t/defn` as the caller
-    - [ ] quantum.core.cache
+    - [.] quantum.core.cache
     - [ ] quantum.core.type-old
     - [.] quantum.core.data.primitive
     - [.] quantum.core.data.string
@@ -480,10 +556,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] gte
     - [x] eq
     - [x] neq
-    - [ ] inc
-    - [ ] dec
-    - [ ] isZero
-    - [ ] isNeg
     - [ ] inc
     - [ ] dec
     - [ ] isZero

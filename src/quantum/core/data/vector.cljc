@@ -46,16 +46,18 @@
                  ;; because supports .push etc.
                  (t/isa? js/Array))))
 
-;; svec = "spliceable vector"
-(def   svector?          (t/isa? clojure.core.rrb_vector.rrbt.Vector))
+(def svector?
+  "The set of spliceable vectors."
+  (t/isa? #?(:clj  clojure.core.rrb_vector.rrbt.Vector
+             :cljs clojure.core.rrb-vector.rrbt.Vector)))
 
-(def   +vector?          (t/isa? #?(:clj  clojure.lang.IPersistentVector
-                                    :cljs cljs.core/IVector)))
+(def   +vector?          (t/isa|direct? #?(:clj  clojure.lang.IPersistentVector
+                                           :cljs cljs.core/IVector)))
 
 (defalias ut/+vector|built-in)
 
-(def  !+vector?          (t/isa? #?(:clj  clojure.lang.ITransientVector
-                                    :cljs cljs.core/ITransientVector)))
+(def  !+vector?          (t/isa|direct? #?(:clj  clojure.lang.ITransientVector
+                                           :cljs cljs.core/ITransientVector)))
 
 (def ?!+vector?          (t/or +vector? !+vector?))
 
@@ -92,7 +94,7 @@
 ;; TODO TYPED below
 
 
-(defalias vector core/vector)
+(defalias  vector core/vector)
 (defalias +vector vector)
 (def !+vector (rcomp vector transient))
 
@@ -145,11 +147,6 @@
          :cljs js/Error)
       _
       (subsvec coll a b))))
-
-(def svector?
-  (partial instance?
-    #?(:clj  clojure.core.rrb_vector.rrbt.Vector
-       :cljs clojure.core.rrb-vector.rrbt.Vector)))
 
 #?(:clj
 (defalias

@@ -102,30 +102,13 @@
    necessary."
   ...)
 
-;; ----- Iterators ----- ;;
+;; ===== Iterators ===== ;;
 
 (t/defn ^:inline >iterator [x (t/isa|direct? #?(:clj java.lang.Iterable :cljs cljs.core/IIterable))]
   #?(:clj  (.iterator x)
      :cljs (cljs.core/-iterator ^not-native x)))
 
-;; ----- Chunking ----- ;;
-
-(t/defn chunk-buffer > chunk-buffer? [capacity num/numerically-int?]
-  (clojure.lang.ChunkBuffer. (p/>int capacity)))
-
-(t/defn ^:inline chunk        [b dc/chunk-buffer?           > dc/chunk?] (.chunk b))
-(t/defn ^:inline chunk-append [b dc/chunk-buffer?, x p/ref? > dc/chunk?] (.add   b x))
-
-(t/defn ^:inline chunk-first [xs dc/chunked-seq? > dc/chunk?] (.chunkedFirst xs))
-(t/defn ^:inline chunk-rest  [xs dc/chunked-seq? > dc/chunk?] (.chunkedMore  xs))
-(t/defn ^:inline chunk-next  [xs dc/chunked-seq? > dc/chunk?] (.chunkedNext  xs))
-
-(t/defn chunk-cons [chunk dc/chunk?, the-rest dc/iseq?]
-  (if (num/zero? (count chunk)) ;; TODO TYPED replace this condition with `empty`
-      the-rest
-      (clojure.lang.ChunkedCons. chunk the-rest)))
-
-;; ----- Sequences ----- ;;
+;; ===== Sequences ===== ;;
 
 ;; TODO use `core/sequence` implementation to produce whatever is `reducible?` but not currently
 ;; `seqable?`
@@ -152,6 +135,45 @@
 ;; TODO move to better place?
 (t/defn- ^:inline string-seq>underlying-string
   [xs (t/isa? clojure.lang.StringSeq) > (t/assume dstr/string?)] (.s xs))
+
+;; ----- Chunking ----- ;;
+
+(t/defn >chunk-buffer > chunk-buffer? [capacity num/numerically-int?]
+  #?(:clj (clojure.lang.ChunkBuffer. (p/>int capacity))
+          ;; TODO TYPED need to define `make-array` ahead of time
+     :clj (cljs.core/ChunkBuffer. (?/make-array capacity) 0)))
+
+(t/defn ^:inline chunk
+  "For CLJS, it's a little unsafe to assume that a `dc/chunk?` is output but we accept the risk."
+  [b dc/chunk-buffer?           > #?(:clj dc/chunk? :cljs (t/assume dc/chunk?))] (.chunk b))
+
+(t/defn ^:inline chunk-append
+  "For CLJS, it's a little unsafe to assume that a `dc/chunk?` is output but we accept the risk."
+  [b dc/chunk-buffer?, x p/ref? > #?(:clj dc/chunk? :cljs (t/assume dc/chunk?))] (.add   b x))
+
+(t/defn ^:inline chunk-first
+  "For CLJS, it's a little unsafe to assume that a `dc/chunk?` is output but we accept the risk."
+  [xs dc/chunked-seq? > #?(:clj dc/chunk? :cljs (t/assume dc/chunk?))]
+  (#?(:clj .chunkedFirst :cljs -chunked-first) xs))
+
+(t/defn ^:inline chunk-rest
+  "For CLJS, it's a little unsafe to assume that a `dc/chunk?` is output but we accept the risk."
+  [xs dc/chunked-seq? > #?(:clj dc/chunk? :cljs (t/assume dc/chunk?))]
+  (#?(:clj .chunkedMore :cljs -chunked-rest) xs))
+
+(t/defn ^:inline chunk-next
+  "For CLJS, it's a little unsafe to assume that a `dc/chunk?` is output but we accept the risk."
+#?(:cljs ([xs dc/chunked-next? > #?(:clj dc/chunk? :cljs (t/assume dc/chunk?))]
+           (cljs.core/-chunked-next xs)))
+         ([xs dc/chunked-seq?  > #?(:clj dc/chunk? :cljs (t/assume dc/chunk?))]
+          #?(:clj  (.chunkedNext xs)
+             :cljs (-> xs chunk-rest >seq))))
+
+(t/defn chunk-cons > chunked-cons? [chunk dc/chunk?, the-rest dc/iseq?]
+  (if (num/zero? (count chunk)) ;; TODO TYPED replace this condition with `empty`
+      the-rest
+      #?(:clj  (clojure.lang.ChunkedCons. chunk the-rest)
+         :cljs (cljs.core/ChunkedCons. chunk the-rest nil nil))))
 
 ;; ===== Reductive functions ===== ;;
 
@@ -362,10 +384,10 @@
 ;; TODO make sure !+vector is handled for CLJS
 (t/defn ^:inline count > dnum/std-integer?
   {:todo #{"handle persistent maps"}
-   :incorporated {clojure.lang.RT/count     "9/2018"
-                  clojure.lang.RT/countFrom "9/2018"
-                  clojure.core/count        "9/2018"
-                  cljs.core/count           "9/26/2018"}}
+   :incorporated '{clojure.lang.RT/count     "9/2018"
+                   clojure.lang.RT/countFrom "9/2018"
+                   clojure.core/count        "9/2018"
+                   cljs.core/count           "9/26/2018"}}
          ;; Counted
          ([x  p/nil?           > #?(:clj p/long? :cljs dnum/nip?)] 0)
 #?(:cljs ([xs dstr/string?     > (t/assume dnum/nip?)] (.-length xs)))

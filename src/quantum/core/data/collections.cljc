@@ -43,15 +43,18 @@
 #?(:clj
 (def string-seq? (t/isa? clojure.lang.StringSeq)))
 
-;; TODO CLJS
-(def chunk-buffer? #?(:clj  (t/isa? clojure.lang.ChunkBuffer)
-                      :cljs ...))
+(def chunk-buffer? (t/isa? #?(:clj clojure.lang.ChunkBuffer :cljs cljs.core/ChunkBuffer)))
 
-;; TODO CLJS
-(def chunk? #?(:clj  (t/isa? clojure.lang.IChunk)
-               :cljs ...))
+(def chunk? (t/isa|direct? #?(:clj clojure.lang.IChunk :cljs cljs.core/IChunk)))
 
-(def chunked-seq? (t/isa? #?(:clj clojure.lang.IChunkedSeq :cljs cljs.core/ChunkedSeq)))
+(def chunked-cons? (t/isa? #?(:clj clojure.lang.ChunkedCons :cljs cljs.core/ChunkedCons)))
+
+(var/def chunked-seq?
+  "Note that `cljs.core/IChunkedSeq` has no interface for `chunked-next`, unliked
+   `clojure.lang.IChunkedSeq`."
+  (t/isa|direct? #?(:clj clojure.lang.IChunkedSeq :cljs cljs.core/IChunkedSeq)))
+
+#?(:cljs (def chunked-next? (t/isa|direct? #?(:cljs cljs.core/IChunkedNext))))
 
 (def indexed-seq? (t/isa? #?(:clj clojure.lang.IndexedSeq :cljs cljs.core/IndexedSeq)))
 
@@ -84,10 +87,10 @@
 
 ;; ===== End sequences ===== ;;
 
-(def record? (t/isa? #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
+(def record? (t/isa|direct? #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
 
 (def sorted?
-  (t/or (t/isa? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
+  (t/or (t/isa|direct? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
         #?@(:clj  [(t/isa? java.util.SortedMap)
                    (t/isa? java.util.SortedSet)]
             :cljs [(t/isa? goog.structs.AvlTree)])
