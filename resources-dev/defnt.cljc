@@ -1,3 +1,5 @@
+Note that for anything built-in js/<whatever>, the `t/isa?` predicates might need some special help
+
 ;; TO MOVE
 
 #?(:clj  (def thread?       (isa? java.lang.Thread)))
@@ -206,20 +208,63 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [. .] *
           - [. .] *'
           - [. .] /
+          - [! |] accessor
+          - [   ] aclone
+          - [   ] add-tap
           - [   ] add-watch
           - [  |] agent
+          - [   ] agent-error
+          - [   ] aget — TODO check out unchecked-aget, checked-aget, checked-aget'
+          - [. x] alength
+          - [   ] alias
+          - [   ] all-ns
+          - [   ] alter
+          - [   ] alter-meta!
+          - [   ] alter-var-root
+          - [   ] amap
+          - [   ] ancestors
           - [   ] and
           - [   ] any?
           - [   ] apply
+          - [   ] areduce
+          - [|  ] array
+          - [| .] array? — TODO also look at goog/isArrayLike
+          - [|  ] array-chunk
+          - [|  ] array-copy
+          - [|  ] array-copy-downward
+          - [|  ] array-iter
+          - [   ] array-map
+          - [|  ] array-seq
+          - [! !] as->
+          - [   ] aset — TODO check out unchecked-aset, checked-aset, checked-aset'
+          - [   ] aset-boolean
+          - [   ] aset-byte
+          - [   ] aset-char
+          - [   ] aset-double
+          - [   ] aset-float
+          - [   ] aset-int
+          - [   ] aset-long
+          - [   ] aset-short
+          - [   ] assert
           - [! |] assert-args
           - [   ] assoc
           - [   ] assoc!
+          - [   ] assoc-in
           - [x x] associative?
+          - [   ] atom
+          - [   ] await
+          - [   ] await1
+          - [   ] await-for
+          - [   ] bases
+          - [   ] bigdec
+          - [   ] bigint
+          - [   ] biginteger
           - [   ] binding
           - [   ] binding-conveyor-fn
           - [. .] bit-and
           - [. .] bit-and-not
           - [x .] bit-clear
+          - [|  ] bit-count
           - [x .] bit-flip
           - [x .] bit-not
           - [. .] bit-or
@@ -230,14 +275,25 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [. .] bit-xor
           - [x .] boolean
           - [x x] boolean?
+          - [   ] boolean-array
+          - [   ] booleans
+          - [   ] bound?
           - [   ] bound-fn
           - [   ] bound-fn*
+          - [   ] bounded-count
           - [   ] butlast
-          - [x x] byte
+          - [. .] byte
           - [x x] byte?
-          - [x x] char
-          - [x x] char?
+          - [   ] byte-array
+          - [   ] bytes
+          - [   ] bytes?
+          - [   ] case
           - [  |] cast
+          - [   ] cat
+          - [. .] char — TODO (.fromCharCode js/String <number>) might be useful
+          - [x x] char?
+          - [   ] char-array
+          - [   ] chars
           - [! |] check-valid-options
           - [x x] chunk
           - [x x] chunk-append
@@ -248,91 +304,245 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x x] chunk-rest
           - [x x] chunked-seq?
           - [  |] class
+          - [x |] class?
+          - [! |] clojure-version
+          - [|  ] clone
+          - [|  ] cloneable?
+          - [   ] coll?
+          - [   ] commute
+          - [   ] comp
+          - [. .] comparator
           - [x x] compare
+          - [   ] compare-and-set!
+          - [|  ] compare-indexed
+          - [   ] compile
           - [   ] complement
+          - [   ] completing
           - [   ] concat
           - [   ] cond
+          - [! !] cond->
+          - [! !] cond->>
+          - [   ] condp
           - [   ] conj
+          - [   ] conj!
           - [   ] cons
           - [   ] constantly
           - [   ] contains?
           - [x x] count
           - [x x] counted?
+          - [  |] create-ns
+          - [! !] create-struct
+          - [   ] cycle
           - [x  ] dec
           - [x  ] dec'
+          - [   ] declare
           - [x |] decimal?
+          - [   ] dedupe
+          - [! |] definline
           - [   ] defmacro
           - [! !] defmethod — rejected because t/defn supersedes
           - [! !] defmulti — rejected because t/defn supersedes
           - [. .] defn
+          - [. .] defn-
+          - [   ] defonce
           - [   ] defrecord
+          - [! !] defstruct
           - [   ] deftype
           - [   ] delay
           - [x x] delay?
+          - [   ] deliver
           - [x |] denominator
+          - [   ] deref
+          - [   ] derive
+          - [   ] descendants
+          - [   ] destructure
           - [   ] disj
           - [   ] disj!
           - [   ] dissoc
           - [   ] dissoc!
-          - [x x] double
+          - [   ] distinct
+          - [   ] distinct?
+          - [   ] doall
+          - [   ] dorun
+          - [   ] doseq
+          - [   ] dosync
+          - [   ] dotimes
+          - [   ] doto
+          - [. .] double
           - [x x] double?
+          - [   ] double-array
+          - [   ] doubles
+          - [   ] drop
+          - [   ] drop-last
+          - [   ] drop-while
+          - [   ] eduction
+          - [  |] elide-top-frames
+          - [   ] empty
           - [. .] empty?
+          - [|  ] enable-console-print!
+          - [   ] enumeration-seq
+          - [   ] ensure
+          - [   ] ensure-reduced
+          - [|  ] equiv-sequential
+          - [   ] error-handler
+          - [   ] error-mode
+          - [|  ] es6-iterator
+          - [   ] eval
           - [   ] even?
+          - [   ] every?
+          - [   ] every-pred
+          - [   ] ex-data
+          - [   ] ex-info
+          - [|  ] extend-object!
           - [x x] false?
+          - [   ] file-seq
           - [   ] filter
+          - [! |] filter-key
+          - [   ] filterv
           - [   ] find
           - [  |] find-keyword
+          - [x |] find-ns
           - [  |] find-var
+          - [|  ] fix
           - [   ] ffirst
           - [x  ] first
-          - [x x] float
+          - [   ] flatten
+          - [. .] float
           - [x x] float?
+          - [   ] float-array
+          - [   ] floats
+          - [   ] flush
           - [. .] fn
           - [x x] fn?
+          - [|  ] fn->comparator
           - [   ] fnext
+          - [   ] fnil
+          - [   ] for
           - [   ] force
+          - [   ] format
+          - [   ] frequencies
+          - [   ] future
+          - [   ] future?
+          - [   ] future-call
+          - [   ] future-cancel
+          - [   ] future-cancelled?
+          - [   ] future-done?
           - [   ] gensym
           - [   ] get
+          - [   ] get-in
           - [   ] get-method
           - [   ] get-thread-bindings
+          - [   ] get-validator
+          - [   ] group-by
+          - [   ] halt-when
+          - [   ] hash
+          - [|  ] hash-coll
+          - [|  ] hash-combine
+          - [|  ] hash-imap
+          - [|  ] hash-iset
+          - [|  ] hash-keyword
           - [   ] hash-map
+          - [   ] hash-ordered-coll
+          - [   ] hash-unordered-coll
           - [   ] hash-set
+          - [|  ] hash-string*
+          - [|  ] hash-string
           - [x x] ident?
           - [x x] identical?
           - [x x] identity
           - [   ] if-let
           - [   ] if-not (not as performant as we thought)
           - [   ] if-some
+          - [|  ] ifind?
           - [x x] ifn?
+          - [   ] import
+          - [|  ] imul
           - [x  ] inc
           - [x  ] inc'
           - [x x] indexed?
           - [|  ] infinite?
+          - [   ] inst?
+          - [   ] inst-ms
           - [   ] instance?
           - [x .] int
           - [x x] int?
+          - [   ] int-array
+          - [|  ] int-rotate-left
+          - [   ] intern
+          - [   ] into
+          - [   ] ints
           - [x x] integer?
+          - [   ] interleave
+          - [   ] interpose
+          - [   ] into-array
+          - [  |] is-annotation?
+          - [  |] is-runtime-annotation?
+          - [   ] isa?
+          - [| x] iterable?
+          - [   ] iterate
+          - [   ] iterator-seq
+          - [   ] io!
+          - [|  ] js-delete
+          - [|  ] js-invoke
+          - [|  ] js-keys
+          - [|  ] js-mod
+          - [|  ] js-obj
+          - [   ] juxt
+          - [   ] keep
+          - [   ] keep-indexed
           - [   ] key
           - [   ] keys
           - [x x] keyword
           - [x x] keyword?
+          - [|  ] keyword-identical?
           - [   ] last
+          - [   ] lazy-cat
           - [   ] lazy-seq
           - [   ] let
+          - [! !] letfn — we just don't use it very much
+          - [   ] line-seq
           - [   ] list
           - [   ] list*
           - [x x] list?
+          - [   ] load
+          - [   ] load-reader
+          - [   ] load-string
+          - [   ] loaded-libs
           - [  |] locking
-          - [x x] long
+          - [. .] long
           - [x x] long?
+          - [   ] long-array
+          - [   ] longs
           - [   ] loop
+          - [|  ] m3-seed
+          - [|  ] m3-C1
+          - [|  ] m3-C2
+          - [|  ] m3-mix-K1
+          - [|  ] m3-mix-H1
+          - [|  ] m3-fmix
+          - [|  ] m3-hash-int
+          - [|  ] m3-hash-unencoded-chars
+          - [   ] macroexpand
+          - [   ] macroexpand-1
+          - [   ] make-array
+          - [   ] make-hierarchy
           - [   ] map
           - [x x] map?
           - [x x] map-entry?
+          - [   ] map-indexed
+          - [   ] mapcat
+          - [   ] mapv
           - [   ] max
+          - [   ] max-key
+          - [   ] memfn
+          - [   ] memoize
+          - [   ] merge
+          - [   ] merge-with
           - [x x] meta
           - [   ] methods
           - [   ] min
+          - [   ] min-key
+          - [   ] mix-collection-hash
           - [   ] mod
           - [x x] name
           - [x x] namespace
@@ -340,44 +550,135 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] nat-int?
           - [   ] neg?
           - [   ] neg-int?
+          - [   ] newline
           - [x  ] next
           - [   ] nfirst
           - [x x] nil?
+          - [|  ] nil-iter
           - [   ] nnext
-          - [   ] nth
           - [   ] not
+          - [   ] not-any?
+          - [   ] not-empty
+          - [   ] not-every?
           - [x x] not=
+          - [   ] ns
+          - [x |] ns-aliases
+          - [x |] ns-imports
+          - [x |] ns-interns
+          - [x |] ns-map
           - [x |] ns-name
+          - [x |] ns-publics
+          - [x |] ns-refers
+          - [   ] ns-resolve
+          - [  |] ns-unalias
+          - [x |] ns-unmap
+          - [   ] nth
+          - [   ] nthnext
+          - [   ] nthrest
+          - [   ] num
           - [x x] number?
           - [x |] numerator
+          - [| x] object?
+          - [   ] object-array
           - [   ] odd?
           - [   ] or
+          - [   ] parents
+          - [   ] partial
+          - [   ] partition
+          - [   ] partition-all
+          - [   ] partition-by
+          - [   ] pcalls
           - [   ] peek
+          - [   ] persistent!
+          - [   ] pmap
           - [   ] pop
+          - [   ] pop!
           - [   ] pop-thread-bindings
           - [   ] pos?
           - [   ] pos-int?
+          - [   ] pr
+          - [   ] pr-on
+          - [   ] pr-str
+          - [|  ] pr-str*
+          - [   ] preserving-reduced
+          - [|  ] prim-seq
+          - [   ] print-str
+          - [   ] println-str
+          - [   ] prn-str
           - [   ] prefer-method
           - [   ] prefers
+          - [   ] print
+          - [   ] printf
+          - [   ] println
+          - [! |] print-dup
+          - [! |] print-method
+          - [   ] prn
+          - [   ] promise
           - [   ] push-thread-bindings
+          - [   ] pvalues
           - [x x] qualified-ident?
           - [x x] qualified-keyword?
           - [x x] qualified-symbol?
           - [   ] quot
+          - [   ] rand
+          - [   ] rand-int
+          - [   ] rand-nth
+          - [   ] random-sample
+          - [   ] range
           - [x |] ratio?
           - [   ] rational?
           - [   ] rationalize
+          - [   ] re-find
+          - [   ] re-groups
+          - [   ] re-matcher
+          - [   ] re-matches
+          - [   ] re-pattern
+          - [   ] re-seq
+          - [   ] read
+          - [   ] read-line
+          - [   ] read-string
+          - [   ] read+string
+          - [   ] reader-conditional
+          - [   ] reader-conditional?
+          - [   ] realized?
           - [x x] record?
           - [x x] reduce
+          - [x x] reduce-kv
+          - [|  ] reduceable?
+          - [x x] reduced
           - [! |] reduce1
+          - [   ] reductions
+          - [   ] ref
+          - [   ] ref-history-count
+          - [   ] ref-min-history
+          - [   ] ref-max-history
+          - [   ] ref-set
+          - [   ] refer
+          - [   ] refer-clojure
           - [   ] release-pending-sends
           - [   ] rem
           - [   ] remove
           - [   ] remove-all-methods
           - [   ] remove-method
+          - [  |] remove-ns
+          - [   ] remove-tap
+          - [   ] remove-watch
+          - [   ] repeat
+          - [   ] repeatedly
+          - [   ] replace
+          - [   ] require
+          - [   ] reset!
+          - [   ] reset-meta!
+          - [   ] reset-vals!
+          - [   ] resolve
           - [x  ] rest
+          - [   ] restart-agent
+          - [   ] resultset-seq
           - [   ] reverse
+          - [   ] reversible?
           - [   ] rseq
+          - [   ] rsubseq
+          - [   ] run!
           - [   ] second
           - [   ] select-keys
           - [   ] send
@@ -385,61 +686,149 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] send-via
           - [x x] seq
           - [x x] seq?
+          - [   ] seqable?
+          - [   ] seque
+          - [   ] sequence
+          - [   ] sequential?
+          - [   ] set
           - [x x] set?
           - [   ] set-agent-send-executor!
           - [   ] set-agent-send-off-executor!
+          - [   ] set-error-handler!
+          - [   ] set-error-mode!
+          - [|  ] set-print-err-fn!
+          - [|  ] set-print-fn!
+          - [   ] set-validator!
           - [   ] setup-reference
-          - [x x] short
+          - [. .] short
           - [x x] short?
+          - [   ] short-array
+          - [   ] shorts
+          - [   ] shuffle
+          - [   ] shutdown-agents
           - [x x] simple-ident?
           - [x x] simple-keyword?
           - [x x] simple-symbol?
+          - [   ] slurp
+          - [   ] some
           - [x x] some?
+          - [   ] some->
+          - [   ] some->>
+          - [   ] some-fn
+          - [   ] sort
+          - [   ] sort-by
           - [x x] sorted?
           - [   ] sorted-map
           - [   ] sorted-map-by
           - [   ] sorted-set
           - [   ] sorted-set-by
+          - [   ] special-symbol?
+          - [   ] spread
+          - [   ] spit
+          - [   ] split-at
+          - [   ] split-with
           - [   ] spread
           - [. .] str
           - [x x] string?
+          - [|  ] string-iter
+          - [! |] struct
+          - [! |] struct-map
+          - [   ] subs
+          - [   ] subseq
           - [   ] subvec
+          - [   ] supers
+          - [   ] swap!
+          - [   ] swap-vals!
           - [x x] symbol
           - [x x] symbol?
+          - [|  ] symbol-identical?
+          - [   ] sync
+          - [|  ] system-time
+          - [   ] tagged-literal
+          - [   ] tagged-literal?
+          - [   ] take
+          - [   ] take-last
+          - [   ] take-nth
+          - [   ] take-while
+          - [   ] tap>
+          - [   ] test
+          - [x |] the-ns
+          - [   ] thread-bound?
+          - [   ] throw-if
+          - [   ] time
           - [x  ] to-array
+          - [   ] to-array-2d
+          - [   ] trampoline
           - [. .] transduce
+          - [   ] transient
+          - [   ] tree-seq
           - [x x] true?
+          - [   ] type
+          - [|  ] type->str
           - [x  ] unchecked-add
           - [x  ] unchecked-add-int
+          - [. .] unchecked-byte
+          - [. .] unchecked-char
           - [x  ] unchecked-dec
           - [x  ] unchecked-dec-int
           - [x  ] unchecked-divide
           - [x  ] unchecked-divide-int
+          - [. .] unchecked-double
+          - [. .] unchecked-float
           - [x  ] unchecked-inc
           - [x  ] unchecked-inc-int
+          - [. .] unchecked-int
+          - [. .] unchecked-long
           - [x  ] unchecked-multiply
           - [x  ] unchecked-multiply-int
           - [x  ] unchecked-negate
           - [x  ] unchecked-negate-int
           - [x  ] unchecked-remainder-int
+          - [. .] unchecked-short
           - [x  ] unchecked-subtract
           - [x  ] unchecked-subtract-int
+          - [|  ] undefined?
+          - [   ] underive
+          - [   ] unreduced
           - [x .] unsigned-bit-shift-right
+          - [   ] update
+          - [   ] update-in
+          - [   ] uri?
+          - [! !] use
           - [x x] uuid?
           - [   ] val
           - [   ] vals
+          - [x x] var?
+          - [   ] var-get
+          - [   ] var-set
           - [. .] vary-meta
           - [   ] vec
           - [   ] vector
           - [x x] vector?
+          - [x x] volatile?
+          - [   ] volatile!
+          - [   ] vreset!
+          - [   ] vswap!
           - [! !] when
+          - [   ] when-first
           - [   ] when-let
           - [! !] when-not
           - [   ] when-some
+          - [! !] while
           - [   ] with-bindings
           - [   ] with-bindings*
+          - [   ] with-in-str
+          - [   ] with-loading-context
+          - [   ] with-local-vars
           - [x x] with-meta
+          - [   ] with-open
+          - [   ] with-out-str
+          - [   ] with-precision
+          - [   ] with-redefs
+          - [   ] with-redefs-fn
+          - [   ] xml-seq
           - [x  ] zero?
+          - [   ] zipmap
     - [.] clojure.lang.Numbers
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Numbers.java
           - [ ] add
