@@ -27,6 +27,7 @@
     [java.util.concurrent.atomic AtomicReference AtomicBoolean AtomicInteger AtomicLong]
     [com.google.common.util.concurrent AtomicDouble])))
 
+;; TODO technically this belongs in like `quantum.core.data.effects` or something
 (defprotocol PAtomic
   (atomically-apply [target f]
     "Atomically applies `f` to `target`, with the following caveats:
