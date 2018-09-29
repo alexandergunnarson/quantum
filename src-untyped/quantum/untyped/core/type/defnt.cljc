@@ -72,7 +72,7 @@
          :arglist-code|fn|hinted      t/any?
          :arglist-code|reify|unhinted t/any?
          :body-form                   t/any?
-         :out-class                   (? class?)
+         :out-class                   (s/nilable class?)
          :out-type                    t/type?
          :positional-args-ct          (s/and integer? #(>= % 0))
          ;; When present, varargs are considered to be of class Object
@@ -101,9 +101,8 @@
          :fnt|type             t/type?}))
 
 (s/def ::opts
-  (s/kv {:gen-gensym         t/fn?
-         :lang               ::lang
-         :symbolic-analysis? t/boolean?}))
+  (s/kv {:gen-gensym t/fn?
+         :lang       ::lang}))
 
 (s/def ::overload-data
   (s/kv {:args                      (s/vec-of t/any?)
@@ -174,15 +173,15 @@
 (defns class>simplest-class
   "This ensures that special overloads are not created for non-primitive subclasses
    of java.lang.Object (e.g. String, etc.)."
-  [c (? class?) > (? class?)]
+  [c (s/nilable class?) > (s/nilable class?)]
   (if (t/primitive-class? c) c java.lang.Object)))
 
 #?(:clj
-(defns class>most-primitive-class [c (? class?), nilable? t/boolean? > (? class?)]
+(defns class>most-primitive-class [c (s/nilable class?), nilable? t/boolean? > (s/nilable class?)]
   (if nilable? c (or (tcore/boxed->unboxed c) c))))
 
 #?(:clj
-(defns type>most-primitive-classes [t t/type? > (s/set-of (? class?))]
+(defns type>most-primitive-classes [t t/type? > (s/set-of (s/nilable class?))]
   (let [cs       (t/type>classes t)
         nilable? (or (-> t meta :quantum.core.type/ref?) (contains? cs nil))]
     (->> cs
@@ -190,7 +189,7 @@
          (r/join #{})))))
 
 #?(:clj
-(defns out-type>class [t t/type? > (? class?)]
+(defns out-type>class [t t/type? > (s/nilable class?)]
   (if (-> t meta :quantum.core.type/ref?)
       java.lang.Object
       (let [cs  (t/type>classes t)
@@ -319,51 +318,41 @@
   "Given an `fnt` overload, computes a seq of 'expanded-overload groups'. Each expanded-overload
    group is the foundation for one `reify`.
 
-   Rather than rigging together something in which either:
-   1) the Clojure compiler will try to cross its fingers and evaluate code meant to be evaluated in
-      ClojureScript
-   2) we use a CLJS-in-CLJS compiler and alienate the mainstream CLJS-in-CLJ (cljsbuild) workflow,
-      which includes our own workflow
-   3) we wait for CLJS-in-CLJS to become mainstream, which could take years if it really ever
-      happens
-
-   we decide instead to evaluate types in languages in which the metalanguage (compiler language)
-   is the same as the object language (e.g. Clojure), and symbolically analyze types in the rest
-   (e.g. vanilla ClojureScript), deferring code analyzed as functions to be enforced at runtime."
+   We decide to evaluate types in languages in which the metalanguage (compiler language) is the
+   same as the object language. As such, for CLJS, we choose to use only a CLJS-in-CLJS /
+   bootstrapped compiler even if that means alienating the mainstream CLJS-in-CLJ workflow."
   [{:as   overload-data
     :keys [args _, varargs _
            arg-types|form _, arg-types _, pre-type|form _, post-type|form _]} ::overload-data
    {:as fnt-globals :keys [fn|name _, fnt|type _]} ::fnt-globals
-   {:as opts        :keys [lang _, symbolic-analysis? _]} ::opts
+   {:as opts        :keys [lang _]} ::opts
    > ::expanded-overload-groups]
-  (if symbolic-analysis?
-      (err! "Symbolic analysis not supported yet")
-      (let [;; TODO support varargs
-            varargs-binding (when varargs
-                              ;; TODO this assertion is purely temporary until destructuring is
-                              ;; supported
-                              (assert (-> varargs :binding-form first (= :sym))))
-            arg-bindings
-              (->> args
-                   (mapv (fn [{[kind binding-] :binding-form}]
-                           ;; TODO this assertion is purely temporary until destructuring is
-                           ;; supported
-                           (assert kind :sym)
-                           binding-)))
-            arg-types|split
-              ;; NOTE Only `t/or`s are splittable for now
-              (->> arg-types
-                   (c/map (fn [t] (if (utr/or-type? t) (utr/or-type>args t) [t]))))
-            arg-types|expanded-seq (->> arg-types|split
-                                        (apply ucombo/cartesian-product)
-                                        (c/map vec))
-            expanded-overload-group-seq
-              (->> arg-types|expanded-seq
-                   (mapv (fn [arg-types|expanded] ; TODO use this
-                           (>expanded-overload-group overload-data fnt-globals opts
-                             arg-bindings varargs-binding arg-types|expanded))))]
-        (kw-map arg-types|expanded-seq arg-types|split expanded-overload-group-seq
-                overload-data)))))
+  (let [;; TODO support varargs
+        varargs-binding (when varargs
+                          ;; TODO this assertion is purely temporary until destructuring is
+                          ;; supported
+                          (assert (-> varargs :binding-form first (= :sym))))
+        arg-bindings
+          (->> args
+               (mapv (fn [{[kind binding-] :binding-form}]
+                       ;; TODO this assertion is purely temporary until destructuring is
+                       ;; supported
+                       (assert kind :sym)
+                       binding-)))
+        arg-types|split
+          ;; NOTE Only `t/or`s are splittable for now
+          (->> arg-types
+               (c/map (fn [t] (if (utr/or-type? t) (utr/or-type>args t) [t]))))
+        arg-types|expanded-seq (->> arg-types|split
+                                    (apply ucombo/cartesian-product)
+                                    (c/map vec))
+        expanded-overload-group-seq
+          (->> arg-types|expanded-seq
+               (mapv (fn [arg-types|expanded] ; TODO use this
+                       (>expanded-overload-group overload-data fnt-globals opts
+                         arg-bindings varargs-binding arg-types|expanded))))]
+    (kw-map arg-types|expanded-seq arg-types|split expanded-overload-group-seq
+            overload-data))))
 
 (def fnt-method-sym 'invoke)
 
@@ -663,7 +652,6 @@
          fn|meta :quantum.core.specs/meta}
           (s/validate args (case kind :defn :quantum.core.defnt/defnt
                                       :fn   :quantum.core.defnt/fnt))
-        symbolic-analysis? false ; TODO parameterize this
         fnt|output-type|form (or (second output-spec) `t/any?)
         fnt|output-type      (eval fnt|output-type|form)
         gen-gensym-base (ufgen/>reproducible-gensym|generator)
@@ -676,7 +664,7 @@
         overloads-data (->> overloads (mapv #(fnt|parsed-overload>overload-data % fnt|output-type)))
         fnt|type (fnt|overloads-data>type overloads-data fnt|output-type)
         fnt-globals (kw-map fn|meta fn|name fnt|output-type|form fnt|type)
-        opts (kw-map gen-gensym lang symbolic-analysis?)
+        opts (kw-map gen-gensym lang)
         expanded-overload-groups-by-fnt-overload
           (->> overloads-data
                (mapv #(fnt|overload-data>expanded-overload-groups % fnt-globals opts)))
