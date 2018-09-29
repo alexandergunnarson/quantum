@@ -389,7 +389,7 @@
   (let [c|analyzed (analyze* env c|form)]
     (if-not (and (-> c|analyzed :type t/value-type?)
                  (-> c|analyzed :type utr/value-type>value class?))
-      (err! "Supplied non-class to `new` form" {:x c|form})
+      (err! "Supplied non-class to `new` form" {:form form})
       (let [c (-> c|analyzed :type utr/value-type>value)
             constructors (-> c class>constructors|with-cache)
             args-ct (count args)
@@ -411,13 +411,13 @@
                                (if (empty? constructors'')
                                    (err! "No constructors for class match the arg type at index"
                                          {:class     c
-                                          :args|form args
+                                          :form      form
                                           :arg-type  (:type arg|analyzed)
                                           :i|arg     i|arg})
                                    (-> ret
                                        (assoc :constructors' constructors'')
                                        (update :args|analyzed conj arg|analyzed)))))
-                           {:constructors' constructors :args|analyzed []}))]
+                           {:constructors' constructors-for-ct :args|analyzed []}))]
               (uast/new-node
                 {:env   env
                  :form  (list* 'new c|form (map :form args|analyzed))
