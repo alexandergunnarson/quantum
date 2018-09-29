@@ -347,17 +347,16 @@
                 (if ?target-static-class-map
                     (cond-> #{target-static-class} target-static-class-nilable? (conj nil))
                     (-> target :type t/type>classes))
-              target-class-nilable? (contains? target-classes nil)
               target-class (classes>class target-classes)]
-          ;; TODO determine how to handle `target-class-nilable?`; for now we will just let it slip
-          ;; through to `NullPointerException` at runtime rather than create a potentially more
-          ;; helpful custom exception
-          (if-let [field (and (empty? args-forms)
-                              (-> target-class class->fields|with-cache
-                                  (c/get (name method-or-field))))]
-            (analyze-seq|dot|field-access env form target method-or-field field)
-            (analyze-seq|dot|method-call env form target target-class
-              (boolean ?target-static-class-map) method-or-field args-forms))))))
+          (if-let [target-class-nilable? (contains? target-classes nil)]
+            (err! "Cannot use the dot operator on a target that might be nil."
+                  {:form form :target-form target-form :target-type (:type target)})
+            (if-let [field (and (empty? args-forms)
+                                (-> target-class class->fields|with-cache
+                                    (c/get (name method-or-field))))]
+              (analyze-seq|dot|field-access env form target method-or-field field)
+              (analyze-seq|dot|method-call env form target target-class
+                (boolean ?target-static-class-map) method-or-field args-forms)))))))
 
 ;; TODO move this
 (defns truthy-node? [{:as ast t [:type _]} _ > (t/? t/boolean?)]
@@ -386,11 +385,11 @@
                  :type       (apply t/or (->> [(:type @true-node) (:type @false-node)]
                                               (remove nil?)))}))]
       (case (truthy-node? pred-node)
-        true      (do (log/ppr :warn "Predicate in `if` node is always true" {:pred pred-form})
-                      (assoc @true-node :env env))
-        false     (do (log/ppr :warn "Predicate in `if` node is always false" {:pred pred-form})
-                      (assoc @false-node :env env))
-        nil       @whole-node))))
+        true  (do (log/ppr :warn "Predicate in `if` node is always true" {:pred pred-form})
+                  (assoc @true-node :env env))
+        false (do (log/ppr :warn "Predicate in `if` node is always false" {:pred pred-form})
+                  (assoc @false-node :env env))
+        nil   @whole-node))))
 
 (defns- analyze-seq|quote [env ::env, [_ _ & body _ :as form] _ > uast/quoted?]
   (uast/quoted env form (t/value (list* body))))
