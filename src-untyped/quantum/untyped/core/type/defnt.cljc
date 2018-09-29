@@ -644,7 +644,11 @@
     (kw-map args varargs body-codelist|pre-analyze
             arg-types|form arg-types, pre-type|form pre-type, post-type|form post-type)))
 
-(defns fnt|code [kind #{:fn :defn}, lang ::lang, args _]
+(defns fnt|code
+  "Special metadata directives include:
+   - `:inline` : Applicable within the metadata of `t/fn` or `t/defn`. A directive to inline the
+                 function if possible."
+  [kind #{:fn :defn}, lang ::lang, args _]
   (let [{:as args'
          :keys [:quantum.core.specs/fn|name
                 :quantum.core.defnt/overloads

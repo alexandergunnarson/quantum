@@ -958,7 +958,7 @@
           (macroexpand '
             (self/defn ref-output-type
               ([x tt/boolean? > (t/ref tt/boolean?)] (Boolean. x))
-              ([x byte?       > (t/ref byte?)]       (Byte.    x))))
+              ([x tt/byte?    > (t/ref tt/byte?)]    (Byte.    x))))
         expected
           ($ (do ;; [x tt/boolean? > (t/ref tt/boolean?)]
 
@@ -968,7 +968,7 @@
                    (reify* [boolean>Object]
                      (~(O 'invoke) [~'_0__ ~(tag "boolean" 'x)] (new ~'Boolean ~'x))))
 
-                 ;; [x byte? > (t/ref byte?)]
+                 ;; [x tt/byte? > (t/ref tt/byte?)]
 
                  (def ~(tag "[Ljava.lang.Object;" 'ref-output-type|__1|input0|types)
                    (*<> (t/isa? java.lang.Byte)))
@@ -980,7 +980,7 @@
                    {:quantum.core.type/type
                      (t/fn t/any?
                            ~'[tt/boolean? :> (t/ref tt/boolean?)]
-                           ~'[byte?       :> (t/ref byte?)])}
+                           ~'[tt/byte?    :> (t/ref tt/byte?)])}
                    ([~'x00__]
                      (ifs
                        ((Array/get ~'ref-output-type|__0|input0|types 0) ~'x00__)
@@ -1214,12 +1214,12 @@
   (let [actual
           (macroexpand '
             (self/defn !str > #?(:clj  (t/isa? StringBuilder)
-                             :cljs (t/isa? StringBuffer))
+                                 :cljs (t/isa? StringBuffer))
                     ([] #?(:clj (StringBuilder.) :cljs (StringBuffer.)))
                     ;; If we had combined this arity, `t/or`ing the `t/string?` means it wouldn't have been
                     ;; handled any differently than `t/char-seq?`
             #?(:clj ([x t/string?] (StringBuilder. x)))
-                    ([x #?(:clj  (t/or t/char-seq? tt/int?)
+                    ([x #?(:clj  (t/or tt/char-seq? tt/int?)
                            :cljs t/val?)]
                       #?(:clj (StringBuilder. x) :cljs (StringBuffer. x)))))
         expected
@@ -1258,7 +1258,7 @@
                             (t/fn ~'(t/isa? StringBuilder)
                                   ~'[]
                                   ~'[t/string?]
-                                  ~'[(t/or t/char-seq? tt/int?)])}
+                                  ~'[(t/or tt/char-seq? tt/int?)])}
                           ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.>Object"
                                              '!str|__0|0)))
                           ([~'x00__]

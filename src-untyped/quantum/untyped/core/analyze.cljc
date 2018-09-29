@@ -37,7 +37,9 @@
     [quantum.untyped.core.vars              :as uvar
       :refer [update-meta]]))
 
-; ----- REFLECTION ----- ;
+(def special-metadata-keys #{:val})
+
+;; ----- Reflection support ----- ;;
 
 #?(:clj
 (defrecord Method
@@ -104,6 +106,8 @@
 #?(:clj
 (def class>fields|with-cache
   (memoize (fn [c] (class>fields c)))))
+
+;; ----- End reflection support ----- ;;
 
 (defonce *analyze-depth (atom 0))
 
@@ -328,12 +332,18 @@
                       (update :form seq))
                 call-data-with-ret-type
                   (update call-data-with-arg-types :type
-                    (fn [ret-type] (->> call-data-with-arg-types :args (mapv :type) ret-type)))
+                    (fn [ret-type] (->> call-data-with-arg-types :args (mapv :type) ret-type
+                                        (<- (maybe-add-val-assumption-to-type form)))))
                 ?cast-type (?cast-call->type target-class method-form)
                 _ (when ?cast-type
                     (log/ppr :warn "Not yet able to statically validate whether primitive cast will succeed at runtime" {:form form})
                     #_(s/validate (-> with-ret-type :args first :type) #(t/>= % (t/numerically ?cast-type))))]
             (uast/method-call call-data-with-ret-type)))))))
+
+(defn- assume-val-for-form? [form] (-> form meta :val true?))
+
+(defns- maybe-add-val-assumption-to-type [t t/type?, form _ > t/type?]
+  (cond-> t (assume-val-for-form? form) (t/and t/val?)))
 
 (defns- analyze-seq|dot|field-access
   [env ::env, form _, target _, field-form simple-symbol?, field (t/isa? Field)
@@ -343,7 +353,7 @@
      :form   form
      :target target
      :field  field-form
-     :type   (-> field :class t/>type)}))
+     :type   (-> field :class t/>type (maybe-add-val-assumption-to-type form))}))
 
 (defns classes>class
   "Ensure that given a set of classes, that set consists of at most a class C and nil.
@@ -649,15 +659,17 @@
 
 (defns- analyze-seq [env ::env, form _]
   (let [expanded-form (ufeval/macroexpand form)]
-    (if (ucomp/== form expanded-form)
-        (analyze-seq* env expanded-form)
-        (let [expanded (analyze* env expanded-form)]
-          (uast/macro-call
-            {:env             env
-             :unexpanded-form form
-             :form            (:form expanded)
-             :expanded        expanded
-             :type            (:type expanded)})))))
+    (if-let [no-expansion? (ucomp/== form expanded-form)]
+      (analyze-seq* env expanded-form)
+      (let [expanded-form' (-> expanded-form
+                               (update-meta merge (select-keys (meta form) special-metadata-keys)))
+            expanded (analyze* env expanded-form')]
+        (uast/macro-call
+          {:env             env
+           :unexpanded-form form
+           :form            (:form expanded)
+           :expanded        expanded
+           :type            (:type expanded)})))))
 
 (defns ?resolve-with-env [sym symbol?, env ::env]
   (if-let [[_ local] (find env sym)]
@@ -685,7 +697,7 @@
            (TODO "Unsure of what to do in this case" (kw-map env form resolved))))))
 
 (defns- analyze* [env ::env, form _ > uast/node?]
-  (when (> (swap! *analyze-depth inc) 100) (throw (ex-info "Stack too deep" {:form form})))
+  (when (> (swap! *analyze-depth inc) 200) (throw (ex-info "Stack too deep" {:form form})))
   (ifs (symbol? form)
          (analyze-symbol env form)
        (t/literal? form)
@@ -699,7 +711,12 @@
          (analyze-seq env form)
        (throw (ex-info "Unrecognized form" {:form form}))))
 
-(defns analyze > uast/node?
+(defns analyze
+  "Special metadata directives are defined in `special-metadata-keys`. They include:
+   - `:val` : Causes the analyzer to assume that the return value of the dot-form satisfies
+              `t/val?`. Useful for doing method/dot-chaining in which the methods return
+              non-primitives."
+  > uast/node?
   ([form _] (analyze {} form))
   ([env ::env, form _]
     (reset! *analyze-depth 0)
