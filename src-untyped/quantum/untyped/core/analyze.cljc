@@ -255,7 +255,7 @@
 
 (defn- assume-val-for-form? [form] (-> form meta :val true?))
 
-(defns- analyze-seq|call-site|incrementally-analyze
+(defns- analyze-seq|method-or-constructor-call|incrementally-analyze
   [env ::env, form _, target-class class?, args|form _, call-sites-for-ct _, kinds-str string?
    > (s/kv {:args|analyzed vector?})]
   (let [{:as ret :keys [call-sites args|analyzed]}
@@ -292,8 +292,8 @@
   [env ::env, form _, target uast/node?, target-class class?, method-form _, args|form _
    methods-for-ct-and-kind (s/seq-of t/any?) > uast/method-call?]
   (let [{:keys [args|analyzed call-sites]}
-          (analyze-seq|call-site|incrementally-analyze env form target-class args|form
-            methods-for-ct-and-kind "methods")
+          (analyze-seq|method-or-constructor-call|incrementally-analyze env form target-class
+            args|form methods-for-ct-and-kind "methods")
         ?cast-type (?cast-call->type target-class method-form)
         ;; TODO enable the below:
         ;; (s/validate (-> with-ret-type :args first :type) #(t/>= % (t/numerically ?cast-type)))
@@ -330,7 +330,7 @@
         (if-not-let [methods-for-ct-and-kind (c/get methods-for-ct kind)]
           (err! (istr "Method found for arg-count, but was ~non-kind, not ~kind")
                 {:class target-class :method method-form :args args|form})
-          (analyze-seq|dot|method-call|incrementally-analyze env form target target-class
+          (analyze-seq|method-or-constructor-call|incrementally-analyze env form target target-class
             method-form args|form methods-for-ct-and-kind))))))
 
 (defns- analyze-seq|dot|field-access
