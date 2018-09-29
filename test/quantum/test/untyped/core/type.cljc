@@ -1,6 +1,6 @@
 (ns quantum.test.untyped.core.type
         (:refer-clojure :exclude
-          [boolean? char? double? float? int? string?])
+          [boolean? char? double? float? int? ratio? string?])
         (:require
           [clojure.core                               :as core]
           [quantum.untyped.core.test
@@ -32,6 +32,10 @@
         (def double?     (t/isa? #?(:clj Double :cljs js/Number)))
 
         (def primitive?  (t/or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
+
+#?(:clj (def comparable-primitive? (t/- primitive? boolean?)))
+
+#?(:clj (def ratio?      (t/isa? clojure.lang.Ratio)))
 
 #?(:clj (def char-seq?   (t/isa? CharSequence)))
         (def string?     (t/isa? #?(:clj String :cljs js/String)))

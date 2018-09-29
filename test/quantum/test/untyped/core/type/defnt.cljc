@@ -2,8 +2,9 @@
 
 (ns quantum.test.untyped.core.type.defnt
   (:refer-clojure :exclude
-    [* boolean? char? count double? float? get int? ratio? seq zero?])
+    [* count get seq])
   (:require
+    [quantum.test.untyped.core.type         :as tt]
     [quantum.untyped.core.type.defnt        :as self
       :refer [fnt unsupported!]]
     [quantum.untyped.core.data.array
@@ -26,26 +27,6 @@
     [clojure.lang ASeq ISeq LazySeq Named Reduced Seqable]
     [quantum.core.data Array]
     [quantum.core Numeric Primitive]))
-
-;; ===== Type predicates ===== ;;
-;; Declared here instead of in `quantum.untyped.core.type` to avoid dependency
-
-#?(:clj (def ratio?   (t/isa? clojure.lang.Ratio)))
-
-#?(:clj (def boolean? (t/isa? #?(:clj Boolean :cljs js/Boolean))))
-#?(:clj (def byte?    (t/isa? Byte)))
-#?(:clj (def short?   (t/isa? Short)))
-#?(:clj (def char?    (t/isa? Character)))
-#?(:clj (def int?     (t/isa? Integer)))
-#?(:clj (def long?    (t/isa? Long)))
-#?(:clj (def float?   (t/isa? Float)))
-        (def double?  (t/isa? #?(:clj Double :cljs js/Number)))
-
-        (def primitive? (t/or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
-
-#?(:clj (def comparable-primitive? (t/- primitive? boolean?)))
-
-;; ===== End type predicates ===== ;;
 
 ;; Just in case
 (clojure.spec.test.alpha/unstrument)
@@ -326,13 +307,13 @@
   (let [actual
           (macroexpand '
             (self/defn #_:inline >boolean
-               ([x boolean?] x)
-               ([x t/nil?]     false)
-               ([x t/any?]     true)))
+               ([x tt/boolean?] x)
+               ([x t/nil?]      false)
+               ([x t/any?]      true)))
         expected
           (case (env-lang)
             :clj
-              ($ (do ;; [x boolean?]
+              ($ (do ;; [x tt/boolean?]
 
                      (def ~(tag "[Ljava.lang.Object;" '>boolean|__0|input0|types)
                        (*<> (t/isa? Boolean)))
@@ -340,7 +321,7 @@
                        (reify* [boolean>boolean]
                          (~(tag "boolean" 'invoke) [~'_0__  ~(tag "boolean"          'x)] ~'x)))
 
-                     ;; [x t/nil? -> (- t/nil? boolean?)]
+                     ;; [x t/nil? -> (- t/nil? tt/boolean?)]
 
                      (def ~(tag "[Ljava.lang.Object;" '>boolean|__1|input0|types)
                        (*<> (t/value nil)))
@@ -348,7 +329,7 @@
                        (reify* [Object>boolean]
                          (~(tag "boolean" 'invoke) [~'_1__  ~(tag "java.lang.Object" 'x)] false)))
 
-                     ;; [x t/any? -> (- t/any? t/nil? boolean?)]
+                     ;; [x t/any? -> (- t/any? t/nil? tt/boolean?)]
 
                      (def ~(tag "[Ljava.lang.Object;" '>boolean|__2|input0|types)
                        (*<> t/any?))
@@ -368,7 +349,7 @@
                      (defn ~'>boolean
                        {:quantum.core.type/type
                          (t/fn t/any?
-                               ~'[boolean?]
+                               ~'[tt/boolean?]
                                ~'[t/nil?]
                                ~'[t/any?])}
                        ([~'x00__]
@@ -382,7 +363,7 @@
                               (unsupported! `>boolean [~'x00__] 0))))))
             :cljs
               ($ (do (defn ~'>boolean [~'x]
-                       (ifs (boolean? x) x
+                       (ifs (tt/boolean? x) x
                             (nil?     x) false
                             true)))))]
     (testing "code equivalence" (is-code= actual expected))
@@ -405,13 +386,13 @@
           (macroexpand '
             ;; Auto-upcasts to long or double (because 64-bit) unless you tell it otherwise
             ;; Will error if not all return values can be safely converted to the return spec
-            (self/defn #_:inline >int* > int?
-              ([x (t/- primitive? boolean?)] (Primitive/uncheckedIntCast x))
+            (self/defn #_:inline >int* > tt/int?
+              ([x (t/- tt/primitive? tt/boolean?)] (Primitive/uncheckedIntCast x))
               ([x (t/ref (t/isa? Number))] (.intValue x))))
         expected
           (case (env-lang)
             :clj
-              ($ (do ;; [x (t/- primitive? boolean?)]
+              ($ (do ;; [x (t/- tt/primitive? tt/boolean?)]
 
                      ;; These are non-primitivized
                      (def ~(tag "[Ljava.lang.Object;" '>int*|__0|input0|types)
@@ -452,7 +433,7 @@
                            ~'(. Primitive uncheckedIntCast x))))
 
                      ;; [x (t/ref (t/isa? Number))
-                     ;;  -> (t/- (t/ref (t/isa? Number)) (t/- primitive? boolean?))]
+                     ;;  -> (t/- (t/ref (t/isa? Number)) (t/- tt/primitive? tt/boolean?))]
 
                      (def ~(tag "[Ljava.lang.Object;" '>int*|__1|input0|types)
                        (*<> ~(with-meta `(t/isa? Number) {:quantum.core.type/ref? true})))
@@ -463,8 +444,8 @@
 
                      (defn ~'>int*
                        {:quantum.core.type/type
-                         (t/fn ~'int?
-                               ~'[(t/- primitive? boolean?)]
+                         (t/fn ~'tt/int?
+                               ~'[(t/- tt/primitive? tt/boolean?)]
                                ~'[(t/ref (t/isa? Number))])}
                        ([~'x00__]
                          (ifs ((Array/get ~'>int*|__0|input0|types 0) ~'x00__)
@@ -504,14 +485,14 @@
             (self/defn #_:inline >|test
                        ;; This is admittedly a place where inference might be nice, but luckily
                        ;; there are no "sparse" combinations
-              #?(:clj  ([a comparable-primitive? b comparable-primitive? > boolean?]
+              #?(:clj  ([a comparable-primitive? b comparable-primitive? > tt/boolean?]
                          (Numeric/gt a b))
-                 :cljs ([a double?               b double?               > (t/assume boolean?)]
+                 :cljs ([a double?               b double?               > (t/assume tt/boolean?)]
                          (cljs.core/> a b)))))
         expected
           (case (env-lang)
             :clj
-              ($ (do ;; [a t/comparable-primitive? b t/comparable-primitive? > boolean?]
+              ($ (do ;; [a t/comparable-primitive? b t/comparable-primitive? > tt/boolean?]
 
                      ;; These are non-primitivized
                      (def ~(tag "[Ljava.lang.Object;" '>|test|__0|input0|types)
@@ -732,9 +713,9 @@
              {:quantum.core.type/type
                (t/fn t/any?
                      #?(:clj  ~'[comparable-primitive? comparable-primitive?
-                                 :> boolean?]
+                                 :> tt/boolean?]
                         :cljs ~'[double?               double?
-                                 :> (t/assume boolean?)]))}
+                                 :> (t/assume tt/boolean?)]))}
              ([~'x00__ ~'x10__]
                (ifs
                  ((Array/get ~'>|test|__0|input0|types 0) ~'x00__)
@@ -878,11 +859,11 @@
             (self/defn #_:inline >long*
               {:source "clojure.lang.RT.uncheckedLongCast"}
               > long?
-              ([x (t/- primitive? boolean?)] (Primitive/uncheckedLongCast x))
+              ([x (t/- tt/boolean? tt/boolean?)] (Primitive/uncheckedLongCast x))
               ([x (t/ref (t/isa? Number))] (.longValue x))))
         expected
           (case (env-lang)
-            :clj ($ (do ;; [x (t/- primitive? boolean?)]
+            :clj ($ (do ;; [x (t/- tt/boolean? tt/boolean?)]
 
                         (def ~(tag "[Ljava.lang.Object;" '>long*|__0|input0|types)
                           (*<> (t/isa? java.lang.Byte)
@@ -934,7 +915,7 @@
                           {:source "clojure.lang.RT.uncheckedLongCast"
                            :quantum.core.type/type
                              (t/fn ~'long?
-                                   ~'[(t/- primitive? boolean?)]
+                                   ~'[(t/- tt/boolean? tt/boolean?)]
                                    ~'[(t/ref (t/isa? Number))])}
                           ([~'x00__]
                             (ifs
@@ -974,11 +955,11 @@
   (let [actual
           (macroexpand '
             (self/defn ref-output-type
-              ([x boolean? > (t/ref boolean?)] (Boolean. x))
-              ([x byte?    > (t/ref byte?)]    (Byte.    x))))
+              ([x tt/boolean? > (t/ref tt/boolean?)] (Boolean. x))
+              ([x byte?       > (t/ref byte?)]       (Byte.    x))))
         expected
           (case (env-lang)
-            :clj ($ (do ;; [x boolean? > (t/ref boolean?)]
+            :clj ($ (do ;; [x tt/boolean? > (t/ref tt/boolean?)]
 
                         (def ~(tag "[Ljava.lang.Object;" 'ref-output-type|__0|input0|types)
                           (*<> (t/isa? java.lang.Boolean)))
@@ -997,8 +978,8 @@
                         (defn ~'ref-output-type
                           {:quantum.core.type/type
                             (t/fn t/any?
-                                  ~'[boolean? :> (t/ref boolean?)]
-                                  ~'[byte?    :> (t/ref byte?)])}
+                                  ~'[tt/boolean? :> (t/ref tt/boolean?)]
+                                  ~'[byte?       :> (t/ref byte?)])}
                           ([~'x00__]
                             (ifs
                               ((Array/get ~'ref-output-type|__0|input0|types 0) ~'x00__)
@@ -1028,11 +1009,11 @@
       (eval '(do (is (identical? (defnt-reference) 1)))))))
 
 (deftest defnt-assume-test
-  (throws (eval '(self/defn defnt-assume-0 [> (t/assume t/int?)] "asd")))
-  (throws (eval '(self/defn defnt-assume-1 [> (t/assume t/int?)] nil)))
-  (is= nil (do (eval '(self/defn defnt-assume-2 [> (t/assume t/int?)] (Object.)))
+  (throws (eval '(self/defn defnt-assume-0 [> (t/assume tt/int?)] "asd")))
+  (throws (eval '(self/defn defnt-assume-1 [> (t/assume tt/int?)] nil)))
+  (is= nil (do (eval '(self/defn defnt-assume-2 [> (t/assume tt/int?)] (Object.)))
                nil))
-  (is= nil (do (eval '(self/defn defnt-assume-3 [> (t/assume t/int?)] (or (Object.) nil)))
+  (is= nil (do (eval '(self/defn defnt-assume-3 [> (t/assume tt/int?)] (or (Object.) nil)))
                nil)))
 
 (self/defn >big-integer > (t/isa? java.math.BigInteger)
@@ -1046,7 +1027,7 @@
               {:source "clojure.lang.RT.longCast"}
               > long?
               ;; TODO multi-arity `t/-`
-              ([x (t/- (t/- (t/- primitive? boolean?) float?) double?)] (>long* x))
+              ([x (t/- (t/- (t/- tt/boolean? tt/boolean?) float?) double?)] (>long* x))
               ([x (t/and (t/or double? float?)
                          ;; TODO add this back in
                          #_(fnt [x (t/or t/double? t/float?)] (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
@@ -1063,10 +1044,10 @@
               ([x (t/value true)]  1)
               ([x (t/value false)] 0)
               ([x t/string?] (Long/parseLong x))
-              ([x t/string?, radix int?] (Long/parseLong x radix))))
+              ([x t/string?, radix tt/int?] (Long/parseLong x radix))))
         expected
           (case (env-lang)
-            :clj ($ (do #_[x (t/- primitive? boolean? float? double?)]
+            :clj ($ (do #_[x (t/- tt/boolean? tt/boolean? float? double?)]
 
                         #_(def ~'>long|__0|input-types (*<> byte?))
                         (def ~'>long|__0
@@ -1089,7 +1070,7 @@
                               ;; Resolved from `(>long* x)`
                               (.invoke >long*|__2 ~'x))))
 
-                        #_(def ~'>long|__3|input-types (*<> int?))
+                        #_(def ~'>long|__3|input-types (*<> tt/int?))
                         (def ~'>long|__3
                           (reify int>long
                             (~(tag "long" 'invoke) [_## ~(tag "int" 'x)]
@@ -1161,7 +1142,7 @@
                               (let* [~(tag "clojure.lang.Ratio" 'x) ~'x]
                                 ;; Resolved from `(>long (.bigIntegerValue x))`
                                 ;; In this case, `(t/compare (type-of '(.bigIntegerValue x)) overload-type)`:
-                                ;; - `(t/- primitive? boolean? float? double?)`  -> t/<>
+                                ;; - `(t/- tt/boolean? tt/boolean? float? double?)`  -> t/<>
                                 ;; - `(t/and (t/or double? float?) ...)`         -> t/<>
                                 ;; - `(t/and (t/isa? clojure.lang.BigInt) ...)`  -> t/<>
                                 ;; - `(t/and (t/isa? java.math.BigInteger) ...)` -> t/>
@@ -1208,7 +1189,7 @@
                         #_[x t/string?]
 
                         #_(def ~'>long|__13|input-types
-                          (*<> t/string? int?))
+                          (*<> t/string? tt/int?))
                         (def ~'>long|__13
                           (reify Object+int>long
                             (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x) ~(tag "int" 'radix)]
@@ -1217,7 +1198,7 @@
                         #_(defn >long
                           {:quantum.core.type/type
                             (t/fn
-                              [(t/- primitive? boolean? float? double?)]
+                              [(t/- tt/boolean? tt/boolean? float? double?)]
                               [(t/and (t/or t/double? t/float?)
                                       (fnt [x (t/or double? float?)]
                                         (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
@@ -1229,7 +1210,7 @@
                               [(t/value true)]
                               [(t/value false)]
                               [t/string?]
-                              [t/string? int?])}
+                              [t/string? tt/int?])}
                           ([x0##] (ifs ((Array/get >long|__0|input-types 0) x0##)
                                          (.invoke >long|__0 x0##)
                                        ((Array/get >long|__1|input-types 0) x0##)
@@ -1262,7 +1243,7 @@
                     ;; If we had combined this arity, `t/or`ing the `t/string?` means it wouldn't have been
                     ;; handled any differently than `t/char-seq?`
             #?(:clj ([x t/string?] (StringBuilder. x)))
-                    ([x #?(:clj  (t/or t/char-seq? int?)
+                    ([x #?(:clj  (t/or t/char-seq? tt/int?)
                            :cljs t/val?)]
                       #?(:clj (StringBuilder. x) :cljs (StringBuffer. x)))))
         expected
@@ -1301,7 +1282,7 @@
                             (t/fn ~'(t/isa? StringBuilder)
                                   ~'[]
                                   ~'[t/string?]
-                                  ~'[(t/or t/char-seq? int?)])}
+                                  ~'[(t/or t/char-seq? tt/int?)])}
                           ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.>Object"
                                              '!str|__0|0)))
                           ([~'x00__]
@@ -1332,7 +1313,7 @@
                    :cljs (t/isa? StringBuffer))
          []
  #?(:clj [t/string?])
-         [#?(:clj  (t/or t/char-seq? t/int?)
+         [#?(:clj  (t/or t/char-seq? tt/int?)
              :cljs t/val?)]))
 
      ~(case-env
@@ -1345,19 +1326,19 @@
                      (reify Object>Object
                        (^java.lang.Object invoke [_# ^java.lang.Object ~'x]
                          (let* [^String x x] (StringBuilder. x)))))
-                   ;; `(t/or t/char-seq? t/int?)`
+                   ;; `(t/or t/char-seq? tt/int?)`
                    (def ^Object>Object !str|__2 ; `t/char-seq?`
                      (reify Object>Object
                        (^java.lang.Object invoke [_# ^java.lang.Object ~'x]
                          (let* [^CharSequence x x] (StringBuilder. x)))))
-                   (def ^int>Object !str|__3 ; `t/int?`
+                   (def ^int>Object !str|__3 ; `tt/int?`
                      (reify int>Object (^java.lang.Object invoke [_# ^int ~'x]
                        (StringBuilder. x))))
 
                    (defn !str ([  ] (.invoke !str|__0))
-                              ([a0] (ifs (t/string? a0)      (.invoke !str|__1 a0)
-                                         (t/char-seq? a0) (.invoke !str|__2 a0)
-                                         (t/int? a0)      (.invoke !str|__3 a0)))))
+                              ([a0] (ifs (tt/string? a0)      (.invoke !str|__1 a0)
+                                         (tt/char-seq? a0) (.invoke !str|__2 a0)
+                                         (tt/int? a0)      (.invoke !str|__3 a0)))))
         :cljs `(do (defn !str ([]   (StringBuffer.))
                               ([a0] (let* [x a0] (StringBuffer. x)))))))
 
@@ -1449,24 +1430,24 @@
 (macroexpand '
 (self/defn #_:inline get
   ;; TODO `t/numerically
-  ([xs t/array? , k #_(t/numerically t/int?)] (#?(:clj Array/get :cljs aget) xs k))
-  ([xs t/string?, k #_(t/numerically t/int?)] (.charAt xs k))
+  ([xs t/array? , k #_(t/numerically tt/int?)] (#?(:clj Array/get :cljs aget) xs k))
+  ([xs t/string?, k #_(t/numerically tt/int?)] (.charAt xs k))
   ([xs !+vector?, k t/any?] #?(:clj (.valAt xs k) :cljs (TODO))))
 )
 ;; ----- expanded code ----- ;;
 
 `(do (swap! fn->spec assoc #'count
        (t/fn :> t/pos-integer?
-         [t/array?  (t/numerically t/int?)]
-         [t/string? (t/numerically t/int?)]
+         [t/array?  (t/numerically tt/int?)]
+         [t/string? (t/numerically tt/int?)]
          [!+vector? t/any?]))
 
      ...)
 
 ;; =====|=====|=====|=====|===== ;;
 
-(self/defn zero? > boolean?
-  ([x (t/- primitive? boolean?)] (Numeric/isZero x)))
+(self/defn zero? > tt/boolean?
+  ([x (t/- tt/boolean? tt/boolean?)] (Numeric/isZero x)))
 
 ; TODO CLJS version will come after
 #?(:clj

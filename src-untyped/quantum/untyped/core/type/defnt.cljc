@@ -60,7 +60,7 @@
 
 ;; Internal specs
 
-(s/def ::expanded-overload|arg-classes (s/vec-of t/class?))
+(s/def ::expanded-overload|arg-classes (s/vec-of class?))
 (s/def ::expanded-overload|arg-types   (s/seq-of t/type?))
 
 ;; This is the overload after the input specs are split by their respective `t/or` constituents,
@@ -72,7 +72,7 @@
          :arglist-code|fn|hinted      t/any?
          :arglist-code|reify|unhinted t/any?
          :body-form                   t/any?
-         :out-class                   (? t/class?)
+         :out-class                   (? class?)
          :out-type                    t/type?
          :positional-args-ct          (s/and integer? #(>= % 0))
          ;; When present, varargs are considered to be of class Object
@@ -174,15 +174,15 @@
 (defns class>simplest-class
   "This ensures that special overloads are not created for non-primitive subclasses
    of java.lang.Object (e.g. String, etc.)."
-  [c (? t/class?) > (? t/class?)]
+  [c (? class?) > (? class?)]
   (if (t/primitive-class? c) c java.lang.Object)))
 
 #?(:clj
-(defns class>most-primitive-class [c (? t/class?), nilable? t/boolean? > (? t/class?)]
+(defns class>most-primitive-class [c (? class?), nilable? t/boolean? > (? class?)]
   (if nilable? c (or (tcore/boxed->unboxed c) c))))
 
 #?(:clj
-(defns type>most-primitive-classes [t t/type? > (s/set-of (? t/class?))]
+(defns type>most-primitive-classes [t t/type? > (s/set-of (? class?))]
   (let [cs       (t/type>classes t)
         nilable? (or (-> t meta :quantum.core.type/ref?) (contains? cs nil))]
     (->> cs
@@ -190,7 +190,7 @@
          (r/join #{})))))
 
 #?(:clj
-(defns out-type>class [t t/type? > (? t/class?)]
+(defns out-type>class [t t/type? > (? class?)]
   (if (-> t meta :quantum.core.type/ref?)
       java.lang.Object
       (let [cs  (t/type>classes t)
@@ -242,7 +242,7 @@
    {:as opts        :keys [lang _]} ::opts
    arg-bindings _
    arg-types|satisfying-primitivization (s/vec-of t/type?)
-   arg-classes (s/vec-of t/class?)
+   arg-classes (s/vec-of class?)
    varargs-binding _
    > ::expanded-overload]
   (let [;; Not sure if `nil` is the right approach for the value
@@ -306,7 +306,7 @@
                (mapv (fn [arg-classes #_::expanded-overload|arg-classes]
                        (let [arg-types|satisfying-primitivization
                                (c/mergev-with
-                                 (fn [_ t #_t/type? c #_t/class?]
+                                 (fn [_ t #_t/type? c #_class?]
                                    (cond-> t (t/primitive-class? c) (t/and c)))
                                  arg-types|expanded arg-classes)]
                          (>expanded-overload overload-data fnt-globals opts
@@ -367,7 +367,7 @@
 
 (def fnt-method-sym 'invoke)
 
-(defns- class>interface-part-name [c t/class? > string?]
+(defns- class>interface-part-name [c class? > string?]
   (if (= c java.lang.Object)
       "Object"
       (let [illegal-pattern #"\|\+"]
@@ -375,12 +375,12 @@
             (err! "Class cannot contain pattern" {:class c :pattern illegal-pattern})
             (-> c >name (str/replace "." "|"))))))
 
-(defns fnt-overload>interface-sym [args-classes (s/seq-of t/class?), out-class t/class? > symbol?]
+(defns fnt-overload>interface-sym [args-classes (s/seq-of class?), out-class class? > symbol?]
   (>symbol (str (->> args-classes (c/lmap class>interface-part-name) (str/join "+"))
                 ">" (class>interface-part-name out-class))))
 
 ;; TODO finish specing args
-(defns fnt-overload>interface [args-classes _, out-class t/class?, gen-gensym fn?]
+(defns fnt-overload>interface [args-classes _, out-class class?, gen-gensym fn?]
   (let [interface-sym     (fnt-overload>interface-sym args-classes out-class)
         hinted-method-sym (ufth/with-type-hint fnt-method-sym
                             (ufth/>interface-method-tag out-class))
@@ -393,7 +393,7 @@
 #?(:clj
 (defns expanded-overload>reify-overload
   [{:as overload
-    :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, out-class t/class?]}
+    :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, out-class class?]}
    ::expanded-overload
    {:as opts :keys [gen-gensym _]} ::opts
    > ::reify|overload]
@@ -482,7 +482,7 @@
 ;; dynamic for testing purposes
 (def ^:dynamic **class>shorthand-tag|cache* *class>shorthand-tag|cache)
 
-(defns class>shorthand-tag [c t/class?]
+(defns class>shorthand-tag [c class?]
   (or (c/get @**class>shorthand-tag|cache* c)
       (-> (swap! **class>shorthand-tag|cache*
             (fn [{:as m :keys [remaining]}]

@@ -324,7 +324,7 @@
 (defns classes>class
   "Ensure that given a set of classes, that set consists of at most a class C and nil.
    If so, returns C. Otherwise, throws."
-  [cs (s/set-of (s/? class?)) > class?]
+  [cs (s/set-of (s/nilable class?)) > class?]
   (let [cs' (disj cs nil)]
     (if (-> cs' count (= 1))
         (first cs')
