@@ -44,8 +44,6 @@ Note that for anything built-in js/<whatever>, the `t/isa?` predicates might nee
 
 >boolean is different than `truthy?`
 
-We should not rely on the value of dynamic vars e.g. `*math-context*` unless specifically typed
-
 Sometimes you want (byte <whatever-double>) to fail at runtime rather than fail at runtime when you can't know everything about the input's range
 
 These two should be defined in the (whatever) data namespace:
@@ -61,15 +59,32 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  - t/type >>>>>> (PRIORITY 1) <<<<<<
-    - dependent types: `[x arr/array? > (t/type x)]`
-    - (comp/t== x)
-      - dependent type such that the passed input must be identical to x
-  - Analysis
-    - This is accepted by the type system without knowing the type:
+  [1 .] This is accepted by the type system without knowing the type:
       (java.math.BigInteger. 1 (-> (ByteBuffer/allocate (int 8)) (.putLong x) .array))
 
       So, constructors need the same kind of lookup that dot calls have
+  [2 .] t/type
+      - dependent types: `[x arr/array? > (t/type x)]`
+  [3] t/value-of
+    - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
+  [4] - t/input-type
+      - `(t/input-type >namespace :?)` meaning the possible input types to the first input to `>namespace`
+      - `(t/input-type reduce :_ :_ :?)`
+      - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
+  [5] - No trailing `>` means `> ?`
+      - ? : type inference
+        - use logic programming and variable unification e.g. `?1` `?2` ?
+        - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
+          ([n dnum/std-integer?, xs dc/counted?] (count xs))
+          ([n dnum/std-integer?, xs ?] ...)
+  - (comp/t== x)
+     - dependent type such that the passed input must be identical to x
+  - Analysis
+    - Better analysis of compound literals
+      - Literal vectors need to be analyzed — (t/finite-of t/built-in-vector? a-type b-type ...)
+      - Literal sets need to be analyzed — (t/finite-of t/built-in-set? a-type b-type ...)
+      - Literal maps need to be better analyzed — (t/finite-of t/built-in-map?  [ak-type av-type] ...)
+      - Literal seqs need to be better analyzed — (t/finite-of t/built-in-list? [ak-type av-type] ...)
     - (if (dcoll/reduced? ret)
           ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`
           (ref/deref ret)
@@ -98,21 +113,13 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - (if (A) ...) should be (if ^boolean (A) ...) if A returns a `p/boolean?`
   - t/- : fix
     - (t/- (t/isa? java.util.Queue) (t/or ?!+queue? !!queue?))
-  - t/value-of
-    - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
   - t/numerically : e.g. a double representing exactly what a float is able to represent
     - and variants thereof: `numerically-long?` etc.
     - t/numerically-integer?
-  - ? : type inference
-    - use logic programming and variable unification e.g. `?1` `?2` ?
-    - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
-      ([n dnum/std-integer?, xs dc/counted?] (count xs))
-      ([n dnum/std-integer?, xs ?] ...)
+  - We should not rely on the value of dynamic vars e.g. `*math-context*` unless specifically typed
+    - We'll have to make a special class or *something* like that to ensure that typed bindings are only
+      bound within typed contexts.
   - t/extend-defn!
-  - t/input-type
-    - `(t/input-type >namespace :?)` meaning the possible input types to the first input to `>namespace`
-    - `(t/input-type reduce :_ :_ :?)`
-    - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
   - dc/of
     - (dc/of number?) ; implicitly the container is a `reducible?`
     - (dc/of map/+map? symbol? dstr/string?)
