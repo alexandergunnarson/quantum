@@ -382,6 +382,25 @@
               (analyze-seq|dot|method-call env form target target-class
                 (boolean ?target-static-class-map) method-or-field args-forms)))))))
 
+(defns- analyze-seq|new|gen-incrementally-analyze
+  [env ::env, form _, constructor-class class?]
+  (fn [{:as ret :keys [constructors']} arg i|arg]
+    (let [arg|analyzed (analyze* env arg)
+          constructors''
+            (->> constructors'
+                 (c/filter (fn [{:keys [^"[Ljava.lang.Object;" argtypes]}]
+                             (t/<= (:type arg|analyzed)
+                                   (class>type (aget argtypes i|arg))))))]
+      (if (empty? constructors'')
+          (err! "No constructors for class match the arg type at index"
+                {:class    constructor-class
+                 :form     form
+                 :arg-type (:type arg|analyzed)
+                 :i|arg    i|arg})
+          (-> ret
+              (assoc :constructors' constructors'')
+              (update :args|analyzed conj arg|analyzed))))))
+
 ;; TODO this is not the right approach for CLJS
 ;; TODO use a similar approach for `analyze-seq|dot|method-call`
 (defns- analyze-seq|new
@@ -401,22 +420,7 @@
             (let [{:keys [args|analyzed]}
                     (->> args
                          (reducei
-                           (fn [{:as ret :keys [constructors']} arg i|arg]
-                             (let [arg|analyzed (analyze* env arg)
-                                   constructors''
-                                     (->> constructors'
-                                          (c/filter (fn [{:keys [^"[Ljava.lang.Object;" argtypes]}]
-                                                      (t/<= (:type arg|analyzed)
-                                                            (class>type (aget argtypes i|arg))))))]
-                               (if (empty? constructors'')
-                                   (err! "No constructors for class match the arg type at index"
-                                         {:class     c
-                                          :form      form
-                                          :arg-type  (:type arg|analyzed)
-                                          :i|arg     i|arg})
-                                   (-> ret
-                                       (assoc :constructors' constructors'')
-                                       (update :args|analyzed conj arg|analyzed)))))
+                           (analyze-seq|new|gen-incrementally-analyze env form c)
                            {:constructors' constructors-for-ct :args|analyzed []}))]
               (uast/new-node
                 {:env   env
