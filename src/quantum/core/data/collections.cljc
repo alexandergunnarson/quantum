@@ -190,3 +190,12 @@
 ;; Since reduction is preferred to "manual" `first`/`next` seq traversal, we prefer `reducible?` to
 ;; `seqable?` as the base type.
 (def seqable? reducible?)
+
+(t/defn unkeyed
+  "Creates an unkeyed collection type, in which the collection may
+   or may not be sequential or even seqable, but must not have key-value
+   pairs like a map.
+   Examples of unkeyed collections include a vector (despite its associativity),
+   a list, and a set (despite its values doubling as keys).
+   A map is not an unkeyed collection."
+  [x ...] (TODO))
