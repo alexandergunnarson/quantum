@@ -42,7 +42,30 @@
    #?(:clj  java.lang.String
       :cljs string)             (>form [x] x)
    #?(:clj  clojure.lang.Symbol
-      :cljs cljs.core.Symbol)   (>form [x] (list 'quote x))
+      :cljs cljs.core/Symbol)   (>form [x] (list 'quote x))
+   #?(:clj  clojure.lang.Keyword
+      :cljs cljs.core/Keyword)  (>form [x] x)
+
+   #?(:clj  clojure.lang.PersistentArrayMap
+      :cljs cljs.core/PersistentArrayMap)
+     (>form [x] (->> x (map (fn [[k v]] [(>form k) (>form v)])) (into (array-map))))
+
+   #?(:clj  clojure.lang.PersistentHashMap
+      :cljs cljs.core/PersistentHashMap)
+     (>form [x] (->> x (map (fn [[k v]] [(>form k) (>form v)])) (into (hash-map))))
+
+   #?(:clj  clojure.lang.PersistentVector
+      :cljs cljs.core/PersistentVector)
+     (>form [x] (->> x (mapv >form)))
+
+   #?(:clj  clojure.lang.PersistentList
+      :cljs cljs.core/PersistentList)
+     (>form [x] (->> x (map >form) list*))
+
+   #?(:clj  clojure.lang.Var
+      :cljs cljs.core/Var)
+     (>form [x] #?(:clj  (list 'var (symbol (-> x .-ns ns-name name) (-> x .-sym name)))
+                   :cljs (.-sym x)))
 
   #?@(:clj [clojure.lang.Fn     (>form [x]
                                   ;; TODO can probably use uconv to good effect here
