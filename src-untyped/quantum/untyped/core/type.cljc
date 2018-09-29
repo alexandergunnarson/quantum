@@ -8,7 +8,7 @@
             boolean? byte? bytes? char? short? int? long? float? double?
             isa?
             nil? any? class? tagged-literal? #?(:cljs object?)
-            true? false? keyword? symbol?
+            true? false? keyword? string? symbol?
             fn? ifn?
             meta
             ref
@@ -212,7 +212,9 @@
        (isa?|protocol x)
 
        (#?(:clj c/class? :cljs c/fn?) x)
-       (isa?|class x)))
+       (isa?|class x)
+
+       (throw (ex-info "`isa?` cannot be applied to" {:x x}))))
 
 (defn isa?|direct [x]
   (if (uclass/protocol? x)

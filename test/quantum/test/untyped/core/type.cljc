@@ -128,8 +128,8 @@
 )
 
 
-(def C a) ; concrete class
-(def A >a+b) ; abstract class
+(def C java.util.AbstractCollection) ; concrete class
+(def A java.util.AbstractCollection) ; abstract class
 (def I Comparable) ; interface
 (def P AProtocolAll) ; protocol
 
@@ -146,11 +146,15 @@
           (testing "collection equality"
             (is= 1 (count (hash-set a b))))))
 
+(defn- gen-meta [] {(rand) (rand)})
+
 (deftest test|universal-set
-  (test-equality #(UniversalSetType.)))
+  (test-equality #(UniversalSetType. nil))
+  (test-equality #(UniversalSetType. (gen-meta))))
 
 (deftest test|empty-set
-  (test-equality #(EmptySetType.)))
+  (test-equality #(EmptySetType. nil))
+  (test-equality #(EmptySetType. (gen-meta))))
 
 (deftest test|not
   (test-equality #(! (t/value 1)))
@@ -240,8 +244,8 @@
                                 (| double? char-seq?)))
            [double? char-seq?])
       (is= (utr/or-type>args (| (| string? double?)
-                                (| char-seq? t/number?)))
-           [char-seq? t/number?]))
+                                (| char-seq? (t/isa? Number))))
+           [char-seq? (t/isa? Number)]))
     (testing "#{<+ =} -> #{<+}"
       (is= (utr/or-type>args (| i|>a+b i|>a0 i|a))
            [i|>a+b i|>a0]))
@@ -365,22 +369,22 @@
            [i|<a+b i|<a0 i|><0 i|><1]))))
 
 (deftest test|isa?|protocol
-  (test-equality #(t/isa|protocol? P)))
+  (test-equality #(@#'t/isa?|protocol P)))
 
 (deftest test|isa?|class
-  (test-equality #(t/isa|class? C))
-  (test-equality #(t/isa|class? A))
-  (test-equality #(t/isa|class? I)))
+  (test-equality #(@#'t/isa?|class C))
+  (test-equality #(@#'t/isa?|class A))
+  (test-equality #(@#'t/isa?|class I)))
 
-(deftest test|isa?|direct
-  (test-equality #(t/isa|direct? utr/PType))
-  (test-equality #(t/isa|direct? Object)))
+#_(deftest test|isa?|direct
+  (test-equality #(t/isa?|direct utr/PType))
+  (test-equality #(t/isa?|direct Object)))
 
 (deftest test|isa?
-  (test-equality #(t/isa? Object))
-  (test-equality #(t/isa? clojure.lang.))
-  (test-equality #(t/isa? Comparable))
-  (test-equality #(t/isa? utr/PType)))
+  (test-equality #(t/isa? C))
+  (test-equality #(t/isa? A))
+  (test-equality #(t/isa? I))
+  (test-equality #(t/isa? P)))
 
 (deftest test|value
   (test-equality #(t/value 1))
