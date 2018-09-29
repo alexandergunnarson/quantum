@@ -951,70 +951,46 @@
              (is (identical? (>long* -1.1)     (clojure.lang.RT/uncheckedLongCast -1.1)))
              (is (identical? (>long* (byte 1)) (clojure.lang.RT/uncheckedLongCast (byte 1)))))))))
 
+#?(:clj
 (deftest ref-output-type-test
+  "Tests whether refs are output when requested instead of primitives"
   (let [actual
           (macroexpand '
             (self/defn ref-output-type
               ([x tt/boolean? > (t/ref tt/boolean?)] (Boolean. x))
               ([x byte?       > (t/ref byte?)]       (Byte.    x))))
         expected
-          (case (env-lang)
-            :clj ($ (do ;; [x tt/boolean? > (t/ref tt/boolean?)]
+          ($ (do ;; [x tt/boolean? > (t/ref tt/boolean?)]
 
-                        (def ~(tag "[Ljava.lang.Object;" 'ref-output-type|__0|input0|types)
-                          (*<> (t/isa? java.lang.Boolean)))
-                        (def ~'ref-output-type|__0|0
-                          (reify* [boolean>Object]
-                            (~(O 'invoke) [~'_0__ ~(tag "boolean" 'x)] (new ~'Boolean ~'x))))
+                 (def ~(tag "[Ljava.lang.Object;" 'ref-output-type|__0|input0|types)
+                   (*<> (t/isa? java.lang.Boolean)))
+                 (def ~'ref-output-type|__0|0
+                   (reify* [boolean>Object]
+                     (~(O 'invoke) [~'_0__ ~(tag "boolean" 'x)] (new ~'Boolean ~'x))))
 
-                        ;; [x byte? > (t/ref byte?)]
+                 ;; [x byte? > (t/ref byte?)]
 
-                        (def ~(tag "[Ljava.lang.Object;" 'ref-output-type|__1|input0|types)
-                          (*<> (t/isa? java.lang.Byte)))
-                        (def ~'ref-output-type|__1|0
-                          (reify* [byte>Object]
-                            (~(O 'invoke) [~'_1__ ~(tag "byte" 'x)] (new ~'Byte ~'x))))
+                 (def ~(tag "[Ljava.lang.Object;" 'ref-output-type|__1|input0|types)
+                   (*<> (t/isa? java.lang.Byte)))
+                 (def ~'ref-output-type|__1|0
+                   (reify* [byte>Object]
+                     (~(O 'invoke) [~'_1__ ~(tag "byte" 'x)] (new ~'Byte ~'x))))
 
-                        (defn ~'ref-output-type
-                          {:quantum.core.type/type
-                            (t/fn t/any?
-                                  ~'[tt/boolean? :> (t/ref tt/boolean?)]
-                                  ~'[byte?       :> (t/ref byte?)])}
-                          ([~'x00__]
-                            (ifs
-                              ((Array/get ~'ref-output-type|__0|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (str `boolean>Object) 'ref-output-type|__0|0)
-                                         ~'x00__)
-                              ((Array/get ~'ref-output-type|__1|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (str `byte>Object) 'ref-output-type|__1|0)
-                                         ~'x00__)
-                              (unsupported! `ref-output-type [~'x00__] 0)))))))]
-    (testing "code equivalence" (is-code= actual expected))))
-
-(deftest defnt-reference-test
-  (let [actual
-          (macroexpand '
-            (self/defn defnt-reference
-              ([] (>long* 1))))
-        expected
-          (case (env-lang)
-            :clj ($ (do (def ~'defnt-reference|__0|0
-                          (reify* [>long] (~(tag "long" 'invoke) [~'_0__] ~'(>long* 1))))
-                        (defn ~'defnt-reference
-                          {:quantum.core.type/type (t/fn t/any? [])}
-                          ([] (.invoke ~(tag (str `>long) 'defnt-reference|__0|0)))))))]
-    (testing "code equivalence" (is-code= actual expected))
-    (testing "functionality"
-      (eval actual)
-      (eval '(do (is (identical? (defnt-reference) 1)))))))
-
-(deftest defnt-assume-test
-  (throws (eval '(self/defn defnt-assume-0 [> (t/assume tt/int?)] "asd")))
-  (throws (eval '(self/defn defnt-assume-1 [> (t/assume tt/int?)] nil)))
-  (is= nil (do (eval '(self/defn defnt-assume-2 [> (t/assume tt/int?)] (Object.)))
-               nil))
-  (is= nil (do (eval '(self/defn defnt-assume-3 [> (t/assume tt/int?)] (or (Object.) nil)))
-               nil)))
+                 (defn ~'ref-output-type
+                   {:quantum.core.type/type
+                     (t/fn t/any?
+                           ~'[tt/boolean? :> (t/ref tt/boolean?)]
+                           ~'[byte?       :> (t/ref byte?)])}
+                   ([~'x00__]
+                     (ifs
+                       ((Array/get ~'ref-output-type|__0|input0|types 0) ~'x00__)
+                         (.invoke ~(tag (str `boolean>Object) 'ref-output-type|__0|0)
+                                  ~'x00__)
+                       ((Array/get ~'ref-output-type|__1|input0|types 0) ~'x00__)
+                         (.invoke ~(tag (str `byte>Object) 'ref-output-type|__1|0)
+                                  ~'x00__)
+                       (unsupported! `ref-output-type [~'x00__] 0))))))]
+    (testing "code equivalence" (is-code= actual expected)))))
 
 (self/defn >big-integer > (t/isa? java.math.BigInteger)
   ([x ratio? > (* (t/isa? java.math.BigInteger))] (.bigIntegerValue x)))
@@ -1305,6 +1281,87 @@
              (is (instance? StringBuilder (!str "asd")))
              (is (instance? StringBuilder (!str (int 123))))
              (is (instance? StringBuilder (!str (.subSequence "abc" 0 1)))))))))
+
+(deftest defn-reference-test
+  "Tests that defnts referencing other defnts works"
+  (let [actual
+          (macroexpand '
+            (self/defn defn-reference
+              ([] (>long* 1))))
+        expected
+          (case (env-lang)
+            :clj ($ (do (def ~'defn-reference|__0|0
+                          (reify* [>long] (~(tag "long" 'invoke) [~'_0__] ~'(>long* 1))))
+                        (defn ~'defn-reference
+                          {:quantum.core.type/type (t/fn t/any? [])}
+                          ([] (.invoke ~(tag (str `>long) 'defn-reference|__0|0)))))))]
+    (testing "code equivalence" (is-code= actual expected))
+    (testing "functionality"
+      (eval actual)
+      (eval '(do (is (identical? (defn-reference) 1)))))))
+
+(deftest defn-assume-test
+  "Tests that t/assume works properly in the context of `t/defn`"
+  (throws (eval '(self/defn defn-assume-0 [> (t/assume tt/int?)] "asd")))
+  (throws (eval '(self/defn defn-assume-1 [> (t/assume tt/int?)] nil)))
+  (is= nil (do (eval '(self/defn defn-assume-2 [> (t/assume tt/int?)] (Object.)))
+               nil))
+  (is= nil (do (eval '(self/defn defn-assume-3 [> (t/assume tt/int?)] (or (Object.) nil)))
+               nil)))
+
+(deftest dependent-type-test
+  (let [actual
+          (macroexpand '
+            (self/defn dependent-type
+              ([x (t/or tt/boolean? tt/string?) > (type x)] x)
+              ;; This arity is the same as `identity`
+              ([x t/any?                        > (type x)] x)))
+        expected
+          (case (env-lang)
+            :clj
+              ($ (do ;; [x (t/or tt/boolean? tt/string?) > (type x)]
+
+                     ;; [x t/any? > (type x)]
+
+                     (def ~(tag "[Ljava.lang.Object;" 'dependent-type|__0|input0|types)
+                       (*<> t/any?))
+                     ;; One `reify` because `t/any?` in CLJ does not have any `t/or`-separability
+                     (def ~'dependent-type|__0|0
+                       (reify* [Object>Object boolean>boolean byte>byte short>short char>char
+                                int>int long>long float>float double>double]
+                         (~(tag "java.lang.Object" 'invoke)
+                           [~'_0__ ~(tag "java.lang.Object" 'x)] ~(O 'x))
+                         (~(tag "boolean"          'invoke)
+                           [~'_1__ ~(tag "boolean"          'x)] ~'x)
+                         (~(tag "byte"             'invoke)
+                           [~'_2__ ~(tag "byte"             'x)] ~'x)
+                         (~(tag "short"            'invoke)
+                           [~'_3__ ~(tag "short"            'x)] ~'x)
+                         (~(tag "char"             'invoke)
+                           [~'_4__ ~(tag "char"             'x)] ~'x)
+                         (~(tag "int"              'invoke)
+                           [~'_5__ ~(tag "int"              'x)] ~'x)
+                         (~(tag "long"             'invoke)
+                           [~'_6__ ~(tag "long"             'x)] ~'x)
+                         (~(tag "float"            'invoke)
+                           [~'_7__ ~(tag "float"            'x)] ~'x)
+                         (~(tag "double"           'invoke)
+                           [~'_8__ ~(tag "double"           'x)] ~'x)))
+
+                     (defn ~'dependent-type
+                       {:quantum.core.type/type (t/fn t/any? ~'[t/any?])}
+                       ([~'x00__]
+                         ;; TODO elide check because `t/any?` doesn't require a check
+                         ;; and all args are `t/=` `t/any?`
+                         (ifs ((Array/get ~'dependent-type|__0|input0|types 0) ~'x00__)
+                                (.invoke ~(tag (str `Object>Object)
+                                               'dependent-type|__0|0) ~'x00__)
+                              (unsupported! `dependent-type [~'x00__] 0)))))))]
+    (testing "code equivalence" (is-code= actual expected))
+    (testing "functionality"
+      (eval actual)
+      (eval '(do (is= (dependent-type 1)  1)
+                 (is= (dependent-type "") ""))))))
 
 ;; ----- expanded code ----- ;;
 
