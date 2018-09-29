@@ -12,7 +12,7 @@
             fn? ifn?
             meta
             ref
-            fn])
+            type])
          (:require
            [clojure.core                               :as c]
            [clojure.string                             :as str]
@@ -167,7 +167,24 @@
   "Creates a type whose extension is the singleton set containing only the value `v`."
   [v _] (ValueType. uhash/default uhash/default nil v))
 
-;; ----- General ----- ;;
+;; ----- `isa?` / Class-Inheritance ----- ;;
+
+(defn isa? [x]
+  (ifs (uclass/protocol? x)
+       (isa?|protocol x)
+
+       (#?(:clj c/class? :cljs c/fn?) x)
+       (isa?|class x)
+
+       (throw (ex-info "`isa?` cannot be applied to" {:x x}))))
+
+(defn isa?|direct [x]
+  (if (uclass/protocol? x)
+      #?(:clj  (isa?|class (uclass/protocol>class x))
+         :cljs (isa?|protocol|direct x))
+      (isa? x)))
+
+;; ------------------
 
 (defns -
   "Computes the difference of `t0` from `t1`: (& t0 (! t1))
@@ -200,21 +217,6 @@
                                       (OrType. uhash/default uhash/default nil args
                                         (atom nil))))))))))
   ([t0 utr/type?, t1 utr/type? & ts (us/seq-of utr/type?) > utr/type?] (reduce - (- t0 t1) ts)))
-
-(defn isa? [x]
-  (ifs (uclass/protocol? x)
-       (isa?|protocol x)
-
-       (#?(:clj c/class? :cljs c/fn?) x)
-       (isa?|class x)
-
-       (throw (ex-info "`isa?` cannot be applied to" {:x x}))))
-
-(defn isa?|direct [x]
-  (if (uclass/protocol? x)
-      #?(:clj  (isa?|class (uclass/protocol>class x))
-         :cljs (isa?|protocol|direct x))
-      (isa? x)))
 
 ;; TODO clean up
 (defns >type
@@ -281,18 +283,6 @@
   "Denote on a type that it must not be expanded to use primitive values.
    For use with `defnt`."
   [t utr/type? > utr/type?] (update-meta t assoc :quantum.core.type/ref? true))
-
-;; TODO figure this out
-#_(do (udt/deftype DeducibleSpec [*spec #_(t/atom-of t/spec?)]
-  {PSpec                 nil
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn      {-edn ([this] (list `deducible @*spec))}
-   ?Atom                 {swap! (([this f] (swap!  *spec f)))
-                          reset! ([this v] (reset! *spec v))}})
-
-(defns deducible-spec? [x _] (instance? DeducibleSpec x))
-
-(defns deducible [x spec? > deducible-spec?] (DeducibleSpec. (atom x))))
 
 ;; ===== Logical ===== ;;
 
@@ -421,14 +411,9 @@
             (first simplified)
             (construct-fn uhash/default uhash/default nil simplified (atom nil))))))
 
-;; TODO do this?
-#_(udt/deftype SequentialType)
+;; ===== `t/ftype` ===== ;;
 
-#_(defns of
-  "Creates a type that ... TODO"
-  [pred (<= iterable?), t utr/type?] (TODO))
-
-(defn fn [out-type arity & arities]
+(defn ftype [out-type arity & arities]
   (let [name- nil
         arities-form (cons arity arities)
         arities (->> arities-form
@@ -470,14 +455,24 @@
 (defns compare|out [x0 utr/fn-type?, x1 utr/fn-type? > ucomp/comparison?]
   (utcomp/compare (fn-type>output-type x0) (fn-type>output-type x1)))
 
-(defn unkeyed
-  "Creates an unkeyed collection type, in which the collection may
-   or may not be sequential or even seqable, but must not have key-value
-   pairs like a map.
-   Examples of unkeyed collections include a vector (despite its associativity),
-   a list, and a set (despite its values doubling as keys).
-   A map is not an unkeyed collection."
-  [x] (TODO))
+;; ===== Dependent types ===== ;;
+
+(defns type
+  "Treated specially by the type analyzer. For runtime use, just defaults to `(t/value x)`."
+  [x _ > type?] (value x))
+
+;; TODO figure this out
+;; TODO move to reifications
+#_(do (udt/deftype DeducibleType [*t #_(t/atom-of t/type?)]
+  {PSpec                 nil
+   fipp.ednize/IOverride nil
+   fipp.ednize/IEdn      {-edn ([this] (list `deducible @*t))}
+   ?Atom                 {swap! (([this f] (swap!  *t f)))
+                          reset! ([this v] (reset! *t v))}})
+
+(defns deducible-type? [x _] (instance? DeducibleType x))
+
+(defns deducible [x type? > deducible-type?] (DeducibleType. (atom x))))
 
 (defns ?
   "Arity 1: Computes a type denoting a nilable value satisfying `t`.
