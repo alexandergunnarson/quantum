@@ -330,7 +330,7 @@
         (if-not-let [methods-for-ct-and-kind (c/get methods-for-ct kind)]
           (err! (istr "Method found for arg-count, but was ~non-kind, not ~kind")
                 {:class target-class :method method-form :args args|form})
-          (analyze-seq|method-or-constructor-call|incrementally-analyze env form target target-class
+          (analyze-seq|dot|method-call|incrementally-analyze env form target target-class
             method-form args|form methods-for-ct-and-kind))))))
 
 (defns- analyze-seq|dot|field-access
@@ -396,8 +396,8 @@
         (if (empty? constructors-for-ct)
             (err! "No constructors for class match the arg ct" {:class c :args|form args|form})
             (let [{:keys [args|analyzed call-sites]}
-                    (analyze-seq|call-site|incrementally-analyze env form c args|form
-                      "constructors")]
+                    (analyze-seq|method-or-constructor-call|incrementally-analyze env form c
+                      args|form "constructors")]
               (uast/new-node
                 {:env   env
                  :form  (list* 'new c|form (map :form args|analyzed))
