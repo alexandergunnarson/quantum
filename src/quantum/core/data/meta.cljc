@@ -7,8 +7,8 @@
     [quantum.core.type :as t]))
 
 (def meta?         (t/? map/+map?))
-(def metable?      (t/isa|direct? #?(:clj clojure.lang.IMeta :cljs cljs.core/IMeta)))
-(def with-metable? (t/isa|direct? #?(:clj clojure.lang.IObj  :cljs cljs.core/IWithMeta)))
+(def metable?      (t/isa?|direct #?(:clj clojure.lang.IMeta :cljs cljs.core/IMeta)))
+(def with-metable? (t/isa?|direct #?(:clj clojure.lang.IObj  :cljs cljs.core/IWithMeta)))
 
 (t/defn ^:inline >meta
   "Returns the (possibly nil) metadata of ->`x`."

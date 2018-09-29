@@ -135,16 +135,10 @@
                                `core/any?)))
    :cljs (defalias core/any?))
 
-;; This is in here only because `protocol?` needs it; it's aliased later
+;; This is in here only because `uclass/protocol?` needs it; it's aliased later
 (defn lookup? [x]
   #?(:clj  (instance?  clojure.lang.ILookup x)
      :cljs (satisfies? cljs.core/ILookup    x)))
-
-(defn protocol? [x]
-  #?(:clj  (and (lookup? x) (-> x (get :on-interface) class?))
-           ;; Unfortunately there's no better check in CLJS, at least as of 03/18/2018
-     :cljs (and (fn? x) (= (str x) "function (){}"))))
-
 
 ;; From `quantum.untyped.core.collections.tree` — used in `quantum.untyped.core.macros`
 

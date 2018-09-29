@@ -23,7 +23,7 @@
 
 ;; ===== Nameability ===== ;;
 
-(def named? (t/isa|direct? #?(:clj clojure.lang.Named :cljs cljs.core/INamed)))
+(def named? (t/isa?|direct #?(:clj clojure.lang.Named :cljs cljs.core/INamed)))
 
 (t/defn demunged>namespace [s dstr/string?] TODO TYPED #_(subs s 0 (.lastIndexOf s "/")))
 (t/defn demunged>name      [s dstr/string?] TODO TYPED #_(subs s (inc (.lastIndexOf s "/"))))
@@ -145,7 +145,7 @@
 
 ;; ===== UUIDs ===== ;;
 
-(def uuid? (t/isa|direct? #?(:clj java.util.UUID :cljs cljs.core/UUID)))
+(def uuid? (t/isa?|direct #?(:clj java.util.UUID :cljs cljs.core/UUID)))
 
 (t/defn >uuid > uuid?
   ([]

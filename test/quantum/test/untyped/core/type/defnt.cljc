@@ -1,6 +1,6 @@
 ;; See https://jsperf.com/js-property-access-comparison — all property accesses (at least of length 1) seem to be equal
 
-(ns quantum.core.test.defnt-equivalences
+(ns quantum.test.untyped.core.type.defnt
   (:refer-clojure :exclude
     [* boolean? char? count double? float? get int? ratio? seq zero?])
   (:require

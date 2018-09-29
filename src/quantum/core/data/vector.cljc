@@ -51,12 +51,12 @@
   (t/isa? #?(:clj  clojure.core.rrb_vector.rrbt.Vector
              :cljs clojure.core.rrb-vector.rrbt.Vector)))
 
-(def   +vector?          (t/isa|direct? #?(:clj  clojure.lang.IPersistentVector
+(def   +vector?          (t/isa?|direct #?(:clj  clojure.lang.IPersistentVector
                                            :cljs cljs.core/IVector)))
 
 (defalias ut/+vector|built-in)
 
-(def  !+vector?          (t/isa|direct? #?(:clj  clojure.lang.ITransientVector
+(def  !+vector?          (t/isa?|direct #?(:clj  clojure.lang.ITransientVector
                                            :cljs cljs.core/ITransientVector)))
 
 (def ?!+vector?          (t/or +vector? !+vector?))

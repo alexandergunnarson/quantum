@@ -104,7 +104,7 @@
 
 ;; ===== Iterators ===== ;;
 
-(t/defn ^:inline >iterator [x (t/isa|direct? #?(:clj java.lang.Iterable :cljs cljs.core/IIterable))]
+(t/defn ^:inline >iterator [x (t/isa?|direct #?(:clj java.lang.Iterable :cljs cljs.core/IIterable))]
   #?(:clj  (.iterator x)
      :cljs (cljs.core/-iterator ^not-native x)))
 
@@ -313,14 +313,14 @@
          ;; NOTE We don't accept `xs` that implement `clojure.core.protocols/IKVReduce` only after
          ;;      the fact because `IKVReduce` could inappropriately specialize on e.g. `Object`
          (^:inline [rf rf?, init t/any?
-                    xs (t/isa|direct? #?(:clj  clojure.core.protocols/IKVReduce
+                    xs (t/isa?|direct #?(:clj  clojure.core.protocols/IKVReduce
                                          :cljs cljs.core/IKVReduce))]
            (#?(:clj  clojure.core.protocols/kv-reduce
                :cljs cljs.core/-kv-reduce) xs rf init))
          ;; NOTE We don't accept `xs` that implement `clojure.core.protocols/CollReduce` only after
          ;;      the fact because `CollReduce` inappropriately specializes on `Object`
          (^:inline [rf rf?, init t/any?
-                    xs (t/isa|direct? #?(:clj  clojure.core.protocols/CollReduce
+                    xs (t/isa?|direct #?(:clj  clojure.core.protocols/CollReduce
                                          :cljs cljs.core/IReduce))]
            (#?(:clj  clojure.core.protocols/coll-reduce
                :cljs cljs.core/-reduce) xs rf init))

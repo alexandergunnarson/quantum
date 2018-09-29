@@ -17,9 +17,9 @@
 ;; ===== Sequences and sequence-wrappers ===== ;;
 ;; Sequential (generally not efficient Lookup / RandomAccess)
 
-(def iseqable? (t/isa|direct? #?(:clj clojure.lang.Seqable :cljs cljs.core/ISeqable)))
+(def iseqable? (t/isa?|direct #?(:clj clojure.lang.Seqable :cljs cljs.core/ISeqable)))
 
-(def iseq? (t/isa|direct? #?(:clj clojure.lang.ISeq :cljs cljs.core/ISeq)))
+(def iseq? (t/isa?|direct #?(:clj clojure.lang.ISeq :cljs cljs.core/ISeq)))
 
 #?(:clj (def aseq? (t/isa? clojure.lang.ASeq)))
 
@@ -45,16 +45,16 @@
 
 (def chunk-buffer? (t/isa? #?(:clj clojure.lang.ChunkBuffer :cljs cljs.core/ChunkBuffer)))
 
-(def chunk? (t/isa|direct? #?(:clj clojure.lang.IChunk :cljs cljs.core/IChunk)))
+(def chunk? (t/isa?|direct #?(:clj clojure.lang.IChunk :cljs cljs.core/IChunk)))
 
 (def chunked-cons? (t/isa? #?(:clj clojure.lang.ChunkedCons :cljs cljs.core/ChunkedCons)))
 
 (var/def chunked-seq?
   "Note that `cljs.core/IChunkedSeq` has no interface for `chunked-next`, unliked
    `clojure.lang.IChunkedSeq`."
-  (t/isa|direct? #?(:clj clojure.lang.IChunkedSeq :cljs cljs.core/IChunkedSeq)))
+  (t/isa?|direct #?(:clj clojure.lang.IChunkedSeq :cljs cljs.core/IChunkedSeq)))
 
-#?(:cljs (def chunked-next? (t/isa|direct? #?(:cljs cljs.core/IChunkedNext))))
+#?(:cljs (def chunked-next? (t/isa?|direct #?(:cljs cljs.core/IChunkedNext))))
 
 (def indexed-seq? (t/isa? #?(:clj clojure.lang.IndexedSeq :cljs cljs.core/IndexedSeq)))
 
@@ -87,10 +87,10 @@
 
 ;; ===== End sequences ===== ;;
 
-(def record? (t/isa|direct? #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
+(def record? (t/isa?|direct #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
 
 (def sorted?
-  (t/or (t/isa|direct? #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
+  (t/or (t/isa?|direct #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
         #?@(:clj  [(t/isa? java.util.SortedMap)
                    (t/isa? java.util.SortedSet)]
             :cljs [(t/isa? goog.structs.AvlTree)])
@@ -103,7 +103,7 @@
 (def editable? (t/isa? #?(:clj  clojure.lang.IEditableCollection
                           :cljs cljs.core/IEditableCollection)))
 
-(def iindexed? (t/isa|direct? #?(:clj clojure.lang.Indexed :cljs cljs.core/IIndexed)))
+(def iindexed? (t/isa?|direct #?(:clj clojure.lang.Indexed :cljs cljs.core/IIndexed)))
 
 ;; Indicates efficient lookup by (integer) index (via `get`)
 (def indexed?
@@ -113,10 +113,10 @@
         #?(:clj dstr/char-seq? :cljs dstr/string?)
         arr/array?))
 
-(def  +associative? (t/isa|direct? #?(:clj  clojure.lang.Associative
+(def  +associative? (t/isa?|direct #?(:clj  clojure.lang.Associative
                                       :cljs cljs.core/IAssociative)))
 
-(def !+associative? (t/isa|direct? #?(:clj  clojure.lang.ITransientAssociative
+(def !+associative? (t/isa?|direct #?(:clj  clojure.lang.ITransientAssociative
                                       :cljs cljs.core/ITransientAssociative)))
 
 ;; Indicates whether `assoc?!` is supported
@@ -126,7 +126,7 @@
   (t/or (t/isa? #?(:clj clojure.lang.Sequential :cljs cljs.core/ISequential))
         list? indexed?))
 
-(def icounted? (t/isa|direct? #?(:clj clojure.lang.Counted :cljs cljs.core/ICounted)))
+(def icounted? (t/isa?|direct #?(:clj clojure.lang.Counted :cljs cljs.core/ICounted)))
 
 ;; If something is `counted?`, it is supposed to implement a constant-time `count`
 ;; `nil` is counted but this type ignores that
@@ -149,7 +149,7 @@
         set/set?
         arr/array?))
 
-(def iterable? (t/isa|direct? #?(:clj java.lang.Iterable :cljs cljs.core/IIterable)))
+(def iterable? (t/isa?|direct #?(:clj java.lang.Iterable :cljs cljs.core/IIterable)))
 
 #?(:clj (def java-coll? (t/isa? java.util.Collection)))
 
@@ -177,10 +177,10 @@
         #?(:clj (t/isa? clojure.lang.IKVReduce))
         #?(:clj (t/isa? clojure.lang.IReduceInit))
         ;; We're ignoring indirect implementation for reasons noted in the `reduce` impl
-        (t/isa|direct? #?(:clj  clojure.core.protocols/IKVReduce
+        (t/isa?|direct #?(:clj  clojure.core.protocols/IKVReduce
                           :cljs cljs.core/IKVReduce))
         ;; We're ignoring indirect implementation for reasons noted in the `reduce` impl
-        (t/isa|direct? #?(:clj  clojure.core.protocols/CollReduce
+        (t/isa?|direct #?(:clj  clojure.core.protocols/CollReduce
                           :cljs cljs.core/IReduce))
         iseq?
         iseqable?

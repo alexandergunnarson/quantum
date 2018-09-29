@@ -61,6 +61,10 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
+  - t/isa?|direct
+    - For CLJ, this is `instance?` for classes and `instance?` on the underlying interface
+      associated with a protocol
+    - For CLJS, this is `instance?` for classes and `implements?` for protocols
   - t/type >>>>>> (PRIORITY 1) <<<<<<
     - dependent types: `[x arr/array? > (t/type x)]`
   - (t/== x)
@@ -91,17 +95,13 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
             ;; - What the possible types of xs' are as a result
             (reduce rf init xs')))
     - ([rf rf?, init t/any?, xs #?(:clj  (t/isa? clojure.core.protocols/CollReduce)
-                                   :cljs (t/isa|direct? cljs.core/IReduce))]
+                                   :cljs (t/isa?|direct cljs.core/IReduce))]
         ;; TODO add `^not-native` to `xs` for CLJS
         (#?(:clj  clojure.core.protocols/coll-reduce
             :cljs cljs.core/-reduce) xs rf init))
     - (if (A) ...) should be (if ^boolean (A) ...) if A returns a `p/boolean?`
   - t/- : fix
     - (t/- (t/isa? java.util.Queue) (t/or ?!+queue? !!queue?))
-  - t/isa|direct?
-    - For CLJ, this is `instance?` for classes and `instance?` on the underlying interface
-      associated with a protocol
-    - For CLJS, this is `instance?` for classes and `implements?` for protocols
   - t/value-of
     - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
   - t/numerically : e.g. a double representing exactly what a float is able to represent

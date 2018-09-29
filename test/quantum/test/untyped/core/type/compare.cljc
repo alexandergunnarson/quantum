@@ -1,6 +1,16 @@
 (ns quantum.test.untyped.core.type.compare
   (:require
     [clojure.core                               :as core]
+    [quantum.test.untyped.core.type
+      :refer [i|>a+b i|>a0 i|>a1 i|>b0 i|>b1
+              i|a i|b
+              i|<a+b i|<a0 i|<a1 i|<b0 i|<b1
+              i|><0 i|><1 i|><2
+
+              >a+b >a >b
+              a b
+              <a0 <a1 <b0 <b1
+              ><0 ><1 ><2]]
     [quantum.untyped.core.analyze.expr          :as xp
       :refer [>expr]]
     [quantum.untyped.core.collections           :as c]
@@ -49,97 +59,6 @@
     (is= 0 (t/compare (t/value 1) (>expr (fn [^long x] (== x 1)))))
     (is= 0 (t/compare (t/value 1) (>expr (fn [x] (core/== (long x) 1)))))
     (is= 0 (t/compare (t/value 1) (>expr (fn [x] (= (long x) 1))))))
-
-;; ----- Example interface hierarchy ----- ;;
-
-(do
-
-(gen-interface :name i.>a+b)
-(gen-interface :name i.>a0)
-(gen-interface :name i.>a1)
-(gen-interface :name i.>b0)
-(gen-interface :name i.>b1)
-
-(gen-interface :name i.a    :extends [i.>a0 i.>a1 i.>a+b])
-(gen-interface :name i.b    :extends [i.>b0 i.>b1 i.>a+b])
-
-(gen-interface :name i.<a+b :extends [i.a i.b])
-(gen-interface :name i.<a0  :extends [i.a])
-(gen-interface :name i.<a1  :extends [i.a])
-(gen-interface :name i.<b0  :extends [i.b])
-(gen-interface :name i.<b1  :extends [i.b])
-
-(gen-interface :name i.><0)
-(gen-interface :name i.><1)
-(gen-interface :name i.><2)
-
-(def i|>a+b  (t/isa? i.>a+b))
-(def i|>a0   (t/isa? i.>a0))
-(def i|>a1   (t/isa? i.>a1))
-(def i|>b0   (t/isa? i.>b0))
-(def i|>b1   (t/isa? i.>b1))
-(def i|a     (t/isa? i.a))
-(def i|b     (t/isa? i.b))
-(def i|<a+b  (t/isa? i.<a+b))
-(def i|<a0   (t/isa? i.<a0))
-(def i|<a1   (t/isa? i.<a1))
-(def i|<b0   (t/isa? i.<b0))
-(def i|<b1   (t/isa? i.<b1))
-(def i|><0   (t/isa? i.><0))
-(def i|><1   (t/isa? i.><1))
-(def i|><2   (t/isa? i.><2))
-
-)
-
-;; ----- Hierarchy within existing non-interfaces ----- ;;
-
-(do (def >a+b (t/isa? java.util.AbstractCollection))
-    (def >a   (t/isa? java.util.AbstractList))
-    (def >b   (t/isa? java.util.AbstractSet))
-    (def a    (t/isa? java.util.ArrayList))
-    (def b    (t/isa? java.util.HashSet))
-    (def <a0  (t/isa? javax.management.AttributeList))
-    (def <a1  (t/isa? javax.management.relation.RoleList))
-    (def <b0  (t/isa? java.util.LinkedHashSet))
-    (def <b1  (t/isa? javax.print.attribute.standard.JobStateReasons))
-    (def ><0  t/byte?)
-    (def ><1  t/short?)
-    (def ><2  t/long?))
-
-(def Uc (t/isa? java.lang.Object))
-
-;; ----- Example protocols ----- ;;
-
-(do
-
-(defprotocol AProtocolAll (a-protocol-all [this]))
-
-(extend-protocol AProtocolAll
-  nil    (a-protocol-all [this])
-  Object (a-protocol-all [this]))
-
-(defprotocol AProtocolString (a-protocol-string [this]))
-
-(extend-protocol AProtocolString
-  java.lang.String (a-protocol-string [this]))
-
-(defprotocol AProtocolNonNil (a-protocol-non-nil [this]))
-
-(extend-protocol AProtocolNonNil
-  Object (a-protocol-non-nil [this]))
-
-(defprotocol AProtocolOnlyNil (a-protocol-only-nil [this]))
-
-(extend-protocol AProtocolOnlyNil
-  nil (a-protocol-only-nil [this]))
-
-(defprotocol AProtocolNone (a-protocol-none [this]))
-
-(def protocol-types
-  (->> [AProtocolAll AProtocolString AProtocolNonNil AProtocolOnlyNil AProtocolNone]
-       (map t/>type) set))
-
-)
 
 ;; TESTS ;;
 

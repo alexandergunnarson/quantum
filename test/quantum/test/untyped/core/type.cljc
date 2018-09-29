@@ -1,4 +1,6 @@
 (ns quantum.test.untyped.core.type
+        (:refer-clojure :exclude
+          [boolean? char? double? float? int? string?])
         (:require
           [clojure.core                               :as core]
           [quantum.untyped.core.test
@@ -9,17 +11,7 @@
  #?@(:cljs [:refer [UniversalSetType EmptySetType
                     NotType OrType AndType
                     ProtocolType ClassType
-                    ValueType]])]
-          [quantum.test.untyped.core.type.compare
-            :refer [i|>a+b i|>a0 i|>a1 i|>b0 i|>b1
-                    i|a i|b
-                    i|<a+b i|<a0 i|<a1 i|<b0 i|<b1
-                    i|><0 i|><1 i|><2
-
-                    >a+b >a >b
-                    a b
-                    <a0 <a1 <b0 <b1
-                    ><0 ><1 ><2]])
+                    ValueType]])])
 #?(:clj (:import
           [quantum.untyped.core.type.reifications
              UniversalSetType EmptySetType
@@ -44,9 +36,106 @@
 #?(:clj (def char-seq?  (t/isa? CharSequence)))
         (def string?    (t/isa? #?(:clj String :cljs js/String)))
 
+;; ----- Example interface hierarchy ----- ;;
+
+(do
+
+(gen-interface :name i.>a+b)
+(gen-interface :name i.>a0)
+(gen-interface :name i.>a1)
+(gen-interface :name i.>b0)
+(gen-interface :name i.>b1)
+
+(gen-interface :name i.a    :extends [i.>a0 i.>a1 i.>a+b])
+(gen-interface :name i.b    :extends [i.>b0 i.>b1 i.>a+b])
+
+(gen-interface :name i.<a+b :extends [i.a i.b])
+(gen-interface :name i.<a0  :extends [i.a])
+(gen-interface :name i.<a1  :extends [i.a])
+(gen-interface :name i.<b0  :extends [i.b])
+(gen-interface :name i.<b1  :extends [i.b])
+
+(gen-interface :name i.><0)
+(gen-interface :name i.><1)
+(gen-interface :name i.><2)
+
+(def i|>a+b  (t/isa? i.>a+b))
+(def i|>a0   (t/isa? i.>a0))
+(def i|>a1   (t/isa? i.>a1))
+(def i|>b0   (t/isa? i.>b0))
+(def i|>b1   (t/isa? i.>b1))
+(def i|a     (t/isa? i.a))
+(def i|b     (t/isa? i.b))
+(def i|<a+b  (t/isa? i.<a+b))
+(def i|<a0   (t/isa? i.<a0))
+(def i|<a1   (t/isa? i.<a1))
+(def i|<b0   (t/isa? i.<b0))
+(def i|<b1   (t/isa? i.<b1))
+(def i|><0   (t/isa? i.><0))
+(def i|><1   (t/isa? i.><1))
+(def i|><2   (t/isa? i.><2))
+
+)
+
+;; ----- Hierarchy within existing non-interfaces ----- ;;
+
+(do (def >a+b (t/isa? java.util.AbstractCollection))
+    (def >a   (t/isa? java.util.AbstractList))
+    (def >b   (t/isa? java.util.AbstractSet))
+    (def a    (t/isa? java.util.ArrayList))
+    (def b    (t/isa? java.util.HashSet))
+    (def <a0  (t/isa? javax.management.AttributeList))
+    (def <a1  (t/isa? javax.management.relation.RoleList))
+    (def <b0  (t/isa? java.util.LinkedHashSet))
+    (def <b1  (t/isa? javax.print.attribute.standard.JobStateReasons))
+    (def ><0  byte?)
+    (def ><1  short?)
+    (def ><2  long?))
+
+(def Uc (t/isa? java.lang.Object))
+
+;; ----- Example protocols ----- ;;
+
+(do
+
+(defprotocol AProtocolAll (a-protocol-all [this]))
+
+(extend-protocol AProtocolAll
+  nil    (a-protocol-all [this])
+  Object (a-protocol-all [this]))
+
+(defprotocol AProtocolString (a-protocol-string [this]))
+
+(extend-protocol AProtocolString
+  java.lang.String (a-protocol-string [this]))
+
+(defprotocol AProtocolNonNil (a-protocol-non-nil [this]))
+
+(extend-protocol AProtocolNonNil
+  Object (a-protocol-non-nil [this]))
+
+(defprotocol AProtocolOnlyNil (a-protocol-only-nil [this]))
+
+(extend-protocol AProtocolOnlyNil
+  nil (a-protocol-only-nil [this]))
+
+(defprotocol AProtocolNone (a-protocol-none [this]))
+
+(def protocol-types
+  (->> [AProtocolAll AProtocolString AProtocolNonNil AProtocolOnlyNil AProtocolNone]
+       (map t/>type) set))
+
+)
+
+
+(def C a) ; concrete class
+(def A >a+b) ; abstract class
+(def I Comparable) ; interface
+(def P AProtocolAll) ; protocol
+
 ;; ===== End type predicates ===== ;;
 
-(defn test-equality [genf]
+(defn- test-equality [genf]
   (let [a (genf) b (genf)]
           (testing "structural equality (`c/=`)"
             (is= a b))
@@ -275,11 +364,23 @@
       (is= (utr/and-type>args (& i|>a+b i|>a0 i|a i|<a+b i|<a0 i|><0 i|><1))
            [i|<a+b i|<a0 i|><0 i|><1]))))
 
-(deftest test|protocol
-  (test-equality #(t/isa? utr/PType)))
+(deftest test|isa?|protocol
+  (test-equality #(t/isa|protocol? P)))
 
-(deftest test|class
-  (test-equality #(t/isa? Object)))
+(deftest test|isa?|class
+  (test-equality #(t/isa|class? C))
+  (test-equality #(t/isa|class? A))
+  (test-equality #(t/isa|class? I)))
+
+(deftest test|isa?|direct
+  (test-equality #(t/isa|direct? utr/PType))
+  (test-equality #(t/isa|direct? Object)))
+
+(deftest test|isa?
+  (test-equality #(t/isa? Object))
+  (test-equality #(t/isa? clojure.lang.))
+  (test-equality #(t/isa? Comparable))
+  (test-equality #(t/isa? utr/PType)))
 
 (deftest test|value
   (test-equality #(t/value 1))

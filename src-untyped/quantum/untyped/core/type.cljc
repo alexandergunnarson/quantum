@@ -18,6 +18,7 @@
            [clojure.string                             :as str]
            [quantum.untyped.core.analyze.expr
              :refer [>expr #?(:cljs Expression)]]
+           [quantum.untyped.core.classes               :as uclass]
            [quantum.untyped.core.collections           :as uc]
            [quantum.untyped.core.collections.logic
              :refer [seq-and seq-or]]
@@ -158,7 +159,7 @@
 
 ;; ----- ProtocolType ----- ;;
 
-(defns- isa?|protocol [p ucore/protocol?]
+(defns- isa?|protocol [p uclass/protocol?]
   (ProtocolType. uhash/default uhash/default nil p nil))
 
 ;; ----- ClassType ----- ;;
@@ -207,11 +208,16 @@
   ([t0 utr/type?, t1 utr/type? & ts (us/seq-of utr/type?) > utr/type?] (reduce - (- t0 t1) ts)))
 
 (defn isa? [x]
-  (ifs (ucore/protocol? x)
+  (ifs (uclass/protocol? x)
        (isa?|protocol x)
 
        (#?(:clj c/class? :cljs c/fn?) x)
        (isa?|class x)))
+
+(defn isa?|direct [x]
+  (if (uclass/protocol? x)
+      #?(:clj (isa?|class (uclass/protocol>class x)))
+      (isa? x)))
 
 ;; TODO clean up
 (defns >type
@@ -245,7 +251,7 @@
               (Expression. sym x))
           (c/nil? x)
             nil?
-          (ucore/protocol? x)
+          (uclass/protocol? x)
             (ProtocolType. uhash/default uhash/default nil x name-sym)
           (value x))
        :cljs nil)))
@@ -615,8 +621,8 @@
       (isa? #?(:clj clojure.lang.PersistentList           :cljs cljs.core/List))))
 
 ;; Used by `quantum.untyped.core.analyze`
-(def +vector|built-in? (t/isa? #?(:clj  clojure.lang.PersistentVector
-                                  :cljs cljs.core/PersistentVector)))
+(def +vector|built-in? (isa? #?(:clj  clojure.lang.PersistentVector
+                                :cljs cljs.core/PersistentVector)))
 
 ;; Used by `quantum.untyped.core.analyze`
 (def +map|built-in?
@@ -633,13 +639,13 @@
 
 ;; Used by `quantum.untyped.core.analyze`
 (def fn? #?(:clj  (isa? clojure.lang.Fn)
-            :cljs (or (isa? js/Function) (isa|direct? cljs.core/Fn))))
+            :cljs (or (isa? js/Function) ( cljs.core/Fn))))
 
 ;; Used by `quantum.untyped.core.analyze` via `t/callable?`
 (uvar/def ifn?
   "Note that in CLJS, `cljs.core/ifn?` checks if something is either `fn?` or if it satisfies
    `cljs.core/IFn`. By contrast, this type encompasses only direct implementers of `cljs.core/IFn`."
-  (isa|direct? #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
+  (isa?|direct #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
 
 ;; Used by `quantum.untyped.core.analyze` via `t/callable?`
 (def fnt? (and fn? (>expr (fn-> c/meta ::type))))
