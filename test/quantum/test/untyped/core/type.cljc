@@ -376,9 +376,12 @@
   (test-equality #(@#'t/isa?|class A))
   (test-equality #(@#'t/isa?|class I)))
 
-#_(deftest test|isa?|direct
-  (test-equality #(t/isa?|direct utr/PType))
-  (test-equality #(t/isa?|direct Object)))
+(deftest test|isa?|direct
+  (test-equality #(t/isa?|direct C))
+  (test-equality #(t/isa?|direct A))
+  (test-equality #(t/isa?|direct I))
+  (test-equality #(t/isa?|direct P))
+  #?(:clj (is (= (t/isa?|direct P) (t/isa? quantum.test.untyped.core.type.AProtocolAll)))))
 
 (deftest test|isa?
   (test-equality #(t/isa? C))

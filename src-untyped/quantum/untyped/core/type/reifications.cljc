@@ -71,8 +71,8 @@
 ;; ----- NotType (`t/not` / `t/!`) ----- ;;
 
 (udt/deftype NotType
-  [^int ^:unsynchronized-mutable hash
-   ^int ^:unsynchronized-mutable hash-code
+  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
+   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
    meta #_(t/? ::meta)
    t #_t/type?]
   {PType          nil
@@ -96,8 +96,8 @@
 ;; ----- OrType (`t/or` / `t/|`) ----- ;;
 
 (udt/deftype OrType
-  [^int ^:unsynchronized-mutable hash
-   ^int ^:unsynchronized-mutable hash-code
+  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
+   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
    meta #_(t/? ::meta)
    args #_(t/and t/indexed? (t/seq t/type?))
    *logical-complement]
@@ -127,8 +127,8 @@
 ;; ----- AndType (`t/and` | `t/&`) ----- ;;
 
 (udt/deftype AndType
-  [^int ^:unsynchronized-mutable hash
-   ^int ^:unsynchronized-mutable hash-code
+  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
+   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
    meta #_(t/? ::meta)
    args #_(t/and t/indexed? (t/seq t/type?))
    *logical-complement]
@@ -160,8 +160,8 @@
 ;; ----- ProtocolType ----- ;;
 
 (udt/deftype ProtocolType
-  [^int ^:unsynchronized-mutable hash
-   ^int ^:unsynchronized-mutable hash-code
+  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
+   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
    meta #_(t/? ::meta)
    p    #_t/protocol?
    name #_(t/? symbol?)]
@@ -185,11 +185,43 @@
 
 (defns protocol-type>protocol [t protocol-type?] (.-p ^ProtocolType t))
 
+;; ----- DirectProtocolType ----- ;;
+
+#?(:cljs
+(udt/deftype
+  ^{:doc "Differs from `ProtocolType` in that an `implements?` check is performed instead of a
+          `satisfies?` check, i.e. native-type protocol dispatch is ignored."}
+  DirectProtocolType
+  [^number ^:mutable hash
+   ^number ^:mutable hash-code
+   meta #_(t/? ::meta)
+   p    #_t/protocol?
+   name #_(t/? symbol?)]
+  {PType          nil
+   ?Fn            {invoke    ([_ x] (implements? p x))}
+   ?Meta          {meta      ([this] meta)
+                   with-meta ([this meta'] (ProtocolType. hash hash-code meta' p name))}
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      ProtocolType p))}
+   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code ProtocolType p))
+                   equals    ([this that #_any?]
+                               (or (== this that)
+                                   (and (instance? ProtocolType that)
+                                        (= p (.-p ^ProtocolType that)))))}
+   uform/PGenForm {>form     ([this] (with-meta
+                                       (list 'quantum.untyped.core.type/isa?|protocol (:on p))
+                                       meta))}
+   fedn/IOverride nil
+   fedn/IEdn      {-edn      ([this] (or name (>form this)))}}))
+
+#?(:cljs (defns direct-protocol-type? [x _] (instance? DirectProtocolType x)))
+
+#?(:cljs (defns direct-protocol-type>protocol [t direct-protocol-type?] (.-p t)))
+
 ;; ----- ClassType ----- ;;
 
 (udt/deftype ClassType
-  [^int ^:unsynchronized-mutable hash
-   ^int ^:unsynchronized-mutable hash-code
+  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
+   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
    meta     #_(t/? ::meta)
    ^Class c #_t/class?
    name     #_(t/? symbol?)]
@@ -215,8 +247,8 @@
 ;; ----- ValueType ----- ;;
 
 (udt/deftype ValueType
-  [^int ^:unsynchronized-mutable hash
-   ^int ^:unsynchronized-mutable hash-code
+  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
+   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
    meta #_(t/? ::meta)
    v #_any?]
   {PType          nil

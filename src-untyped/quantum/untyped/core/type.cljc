@@ -54,7 +54,7 @@
              :refer [->AndType ->OrType PType
                      #?@(:cljs [UniversalSetType EmptySetType
                                 NotType OrType AndType
-                                ProtocolType ClassType
+                                ProtocolType DirectProtocolType ClassType
                                 ValueType])]]
            [quantum.untyped.core.vars                  :as uvar
              :refer [def- defmacro- update-meta]])
@@ -73,16 +73,6 @@
 (ucore/log-this-ns)
 
 ;; ===== TODOS ===== ;;
-
-#_(defmacro ->
-  ("Anything that is coercible to x"
-    [x]
-    ...)
-  ("Anything satisfying `from` that is coercible to `to`.
-    Will be coerced to `to`."
-    [from to]))
-
-#_(defmacro range-of)
 
 (declare
   - create-logical-type nil? val?
@@ -162,6 +152,10 @@
 (defns- isa?|protocol [p uclass/protocol?]
   (ProtocolType. uhash/default uhash/default nil p nil))
 
+#?(:cljs
+(defns- isa?|protocol|direct [p uclass/protocol?]
+  (DirectProtocolType. uhash/default uhash/default nil p nil)))
+
 ;; ----- ClassType ----- ;;
 
 (defns- isa?|class [c #?(:clj c/class? :cljs c/fn?)]
@@ -218,7 +212,8 @@
 
 (defn isa?|direct [x]
   (if (uclass/protocol? x)
-      #?(:clj (isa?|class (uclass/protocol>class x)))
+      #?(:clj  (isa?|class (uclass/protocol>class x))
+         :cljs (isa?|protocol|direct x))
       (isa? x)))
 
 ;; TODO clean up
@@ -689,7 +684,7 @@
 
 ;; Used by `quantum.untyped.core.analyze`
 (def literal?
-  (or nil? boolean? symbol? keyword? str? #?(:clj long?) double? regex? #?(:clj tagged-literal?)))
+  (or nil? boolean? symbol? keyword? string? #?(:clj long?) double? regex? #?(:clj tagged-literal?)))
 
 ;; TODO this might not be right — quite possibly any seq is a valid form
 ;; TODO this has to be recursively true for seq, vector, map, and set
