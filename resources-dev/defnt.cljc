@@ -59,6 +59,7 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
+  ;; TODO test the new analyze-seq|new!!!
   [1 .] This is accepted by the type system without knowing the type:
       (java.math.BigInteger. 1 (-> (ByteBuffer/allocate (int 8)) (.putLong x) .array))
 

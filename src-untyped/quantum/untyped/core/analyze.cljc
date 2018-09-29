@@ -48,42 +48,62 @@
 #?(:clj (defns method? [x _] (instance? Method x)))
 
 #?(:clj
-(defns class->methods [^Class c class? > map?]
+(defns class>methods
+  "Returns all the public methods associated with a class, as a map from method name to methods."
+  [^Class c class? > map?]
   (->> (.getMethods c)
-       (c/remove+  (fn [^java.lang.reflect.Method x]
-                     (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
-       (c/map+     (fn [^java.lang.reflect.Method x]
-                     (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
-                       (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
-                           :static
-                           :instance))))
-       (c/group-by (fn [^Method x] (.-name x))) ; TODO all of these need to be into !vector and !hash-map
-       (c/map-vals+  (fn->> (c/group-by  (fn [^Method x] (count (.-argtypes x))))
-                            (c/map-vals+ (fn->> (c/group-by (fn [^Method x] (.-kind x)))))
-                            (r/join {})))
-       (r/join {}))))
+       (c/map+      (fn [^java.lang.reflect.Method x]
+                      (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
+                        (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
+                            :static
+                            :instance))))
+       (c/group-by  (fn [^Method x] (.-name x))) ; TODO all of these need to be into !vector and !hash-map
+       (c/map-vals+ (fn->> (c/group-by  (fn [^Method x] (count (.-argtypes x))))
+                           (c/map-vals+ (fn->> (c/group-by (fn [^Method x] (.-kind x)))))
+                           (r/join {})))
+       (r/join      {}))))
 
-(defonce class->methods|with-cache
-  (memoize (fn [c] (class->methods c))))
+(defonce class>methods|with-cache
+  (memoize (fn [c] (class>methods c))))
 
+#?(:clj
+(defrecord Constructor [^"[Ljava.lang.Class;" argtypes]
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "C") {:argtypes (vec argtypes)}))))
+
+#?(:clj (defns constructor? [x _] (instance? Constructor x)))
+
+#?(:clj
+(defns class>constructors
+  "Returns all the public constructors associated with a class, as a vector."
+  [^Class c class? > vector?]
+  (->> (.getConstructors c)
+       (c/map (fn [^java.lang.reflect.Constructor x] (Constructor. (.getParameterTypes x)))))))
+
+(defonce class>constructors|with-cache
+  (memoize (fn [c] (class>constructors c))))
+
+#?(:clj
 (defrecord Field [^String name ^Class class ^clojure.lang.Keyword kind]
   fipp.ednize/IOverride
-  fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "F") (into (array-map) this))))
+  fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "F") (into (array-map) this)))))
 
-(defns class->fields [^Class c class? > map?]
+#?(:clj
+(defns class>fields
+  "Returns all the public fields associated with a class, as a map from field name to field."
+  [^Class c class? > map?]
   (->> (.getFields c)
-       (c/remove+ (fn [^java.lang.reflect.Field x]
-                    (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
-       (c/map+    (fn [^java.lang.reflect.Field x]
-                    [(.getName x)
-                     (Field. (.getName x) (.getType x)
-                       (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
-                           :static
-                           :instance))]))
-       (r/join {}))) ; TODO !hash-map
+       (c/map+ (fn [^java.lang.reflect.Field x]
+                 [(.getName x)
+                  (Field. (.getName x) (.getType x)
+                    (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
+                        :static
+                        :instance))]))
+       (r/join {})))) ; TODO !hash-map
 
-(def class->fields|with-cache
-  (memoize (fn [c] (class->fields c))))
+#?(:clj
+(def class>fields|with-cache
+  (memoize (fn [c] (class>fields c)))))
 
 (defonce *analyze-depth (atom 0))
 
@@ -199,7 +219,18 @@
                 :body            body
                 :type            body|type})))
 
+;; TODO move?
+(defn class>type
+  "For converting a class in a reflective method, constructor, or field declaration to a type.
+   Unlike `t/isa?`, takes into account that non-primitive classes in Java aren't guaranteed to be
+   non-null."
+  [x]
+  (if (class? x)
+      (-> x t/>type (cond-> (not (t/primitive-class? x)) t/?))
+      (uerr/not-supported! `class>type x)))
+
 ;; TODO enhance this to use `t/fn`
+;; TODO there's definitely array reflection going on here
 (defns methods->type
   "Creates a type given ->`methods`."
   [methods (s/seq-of t/any? #_method?) #_> #_t/type?]
@@ -207,13 +238,6 @@
   (let [methods|by-ct (->> methods
                            (c/group-by (fn-> :argtypes count))
                            (sort-by first <))
-        ;; non-primitive classes in Java aren't guaranteed to be non-null
-        >class-type (fn [x]
-                      (ifs (class? x)
-                             (-> x t/>type (cond-> (not (t/primitive-class? x)) t/?))
-                           (t/type? x)
-                             x
-                           (uerr/not-supported! `>class-type x)))
         partition-deep
           (fn partition-deep [t methods' arglist-size i|arg depth]
             (let [_ (when (> depth 3) (TODO))
@@ -226,10 +250,10 @@
               (r/for [[c methods''] methods'|by-class
                       t' t]
                 (update t' :clauses conj
-                  [(>class-type c)
+                  [(class>type c)
                    (if (= (inc depth) arglist-size)
                        ;; here, methods'' count will be = 1
-                       (-> methods'' first :rtype >class-type)
+                       (-> methods'' first :rtype class>type)
                        (partition-deep
                          (uxp/condpf-> t/<= (uxp/get (inc i|arg)))
                          methods''
@@ -239,7 +263,7 @@
     (r/for [[ct methods'] methods|by-ct
             t (uxp/casef count)]
       (if (zero? ct)
-          (c/assoc-in t [:cases 0]  (-> methods' first :rtype >class-type))
+          (c/assoc-in t [:cases 0]  (-> methods' first :rtype class>type))
           (c/assoc-in t [:cases ct] (partition-deep (uxp/condpf-> t/<= (uxp/get 0)) methods' ct 0 0))))))
 
 #?(:clj
@@ -269,7 +293,7 @@
   [env ::env, form _, target uast/node?, target-class class?, static? t/boolean?
    method-form simple-symbol?, args-forms _ #_(seq-of form?) > uast/method-call?]
   ;; TODO cache type by method
-  (if-not-let [methods-for-name (-> target-class class->methods|with-cache
+  (if-not-let [methods-for-name (-> target-class class>methods|with-cache
                                     (c/get (name method-form)))]
     (if (empty? args-forms)
         (err! "No such method or field in class" {:class target-class :method-or-field method-form})
@@ -336,7 +360,7 @@
         method-or-field (if (symbol? ?method-or-field) ?method-or-field (first ?method-or-field))
         args-forms      (if (symbol? ?method-or-field) ?args            (rest  ?method-or-field))]
     (if (t/= (:type target) t/nil?)
-        (err! "Cannot use the dot operator on nil." {:form form})
+        (err! "Cannot use the dot operator on a target of nil type." {:form form})
         (let [;; `nilable?` because technically any non-primitive in Java is nilable and we can't
               ;; necessarily rely on all e.g. "@nonNull" annotations
               {:as ?target-static-class-map
@@ -350,13 +374,56 @@
               target-class (classes>class target-classes)]
           (if-let [target-class-nilable? (contains? target-classes nil)]
             (err! "Cannot use the dot operator on a target that might be nil."
-                  {:form form :target-form target-form :target-type (:type target)})
+                  {:form form :target-type (:type target)})
             (if-let [field (and (empty? args-forms)
-                                (-> target-class class->fields|with-cache
+                                (-> target-class class>fields|with-cache
                                     (c/get (name method-or-field))))]
               (analyze-seq|dot|field-access env form target method-or-field field)
               (analyze-seq|dot|method-call env form target target-class
                 (boolean ?target-static-class-map) method-or-field args-forms)))))))
+
+;; TODO this is not the right approach for CLJS
+;; TODO use a similar approach for `analyze-seq|dot|method-call`
+(defns- analyze-seq|new
+  [env ::env, [_ _ & [c|form _ & args _ :as body] _ :as form] _ > uast/new-node?]
+  (let [c|analyzed (analyze* env c|form)]
+    (if-not (and (-> c|analyzed :type t/value-type?)
+                 (-> c|analyzed :type utr/value-type>value class?))
+      (err! "Supplied non-class to `new` form" {:x c|form})
+      (let [c (-> c|analyzed :type utr/value-type>value)
+            constructors (-> c class>constructors|with-cache)
+            args-ct (count args)
+            constructors-for-ct (->> constructors
+                                     (c/filter (fn [{:keys [^"[Ljava.lang.Object;" argtypes]}]
+                                                 (= (alength argtypes) args-ct))))]
+        (if (empty? constructors-for-ct)
+            (err! "No constructors for class match the arg ct" {:class c :args|form args})
+            (let [{:keys [args|analyzed]}
+                    (->> args
+                         (reducei
+                           (fn [{:as ret :keys [constructors']} arg i|arg]
+                             (let [arg|analyzed (analyze* env arg)
+                                   constructors''
+                                     (->> constructors'
+                                          (c/filter (fn [{:keys [^"[Ljava.lang.Object;" argtypes]}]
+                                                      (t/<= (:type arg|analyzed)
+                                                            (class>type (aget argtypes i|arg))))))]
+                               (if (empty? constructors'')
+                                   (err! "No constructors for class match the arg type at index"
+                                         {:class     c
+                                          :args|form args
+                                          :arg-type  (:type arg|analyzed)
+                                          :i|arg     i|arg})
+                                   (-> ret
+                                       (assoc :constructors' constructors'')
+                                       (update :args|analyzed conj arg|analyzed)))))
+                           {:constructors' constructors :args|analyzed []}))]
+              (uast/new-node
+                {:env   env
+                 :form  (list* 'new c|form (map :form args|analyzed))
+                 :class c
+                 :args  args|analyzed
+                 :type  (t/isa? c)})))))))
 
 ;; TODO move this
 (defns truthy-node? [{:as ast t [:type _]} _ > (t/? t/boolean?)]
@@ -393,21 +460,6 @@
 
 (defns- analyze-seq|quote [env ::env, [_ _ & body _ :as form] _ > uast/quoted?]
   (uast/quoted env form (t/value (list* body))))
-
-(defns- analyze-seq|new
-  [env ::env, [_ _ & [c|form _ #_class? & args _ :as body] _ :as form] _ > uast/new-node?]
-  (let [c|analyzed (analyze* env c|form)]
-    (if-not (and (-> c|analyzed :type t/value-type?)
-                 (-> c|analyzed :type utr/value-type>value class?))
-      (err! "Supplied non-class to `new` form" {:x c|form})
-      (let [c             (-> c|analyzed :type utr/value-type>value)
-            args|analyzed (mapv #(analyze* env %) args)]
-        (uast/new-node
-          {:env   env
-           :form  (list* 'new c|form (map :form args|analyzed))
-           :class c
-           :args  args|analyzed
-           :type  (t/isa? c)})))))
 
 (defns- analyze-seq|throw [env ::env, form _ [arg _ :as body] _ > uast/throw-node?]
   (if (-> body count (not= 1))
