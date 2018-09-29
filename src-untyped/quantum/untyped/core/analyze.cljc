@@ -43,7 +43,7 @@
 
 #?(:clj
 (defrecord Method
-  [^String name ^Class rtype ^"[Ljava.lang.Class;" argtypes ^clojure.lang.Keyword kind]
+  [^String name ^Class out-class ^"[Ljava.lang.Class;" arg-classes ^clojure.lang.Keyword kind]
   fipp.ednize/IOverride
   fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "M") (into (array-map) this)))))
 
@@ -59,9 +59,9 @@
                         (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
                             :static
                             :instance))))
-       (c/group-by  (fn [^Method x] (.-name x))) ; TODO all of these need to be into !vector and !hash-map
-       (c/map-vals+ (fn->> (c/group-by  (fn [^Method x] (count (.-argtypes x))))
-                           (c/map-vals+ (fn->> (c/group-by (fn [^Method x] (.-kind x)))))
+       (c/group-by  (fn [^Method x] (:name x))) ; TODO all of these need to be into !vector and !hash-map
+       (c/map-vals+ (fn->> (c/group-by  (fn [^Method x] (count (:arg-classes x))))
+                           (c/map-vals+ (fn->> (c/group-by (fn [^Method x] (:kind x)))))
                            (r/join {})))
        (r/join      {}))))
 
@@ -69,9 +69,9 @@
   (memoize (fn [c] (class>methods c))))
 
 #?(:clj
-(defrecord Constructor [^"[Ljava.lang.Class;" argtypes]
+(defrecord Constructor [^"[Ljava.lang.Class;" arg-classes]
   fipp.ednize/IOverride
-  fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "C") {:argtypes (vec argtypes)}))))
+  fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "C") {:arg-classes (vec arg-classes)}))))
 
 #?(:clj (defns constructor? [x _] (instance? Constructor x)))
 
@@ -233,43 +233,6 @@
       (-> x t/>type (cond-> (not (t/primitive-class? x)) t/?))
       (uerr/not-supported! `class>type x)))
 
-;; TODO enhance this to use `t/fn`
-;; TODO there's definitely array reflection going on here
-(defns methods->type
-  "Creates a type given ->`methods`."
-  [methods (s/seq-of t/any? #_method?) #_> #_t/type?]
-  ;; TODO room for plenty of optimization here
-  (let [methods|by-ct (->> methods
-                           (c/group-by (fn-> :argtypes count))
-                           (sort-by first <))
-        partition-deep
-          (fn partition-deep [t methods' arglist-size i|arg depth]
-            (let [_ (when (> depth 3) (TODO))
-                  methods'|by-class
-                    (->> methods'
-                         ;; TODO optimize further via `group-by-into`
-                         (c/group-by (fn-> :argtypes (c/get i|arg)))
-                         ;; classes will be sorted from most to least specific
-                         (sort-by (fn-> first t/>type) t/<))]
-              (r/for [[c methods''] methods'|by-class
-                      t' t]
-                (update t' :clauses conj
-                  [(class>type c)
-                   (if (= (inc depth) arglist-size)
-                       ;; here, methods'' count will be = 1
-                       (-> methods'' first :rtype class>type)
-                       (partition-deep
-                         (uxp/condpf-> t/<= (uxp/get (inc i|arg)))
-                         methods''
-                         arglist-size
-                         (inc i|arg)
-                         (inc depth)))]))))]
-    (r/for [[ct methods'] methods|by-ct
-            t (uxp/casef count)]
-      (if (zero? ct)
-          (c/assoc-in t [:cases 0]  (-> methods' first :rtype class>type))
-          (c/assoc-in t [:cases ct] (partition-deep (uxp/condpf-> t/<= (uxp/get 0)) methods' ct 0 0))))))
-
 #?(:clj
 (defns ?cast-call->type
   "Given a cast call like `clojure.lang.RT/uncheckedBooleanCast`, returns the
@@ -290,60 +253,85 @@
       (uncheckedDoubleCast  doubleCast)  t/double?
       nil))))
 
+(defn- assume-val-for-form? [form] (-> form meta :val true?))
+
+(defns- analyze-seq|call-site|incrementally-analyze
+  [env ::env, form _, target-class class?, args|form _, call-sites-for-ct _, kinds-str string?
+   > (s/kv {:args|analyzed vector?})]
+  (let [{:as ret :keys [call-sites args|analyzed]}
+          (->> args|form
+               (reducei
+                 (fn [{:as ret :keys [call-sites]} arg|form i|arg]
+                   (let [arg|analyzed (analyze* env arg|form)
+                         arg|analyzed|type (:type arg|analyzed)
+                         call-sites'
+                           (->> call-sites
+                                (c/filter
+                                  (fn [{:keys [^"[Ljava.lang.Object;" arg-classes]}]
+                                    (t/<= arg|analyzed|type
+                                          (class>type (aget arg-classes i|arg))))))]
+                     (if (empty? call-sites')
+                         (err! (str "No " kinds-str " for class match the arg type at index")
+                               {:class    target-class
+                                :form     form
+                                :arg-type arg|analyzed|type
+                                :i|arg    i|arg})
+                         (-> ret
+                             (assoc :call-sites call-sites')
+                             (update :args|analyzed conj arg|analyzed)))))
+                 {:call-sites call-sites-for-ct :args|analyzed []}))]
+    (if (-> call-sites count (> 1))
+        (err! (str "Multiple " kinds-str " for class match the arg types")
+              {:class              target-class
+               :form               form
+               (keyword kinds-str) call-sites
+               :arg-types          (mapv :type args|analyzed)})
+        ret)))
+
+(defns- analyze-seq|dot|method-call|incrementally-analyze
+  [env ::env, form _, target uast/node?, target-class class?, method-form _, args|form _
+   methods-for-ct-and-kind (s/seq-of t/any?) > uast/method-call?]
+  (let [{:keys [args|analyzed call-sites]}
+          (analyze-seq|call-site|incrementally-analyze env form target-class args|form
+            methods-for-ct-and-kind "methods")
+        ?cast-type (?cast-call->type target-class method-form)
+        ;; TODO enable the below:
+        ;; (s/validate (-> with-ret-type :args first :type) #(t/>= % (t/numerically ?cast-type)))
+        _ (when ?cast-type
+            (log/ppr :warn
+              "Not yet able to statically validate whether primitive cast will succeed at runtime"
+              {:form form}))]
+    (uast/method-call
+      {:env    env
+       :form   form
+       :target target
+       :method method-form
+       :args   args|analyzed
+       :type   (-> call-sites first :out-class)})))
+
 (defns- analyze-seq|dot|method-call
   "A note will be made of what methods match the argument types.
    If only one method is found, that is noted too. If no matching method is found, an
    exception is thrown."
   [env ::env, form _, target uast/node?, target-class class?, static? t/boolean?
-   method-form simple-symbol?, args-forms _ #_(seq-of form?) > uast/method-call?]
+   method-form simple-symbol?, args|form _ #_(seq-of form?) > uast/method-call?]
   ;; TODO cache type by method
   (if-not-let [methods-for-name (-> target-class class>methods|with-cache
                                     (c/get (name method-form)))]
-    (if (empty? args-forms)
+    (if (empty? args|form)
         (err! "No such method or field in class" {:class target-class :method-or-field method-form})
         (err! "No such method in class"          {:class target-class :methods        method-form}))
-    (if-not-let [methods-for-count (c/get methods-for-name (c/count args-forms))]
+    (if-not-let [methods-for-ct (c/get methods-for-name (c/count args|form))]
       (err! "Incorrect number of arguments for method"
             {:class           target-class
              :method          method-form
-             :possible-counts (set (keys methods-for-name))})
-      (let [static?>kind (fn [static?] (if static? :static :instance))]
-        (if-not-let [methods (c/get methods-for-count (static?>kind static?))]
-          (err! (istr "Method found for arg-count, but was ~(static?>kind (not static?)), not ~(static?>kind static?)")
-                {:class target-class :method method-form :args args-forms})
-          (let [args-ct (c/count args-forms)
-                call-data
-                  {:env    env
-                   :form   ['. (-> target :form ufth/un-type-hint) method-form]
-                   :target target
-                   :method method-form
-                   :args   []
-                   :type   (methods->type methods #_(count arg-forms))}
-                call-data-with-arg-types
-                  (-> (r/fori [arg-form   args-forms
-                               call-data' call-data
-                               i|arg]
-                        (let [arg-node (analyze* env arg-form)]
-                          ;; TODO can incrementally calculate return value, but possibly not
-                          ;; worth it
-                          (-> call-data'
-                              (update :form conj (:form arg-node))
-                              (update :args conj arg-node))))
-                      (update :form seq))
-                call-data-with-ret-type
-                  (update call-data-with-arg-types :type
-                    (fn [ret-type] (->> call-data-with-arg-types :args (mapv :type) ret-type
-                                        (<- (maybe-add-val-assumption-to-type form)))))
-                ?cast-type (?cast-call->type target-class method-form)
-                _ (when ?cast-type
-                    (log/ppr :warn "Not yet able to statically validate whether primitive cast will succeed at runtime" {:form form})
-                    #_(s/validate (-> with-ret-type :args first :type) #(t/>= % (t/numerically ?cast-type))))]
-            (uast/method-call call-data-with-ret-type)))))))
-
-(defn- assume-val-for-form? [form] (-> form meta :val true?))
-
-(defns- maybe-add-val-assumption-to-type [t t/type?, form _ > t/type?]
-  (cond-> t (assume-val-for-form? form) (t/and t/val?)))
+             :possible-counts (->> methods-for-name keys (apply sorted-set))})
+      (let [[kind non-kind] (if static? [:static :instance] [:instance :static])]
+        (if-not-let [methods-for-ct-and-kind (c/get methods-for-ct kind)]
+          (err! (istr "Method found for arg-count, but was ~non-kind, not ~kind")
+                {:class target-class :method method-form :args args|form})
+          (analyze-seq|dot|method-call|incrementally-analyze env form target target-class
+            method-form args|form methods-for-ct-and-kind))))))
 
 (defns- analyze-seq|dot|field-access
   [env ::env, form _, target _, field-form simple-symbol?, field (t/isa? Field)
@@ -392,46 +380,24 @@
               (analyze-seq|dot|method-call env form target target-class
                 (boolean ?target-static-class-map) method-or-field args-forms)))))))
 
-(defns- analyze-seq|new|gen-incrementally-analyze
-  [env ::env, form _, constructor-class class?]
-  (fn [{:as ret :keys [constructors']} arg i|arg]
-    (let [arg|analyzed (analyze* env arg)
-          constructors''
-            (->> constructors'
-                 (c/filter (fn [{:keys [^"[Ljava.lang.Object;" argtypes]}]
-                             (t/<= (:type arg|analyzed)
-                                   (class>type (aget argtypes i|arg))))))]
-      (if (empty? constructors'')
-          (err! "No constructors for class match the arg type at index"
-                {:class    constructor-class
-                 :form     form
-                 :arg-type (:type arg|analyzed)
-                 :i|arg    i|arg})
-          (-> ret
-              (assoc :constructors' constructors'')
-              (update :args|analyzed conj arg|analyzed))))))
-
 ;; TODO this is not the right approach for CLJS
-;; TODO use a similar approach for `analyze-seq|dot|method-call`
 (defns- analyze-seq|new
-  [env ::env, [_ _ & [c|form _ & args _ :as body] _ :as form] _ > uast/new-node?]
+  [env ::env, [_ _ & [c|form _ & args|form _ :as body] _ :as form] _ > uast/new-node?]
   (let [c|analyzed (analyze* env c|form)]
     (if-not (and (-> c|analyzed :type t/value-type?)
                  (-> c|analyzed :type utr/value-type>value class?))
       (err! "Supplied non-class to `new` form" {:form form})
       (let [c (-> c|analyzed :type utr/value-type>value)
             constructors (-> c class>constructors|with-cache)
-            args-ct (count args)
+            args-ct (count args|form)
             constructors-for-ct (->> constructors
                                      (c/filter (fn [{:keys [^"[Ljava.lang.Object;" argtypes]}]
                                                  (= (alength argtypes) args-ct))))]
         (if (empty? constructors-for-ct)
-            (err! "No constructors for class match the arg ct" {:class c :args|form args})
-            (let [{:keys [args|analyzed]}
-                    (->> args
-                         (reducei
-                           (analyze-seq|new|gen-incrementally-analyze env form c)
-                           {:constructors' constructors-for-ct :args|analyzed []}))]
+            (err! "No constructors for class match the arg ct" {:class c :args|form args|form})
+            (let [{:keys [args|analyzed call-sites]}
+                    (analyze-seq|call-site|incrementally-analyze env form c args|form
+                      "constructors")]
               (uast/new-node
                 {:env   env
                  :form  (list* 'new c|form (map :form args|analyzed))
@@ -661,8 +627,7 @@
   (let [expanded-form (ufeval/macroexpand form)]
     (if-let [no-expansion? (ucomp/== form expanded-form)]
       (analyze-seq* env expanded-form)
-      (let [expanded-form' (-> expanded-form
-                               (update-meta merge (select-keys (meta form) special-metadata-keys)))
+      (let [expanded-form' (-> expanded-form (update-meta merge (meta form)))
             expanded (analyze* env expanded-form')]
         (uast/macro-call
           {:env             env
