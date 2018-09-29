@@ -393,7 +393,7 @@
         nil       @whole-node))))
 
 (defns- analyze-seq|quote [env ::env, [_ _ & body _ :as form] _ > uast/quoted?]
-  (uast/quoted env form (tcore/most-primitive-class-of body)))
+  (uast/quoted env form (t/value (list* body))))
 
 (defns- analyze-seq|new
   [env ::env, [_ _ & [c|form _ #_class? & args _ :as body] _ :as form] _ > uast/new-node?]

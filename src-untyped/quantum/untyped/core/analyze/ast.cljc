@@ -105,7 +105,9 @@
   fipp.ednize/IEdn
     (-edn [this] (list `quoted form type)))
 
-(defn quoted [form t] (Quoted. nil (ufth/with-type-hint form (>type-hint form t)) t))
+(defn quoted
+  ([form t] (quoted nil form t))
+  ([env form t] (Quoted. nil (ufth/with-type-hint form (>type-hint form t)) t)))
 
 (defn quoted? [x] (instance? Quoted x))
 
