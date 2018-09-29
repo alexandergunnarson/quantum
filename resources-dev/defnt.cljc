@@ -61,14 +61,10 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  - t/isa?|direct
-    - For CLJ, this is `instance?` for classes and `instance?` on the underlying interface
-      associated with a protocol
-    - For CLJS, this is `instance?` for classes and `implements?` for protocols
   - t/type >>>>>> (PRIORITY 1) <<<<<<
     - dependent types: `[x arr/array? > (t/type x)]`
-  - (t/== x)
-    - dependent type such that the passed input must be identical to x
+    - (comp/t== x)
+      - dependent type such that the passed input must be identical to x
   - Analysis
     - This is accepted by the type system without knowing the type:
       (java.math.BigInteger. 1 (-> (ByteBuffer/allocate (int 8)) (.putLong x) .array))

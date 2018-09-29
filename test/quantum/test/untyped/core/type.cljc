@@ -22,19 +22,22 @@
 ;; ===== Type predicates ===== ;;
 ;; Declared here instead of in `quantum.untyped.core.type` to avoid dependency
 
-#?(:clj (def boolean?   (t/isa? #?(:clj Boolean :cljs js/Boolean))))
-#?(:clj (def byte?      (t/isa? Byte)))
-#?(:clj (def short?     (t/isa? Short)))
-#?(:clj (def char?      (t/isa? Character)))
-#?(:clj (def int?       (t/isa? Integer)))
-#?(:clj (def long?      (t/isa? Long)))
-#?(:clj (def float?     (t/isa? Float)))
-        (def double?    (t/isa? #?(:clj Double :cljs js/Number)))
+#?(:clj (def boolean?    (t/isa? #?(:clj Boolean :cljs js/Boolean))))
+#?(:clj (def byte?       (t/isa? Byte)))
+#?(:clj (def short?      (t/isa? Short)))
+#?(:clj (def char?       (t/isa? Character)))
+#?(:clj (def int?        (t/isa? Integer)))
+#?(:clj (def long?       (t/isa? Long)))
+#?(:clj (def float?      (t/isa? Float)))
+        (def double?     (t/isa? #?(:clj Double :cljs js/Number)))
 
-        (def primitive? (t/or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
+        (def primitive?  (t/or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
 
-#?(:clj (def char-seq?  (t/isa? CharSequence)))
-        (def string?    (t/isa? #?(:clj String :cljs js/String)))
+#?(:clj (def char-seq?   (t/isa? CharSequence)))
+        (def string?     (t/isa? #?(:clj String :cljs js/String)))
+
+#?(:clj (def comparable? (t/isa? Comparable)))
+#?(:clj (def java-set?   (t/isa? java.util.Set)))
 
 ;; ----- Example interface hierarchy ----- ;;
 

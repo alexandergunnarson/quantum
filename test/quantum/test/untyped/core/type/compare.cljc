@@ -1,7 +1,7 @@
 (ns quantum.test.untyped.core.type.compare
   (:require
     [clojure.core                               :as core]
-    [quantum.test.untyped.core.type
+    [quantum.test.untyped.core.type             :as tt
       :refer [i|>a+b i|>a0 i|>a1 i|>b0 i|>b1
               i|a i|b
               i|<a+b i|<a0 i|<a1 i|<b0 i|<b1
@@ -10,7 +10,12 @@
               >a+b >a >b
               a b
               <a0 <a1 <b0 <b1
-              ><0 ><1 ><2]]
+              ><0 ><1 ><2
+
+              AProtocolAll AProtocolNone AProtocolString AProtocolNonNil AProtocolOnlyNil
+              protocol-types
+
+              Uc C A I P]]
     [quantum.untyped.core.analyze.expr          :as xp
       :refer [>expr]]
     [quantum.untyped.core.collections           :as c]
@@ -465,15 +470,15 @@
         (test-comparison <>ident a     (| ><0 ><1)))
       (testing "Nilable"
         (testing "<  nilabled: #{< <>}"
-          (test-comparison  <ident t/long?     (t/? t/object?)))
+          (test-comparison  <ident t/long?           (t/? t/object?)))
         (testing "=  nilabled: #{= <>}"
-          (test-comparison  <ident t/long?     (t/? t/long?)))
+          (test-comparison  <ident t/long?           (t/? t/long?)))
         (testing ">  nilabled: #{> <>}"
-          (test-comparison ><ident t/object?   (t/? t/long?)))
+          (test-comparison ><ident t/object?         (t/? t/long?)))
         (testing ">< nilabled: #{>< <>}"
-          (test-comparison ><ident t/iterable? (t/? t/comparable?)))
+          (test-comparison ><ident (t/isa? Iterable) (t/? tt/comparable?)))
         (testing "<> nilabled: #{<>}"
-          (test-comparison <>ident t/long?     (t/? t/string?)))))
+          (test-comparison <>ident t/long?           (t/? t/string?)))))
     (testing "+ ValueType"
       (testing "arg <"
         (testing "+ arg <")
@@ -502,11 +507,11 @@
     (testing "+ ClassType"
       (testing "#{<}"
         (testing "Boxed Primitive"
-          (test-comparison <ident t/byte?        (& t/number?   t/comparable?)))
+          (test-comparison <ident t/byte?        (& (t/isa? Number) tt/comparable?)))
         (testing "Final Concrete"
-          (test-comparison <ident t/string?      (& t/char-seq? t/comparable?)))
+          (test-comparison <ident t/string?      (& tt/char-seq? tt/comparable?)))
         (testing "Extensible Concrete"
-          (test-comparison <ident a (& t/iterable? (t/isa? java.util.RandomAccess))))
+          (test-comparison <ident a (& (t/isa? Iterable) (t/isa? java.util.RandomAccess))))
         (testing "Abstract"
           (test-comparison <ident (t/isa? java.util.AbstractMap$SimpleEntry)
                                   (& (t/isa? java.util.Map$Entry) (t/isa? java.io.Serializable))))
@@ -529,10 +534,10 @@
       (testing "#{< ><}"
         (test-comparison ><ident i|a            (& i|>a+b i|>a0 i|>a1 i|><0 i|><1)))
       (testing "#{< >< <>}"
-        (test-comparison ><ident t/java-set?    (& t/java-coll? t/char-seq?
+        (test-comparison ><ident tt/java-set?   (& (t/isa? java.util.Collection) tt/char-seq?
                                                    (t/isa? java.nio.ByteBuffer))))
       (testing "#{< <>}"
-        (test-comparison <>ident t/string?      (& t/char-seq? t/java-set?))
+        (test-comparison <>ident t/string?      (& tt/char-seq? tt/java-set?))
         (test-comparison <>ident ><0            (& (! ><1) (! ><0)))
         (test-comparison <>ident a              (& (! a)   (! b))))
     #_(testing "#{=}")           ; Impossible for `AndType`
@@ -542,30 +547,30 @@
     #_(testing "#{= > <>}")      ; Impossible for `AndType`
       (testing "#{= ><}"
         (test-comparison  >ident i|a            (& i|a i|><0 i|><1))
-        (test-comparison  >ident t/char-seq?    (& t/char-seq?   t/java-set?))
-        (test-comparison  >ident t/char-seq?    (& t/char-seq?   t/java-set? a)))
+        (test-comparison  >ident tt/char-seq?   (& tt/char-seq? tt/java-set?))
+        (test-comparison  >ident tt/char-seq?   (& tt/char-seq? tt/java-set? a)))
       (testing "#{= >< <>}") ; <- TODO comparison should be >ident
       ;; TODO fix
       (testing "#{= <>}"
-        (test-comparison  >ident a              (& a t/java-set?)))
+        (test-comparison  >ident a              (& a tt/java-set?)))
       (testing "#{>}"
         (test-comparison  >ident i|a            (& i|<a+b i|<a0 i|<a1)))
       (testing "#{> ><}"
         (test-comparison ><ident i|a            (& i|<a+b i|<a0 i|><0 i|><1))
-        (test-comparison ><ident a              (& (t/isa? javax.management.AttributeList) t/java-set?))
-        (test-comparison ><ident t/comparable?  (& (t/isa? java.nio.ByteBuffer) t/java-set?)))
+        (test-comparison ><ident a              (& (t/isa? javax.management.AttributeList) tt/java-set?))
+        (test-comparison ><ident tt/comparable? (& (t/isa? java.nio.ByteBuffer) tt/java-set?)))
       (testing "#{> >< <>}"
         (test-comparison ><ident i|a            (& i|<a0 i|><0 a)))
       (testing "#{> <>}") ; <- TODO comparison should be 1
       (testing "#{><}"
         (test-comparison ><ident i|a            (& i|><0 i|><1))
-        (test-comparison ><ident t/char-seq?    (& t/java-set? a)))
+        (test-comparison ><ident tt/char-seq?   (& tt/java-set? a)))
       (testing "#{>< <>}") ; <- TODO comparison should be 3
       (testing "#{<>}"
-        (test-comparison <>ident t/string?      (& a t/java-set?))))
+        (test-comparison <>ident t/string?      (& a tt/java-set?))))
     (testing "+ ValueType"
       (testing "#{<}"
-        (test-comparison <ident (t/value "a")  (& t/char-seq? t/comparable?)))
+        (test-comparison <ident (t/value "a")  (& tt/char-seq? tt/comparable?)))
     #_(testing "#{< =}")         ; not possible for `AndType`
     #_(testing "#{< = >}")       ; not possible for `AndType`; `>` not possible for `ValueType`
     #_(testing "#{< = > ><}")    ; not possible for `AndType`; `>` and `><` not possible for `ValueType`
@@ -581,8 +586,8 @@
     #_(testing "#{< ><}")        ; `><` not possible for `ValueType`
     #_(testing "#{< >< <>}")     ; `><` not possible for `ValueType`
       (testing "#{< <>}"
-        (test-comparison <>ident (t/value "a") (& t/char-seq? a))
-        (test-comparison <>ident (t/value "a") (& t/char-seq? t/java-set?)))
+        (test-comparison <>ident (t/value "a") (& tt/char-seq? a))
+        (test-comparison <>ident (t/value "a") (& tt/char-seq? tt/java-set?)))
     #_(testing "#{=}")           ; not possible for `AndType`
     #_(testing "#{= >}")         ; not possible for `AndType`; `>` not possible for `ValueType`
     #_(testing "#{= > ><}")      ; not possible for `AndType`; `>` and `><` not possible for `ValueType`
@@ -598,7 +603,7 @@
     #_(testing "#{><}")          ; `><` not possible for `ValueType`
     #_(testing "#{>< <>}")       ; `><` not possible for `ValueType`
       (testing "#{<>}"
-        (test-comparison <>ident (t/value "a") (& a t/java-set?)))))
+        (test-comparison <>ident (t/value "a") (& a tt/java-set?)))))
   (testing "Expression"
     (testing "+ Expression")
     (testing "+ ProtocolType")
@@ -611,7 +616,7 @@
     (testing "+ ClassType")
     (testing "+ ValueType"
       (let [values #{t/universal-set t/empty-set nil {} 1 "" AProtocolAll
-                     quantum.test.untyped.core.type.compare.AProtocolAll}]
+                     quantum.test.untyped.core.type.AProtocolAll}]
         (doseq [v values]
           (test-comparison  <ident (t/value v) (t/isa? AProtocolAll)))
         (doseq [v [""]]
@@ -631,21 +636,21 @@
   (testing "ClassType"
     (testing "+ ClassType"
       (testing "Boxed Primitive + Boxed Primitive"
-        (test-comparison  =ident t/long? t/long?)
-        (test-comparison <>ident t/long? t/int?))
+        (test-comparison  =ident tt/long? tt/long?)
+        (test-comparison <>ident tt/long? tt/int?))
       (testing "Boxed Primitive + Final Concrete"
-        (test-comparison <>ident t/long? t/string?))
+        (test-comparison <>ident tt/long? t/string?))
       (testing "Boxed Primitive + Extensible Concrete"
         (testing "< , >"
-          (test-comparison  <ident t/long? t/object?))
+          (test-comparison  <ident tt/long? t/object?))
         (testing "<>"
-          (test-comparison <>ident t/long? (t/isa? Thread))))
+          (test-comparison <>ident tt/long? (t/isa? Thread))))
       (testing "Boxed Primitive + Abstract"
-        (test-comparison <>ident t/long? (t/isa? java.util.AbstractCollection)))
+        (test-comparison <>ident tt/long? (t/isa? java.util.AbstractCollection)))
       (testing "Boxed Primitive + Interface"
-        (test-comparison <>ident t/long? t/char-seq?))
+        (test-comparison <>ident tt/long? tt/char-seq?))
       (testing "Final Concrete + Final Concrete"
-        (test-comparison =ident t/string? t/string?))
+        (test-comparison =ident tt/string? tt/string?))
       (testing "Final Concrete + Extensible Concrete"
         (testing "< , >"
           (test-comparison  <ident t/string? t/object?))
@@ -654,9 +659,9 @@
       (testing "Final Concrete + Abstract")
       (testing "Final Concrete + Interface"
         (testing "< , >"
-          (test-comparison  <ident t/string? t/comparable?))
+          (test-comparison  <ident t/string? tt/comparable?))
         (testing "<>"
-          (test-comparison <>ident t/string? t/java-coll?)))
+          (test-comparison <>ident t/string? (t/isa? java.util.Collection))))
       (testing "Extensible Concrete + Extensible Concrete"
         (test-comparison =ident t/object? t/object?)
         (testing "< , >"
@@ -671,7 +676,7 @@
           (test-comparison <>ident (t/isa? Thread) (t/isa? java.util.AbstractCollection))
           (test-comparison <>ident (t/isa? java.util.AbstractCollection) (t/isa? Thread))))
       (testing "Extensible Concrete + Interface"
-        (test-comparison ><ident a t/char-seq?))
+        (test-comparison ><ident a tt/char-seq?))
       (testing "Abstract + Abstract"
         (test-comparison  =ident (t/isa? java.util.AbstractCollection) (t/isa? java.util.AbstractCollection))
         (testing "< , >"
@@ -680,20 +685,20 @@
           (test-comparison <>ident (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractQueue))))
       (testing "Abstract + Interface"
         (testing "< , >"
-          (test-comparison  <ident (t/isa? java.util.AbstractCollection) t/java-coll?))
+          (test-comparison  <ident (t/isa? java.util.AbstractCollection) (t/isa? java.util.Collection)))
         (testing "><"
-          (test-comparison ><ident (t/isa? java.util.AbstractCollection) t/comparable?)))
+          (test-comparison ><ident (t/isa? java.util.AbstractCollection) tt/comparable?)))
       (testing "Interface + Interface"
         (testing "< , >",
-          (test-comparison  <ident t/java-coll? t/iterable?))
+          (test-comparison  <ident (t/isa? java.util.Collection) (t/isa? Iterable)))
         (testing "><"
-          (test-comparison ><ident t/char-seq?  t/comparable?))))
+          (test-comparison ><ident tt/char-seq? tt/comparable?))))
     (testing "+ ValueType"
       (testing "<"
         (testing "Class equality"
           (test-comparison  <ident (t/value "a") t/string?))
         (testing "Class inheritance"
-          (test-comparison  <ident (t/value "a") t/char-seq?)
+          (test-comparison  <ident (t/value "a") tt/char-seq?)
           (test-comparison  <ident (t/value "a") t/object?)))
       (testing "<>"
         (test-comparison <>ident (t/value "a") t/byte?))))
@@ -715,9 +720,9 @@
 
 (deftest test|=
   ;; Takes an inordinately long time to do `test-comparison 0 ...` even without instrumentation
-  (is= (| t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)
-       (& (| t/boolean? t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)
-          (! t/boolean?)))
+  (is= (| tt/byte? tt/char? tt/short? tt/int? tt/long? tt/float? tt/double?)
+       (& (| tt/boolean? tt/byte? tt/char? tt/short? tt/int? tt/long? tt/float? tt/double?)
+          (! tt/boolean?)))
   (test-comparison 0 t/any? t/universal-set)
   (testing "universal class(-set) identity"
     (is (t/= t/val? (& t/any? t/val?)))))
