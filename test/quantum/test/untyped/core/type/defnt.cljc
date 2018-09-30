@@ -1543,6 +1543,11 @@
                       -> Put `out` in env as `(t/value 23)`"
                 [out (type (>long-checked "23"))]
                 (self/fn dependent-type-combo-inner
+                  ;; This test overview was put up in ~30 minutes during a seemingly random walk of
+                  ;; thoughts without any testing or research whatsoever that happened to actually
+                  ;; coalesce into a working, clear, simple algorithm for handling dependent types.
+                  ;; Not sure if listening to Bach Passacaglia & Fugue In C Minor for organ and
+                  ;; then orchestra helped, but there you go :)
                   #_"1. Analyze `a` = `(t/or tt/boolean? (type b))`
                         - Put `a` on queue
                         1. Analyze `tt/boolean?`
