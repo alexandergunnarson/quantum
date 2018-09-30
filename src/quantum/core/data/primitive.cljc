@@ -396,11 +396,10 @@
   ([x byte?]  (Numeric/bitAnd (short 0xFF)       x))
   ([x short?] (Numeric/bitAnd (int   0xFFFF)     x))
   ([x int?]   (Numeric/bitAnd (long  0xFFFFFFFF) x))
-              ;; TODO TYPED there is reflection here but there shouldn't be
   ([x long?]  (java.math.BigInteger. (int 1)
                 (-> ^:val (ByteBuffer/allocate (int 8))
                     ^:val (.putLong x)
-                    .array))))) ; TODO reflection
+                    .array)))))
 
 ;; TODO TYPED awaiting `>long`
 #_(:clj (t/defn ubyte>byte   [x long?   > long?] (-> x >byte   >long)))

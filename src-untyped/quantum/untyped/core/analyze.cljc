@@ -40,6 +40,30 @@
 
 (def special-metadata-keys #{:val})
 
+;; TODO move?
+(defns class>type
+  "For converting a class in a reflective method, constructor, or field declaration to a type.
+   Unlike `t/isa?`, takes into account that non-primitive classes in Java aren't guaranteed to be
+   non-null."
+  [x class? > t/type?]
+  (let [matching-boxed-class (t/unboxed-class->boxed-class x)]
+    (-> (or matching-boxed-class x) t/isa? (cond-> (not matching-boxed-class) t/?))))
+
+(defn- assume-val-for-form? [form] (-> form meta :val true?))
+
+(defns- maybe-with-assume-val [c class?, form _ > t/type?]
+  (let [matching-boxed-class (t/unboxed-class->boxed-class c)]
+    (-> (or matching-boxed-class c)
+        t/isa?
+        (cond-> (and (not matching-boxed-class) (not (assume-val-for-form? form))) t/?))))
+
+;; TODO move?
+(defns- compare-class-specificity [c0 class?, c1 class?]
+  (case (utcomp/compare|class+class* c0 c1)
+    -1     -1
+    (0 2 3) 0
+     1      1))
+
 ;; ----- Reflection support ----- ;;
 
 #?(:clj
@@ -52,19 +76,40 @@
 
 #?(:clj
 (defns class>methods
-  "Returns all the public methods associated with a class, as a map from method name to methods."
+  "Returns all the public methods associated with a class, as a map from:
+   method-name -> arg-count -> kind=static|instance -> methods"
   [^Class c class? > map?]
-  (->> (.getMethods c)
-       (c/map+      (fn [^java.lang.reflect.Method x]
-                      (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
-                        (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
-                            :static
-                            :instance))))
-       (c/group-by  (fn [^Method x] (:name x))) ; TODO all of these need to be into !vector and !hash-map
-       (c/map-vals+ (fn->> (c/group-by  (fn [^Method x] (count (:arg-classes x))))
-                           (c/map-vals+ (fn->> (c/group-by (fn [^Method x] (:kind x)))))
+  (let [with-most-specific-out-class
+          (fn->> (ucomp/comp-min-of
+                   (fn [m0 m1] (compare-class-specificity (:out-class m0) (:out-class m1)))))
+        ;; Because even though it's not supposed to be the case that there is ever more than one
+        ;; method with the same combination of name, kind (static/instance), and arg classes, only
+        ;; differing by return type, it *has* happened on Java version "1.8.0_162", Mac OS X, JVM
+        ;; version "25.162-b12", with the `ByteBuffer.array()` public instance method which maps to
+        ;; to overloads, one which returns `Object` and one which returns `byte[]`.
+        ;; See also this link for the claim that this is impossible according to the Java 1.8 spec
+        ;; (http://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html#jls-8.4.2) and that the bug
+        ;; only exists in Java 6 or 7 on Oracle's JDK, OpenJDK, and IBM's JDK: https://stackoverflow.com/questions/5561436/can-two-java-methods-have-same-name-with-different-return-types
+        with-distinct-arg-class-seqs
+          (fn->> (c/group-by (fn-> :arg-classes vec))
+                 vals
+                 (c/map with-most-specific-out-class))]
+    (->> (.getMethods c)
+         (c/map+      (fn [^java.lang.reflect.Method x]
+                        (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
+                          (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
+                              :static
+                              :instance))))
+         (c/group-by  (fn [^Method x] (:name x))) ; TODO all of these need to be into !vector and !hash-map
+         (c/map-vals+
+           (fn->> (c/group-by (fn [^Method x] (count (:arg-classes x))))
+                  (c/map-vals+
+                    (fn->> (c/group-by (fn [^Method x] (:kind x)))
+                           (c/map-vals+ with-distinct-arg-class-seqs)
                            (r/join {})))
-       (r/join      {}))))
+                  (r/join {})))
+         (r/join      {})))))
+
 
 (defonce class>methods|with-cache
   (memoize (fn [c] (class>methods c))))
@@ -244,30 +289,6 @@
       (uncheckedDoubleCast  doubleCast)  t/double?
       nil))))
 
-;; TODO move?
-(defns class>type
-  "For converting a class in a reflective method, constructor, or field declaration to a type.
-   Unlike `t/isa?`, takes into account that non-primitive classes in Java aren't guaranteed to be
-   non-null."
-  [x class? > t/type?]
-  (let [matching-boxed-class (t/unboxed-class->boxed-class x)]
-    (-> (or matching-boxed-class x) t/isa? (cond-> (not matching-boxed-class) t/?))))
-
-(defn- assume-val-for-form? [form] (-> form meta :val true?))
-
-(defns- maybe-with-assume-val [c class?, form _ > t/type?]
-  (let [matching-boxed-class (t/unboxed-class->boxed-class c)]
-    (-> (or matching-boxed-class c)
-        t/isa?
-        (cond-> (and (not matching-boxed-class) (not (assume-val-for-form? form))) t/?))))
-
-;; TODO move?
-(defns- compare-class-specificity [c0 class?, c1 class?]
-  (case (utcomp/compare|class+class* c0 c1)
-    -1     -1
-    (0 2 3) 0
-     1      1))
-
 (defns- call-sites>most-specific
   "Time complexity = O(m•n) where m = # of call sites and n = # of args per call site."
   [call-sites (s/vec-of t/any? #_(s/array-of class?)) > (s/vec-of t/any? #_(s/array-of class?))]
@@ -303,7 +324,12 @@
                                 :arg|type          arg|analyzed|type
                                 :arg|analyzed-form (:form arg|analyzed)
                                 :i|arg             i|arg
-                                :arg-types-so-far  (mapv :type args|analyzed)})
+                                :arg-types
+                                  (vec (concat (mapv :type args|analyzed)
+                                               [arg|analyzed|type]
+                                               (repeat (- (count args|form)
+                                                          (count args|analyzed))
+                                                       :unanalyzed)))})
                          (-> ret
                              (assoc :call-sites call-sites')
                              (update :args|analyzed conj arg|analyzed)))))
