@@ -484,6 +484,18 @@
 
 ;; TODO figure out the best place to put this
 #?(:clj
+(def unboxed-class->boxed-class
+  {Boolean/TYPE   Boolean
+   Byte/TYPE      Byte
+   Short/TYPE     Short
+   Character/TYPE Character
+   Integer/TYPE   Integer
+   Long/TYPE      Long
+   Float/TYPE     Float
+   Double/TYPE    Double}))
+
+;; TODO figure out the best place to put this
+#?(:clj
 (def boxed-class->unboxed-symbol
   {Boolean   'boolean
    Byte      'byte

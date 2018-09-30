@@ -224,16 +224,6 @@
                 :body            body
                 :type            body|type})))
 
-;; TODO move?
-(defn class>type
-  "For converting a class in a reflective method, constructor, or field declaration to a type.
-   Unlike `t/isa?`, takes into account that non-primitive classes in Java aren't guaranteed to be
-   non-null."
-  [x]
-  (if (class? x)
-      (-> x t/>type (cond-> (not (t/primitive-class? x)) t/?))
-      (uerr/not-supported! `class>type x)))
-
 #?(:clj
 (defns ?cast-call->type
   "Given a cast call like `clojure.lang.RT/uncheckedBooleanCast`, returns the
@@ -254,13 +244,22 @@
       (uncheckedDoubleCast  doubleCast)  t/double?
       nil))))
 
-;; TODO use this
+;; TODO move?
+(defns class>type
+  "For converting a class in a reflective method, constructor, or field declaration to a type.
+   Unlike `t/isa?`, takes into account that non-primitive classes in Java aren't guaranteed to be
+   non-null."
+  [x class? > t/type?]
+  (let [matching-boxed-class (t/unboxed-class->boxed-class x)]
+    (-> (or matching-boxed-class x) t/isa? (cond-> (not matching-boxed-class) t/?))))
+
 (defn- assume-val-for-form? [form] (-> form meta :val true?))
 
 (defns- maybe-with-assume-val [c class?, form _ > t/type?]
-  (if (assume-val-for-form? form)
-      (t/isa? c)
-      (t/? (t/isa? c))))
+  (let [matching-boxed-class (t/unboxed-class->boxed-class c)]
+    (-> (or matching-boxed-class c)
+        t/isa?
+        (cond-> (and (not matching-boxed-class) (not (assume-val-for-form? form))) t/?))))
 
 ;; TODO move?
 (defns- compare-class-specificity [c0 class?, c1 class?]
@@ -288,7 +287,7 @@
   (let [{:as ret :keys [call-sites args|analyzed]}
           (->> args|form
                (reducei
-                 (fn [{:as ret :keys [call-sites]} arg|form i|arg]
+                 (fn [{:as ret :keys [args|analyzed call-sites]} arg|form i|arg]
                    (let [arg|analyzed (analyze* env arg|form)
                          arg|analyzed|type (:type arg|analyzed)
                          call-sites'
@@ -299,10 +298,12 @@
                                           (class>type (aget arg-classes i|arg))))))]
                      (if (empty? call-sites')
                          (err! (str "No " kinds-str " for class match the arg type at index")
-                               {:class    target-class
-                                :form     form
-                                :arg-type arg|analyzed|type
-                                :i|arg    i|arg})
+                               {:class             target-class
+                                :form              form
+                                :arg|type          arg|analyzed|type
+                                :arg|analyzed-form (:form arg|analyzed)
+                                :i|arg             i|arg
+                                :arg-types-so-far  (mapv :type args|analyzed)})
                          (-> ret
                              (assoc :call-sites call-sites')
                              (update :args|analyzed conj arg|analyzed)))))
@@ -419,13 +420,13 @@
             constructors (-> c class>constructors|with-cache)
             args-ct (count args|form)
             constructors-for-ct (->> constructors
-                                     (c/filter (fn [{:keys [^"[Ljava.lang.Object;" argtypes]}]
-                                                 (= (alength argtypes) args-ct))))]
+                                     (c/filter (fn [{:keys [^"[Ljava.lang.Object;" arg-classes]}]
+                                                 (= (alength arg-classes) args-ct))))]
         (if (empty? constructors-for-ct)
             (err! "No constructors for class match the arg ct" {:class c :args|form args|form})
             (let [{:keys [args|analyzed call-sites]}
                     (analyze-seq|method-or-constructor-call|incrementally-analyze env form c
-                      args|form "constructors")]
+                      args|form constructors-for-ct "constructors")]
               (uast/new-node
                 {:env   env
                  :form  (list* 'new c|form (map :form args|analyzed))
