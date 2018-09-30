@@ -672,7 +672,8 @@
           (>direct-dispatch fnt-globals opts expanded-overload-groups-by-fnt-overload)
         fn-codelist
           (case lang
-            :clj  (->> `[~@(:form direct-dispatch)
+            :clj  (->> `[(declare ~fn|name) ; for recursion
+                         ~@(:form direct-dispatch)
                          ~(>dynamic-dispatch-fn|form fnt-globals opts
                             expanded-overload-groups-by-fnt-overload
                             i-overload->direct-dispatch-data)]
