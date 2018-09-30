@@ -1507,17 +1507,203 @@
         (testing "code equivalence" (is-code= actual expected))
         (testing "functionality"
           (eval actual)
+          (eval '(do ...)))))
+    (testing "First input splittable; second input not splittable"
+      (let [actual
+              (macroexpand '
+                (self/defn dependent-type-2input-0split
+                  #_"1. Analyze `a` = `(t/or tt/boolean? tt/byte?)`. Splittable.
+                     2. Split:
+                        [[a tt/boolean?, b (type a) > (type b)]
+                         [a tt/byte?   , b (type a) > (type b)]]
+                     3. Analyze split 0.
+                        1. Analyze `a` = `tt/boolean?`
+                           -> Put `a` in env as `(t/isa? Boolean)`
+                        2. Analyze `b` = `(type a)`
+                           -> Put `b` in env as `(t/isa? Boolean)`
+                        3. Analyze out-type = `(type b)`
+                           -> `(t/isa? Boolean)`
+                     4. Analyze split 1 in the same way."
+                  ([a (t/or tt/boolean? tt/byte?), b (type a) > (type b)] b)))
+            expected
+              (case (env-lang)
+                :clj
+                  ($ (do ...)))]
+        (testing "code equivalence" (is-code= actual expected))
+        (testing "functionality"
+          (eval actual)
           (eval '(do ...))))))
-  (testing "Two input types directly depend on each other"
+  (testing "Combination/integration test"
     (let [actual
             (macroexpand '
-              (self/defn dependent-type-directin
-                #_"1. Analyze `a` = `(type b)`
-                      1. Analyze `b` = `(type a)`
-                         -> ERROR: `a` already in stack; circular dependency detected"
-                ([a (type b), b (type a)] b)))]
+              (self/defn dependent-type-combo
+                #_"1. Analyze `a` = `(type (>long-checked \"23\"))`
+                      1. Analyze `(>long-checked \"23\")`
+                         -> `(t/value 23)`
+                      -> Put `out` in env as `(t/value 23)`"
+                [out (type (>long-checked "23"))]
+                (self/fn dependent-type-combo-inner
+                  #_"1. Analyze `a` = `(t/or tt/boolean? (type b))`
+                        - Put `a` on queue
+                        1. Analyze `tt/boolean?`
+                           -> `(t/isa? Boolean)`
+                        2. Analyze `(type b)`
+                           1. Analyze `b` = `(t/or tt/byte? (type d))`
+                              - Put `b` on queue
+                              1. Analyze `tt/byte?`
+                                 -> `(t/isa? Byte)`
+                              2. Analyze `(type d)`
+                                 1. Analyze `d` = `(let [b (t/- tt/char? tt/long?)]
+                                                     (t/or tt/char? (type b) (type c)))`
+                                    - Put `d` on queue
+                                    1. Analyze `b` = `(t/- tt/char? tt/long?)`
+                                       -> Put `b` in env as `t/none?`
+                                    2. Analyze `(t/or tt/char? (type b) (type c))`
+                                       1. Analyze `tt/char?`
+                                          -> `(t/isa? Character)`
+                                       2. Analyze `(type b)`
+                                          -> `t/none-type?`  <-- be careful of this
+                                       3. Analyze `(type c)`
+                                          1. Analyze `c` = `(t/or tt/short? tt/char?)`
+                                             1. Analyze `tt/short?`
+                                                -> `(t/isa? Short)`
+                                             2. Analyze `tt/char?`
+                                                -> `(t/isa? Character)`
+                                             -> `c` candidate is:
+                                                `(t/or (t/isa? Short) (t/isa? Character))`
+                                                Splittable.
+                                             - Split:
+                                               [[a (t/or tt/boolean? (type b))
+                                                 b (t/or tt/byte? (type d))
+                                                 c (t/isa? Short)
+                                                 d (let [b (t/- tt/char? tt/long?)]
+                                                     (t/or tt/char? (type b) (type c)))
+                                                 > (t/or (type b) (type d))]
+                                                [a (t/or tt/boolean? (type b))
+                                                 b (t/or tt/byte? (type d))
+                                                 c (t/isa? Character)
+                                                 d (let [b (t/- tt/char? tt/long?)]
+                                                     (t/or tt/char? (type b) (type c)))
+                                                 > (t/or (type b) (type d))]]
+                                             - We continue with only Split 0 for brevity. Other
+                                               splits should be handled the same.
+                                             -> Put `c` in env as `(t/isa? Short)`
+                                          -> `(t/isa? Short)`
+                                       -> `(t/or (t/isa? Character)
+                                                 t/none-type?
+                                                 (t/isa? Short))`
+                                    - Remove `b` from env
+                                    - Remove `d` from queue
+                                    -> `d` candidate is:
+                                       `(t/or (t/isa? Character)
+                                              t/none-type?
+                                              (t/isa? Short))`.
+                                       Splittable.
+                                    - Split:
+                                      [[a (t/or tt/boolean? (type b))
+                                        b (t/or tt/byte? (type d))
+                                        c (t/isa? Short)
+                                        d (t/isa? Character)
+                                        > (t/or (type b) (type d))]
+                                       [a (t/or tt/boolean? (type b))
+                                        b (t/or tt/byte? (type d))
+                                        c (t/isa? Short)
+                                        d t/none-type?
+                                        > (t/or (type b) (type d))]
+                                       [a (t/or tt/boolean? (type b))
+                                        b (t/or tt/byte? (type d))
+                                        c (t/isa? Short)
+                                        d (t/isa? Short)
+                                        > (t/or (type b) (type d))]]
+                                    - We continue with only Split 0 for brevity. Other splits
+                                      should be handled the same.
+                                    -> Put `d` in env as `(t/isa? Character)`
+                                 -> `(t/isa? Character)`
+                              -> `(t/isa? Character)`
+                           - Remove `b` from queue
+                           -> `b` candidate is:
+                              `(t/or (t/isa? Byte) (t/isa? Character))`
+                              Splittable.
+                           - Split:
+                             [[a (t/or tt/boolean? (type b))
+                               b (t/isa? Byte)
+                               c (t/isa? Short)
+                               d (t/isa? Character)
+                               > (t/or (type b) (type d))]
+                              [a (t/or tt/boolean? (type b))
+                               b (t/isa? Character)
+                               c (t/isa? Short)
+                               d (t/isa? Character)
+                               > (t/or (type b) (type d))]]
+                           - We continue with only Split 0 for brevity. Other splits should be
+                             handled the same.
+                           -> Put `b` in env as `(t/isa? Byte)`
+                        -> `(t/isa? Byte)`
+                     - Remove `a` from queue
+                     -> `a` candidate is:
+                        `(t/or (t/isa? Boolean) (t/isa? Byte))`
+                        Splittable.
+                     - Split:
+                       [[a (t/isa? Boolean)
+                         b (t/isa? Byte)
+                         c (t/isa? Short)
+                         d (t/isa? Character)
+                         > (t/or (type b) (type d))]
+                        [a (t/isa? Byte)
+                         b (t/isa? Character)
+                         c (t/isa? Short)
+                         d (t/isa? Character)
+                         > (t/or (type b) (type d))]]
+                     - We continue with only Split 0 for brevity. Other splits should be handled
+                       the same.
+                     -> Put `a` in env as `(t/isa? Boolean)`
+                     2. Analyze out-type = `(t/or (type b) (type d))`
+                        -> (Cutting obvious corners) `(t/or (t/isa? Byte) (t/isa? Character))`
+                        - No splitting necessary because out-type
+                     - All input types are in env and output-type was analyzed. DONE"
+                  ([a (t/or tt/boolean? (type b))
+                    b (t/or tt/byte? (type d))
+                    c (t/or tt/short? tt/char?)
+                    d (let [b (t/- tt/char? tt/long?)]
+                        (t/or tt/char? (type b) (type c)))
+                    > (t/or (type b) (type d))] b)))
+          expected
+            (case (env-lang)
+              :clj
+                ($ (do ...)))]
+      (testing "code equivalence" (is-code= actual expected))
       (testing "functionality"
-        (throws? (eval actual)))))
+        (eval actual)
+        (eval '(do ...)))))
+  (testing "Two input types directly depend on each other"
+    (testing "Symbolically"
+      (let [actual
+              (macroexpand '
+                (self/defn dependent-type-directin
+                  #_"1. Analyze `a` = `(type b)`
+                        - Put `a` on queue
+                        1. Analyze `b` = `(type a)`
+                           - Put `b` on queue
+                           -> ERROR: `a` not in environment and `a` already on queue; circular
+                                     dependency detected"
+                  ([a (type b), b (type a)] b)))]
+        (testing "functionality"
+          (throws? (eval actual)))))
+    (testing "Non-symbolically"
+      (let [actual
+              (macroexpand '
+                (self/defn dependent-type-directin
+                  #_"1. Analyze `a` = `(type b)`
+                        - Put `a` on queue
+                        1. Analyze `b` = `(type [a])`
+                           - Put `b` on queue
+                           1. Analyze `[a]`
+                              1. Analyze `a`
+                                 -> ERROR: `a` not in environment and `a` already on queue;
+                                           circular dependency detected"
+                  ([a (type b), b (type [a])] b)))]
+        (testing "functionality"
+          (throws? (eval actual))))))
   (testing "Two input types indirectly depend on each other"
     (let [actual
             (macroexpand '
@@ -1525,7 +1711,7 @@
                 #_"1. Analyze `a` = `(type b)`
                       1. Analyze `b` = `(type c)`
                          1. Analyze `c` = `(type a)`
-                            -> ERROR `a` already in stack; circular dependency detected"
+                            -> ERROR `a` already in queue; circular dependency detected"
                 ([a (type b), b (type c), c (type a)] b)))]
       (testing "functionality"
         (throws? (eval actual))))))
