@@ -191,6 +191,8 @@
 
 (s/def ::env (s/map-of symbol? t/any?))
 
+(s/def ::opts (s/map-of keyword? t/any?))
+
 (declare analyze*)
 
 (defns- analyze-non-map-seqable
@@ -200,9 +202,9 @@
                       The first argument is the current deduced type of the
                       overall AST node; the second is the deduced type of
                       the current sub-AST-node."}}
-  [env ::env, form _, empty-form _, rf _]
+  [opts ::opts, env ::env, form _, empty-form _, rf _]
   (-> (reducei
-        (fn [accum form' i] (rf accum (analyze* (:env accum) form') i))
+        (fn [accum form' i] (rf accum (analyze* opts (:env accum) form') i))
         {:env env :form (transient empty-form) :body (transient [])}
         form)
       (update :form (fn-> persistent! (add-file-context-from form)))
@@ -211,12 +213,12 @@
 (defns- analyze-map
   {:todo #{"If the map is bound to a variable, preserve type info for it such that lookups
             can start out with a guarantee of a certain type."}}
-  [env ::env, form _]
+  [opts ::opts, env ::env, form _]
   (TODO "analyze-map")
   #_(->> form
        (reduce-kv (fn [{env' :env forms :form} form'k form'v]
-                    (let [ast-node-k (analyze* env' form'k)
-                          ast-node-v (analyze* env' form'v)]
+                    (let [ast-node-k (analyze* opts env' form'k)
+                          ast-node-v (analyze* opts env' form'v)]
                       (->expr-info {:env       env'
                                     :form      (assoc! forms (:form ast-node-k) (:form ast-node-v))
                                    ;; TODO fix; we want the types of the keys and vals to be deduced
@@ -224,7 +226,7 @@
          (->expr-info {:env env :form (transient {})}))
        (persistent!-and-add-file-context-from form)))
 
-(defns- analyze-seq|do [env ::env, [_ _ & body|form _ :as form] _ > uast/do?]
+(defns- analyze-seq|do [opts ::opts, env ::env, [_ _ & body|form _ :as form] _ > uast/do?]
   (if (empty? body|form)
       (uast/do {:env             env
                 :unexpanded-form form
@@ -232,7 +234,7 @@
                 :body            []
                 :type            t/nil?})
       (let [{expanded-form :form body :body}
-              (analyze-non-map-seqable env body|form []
+              (analyze-non-map-seqable opts env body|form []
                 (fn [accum ast-data _]
                   ;; The env should be the same as whatever it was originally because no new scopes
                   ;; are created
@@ -247,22 +249,23 @@
                   ;; the others
                   :type            (-> body c/last :type)}))))
 
-(defns analyze-seq|let*|bindings [env ::env, bindings|form _]
+(defns analyze-seq|let*|bindings [opts ::opts, env ::env, bindings|form _]
   (->> bindings|form
        (c/partition-all+ 2)
        (reduce (fn [{env' :env !bindings :form :keys [bindings-map]} [sym form :as binding|form]]
-                 (let [node (analyze* env' form)] ; environment is additive with each binding
+                 (let [node (analyze* opts env' form)] ; environment is additive with each binding
                    {:env          (assoc env' sym node)
                     :form         (conj! (conj! !bindings sym) (:form node))
                     :bindings-map (assoc bindings-map sym node)}))
          {:env env :form (transient []) :bindings-map {}})
        (<- (update :form (fn-> persistent! (add-file-context-from bindings|form))))))
 
-(defns analyze-seq|let* [env ::env, [_ _, bindings|form _ & body|form _ :as form] _ > uast/let*?]
+(defns analyze-seq|let*
+  [opts ::opts, env ::env, [_ _, bindings|form _ & body|form _ :as form] _ > uast/let*?]
   (let [{env' :env bindings|form' :form :keys [bindings-map]}
-          (analyze-seq|let*|bindings env bindings|form)
+          (analyze-seq|let*|bindings opts env bindings|form)
         {body|form' :form body|type :type body :body}
-          (analyze-seq|do env' (list* 'do body|form))]
+          (analyze-seq|do opts env' (list* 'do body|form))]
     (uast/let* {:env             env
                 :unexpanded-form form
                 :form            (list* 'let* bindings|form' (rest body|form'))
@@ -304,13 +307,13 @@
            call-sites))))
 
 (defns- analyze-seq|method-or-constructor-call|incrementally-analyze
-  [env ::env, form _, target-class class?, args|form _, call-sites-for-ct _, kinds-str string?
-   > (s/kv {:args|analyzed vector?})]
+  [opts ::opts, env ::env, form _, target-class class?, args|form _, call-sites-for-ct _
+   kinds-str string? > (s/kv {:args|analyzed vector?})]
   (let [{:as ret :keys [call-sites args|analyzed]}
           (->> args|form
                (reducei
                  (fn [{:as ret :keys [args|analyzed call-sites]} arg|form i|arg]
-                   (let [arg|analyzed (analyze* env arg|form)
+                   (let [arg|analyzed (analyze* opts env arg|form)
                          arg|analyzed|type (:type arg|analyzed)
                          call-sites'
                            (->> call-sites
@@ -345,10 +348,10 @@
         ret)))
 
 (defns- analyze-seq|dot|method-call|incrementally-analyze
-  [env ::env, form _, target uast/node?, target-class class?, method-form _, args|form _
-   methods-for-ct-and-kind (s/seq-of t/any?) > uast/method-call?]
+  [opts ::opts, env ::env, form _, target uast/node?, target-class class?, method-form _
+   args|form _ methods-for-ct-and-kind (s/seq-of t/any?) > uast/method-call?]
   (let [{:keys [args|analyzed call-sites]}
-          (analyze-seq|method-or-constructor-call|incrementally-analyze env form target-class
+          (analyze-seq|method-or-constructor-call|incrementally-analyze opts env form target-class
             args|form methods-for-ct-and-kind "methods")
         ?cast-type (?cast-call->type target-class method-form)
         ;; TODO enable the below:
@@ -369,7 +372,7 @@
   "A note will be made of what methods match the argument types.
    If only one method is found, that is noted too. If no matching method is found, an
    exception is thrown."
-  [env ::env, form _, target uast/node?, target-class class?, static? t/boolean?
+  [opts ::opts, env ::env, form _, target uast/node?, target-class class?, static? t/boolean?
    method-form simple-symbol?, args|form _ #_(seq-of form?) > uast/method-call?]
   ;; TODO cache type by method
   (if-not-let [methods-for-name (-> target-class class>methods|with-cache
@@ -386,11 +389,11 @@
         (if-not-let [methods-for-ct-and-kind (c/get methods-for-ct kind)]
           (err! (istr "Method found for arg-count, but was ~non-kind, not ~kind")
                 {:class target-class :method method-form :args args|form})
-          (analyze-seq|dot|method-call|incrementally-analyze env form target target-class
+          (analyze-seq|dot|method-call|incrementally-analyze opts env form target target-class
             method-form args|form methods-for-ct-and-kind))))))
 
 (defns- analyze-seq|dot|field-access
-  [env ::env, form _, target _, field-form simple-symbol?, field (t/isa? Field)
+  [opts ::opts, env ::env, form _, target _, field-form simple-symbol?, field (t/isa? Field)
    > uast/field-access?]
   (uast/field-access
     {:env    env
@@ -409,8 +412,9 @@
         (err! "Found more than one class" cs))))
 
 ;; TODO type these arguments; e.g. check that ?method||field, if present, is an unqualified symbol
-(defns- analyze-seq|dot [env ::env, [_ _, target-form _, ?method-or-field _ & ?args _ :as form] _]
-  (let [target          (analyze* env target-form)
+(defns- analyze-seq|dot
+  [opts ::opts, env ::env, [_ _, target-form _, ?method-or-field _ & ?args _ :as form] _]
+  (let [target          (analyze* opts env target-form)
         method-or-field (if (symbol? ?method-or-field) ?method-or-field (first ?method-or-field))
         args-forms      (if (symbol? ?method-or-field) ?args            (rest  ?method-or-field))]
     (if (t/= (:type target) t/nil?)
@@ -432,14 +436,14 @@
             (if-let [field (and (empty? args-forms)
                                 (-> target-class class>fields|with-cache
                                     (c/get (name method-or-field))))]
-              (analyze-seq|dot|field-access env form target method-or-field field)
-              (analyze-seq|dot|method-call env form target target-class
+              (analyze-seq|dot|field-access opts env form target method-or-field field)
+              (analyze-seq|dot|method-call opts env form target target-class
                 (boolean ?target-static-class-map) method-or-field args-forms)))))))
 
 ;; TODO this is not the right approach for CLJS
 (defns- analyze-seq|new
-  [env ::env, [_ _ & [c|form _ & args|form _ :as body] _ :as form] _ > uast/new-node?]
-  (let [c|analyzed (analyze* env c|form)]
+  [opts ::opts, env ::env, [_ _ & [c|form _ & args|form _ :as body] _ :as form] _ > uast/new-node?]
+  (let [c|analyzed (analyze* opts env c|form)]
     (if-not (and (-> c|analyzed :type t/value-type?)
                  (-> c|analyzed :type utr/value-type>value class?))
       (err! "Supplied non-class to `new` form" {:form form})
@@ -452,7 +456,7 @@
         (if (empty? constructors-for-ct)
             (err! "No constructors for class match the arg ct" {:class c :args|form args|form})
             (let [{:keys [args|analyzed call-sites]}
-                    (analyze-seq|method-or-constructor-call|incrementally-analyze env form c
+                    (analyze-seq|method-or-constructor-call|incrementally-analyze opts env form c
                       args|form constructors-for-ct "constructors")]
               (uast/new-node
                 {:env   env
@@ -469,14 +473,14 @@
 
 (defns- analyze-seq|if
   "Performs conditional branch pruning."
-  [env ::env, [_ _ & [pred-form _, true-form _, false-form _ :as body] _ :as form] _
+  [opts ::opts, env ::env, [_ _ & [pred-form _, true-form _, false-form _ :as body] _ :as form] _
    > uast/node?]
   (if-not (<= 2 (count body) 3)
     (err! "`if` accepts exactly 3 arguments: one predicate test and two branches; received"
           {:body body})
-    (let [pred-node  (analyze* env pred-form)
-          true-node  (delay (analyze* env true-form))
-          false-node (delay (analyze* env false-form))
+    (let [pred-node  (analyze* opts env pred-form)
+          true-node  (delay (analyze* opts env true-form))
+          false-node (delay (analyze* opts env false-form))
           whole-node
             (delay
               (uast/if-node
@@ -494,13 +498,13 @@
                   (assoc @false-node :env env))
         nil   @whole-node))))
 
-(defns- analyze-seq|quote [env ::env, [_ _ & body _ :as form] _ > uast/quoted?]
+(defns- analyze-seq|quote [opts ::opts, env ::env, [_ _ & body _ :as form] _ > uast/quoted?]
   (uast/quoted env form (t/value (list* body))))
 
-(defns- analyze-seq|throw [env ::env, form _ [arg _ :as body] _ > uast/throw-node?]
+(defns- analyze-seq|throw [opts ::opts, env ::env, form _ [arg _ :as body] _ > uast/throw-node?]
   (if (-> body count (not= 1))
       (err! "Must supply exactly one input to `throw`; supplied" {:body body})
-      (let [arg|analyzed (analyze* env arg)]
+      (let [arg|analyzed (analyze* opts env arg)]
         ;; TODO this is not quite true for CLJS but it's good practice at least
         (if-not (-> arg|analyzed :type (t/<= t/throwable?))
           (err! "`throw` requires a throwable; received" {:arg arg :type (:type arg|analyzed)})
@@ -567,7 +571,7 @@
                   (apply t/or))))
 
 (defns- call>input-nodes+out-type
-  [env _, caller|node _, caller|type _, caller-kind _, inputs-ct _, body _
+  [opts ::opts, env ::env, caller|node _, caller|type _, caller-kind _, inputs-ct _, body _
    > (s/kv {:input-nodes t/any? #_(s/seq-of ast/node?)
             :out-type  t/type?})]
   (dissoc
@@ -579,7 +583,7 @@
                ;; We could do a little smarter analysis here but we'll keep it simple for now
                t/any?)}
         (->> body
-             (c/map+ #(analyze* env %))
+             (c/map+ #(analyze* opts env %))
              (reducei
                (fn [{:as ret :keys [dispatch-type]} input|analyzed i]
                  (if (= :fnt caller-kind)
@@ -610,19 +614,19 @@
 (defns- analyze-seq*
   "Analyze a seq after it has been macro-expanded.
    The ->`form` is post- incremental macroexpansion."
-  [env ::env, [caller|form _ & body _ :as form] _ > uast/node?]
+  [opts ::opts, env ::env, [caller|form _ & body _ :as form] _ > uast/node?]
   (case caller|form
-    do       (analyze-seq|do    env form)
-    let*     (analyze-seq|let*  env form)
+    do       (analyze-seq|do    opts env form)
+    let*     (analyze-seq|let*  opts env form)
     deftype* (TODO "deftype*")
     fn*      (TODO "fn*")
     def      (TODO "def")
-    .        (analyze-seq|dot   env form)
-    if       (analyze-seq|if    env form)
-    quote    (analyze-seq|quote env form)
-    new      (analyze-seq|new   env form)
-    throw    (analyze-seq|throw env form)
-    (let [caller|node (analyze* env caller|form)
+    .        (analyze-seq|dot   opts env form)
+    if       (analyze-seq|if    opts env form)
+    quote    (analyze-seq|quote opts env form)
+    new      (analyze-seq|new   opts env form)
+    throw    (analyze-seq|throw opts env form)
+    (let [caller|node (analyze* opts env caller|form)
           caller|type (:type caller|node)
           inputs-ct   (count body)]
             ;; TODO fix this line of code and extend t/compare so the comparison checks below
@@ -669,7 +673,7 @@
                          :fn nil)
                      {:keys [input-nodes out-type]}
                        (call>input-nodes+out-type
-                         env caller|node caller|type caller-kind inputs-ct body)
+                         opts env caller|node caller|type caller-kind inputs-ct body)
                      call-node
                        (uast/call-node
                          {:env    env
@@ -679,12 +683,12 @@
                           :type   out-type})]
                  call-node)))))
 
-(defns- analyze-seq [env ::env, form _]
+(defns- analyze-seq [opts ::opts, env ::env, form _]
   (let [expanded-form (ufeval/macroexpand form)]
     (if-let [no-expansion? (ucomp/== form expanded-form)]
-      (analyze-seq* env expanded-form)
+      (analyze-seq* opts env expanded-form)
       (let [expanded-form' (-> expanded-form (update-meta merge (meta form)))
-            expanded (analyze* env expanded-form')]
+            expanded (analyze* opts env expanded-form')]
         (uast/macro-call
           {:env             env
            :unexpanded-form form
@@ -692,18 +696,19 @@
            :expanded        expanded
            :type            (:type expanded)})))))
 
-(defns ?resolve-with-env [sym symbol?, env ::env]
+(defns ?resolve-with-env [opts ::opts, env ::env, sym symbol?]
   (if-let [[_ local] (find env sym)]
     {:value local}
     (let [resolved (ns-resolve *ns* sym)]
       (ifs resolved
              {:value resolved}
            (some-> sym namespace symbol resolve class?)
-             {:value (analyze-seq|dot env (list '. (-> sym namespace symbol) (-> sym name symbol)))}
+             {:value (analyze-seq|dot
+                       opts env (list '. (-> sym namespace symbol) (-> sym name symbol)))}
            nil))))
 
-(defns- analyze-symbol [env ::env, form symbol? > uast/symbol?]
-  (if-not-let [{resolved :value} (?resolve-with-env form env)]
+(defns- analyze-symbol [opts ::opts, env ::env, form symbol? > uast/symbol?]
+  (if-not-let [{resolved :value} (?resolve-with-env opts env form)]
     (err! "Could not resolve symbol" {:sym form})
     (uast/symbol env form resolved
       (ifs (uast/node? resolved)
@@ -717,19 +722,19 @@
              t/any?
            (TODO "Unsure of what to do in this case" (kw-map env form resolved))))))
 
-(defns- analyze* [env ::env, form _ > uast/node?]
+(defns- analyze* [opts ::opts, env ::env, form _ > uast/node?]
   (when (> (swap! *analyze-depth inc) 200) (throw (ex-info "Stack too deep" {:form form})))
   (ifs (symbol? form)
-         (analyze-symbol env form)
+         (analyze-symbol opts env form)
        (t/literal? form)
          (uast/literal env form (t/>type form))
        (or (vector? form)
            (set?    form))
-         (analyze-non-map-seqable env form (empty form) (fn stop [& [a b :as args]] (prl! args) (err! "STOP")))
+         (analyze-non-map-seqable opts env form (empty form) (fn stop [& [a b :as args]] (prl! args) (err! "STOP")))
        (map? form)
-         (analyze-map env form)
+         (analyze-map opts env form)
        (seq? form)
-         (analyze-seq env form)
+         (analyze-seq opts env form)
        (throw (ex-info "Unrecognized form" {:form form}))))
 
 (defns analyze
@@ -739,6 +744,7 @@
               non-primitives."
   > uast/node?
   ([form _] (analyze {} form))
-  ([env ::env, form _]
+  ([env ::env, form _] (analyze {} env form))
+  ([opts ::opts, env ::env, form _]
     (reset! *analyze-depth 0)
-    (analyze* env form)))
+    (analyze* opts env form)))
