@@ -82,11 +82,12 @@
   (let [with-most-specific-out-class
           (fn->> (ucomp/comp-min-of
                    (fn [m0 m1] (compare-class-specificity (:out-class m0) (:out-class m1)))))
-        ;; Because even though it's not supposed to be the case that there is ever more than one
-        ;; method with the same combination of name, kind (static/instance), and arg classes, only
-        ;; differing by return type, it *has* happened on Java version "1.8.0_162", Mac OS X, JVM
-        ;; version "25.162-b12", with the `ByteBuffer.array()` public instance method which maps to
-        ;; to overloads, one which returns `Object` and one which returns `byte[]`.
+        ;; We have to use `with-distinct-arg-class-seqs` Because even though it's not supposed to
+        ;; be the case that there is ever more than one method with the same combination of name,
+        ;; kind (static/instance), and arg classes, only differing by return type, it *has*
+        ;; happened on Java version "1.8.0_162", Mac OS X, JVM version "25.162-b12", with the
+        ;; `ByteBuffer.array()` public instance method which maps to two overloads, one which
+        ;; returns `Object` and one which returns `byte[]`.
         ;; See also this link for the claim that this is impossible according to the Java 1.8 spec
         ;; (http://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html#jls-8.4.2) and that the bug
         ;; only exists in Java 6 or 7 on Oracle's JDK, OpenJDK, and IBM's JDK: https://stackoverflow.com/questions/5561436/can-two-java-methods-have-same-name-with-different-return-types
