@@ -59,16 +59,20 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  [1 .] Fix `analyze-seq|method-or-constructor-call|incrementally-analyze` :
-        Error Message: No methods for class match the arg type at index
+  [1 .] Fix `quantum.untyped.core.analyze`:
+        Error Message: Multiple, equally specific methods for class match the arg types
         Data:
-        {:class quantum.core.Numeric,
-         :form (. Numeric bitAnd (short 255) x),
-         :arg-type (quantum.untyped.core.type/or
-                    (quantum.untyped.core.type/value nil)
-                    (quantum.untyped.core.type/isa? short)),
-         :i|arg 0}
-          quantum.untyped.core.error/>err (error.cljc:169)
+        {:class java.nio.ByteBuffer,
+         :form (. (.putLong (ByteBuffer/allocate (int 8)) x) array),
+         :methods [#M{:name 'array',
+                      :out-class java.lang.Object,
+                      :arg-classes #class<>[],
+                      :kind :instance}
+                   #M{:name 'array',
+                      :out-class '[B',
+                      :arg-classes #class<>[],
+                      :kind :instance}],
+         :arg-types []}
   [2 .] t/type
       - dependent types: `[x arr/array? > (t/type x)]`
   [3] t/value-of
