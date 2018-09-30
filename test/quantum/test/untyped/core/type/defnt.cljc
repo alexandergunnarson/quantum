@@ -1711,7 +1711,8 @@
                 #_"1. Analyze `a` = `(type b)`
                       1. Analyze `b` = `(type c)`
                          1. Analyze `c` = `(type a)`
-                            -> ERROR `a` already in queue; circular dependency detected"
+                            -> ERROR `a` not in environment and `a` already in queue; circular
+                                     dependency detected"
                 ([a (type b), b (type c), c (type a)] b)))]
       (testing "functionality"
         (throws? (eval actual))))))
