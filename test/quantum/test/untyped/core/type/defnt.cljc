@@ -1314,6 +1314,19 @@
     (let [actual
             (macroexpand '
               (self/defn dependent-type-0
+                ([x tt/boolean? > (type x)] x))
+          expected
+            (case (env-lang)
+              :clj
+                ($ (do ...)))]
+      (testing "code equivalence" (is-code= actual expected))
+      (testing "functionality"
+        (eval actual)
+        (eval '(do ...)))))
+  (testing "Output type dependent on splittable but non-primitive-splittable input"
+    (let [actual
+            (macroexpand '
+              (self/defn dependent-type-1
                 ([x (t/or tt/boolean? tt/string?) > (type x)] x))
           expected
             (case (env-lang)
@@ -1326,7 +1339,7 @@
   (testing "Output type dependent on primitive-splittable input"
     (let [actual
             (macroexpand '
-              (self/defn dependent-type-1
+              (self/defn dependent-type-2
                 ([x t/any? > (type x)] x)))
           expected
             (case (env-lang)
@@ -1339,7 +1352,7 @@
   (testing "Input type dependent on other input type"
     (let [actual
             (macroexpand '
-              (self/defn dependent-type-2
+              (self/defn dependent-type-3
                 ([a tt/byte?, b (type a)] a)))
           expected
             (case (env-lang)
@@ -1348,7 +1361,34 @@
       (testing "code equivalence" (is-code= actual expected))
       (testing "functionality"
         (eval actual)
-        (eval '(do ...))))))
+        (eval '(do ...)))))
+  (testing "Output type dependent on input type which is dependent on other input type"
+    (let [actual
+            (macroexpand '
+              (self/defn dependent-type-4
+                ([a tt/byte?, b (type a) > (type b)] b)))
+          expected
+            (case (env-lang)
+              :clj
+                ($ (do ...)))]
+      (testing "code equivalence" (is-code= actual expected))
+      (testing "functionality"
+        (eval actual)
+        (eval '(do ...)))))
+  (testing "Two input types directly depend on each other"
+    (let [actual
+            (macroexpand '
+              (self/defn dependent-type-5
+                ([a (type b), b (type a)] b)))]
+      (testing "functionality"
+        (throws? (eval actual)))))
+  (testing "Two input types indirectly depend on each other"
+    (let [actual
+            (macroexpand '
+              (self/defn dependent-type-6
+                ([a (type b), b (type c), c (type a)] b)))]
+      (testing "functionality"
+        (throws? (eval actual))))))
 
 ;; ----- expanded code ----- ;;
 

@@ -13,7 +13,7 @@ Note that for anything built-in js/<whatever>, the `t/isa?` predicates might nee
 ;; ===== quantum.core.system
 
 #?(:clj
-(defnt pid [> (? t/string?)]
+(t/defn pid [> (? t/string?)]
   (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
        (.getName))))
 
@@ -67,7 +67,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - `(t/input-type >namespace :?)` meaning the possible input types to the first input to `>namespace`
       - `(t/input-type reduce :_ :_ :?)`
       - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
-  [4] - Direct dispatch
+  [4] - Direct dispatch needs to actually work correctly in `t/defn`
   [5] - No trailing `>` means `> ?`
       - ? : type inference
         - use logic programming and variable unification e.g. `?1` `?2` ?
@@ -135,10 +135,12 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - t/declare
   - declare-fnt (a way to do protocols/interfaces)
     - extend-fnt!
-  - defnt (t/defn)
+  - `t/defn`
     - Arity elision: if any type in an arity is `t/none?` then elide it and emit a warning
       - `([x bigint?] x)`
     - t/defn-
+      - Not just a private var for the dynamic dispatch, but needs to be private for purposes of the
+        analyzer when doing direct dispatch. Should emit a warning, not just fail.
     - (t/and (t/or a b) c) should -> (t/or (t/and a c) (t/and b c)) for purposes of separating dispatches
     - t/extend-defn!
       - `(t/extend-defn! id/>name (^:inline [x namespace?] (-> x .getName id/>name)))`
@@ -161,11 +163,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           ([xs (t/input-type educe :_ :_ :?)] (educe empty?|rf x)))
     - handle varargs
       - [& args _] shouldn't result in `t/any?` but rather like `t/reducible?` or whatever
-    - do the defnt-equivalences
+    - do the defnt-equivalences / `t/defn` test namespace
     - a linting warning that you can narrow the type to whatever the deduced type is from whatever
       wider declared type there is
-    - the option of creating a `defnt` that isn't extensible? Or at least in which the input types are limited in the same way per-overload output types are limited by the per-fn output type?
-    - dealing with `apply`...
+    - the option of creating a `t/defn` that isn't extensible? Or at least in which the input types are limited in the same way per-overload output types are limited by the per-fn output type?
   - t/defmacro
   - t/deftype
   - t/dotyped
@@ -175,13 +176,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [xs (t/fn [x (t/isa? clojure.lang.Range)] ...)]
   - No return value means that it should infer
 - NOTE on namespace organization:
-  - [quantum.untyped.core.ns :refer [namespace?]]
-    instead of
-    [quantum.untyped.core.type.predicates :refer [namespace?]]
-    because not all predicates (type-related or otherwise) can be thought of ahead of time to be put
-    in one giant namespace
-  - Same with the `core.convert` namespace too
-    - Conversion functions belong in the namespace that their destination types belong in
+  - Conversion functions belong in the namespace that their destination types belong in, not in one
+    giant namespace of all conversion
 - TODO transition the quantum.core.* namespaces:
   ->>>>>> TODO need to add *all* quantum namespaces in here
   - Legend:
@@ -1363,12 +1359,11 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
                        ([x0]    (identity x0))
                        ([x0 x1] (conj x0 x1)))}}
   - Instead of e.g. `ns-` or `var-` we can do `ns-val` and `var-val`
-  - Should we type `when`, `let`?
 
 [ ] Compile-Time (Direct) Dispatch
     - TODO Should we take into account 'actual' types (not just 'declared' types) when performing
       dispatch / overload resolution?
-      - Let's take the example of `(defnt abcde [] (f (rand/int-between -10 -2)))`.
+      - Let's take the example of `(t/defn abcde [] (f (rand/int-between -10 -2)))`.
         - Let's say `rand/int-between`'s output is labeled `t/int?`. However, we know based on
           further static analysis of its implementation that the output is not only `t/int?` but
           also `t/neg?`, or perhaps even further, `(< -10 % -2)`.
@@ -1392,13 +1387,13 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
             output type).
           - One option (Option A) is to turn off compile-time overload resolution during
             development. This would mean it might get very slow during that time. But if it's in
-            the same `defnt` (ignoring `extend-defnt!` for a minute) — like a recursive call — you
+            the same `t/defn` (ignoring `t/extend-defn!` for a minute) — like a recursive call — you
             could always leave on compile-time resolution for that.
           - Option B — probably better (though we'd still like to have all this configurable) —
             is to have each function know its dependencies (this would actually have the bonus
             property of enabling `clojure.tools.namespace.repl/refresh`-style function-level
             smart auto-recompilation which is nice). So let's go back to the previous example.
-            `abcde` could keep track of (or the `defnt` ns could keep track of it, but you get the
+            `abcde` could keep track of (or the `t/defn` ns could keep track of it, but you get the
             point) the fact that it depends on `rand/int-between` and `f`. It has a compile-time-
             resolvable call site that depends only on the output type of `rand/int-between` so if
             `rand/int-between`'s computed/actual output type (when given the inputs in question)
@@ -1417,16 +1412,16 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     [x] `fn` generation
         - Performs a worst-case linear check of the typedefs, `cond`-style.
 [x] Interface generation
-    [x] Even if the `defnt` is redefined, you won't have interface problems.
+    [x] Even if the `t/defn` is redefined, you won't have interface problems.
 [ ] `reify` generation
     - Which `reify`s get generated is mainly up to the inputs but partially up to the fn body —
       If any typed fns are called in the fn body then this can change what gets generated.
       - TODO explain this more
     - Each of the `reify`s will keep their label (`__2__0` or whatever) as long as the original
       typedef of the `reify` is `t/=` to the new typedef of that reify
-      - If a redefined `defnt` doesn't have that type overload then the previous reify is uninterned
+      - If a redefined `t/defn` doesn't have that type overload then the previous reify is uninterned
         and thus made unavailable
-      - That way, according to the dynamicity tests in `quantum.test.core.defnt`, we can redefine
+      - That way, according to the dynamicity tests in `quantum.test.core.type.defn`, we can redefine
         implementations at will as long as the specs don't change
       - To make this process faster we maintain a set of typedefs so at least cheap c/= checks can
         be performed
