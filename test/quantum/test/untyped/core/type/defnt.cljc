@@ -33,8 +33,9 @@
 (do (require '[orchestra.spec.test :as st])
     (orchestra.spec.test/instrument))
 
-(defn O   [form] (tag "java.lang.Object" form))
-(defn STR [form] (tag "java.lang.String" form))
+(defn O   [form] (tag "java.lang.Object"    form))
+(defn O<> [form] (tag "[Ljava.lang.Object;" form))
+(defn STR [form] (tag "java.lang.String"    form))
 
 #?(:clj
 (deftest test|pid
@@ -46,7 +47,7 @@
         expected
           ($ (do (def ~'pid|test|__0|0
                    (reify* [>Object]
-                     (~(tag "java.lang.Object" 'invoke) [~'_0__]
+                     (~(O 'invoke) [~'_0__]
                        ~(STR '(. (. java.lang.management.ManagementFactory getRuntimeMXBean)
                                  getName)))))
                  (defn ~'pid|test
@@ -70,7 +71,7 @@
             :clj
               ($ (do ;; [x t/any?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'identity|uninlined|__0|input0|types)
+                     (def ~(O<> 'identity|uninlined|__0|input0|types)
                        (*<> t/any?))
                      ;; One `reify` because `t/any?` in CLJ does not have any `t/or`-separability
                      (def ~'identity|uninlined|__0|0
@@ -129,20 +130,20 @@
 
                      ;; [t/string?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'name|test|__0|input0|types)
+                     (def ~(O<> 'name|test|__0|input0|types)
                        (*<> (t/isa? java.lang.String)))
                      (def ~'name|test|__0|0
                        (reify* [Object>Object]
-                         (~(tag "java.lang.Object" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)]
+                         (~(O 'invoke) [~'_0__ ~(O 'x)]
                            (let* [~(STR 'x) ~'x] ~(STR 'x)))))
 
                      ;; [(t/isa? Named)]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'name|test|__1|input0|types)
+                     (def ~(O<> 'name|test|__1|input0|types)
                        (*<> (t/isa? Named)))
                      (def ~'name|test|__1|0
                        (reify* [Object>Object]
-                         (~(tag "java.lang.Object" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)]
+                         (~(O 'invoke) [~'_1__ ~(O 'x)]
                            (let* [~(tag "clojure.lang.Named" 'x) ~'x]
                              (t/validate ~(STR '(. x getName))
                                          ~'(* t/string?))))))
@@ -190,7 +191,7 @@
             :clj
               ($ (do ;; [x t/nil?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'some?|test|__0|input0|types)
+                     (def ~(O<> 'some?|test|__0|input0|types)
                        (*<> (t/value nil)))
                      (def ~'some?|test|__0|0
                        (reify* [Object>boolean]
@@ -198,7 +199,7 @@
 
                      ;; [x t/any?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'some?|test|__1|input0|types)
+                     (def ~(O<> 'some?|test|__1|input0|types)
                        (*<> t/any?))
                      (def ~'some?|test|__1|0
                        (reify* [Object>boolean boolean>boolean byte>boolean short>boolean
@@ -251,7 +252,7 @@
             :clj
               ($ (do ;; [x (t/isa? Reduced)]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'reduced?|test|__0|input0|types)
+                     (def ~(O<> 'reduced?|test|__0|input0|types)
                        (*<> (t/isa? Reduced)))
                      (def ~'reduced?|test|__0|0
                        (reify* [Object>boolean]
@@ -260,7 +261,7 @@
 
                      ;; [x t/any?]
 
-                     (def ~(tag "[Ljava.lang.Object;" 'reduced?|test|__1|input0|types)
+                     (def ~(O<> 'reduced?|test|__1|input0|types)
                        (*<> t/any?))
                      (def ~'reduced?|test|__1|0
                        (reify* [Object>boolean boolean>boolean byte>boolean short>boolean
@@ -315,7 +316,7 @@
             :clj
               ($ (do ;; [x tt/boolean?]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__0|input0|types)
+                     (def ~(O<> '>boolean|__0|input0|types)
                        (*<> (t/isa? Boolean)))
                      (def ~'>boolean|__0|0
                        (reify* [boolean>boolean]
@@ -323,7 +324,7 @@
 
                      ;; [x t/nil? -> (- t/nil? tt/boolean?)]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__1|input0|types)
+                     (def ~(O<> '>boolean|__1|input0|types)
                        (*<> (t/value nil)))
                      (def ~'>boolean|__1|0
                        (reify* [Object>boolean]
@@ -331,7 +332,7 @@
 
                      ;; [x t/any? -> (- t/any? t/nil? tt/boolean?)]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>boolean|__2|input0|types)
+                     (def ~(O<> '>boolean|__2|input0|types)
                        (*<> t/any?))
                      (def ~'>boolean|__2|0
                        (reify* [Object>boolean boolean>boolean byte>boolean short>boolean
@@ -395,7 +396,7 @@
               ($ (do ;; [x (t/- tt/primitive? tt/boolean?)]
 
                      ;; These are non-primitivized
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__0|input0|types)
+                     (def ~(O<> '>int*|__0|input0|types)
                        (*<> (t/isa? java.lang.Byte)
                             (t/isa? java.lang.Short)
                             (t/isa? java.lang.Character)
@@ -435,7 +436,7 @@
                      ;; [x (t/ref (t/isa? Number))
                      ;;  -> (t/- (t/ref (t/isa? Number)) (t/- tt/primitive? tt/boolean?))]
 
-                     (def ~(tag "[Ljava.lang.Object;" '>int*|__1|input0|types)
+                     (def ~(O<> '>int*|__1|input0|types)
                        (*<> ~(with-meta `(t/isa? Number) {:quantum.core.type/ref? true})))
                      (def ~'>int*|__1|0
                        (reify* [Object>int]
@@ -495,7 +496,7 @@
               ($ (do ;; [a t/comparable-primitive? b t/comparable-primitive? > tt/boolean?]
 
                      ;; These are non-primitivized
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|input0|types)
+                     (def ~(O<> '>|test|__0|input0|types)
                        (*<> (t/isa? java.lang.Byte)
                             (t/isa? java.lang.Short)
                             (t/isa? java.lang.Character)
@@ -503,7 +504,7 @@
                             (t/isa? java.lang.Long)
                             (t/isa? java.lang.Float)
                             (t/isa? java.lang.Double)))
-                     (def ~(tag "[Ljava.lang.Object;" '>|test|__0|input1|types)
+                     (def ~(O<> '>|test|__0|input1|types)
                        (*<> (t/isa? java.lang.Byte)
                             (t/isa? java.lang.Short)
                             (t/isa? java.lang.Character)
@@ -858,14 +859,14 @@
           (macroexpand '
             (self/defn #_:inline >long*
               {:source "clojure.lang.RT.uncheckedLongCast"}
-              > long?
-              ([x (t/- tt/boolean? tt/boolean?)] (Primitive/uncheckedLongCast x))
+              > tt/long?
+              ([x (t/- tt/primitive? tt/boolean?)] (Primitive/uncheckedLongCast x))
               ([x (t/ref (t/isa? Number))] (.longValue x))))
         expected
           (case (env-lang)
-            :clj ($ (do ;; [x (t/- tt/boolean? tt/boolean?)]
+            :clj ($ (do ;; [x (t/- tt/primitive? tt/boolean?)]
 
-                        (def ~(tag "[Ljava.lang.Object;" '>long*|__0|input0|types)
+                        (def ~(O<> '>long*|__0|input0|types)
                           (*<> (t/isa? java.lang.Byte)
                                (t/isa? java.lang.Short)
                                (t/isa? java.lang.Character)
@@ -904,7 +905,7 @@
 
                         ;; [x (t/ref (t/isa? Number))]
 
-                        (def ~(tag "[Ljava.lang.Object;" '>long*|__1|input0|types)
+                        (def ~(O<> '>long*|__1|input0|types)
                           (*<> ~(with-meta `(t/isa? Number) {:quantum.core.type/ref? true})))
                         (def ~'>long*|__1|0
                           (reify* [Object>long]
@@ -915,7 +916,7 @@
                           {:source "clojure.lang.RT.uncheckedLongCast"
                            :quantum.core.type/type
                              (t/fn ~'long?
-                                   ~'[(t/- tt/boolean? tt/boolean?)]
+                                   ~'[(t/- tt/primitive? tt/boolean?)]
                                    ~'[(t/ref (t/isa? Number))])}
                           ([~'x00__]
                             (ifs
@@ -962,7 +963,7 @@
         expected
           ($ (do ;; [x tt/boolean? > (t/ref tt/boolean?)]
 
-                 (def ~(tag "[Ljava.lang.Object;" 'ref-output-type|__0|input0|types)
+                 (def ~(O<> 'ref-output-type|__0|input0|types)
                    (*<> (t/isa? java.lang.Boolean)))
                  (def ~'ref-output-type|__0|0
                    (reify* [boolean>Object]
@@ -970,7 +971,7 @@
 
                  ;; [x tt/byte? > (t/ref tt/byte?)]
 
-                 (def ~(tag "[Ljava.lang.Object;" 'ref-output-type|__1|input0|types)
+                 (def ~(O<> 'ref-output-type|__1|input0|types)
                    (*<> (t/isa? java.lang.Byte)))
                  (def ~'ref-output-type|__1|0
                    (reify* [byte>Object]
@@ -993,7 +994,7 @@
     (testing "code equivalence" (is-code= actual expected)))))
 
 (self/defn >big-integer > (t/isa? java.math.BigInteger)
-  ([x ratio? > (* (t/isa? java.math.BigInteger))] (.bigIntegerValue x)))
+  ([x tt/ratio? > (* (t/isa? java.math.BigInteger))] (.bigIntegerValue x)))
 
 ;; NOTE would use `>long` but that's already an interface
 (deftest test|>long-checked
@@ -1001,10 +1002,10 @@
           (macroexpand '
             (self/defn >long-checked
               {:source "clojure.lang.RT.longCast"}
-              > long?
+              > tt/long?
               ;; TODO multi-arity `t/-`
-              ([x (t/- (t/- (t/- tt/boolean? tt/boolean?) float?) double?)] (>long* x))
-              ([x (t/and (t/or double? float?)
+              ([x (t/- tt/primitive? tt/boolean? tt/float? tt/double?)] (>long* x))
+              ([x (t/and (t/or tt/double? tt/float?)
                          ;; TODO add this back in
                          #_(fnt [x (t/or t/double? t/float?)] (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
                 (>long* x))
@@ -1016,7 +1017,7 @@
                          ;; TODO add this back in
                          #_(fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
                 (.longValue x))
-              ([x ratio?] (-> x >big-integer >long-checked))
+              ([x tt/ratio?] (-> x >big-integer >long-checked))
               ([x (t/value true)]  1)
               ([x (t/value false)] 0)
               ([x t/string?] (Long/parseLong x))
@@ -1053,7 +1054,7 @@
                               ;; Resolved from `(>long* x)`
                               (.invoke >long*|__3 ~'x))))
 
-                        #_(def ~'>long|__4|input-types (*<> long?))
+                        #_(def ~'>long|__4|input-types (*<> tt/long?))
                         (def ~'>long|__4
                           (reify long>long
                             (~(tag "long" 'invoke) [_## ~(tag "long" 'x)]
@@ -1226,31 +1227,31 @@
           (case (env-lang)
             :clj ($ (do (def ~'!str|__0|0
                           (reify* [>Object]
-                            (~(tag "java.lang.Object" 'invoke) [~'_0__]
+                            (~(O 'invoke) [~'_0__]
                               ~(tag "java.lang.StringBuilder" '(new StringBuilder)))))
 
-                        (def ~(tag "[Ljava.lang.Object;" '!str|__1|input0|types)
+                        (def ~(O<> '!str|__1|input0|types)
                           (*<> (t/isa? java.lang.String)))
                         (def ~'!str|__1|0
                           (reify* [Object>Object]
-                            (~(tag "java.lang.Object" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)]
+                            (~(O 'invoke) [~'_1__ ~(O 'x)]
                               (let* [~(Str 'x) ~'x]
                                 ~(tag "java.lang.StringBuilder"
                                       (list 'new 'StringBuilder (STR 'x)))))))
 
-                        (def ~(tag "[Ljava.lang.Object;" '!str|__2|input0|types)
+                        (def ~(O<> '!str|__2|input0|types)
                           (*<> (t/isa? java.lang.CharSequence)
                                (t/isa? java.lang.Integer)))
                         (def ~'!str|__2|0
                           (reify* [Object>Object]
-                            (~(tag "java.lang.Object" 'invoke) [~'_2__ ~(tag "java.lang.Object" 'x)]
+                            (~(O 'invoke) [~'_2__ ~(O 'x)]
                               (let* [~(tag "java.lang.CharSequence" 'x) ~'x]
                                 ~(tag "java.lang.StringBuilder"
                                       (list 'new 'StringBuilder
                                             (tag "java.lang.CharSequence" 'x)))))))
                         (def ~'!str|__2|1
                           (reify* [int>Object]
-                            (~(tag "java.lang.Object" 'invoke) [~'_3__ ~(tag "int" 'x)]
+                            (~(O 'invoke) [~'_3__ ~(tag "int" 'x)]
                               ~(tag "java.lang.StringBuilder" '(new StringBuilder x)))))
 
                         (defn ~'!str
@@ -1283,22 +1284,56 @@
              (is (instance? StringBuilder (!str (.subSequence "abc" 0 1)))))))))
 
 (deftest defn-reference-test
-  "Tests that defnts referencing other defnts works"
-  (let [actual
-          (macroexpand '
-            (self/defn defn-reference
-              ([] (>long* 1))))
-        expected
-          (case (env-lang)
-            :clj ($ (do (def ~'defn-reference|__0|0
-                          (reify* [>long] (~(tag "long" 'invoke) [~'_0__] ~'(>long* 1))))
-                        (defn ~'defn-reference
-                          {:quantum.core.type/type (t/fn t/any? [])}
-                          ([] (.invoke ~(tag (str `>long) 'defn-reference|__0|0)))))))]
-    (testing "code equivalence" (is-code= actual expected))
-    (testing "functionality"
-      (eval actual)
-      (eval '(do (is (identical? (defn-reference) 1)))))))
+  (testing "`t/defn` references itself"
+    (let [actual
+            (macroexpand '
+              (self/defn defn-self-reference
+                ([] nil)
+                ([x tt/long?] (defn-self-reference))))
+          expected
+            (case (env-lang)
+              :clj ($ (do (declare ~'defn-self-reference)
+                          (def ~'defn-self-reference|__0|0
+                            (reify* [>Object]
+                              (~(O 'invoke) [~'_0__] nil)))
+                          (def ~(O<> 'defn-self-reference|__1|input0|types)
+                            (*<> (t/isa? java.lang.Long)))
+                          (def ~'defn-self-reference|__1|0
+                            (reify* [long>Object]
+                              (~(O 'invoke) [~'_1__ ~'x] (~'defn-self-reference))))
+                          (defn ~'defn-self-reference
+                            {:quantum.core.type/type
+                              (t/ftype t/any? [] [tt/long?])}
+                            ([] (.invoke ~'defn-self-reference|__0|0))
+                            ([~'x00__]
+                             (ifs
+                              ((Array/get
+                                ~'defn-self-reference|__1|input0|types
+                                0)
+                               ~'x00__)
+                              (.invoke ~(tag (str `long>Object) 'defn-self-reference|__1|0) ~'x00__)
+                              (unsupported! `defn-self-reference [~'x00__] 0)))))))]
+      (testing "code equivalence" (is-code= actual expected))
+      (testing "functionality"
+        (eval actual)
+        (eval '(do (is= (defn-self-reference) nil))))))
+  (testing "`t/defn` references other `t/defn`"
+    (let [actual
+            (macroexpand '
+              (self/defn defn-reference
+                ([] (>long* 1))))
+          expected
+            (case (env-lang)
+              :clj ($ (do (declare ~'defn-reference)
+                          (def ~'defn-reference|__0|0
+                            (reify* [>long] (~(tag "long" 'invoke) [~'_0__] ~'(>long* 1))))
+                          (defn ~'defn-reference
+                            {:quantum.core.type/type (t/fn t/any? [])}
+                            ([] (.invoke ~(tag (str `>long) 'defn-reference|__0|0)))))))]
+      (testing "code equivalence" (is-code= actual expected))
+      (testing "functionality"
+        (eval actual)
+        (eval '(do (is (identical? (defn-reference) 1))))))))
 
 (deftest defn-assume-test
   "Tests that t/assume works properly in the context of `t/defn`"
@@ -1311,22 +1346,51 @@
 
 (deftest dependent-type-test
   (testing "Output type dependent on non-splittable input"
-    (let [actual
-            (macroexpand '
-              (self/defn dependent-type-0
-                ([x tt/boolean? > (type x)] x))
-          expected
-            (case (env-lang)
-              :clj
-                ($ (do ...)))]
-      (testing "code equivalence" (is-code= actual expected))
-      (testing "functionality"
-        (eval actual)
-        (eval '(do ...)))))
+    (testing "Not nested within another type"
+      (let [actual
+              (macroexpand '
+                (self/defn dependent-type
+                  ([x tt/boolean? > (type x)] x))
+            expected
+              (case (env-lang)
+                :clj
+                  ($ (do ...)))]
+        (testing "code equivalence" (is-code= actual expected))
+        (testing "functionality"
+          (eval actual)
+          (eval '(do ...))))))
+    (testing "Nested within another type"
+      (testing "Without arg shadowing"
+        (let [actual
+                (macroexpand '
+                  (self/defn dependent-type-nest
+                    ([x tt/boolean? > (t/or t/number? (type x))] (if x x 1)))
+              expected
+                (case (env-lang)
+                  :clj
+                    ($ (do ...)))]
+          (testing "code equivalence" (is-code= actual expected))
+          (testing "functionality"
+            (eval actual)
+            (eval '(do ...))))))
+     (testing "With arg shadowing"
+       (let [actual
+               (macroexpand '
+                 (self/defn dependent-type-shadow
+                   ([x tt/boolean? > (let [x (>long-checked "123")]
+                                       (t/or t/number? (type x)))] (if x x 1)))
+             expected
+               (case (env-lang)
+                 :clj
+                   ($ (do ...)))]
+         (testing "code equivalence" (is-code= actual expected))
+         (testing "functionality"
+           (eval actual)
+           (eval '(do ...))))))))
   (testing "Output type dependent on splittable but non-primitive-splittable input"
     (let [actual
             (macroexpand '
-              (self/defn dependent-type-1
+              (self/defn dependent-type-split
                 ([x (t/or tt/boolean? tt/string?) > (type x)] x))
           expected
             (case (env-lang)
@@ -1339,7 +1403,7 @@
   (testing "Output type dependent on primitive-splittable input"
     (let [actual
             (macroexpand '
-              (self/defn dependent-type-2
+              (self/defn dependent-type-psplit
                 ([x t/any? > (type x)] x)))
           expected
             (case (env-lang)
@@ -1352,7 +1416,7 @@
   (testing "Input type dependent on other input type"
     (let [actual
             (macroexpand '
-              (self/defn dependent-type-3
+              (self/defn dependent-type-input
                 ([a tt/byte?, b (type a)] a)))
           expected
             (case (env-lang)
@@ -1365,7 +1429,7 @@
   (testing "Output type dependent on input type which is dependent on other input type"
     (let [actual
             (macroexpand '
-              (self/defn dependent-type-4
+              (self/defn dependent-type-2input
                 ([a tt/byte?, b (type a) > (type b)] b)))
           expected
             (case (env-lang)
@@ -1378,14 +1442,14 @@
   (testing "Two input types directly depend on each other"
     (let [actual
             (macroexpand '
-              (self/defn dependent-type-5
+              (self/defn dependent-type-directin
                 ([a (type b), b (type a)] b)))]
       (testing "functionality"
         (throws? (eval actual)))))
   (testing "Two input types indirectly depend on each other"
     (let [actual
             (macroexpand '
-              (self/defn dependent-type-6
+              (self/defn dependent-type-indirectin
                 ([a (type b), b (type c), c (type a)] b)))]
       (testing "functionality"
         (throws? (eval actual))))))
