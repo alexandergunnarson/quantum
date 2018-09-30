@@ -11,10 +11,11 @@
             ;; TODO remove this dependency
             [quantum.untyped.core.classes           :as uclass]
             [quantum.untyped.core.compare           :as ucomp
-              :refer [== <ident =ident >ident ><ident <>ident comparison?]]
+              :refer [==]]
             [quantum.untyped.core.core              :as ucore]
             [quantum.untyped.core.data.bits         :as ubit]
-            [quantum.untyped.core.data.set          :as uset]
+            [quantum.untyped.core.data.set          :as uset
+              :refer [<ident =ident >ident ><ident <>ident comparison?]]
             [quantum.untyped.core.defnt
               :refer [defns defns-]]
             [quantum.untyped.core.error
@@ -294,7 +295,7 @@
 
 ;; TODO take away var indirection once done
 (def- compare|dispatch
-  (let [inverted (fn [f] (fn [t0 t1] (ucomp/invert (f t1 t0))))]
+  (let [inverted (fn [f] (fn [t0 t1] (uset/invert-comparison (f t1 t0))))]
     {UniversalSetType
        {UniversalSetType #'fn=
         EmptySetType     #'compare|universal+empty
@@ -408,44 +409,44 @@
 (defns <
   "Computes whether the extension of type ->`t0` is a strict subset of that of ->`t1`."
   ([t1 type?] #(< % t1))
-  ([t0 type?, t1 type? > boolean?] (ucomp/compf< compare t0 t1)))
+  ([t0 type?, t1 type? > boolean?] (uset/comp< compare t0 t1)))
 
 (defns <=
   "Computes whether the extension of type ->`t0` is a (lax) subset of that of ->`t1`."
   ([t1 type?] #(<= % t1))
-  ([t0 type?, t1 type? > boolean?] (ucomp/compf<= compare t0 t1)))
+  ([t0 type?, t1 type? > boolean?] (uset/comp<= compare t0 t1)))
 
 (defns =
   "Computes whether the extension of type ->`t0` is equal to that of ->`t1`."
   ([t1 type?] #(= % t1))
-  ([t0 type?, t1 type? > boolean?] (ucomp/compf= compare t0 t1)))
+  ([t0 type?, t1 type? > boolean?] (uset/comp= compare t0 t1)))
 
 (defns not=
   "Computes whether the extension of type ->`t0` is not equal to that of ->`t1`."
   ([t1 type?] #(not= % t1))
-  ([t0 type?, t1 type? > boolean?] (ucomp/compf-not= compare t0 t1)))
+  ([t0 type?, t1 type? > boolean?] (uset/comp-not= compare t0 t1)))
 
 (defns >=
   "Computes whether the extension of type ->`t0` is a (lax) superset of that of ->`t1`."
   ([t1 type?] #(>= % t1))
-  ([t0 type?, t1 type? > boolean?] (ucomp/compf>= compare t0 t1)))
+  ([t0 type?, t1 type? > boolean?] (uset/comp>= compare t0 t1)))
 
 (defns >
   "Computes whether the extension of type ->`t0` is a strict superset of that of ->`t1`."
   ([t1 type?] #(> % t1))
-  ([t0 type?, t1 type? > boolean?] (ucomp/compf> compare t0 t1)))
+  ([t0 type?, t1 type? > boolean?] (uset/comp> compare t0 t1)))
 
 (defns ><
   "Computes whether it is the case that the intersect of the extensions of type ->`t0`
    and ->`t1` is non-empty, and neither ->`t0` nor ->`t1` share a subset/equality/superset
    relationship."
   ([t1 type?] #(>< % t1))
-  ([t0 type?, t1 type? > boolean?] (ucomp/compf>< compare t0 t1)))
+  ([t0 type?, t1 type? > boolean?] (uset/comp>< compare t0 t1)))
 
 (defns <>
   "Computes whether the respective extensions of types ->`t0` and ->`t1` are disjoint."
   ([t1 type?] #(<> % t1))
-  ([t0 type? t1 type? > boolean?] (ucomp/compf<> compare t0 t1)))
+  ([t0 type? t1 type? > boolean?] (uset/comp<> compare t0 t1)))
 
 ;; ===== FnType ===== ;;
 
@@ -453,9 +454,9 @@
 (defns combine-comparisons
   "Used in `t/compare|in` and `t/compare|out`. Might be used for other things too in the future.
    Commutative in the 2-ary arity."
-  ([cs _ #_(seq-of ucomp/comparison?) > ucomp/comparison?]
+  ([cs _ #_(seq-of uset/comparison?) > uset/comparison?]
     (reduce (fn [c' c] (combine-comparisons c' c)) (first cs) (rest cs)))
-  ([^long c0 ucomp/comparison?, ^long c1 ucomp/comparison? > ucomp/comparison?]
+  ([^long c0 uset/comparison?, ^long c1 uset/comparison? > uset/comparison?]
     (case c0
       -1 (case c1
            -1  <ident

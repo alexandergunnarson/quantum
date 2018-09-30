@@ -541,7 +541,7 @@
 (defns >dynamic-dispatch-fn|type-decl
   [{:keys [fnt|output-type|form _, fnt|type _]} ::fnt-globals
    expanded-overload-groups-by-fnt-overload (s/vec-of ::expanded-overload-groups)]
-  (list* `t/fn fnt|output-type|form
+  (list* `t/ftype fnt|output-type|form
     (->> expanded-overload-groups-by-fnt-overload
          (map (fn [{{:keys [arg-types|form pre-type|form post-type|form]} :overload-data}]
                 (cond-> (or arg-types|form [])
@@ -617,7 +617,7 @@
                  (cond-> arg-types
                    pre-type  (conj :| pre-type)
                    post-type (conj :> post-type))))
-       (apply t/fn fnt|output-type)))
+       (apply t/ftype fnt|output-type)))
 
 (defns fnt|parsed-overload>overload-data
   [{:as in {:keys [args _, varargs _]

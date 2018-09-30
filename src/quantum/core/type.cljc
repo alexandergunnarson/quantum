@@ -15,7 +15,8 @@
 (defaliases ut
   ;; Generators
   ? * isa?
-  fn ; TODO TYPED rename
+  ; fn ; TODO TYPED rename
+  ftype
   value
   ;; Combinators
   and or - if not

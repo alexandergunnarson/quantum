@@ -59,11 +59,16 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  ;; TODO test the new analyze-seq|new!!!
-  [1 .] This is accepted by the type system without knowing the type:
-      (java.math.BigInteger. 1 (-> (ByteBuffer/allocate (int 8)) (.putLong x) .array))
-
-      So, constructors need the same kind of lookup that dot calls have
+  [1 .] Fix `analyze-seq|method-or-constructor-call|incrementally-analyze` :
+        Error Message: No methods for class match the arg type at index
+        Data:
+        {:class quantum.core.Numeric,
+         :form (. Numeric bitAnd (short 255) x),
+         :arg-type (quantum.untyped.core.type/or
+                    (quantum.untyped.core.type/value nil)
+                    (quantum.untyped.core.type/isa? short)),
+         :i|arg 0}
+          quantum.untyped.core.error/>err (error.cljc:169)
   [2 .] t/type
       - dependent types: `[x arr/array? > (t/type x)]`
   [3] t/value-of

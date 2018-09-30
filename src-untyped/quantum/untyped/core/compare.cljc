@@ -65,12 +65,12 @@
          second)))
 
 (defn comp-mins-of
-  "Returns the 'min' elements of `xs` according to comparator `compf` in O(n) time."
+  "Returns the equally 'min' elements of `xs` according to comparator `compf` in O(n) time."
   ([xs] (comp-mins-of compare xs))
   ([compf xs] (comp-extrema-of comparison< compf xs)))
 
 (defn comp-maxes-of
-  "Returns the 'max' elements of `xs` according to comparator `compf` in O(n) time."
+  "Returns the equally 'max' elements of `xs` according to comparator `compf` in O(n) time."
   ([xs] (comp-mins-of compare xs))
   ([compf xs] (comp-extrema-of comparison> compf xs)))
 

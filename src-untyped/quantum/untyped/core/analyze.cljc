@@ -33,6 +33,7 @@
     [quantum.untyped.core.spec              :as s]
     [quantum.untyped.core.type              :as t
       :refer [?]]
+    [quantum.untyped.core.type.compare      :as utcomp]
     [quantum.untyped.core.type.reifications :as utr]
     [quantum.untyped.core.vars              :as uvar
       :refer [update-meta]]))
@@ -253,7 +254,33 @@
       (uncheckedDoubleCast  doubleCast)  t/double?
       nil))))
 
+;; TODO use this
 (defn- assume-val-for-form? [form] (-> form meta :val true?))
+
+(defns- maybe-with-assume-val [c class?, form _ > t/type?]
+  (if (assume-val-for-form? form)
+      (t/isa? c)
+      (t/? (t/isa? c))))
+
+;; TODO move?
+(defns- compare-class-specificity [c0 class?, c1 class?]
+  (case (utcomp/compare|class+class* c0 c1)
+    -1     -1
+    (0 2 3) 0
+     1      1))
+
+(defns- call-sites>most-specific
+  "Time complexity = O(m•n) where m = # of call sites and n = # of args per call site."
+  [call-sites (s/vec-of t/any? #_(s/array-of class?)) > (s/vec-of t/any? #_(s/array-of class?))]
+  (let [^"[Ljava.lang.Object;" sample-arg-classes (-> call-sites first :arg-classes)
+        args-ct (alength sample-arg-classes)]
+    (->> (range args-ct)
+         (reduce
+           (fn [call-sites' i]
+             (->> call-sites'
+                  (c/map+ (fn [{:keys [^"[Ljava.lang.Object;" arg-classes]}] (aget arg-classes i)))
+                  (ucomp/comp-mins-of compare-class-specificity)))
+           call-sites))))
 
 (defns- analyze-seq|method-or-constructor-call|incrementally-analyze
   [env ::env, form _, target-class class?, args|form _, call-sites-for-ct _, kinds-str string?
@@ -279,9 +306,10 @@
                          (-> ret
                              (assoc :call-sites call-sites')
                              (update :args|analyzed conj arg|analyzed)))))
-                 {:call-sites call-sites-for-ct :args|analyzed []}))]
+                 {:call-sites call-sites-for-ct :args|analyzed []}))
+        call-sites (cond-> call-sites (-> call-sites count (> 1)) call-sites>most-specific)]
     (if (-> call-sites count (> 1))
-        (err! (str "Multiple " kinds-str " for class match the arg types")
+        (err! (str "Multiple, equally specific " kinds-str " for class match the arg types")
               {:class              target-class
                :form               form
                (keyword kinds-str) call-sites
@@ -307,7 +335,7 @@
        :target target
        :method method-form
        :args   args|analyzed
-       :type   (-> call-sites first :out-class)})))
+       :type   (-> call-sites first :out-class (maybe-with-assume-val form))})))
 
 (defns- analyze-seq|dot|method-call
   "A note will be made of what methods match the argument types.
@@ -341,7 +369,7 @@
      :form   form
      :target target
      :field  field-form
-     :type   (-> field :class t/>type (maybe-add-val-assumption-to-type form))}))
+     :type   (-> field :class (maybe-with-assume-val form))}))
 
 (defns classes>class
   "Ensure that given a set of classes, that set consists of at most a class C and nil.
