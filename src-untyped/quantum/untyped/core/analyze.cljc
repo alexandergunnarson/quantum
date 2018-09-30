@@ -575,7 +575,7 @@
         {:input-nodes []
          :out-type
            (if (= :fnt caller-kind)
-               (-> caller|type (get inputs-ct) first :output-type)
+               (-> caller|type utr/fn-type>arities (get inputs-ct) first :output-type)
                ;; We could do a little smarter analysis here but we'll keep it simple for now
                t/any?)}
         (->> body
