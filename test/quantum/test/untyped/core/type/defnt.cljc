@@ -1310,58 +1310,45 @@
                nil)))
 
 (deftest dependent-type-test
-  (let [actual
-          (macroexpand '
-            (self/defn dependent-type
-              ([x (t/or tt/boolean? tt/string?) > (type x)] x)
-              ;; This arity is the same as `identity`
-              ([x t/any?                        > (type x)] x)))
-        expected
-          (case (env-lang)
-            :clj
-              ($ (do ;; [x (t/or tt/boolean? tt/string?) > (type x)]
-
-                     ;; [x t/any? > (type x)]
-
-                     (def ~(tag "[Ljava.lang.Object;" 'dependent-type|__0|input0|types)
-                       (*<> t/any?))
-                     ;; One `reify` because `t/any?` in CLJ does not have any `t/or`-separability
-                     (def ~'dependent-type|__0|0
-                       (reify* [Object>Object boolean>boolean byte>byte short>short char>char
-                                int>int long>long float>float double>double]
-                         (~(tag "java.lang.Object" 'invoke)
-                           [~'_0__ ~(tag "java.lang.Object" 'x)] ~(O 'x))
-                         (~(tag "boolean"          'invoke)
-                           [~'_1__ ~(tag "boolean"          'x)] ~'x)
-                         (~(tag "byte"             'invoke)
-                           [~'_2__ ~(tag "byte"             'x)] ~'x)
-                         (~(tag "short"            'invoke)
-                           [~'_3__ ~(tag "short"            'x)] ~'x)
-                         (~(tag "char"             'invoke)
-                           [~'_4__ ~(tag "char"             'x)] ~'x)
-                         (~(tag "int"              'invoke)
-                           [~'_5__ ~(tag "int"              'x)] ~'x)
-                         (~(tag "long"             'invoke)
-                           [~'_6__ ~(tag "long"             'x)] ~'x)
-                         (~(tag "float"            'invoke)
-                           [~'_7__ ~(tag "float"            'x)] ~'x)
-                         (~(tag "double"           'invoke)
-                           [~'_8__ ~(tag "double"           'x)] ~'x)))
-
-                     (defn ~'dependent-type
-                       {:quantum.core.type/type (t/fn t/any? ~'[t/any?])}
-                       ([~'x00__]
-                         ;; TODO elide check because `t/any?` doesn't require a check
-                         ;; and all args are `t/=` `t/any?`
-                         (ifs ((Array/get ~'dependent-type|__0|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (str `Object>Object)
-                                               'dependent-type|__0|0) ~'x00__)
-                              (unsupported! `dependent-type [~'x00__] 0)))))))]
-    (testing "code equivalence" (is-code= actual expected))
-    (testing "functionality"
-      (eval actual)
-      (eval '(do (is= (dependent-type 1)  1)
-                 (is= (dependent-type "") ""))))))
+  (testing "Output type dependent on non-splittable input"
+    (let [actual
+            (macroexpand '
+              (self/defn dependent-type-0
+                ([x (t/or tt/boolean? tt/string?) > (type x)] x))
+          expected
+            (case (env-lang)
+              :clj
+                ($ (do ...)))]
+      (testing "code equivalence" (is-code= actual expected))
+      (testing "functionality"
+        (eval actual)
+        (eval '(do ...)))))
+  (testing "Output type dependent on primitive-splittable input"
+    (let [actual
+            (macroexpand '
+              (self/defn dependent-type-1
+                ([x t/any? > (type x)] x)))
+          expected
+            (case (env-lang)
+              :clj
+                ($ (do ...)))]
+      (testing "code equivalence" (is-code= actual expected))
+      (testing "functionality"
+        (eval actual)
+        (eval '(do ...)))))
+  (testing "Input type dependent on other input type"
+    (let [actual
+            (macroexpand '
+              (self/defn dependent-type-2
+                ([a tt/byte?, b (type a)] a)))
+          expected
+            (case (env-lang)
+              :clj
+                ($ (do ...)))]
+      (testing "code equivalence" (is-code= actual expected))
+      (testing "functionality"
+        (eval actual)
+        (eval '(do ...))))))
 
 ;; ----- expanded code ----- ;;
 

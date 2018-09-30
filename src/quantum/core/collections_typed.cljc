@@ -132,10 +132,6 @@
               :cljs (when-not (num/zero? (count xs)) ; TODO use `empty?` instead
                       (cljs.core/IndexedSeq. xs 0 nil)))))
 
-;; TODO move to better place?
-(t/defn- ^:inline string-seq>underlying-string
-  [xs (t/isa? clojure.lang.StringSeq) > (t/assume dstr/string?)] (.s xs))
-
 ;; ----- Chunking ----- ;;
 
 (t/defn >chunk-buffer > chunk-buffer? [capacity num/numerically-int?]
@@ -263,7 +259,7 @@
          (^:inline [rf rf?, init t/any?, xs (t/or dstr/string? vec/!+vector? arr/array?)]
            (reduce-indexed rf init xs 0))
 #?(:clj  (^:inline [rf rf?, init t/any?, xs dc/string-seq?]
-           (reduce-indexed rf init (string-seq>underlying-string xs) (.index xs))))
+           (reduce-indexed rf init ^:val (.s xs) (.index xs))))
 #?(:clj  (^:inline [rf rf?, init t/any?, xs dc/array-seq?]
            (reduce-indexed rf init (.array xs) (.index xs))))
          ;; Vector's chunked seq is faster than its iterator

@@ -67,7 +67,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - `(t/input-type >namespace :?)` meaning the possible input types to the first input to `>namespace`
       - `(t/input-type reduce :_ :_ :?)`
       - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
-  [4] - No trailing `>` means `> ?`
+  [4] - Direct dispatch
+  [5] - No trailing `>` means `> ?`
       - ? : type inference
         - use logic programming and variable unification e.g. `?1` `?2` ?
         - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
@@ -1364,19 +1365,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - Instead of e.g. `ns-` or `var-` we can do `ns-val` and `var-val`
   - Should we type `when`, `let`?
 
-- With `defnt`, protocols and interfaces aren't needed. You can just create `t/fn`s that you can
-  then conform your fns to.
-- `dotyped`, `defnt`, and `fnt` create typed contexts in which their internal forms are analyzed
-  and overloads are resolved.
-- `defnt` is intended to catch many runtime errors at compile time, but cannot catch all of them;
-  types will very often have to be validated at runtime.
-
 [ ] Compile-Time (Direct) Dispatch
-    [x] Any argument, if it requires a non-nilable primitive-like value, will be marked as a
-        primitive.
-    [x] If nilable, there will be one overload for nil and one for primitive.
-    [x] When a `fnt` with type overloads is referenced outside of a typed context, then the overload
-        resolution will be done via Runtime Dispatch.
     - TODO Should we take into account 'actual' types (not just 'declared' types) when performing
       dispatch / overload resolution?
       - Let's take the example of `(defnt abcde [] (f (rand/int-between -10 -2)))`.
@@ -1453,5 +1442,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - Not yet; wait for it to come out of alpha
 [—] Support for compilers in which the metalanguage differs from the object language (i.e. 'normal'
     non-CLJS-in-CLJS CLJS)
-    - This will have to be approached later. We'll figure it out; maybe just not yet.
+    - This will have to be approached later. We may or may not choose to figure it out, but it seems
+      promising enough.
 "

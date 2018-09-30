@@ -458,7 +458,8 @@
 ;; ===== Dependent types ===== ;;
 
 (defns type
-  "Treated specially by the type analyzer. For runtime use, just defaults to `(t/value x)`."
+  "Treated specially by the type analyzer when used within the type declaration of a function input.
+   For runtime use, just defaults to `(t/value x)`."
   [x _ > type?] (value x))
 
 ;; TODO figure this out

@@ -644,11 +644,7 @@
     (kw-map args varargs body-codelist|pre-analyze
             arg-types|form arg-types, pre-type|form pre-type, post-type|form post-type)))
 
-(defns fnt|code
-  "Special metadata directives include:
-   - `:inline` : Applicable within the metadata of `t/fn` or `t/defn`. A directive to inline the
-                 function if possible."
-  [kind #{:fn :defn}, lang ::lang, args _]
+(defns fn|code [kind #{:fn :defn}, lang ::lang, args _]
   (let [{:as args'
          :keys [:quantum.core.specs/fn|name
                 :quantum.core.defnt/overloads
@@ -687,5 +683,37 @@
                :defn `(~'do ~@fn-codelist))]
     code))
 
-#?(:clj (defmacro fnt  [& args] (fnt|code :fn   (ufeval/env-lang) args)))
-#?(:clj (defmacro defn [& args] (fnt|code :defn (ufeval/env-lang) args)))
+#?(:clj
+(defmacro fnt
+  "With `t/fn`, protocols, interfaces, and multimethods become unnecessary. The preferred method of
+   dispatch becomes the function alone.
+
+   `t/fn` is intended to catch many runtime errors at compile time, but cannot catch all of them.
+
+   `t/fn`, along with `t/defn`, `t/dotyped`, and others, creates a typed context in which its
+   internal forms are analyzed, type-consistency is checked, and type-dispatch is resolved at
+   compile time inasmuch as possible, and at runtime only when necessary.
+
+   Within the type system, primitives are always preferred to boxed values. All values that can be
+   primitives (i.e. ones that are `t/<=` w.r.t. a `(t/isa? <boxed-primitive-class>)`) are treated
+   as primitives unless specifically marked otherwise with the `t/ref` metadata-adding directive.
+
+   Compile-Time (Direct) Dispatch characteristics
+   - Any input, if its type is `t/<=` a non-nil primitive (boxed or not) class, it will be marked
+     as a primitive in the corresponding `reify`.
+   - If an input is a nilable primitive, its nilability will not result in only one `reify`
+     overload with a boxed input, but rather will result in two `reify` overloads — one
+     corresponding to a nil input and another for the primitive input.
+
+   Runtime (Dynamic) Dispatch characteristics
+   - Compile-Time Dispatch is preferred to Runtime Dispatch in all but the following situations, in
+     which Compile-Time Dispatch is not possible:
+     - When a typed function (or a typed object with function-like characteristics such as a
+       `t/deftype`) is referenced outside of a typed context.
+
+   Metadata directives special to `t/fn` include:
+   - `:inline` : Applicable within the metadata of `t/fn` or `t/defn`. A directive to inline the
+                 function if possible."
+  [& args] (fn|code :fn (ufeval/env-lang) args)))
+
+#?(:clj (defmacro defn [& args] (fn|code :defn (ufeval/env-lang) args)))
