@@ -1306,13 +1306,11 @@
                               (t/ftype t/any? [] [tt/long?])}
                             ([] (.invoke ~'defn-self-reference|__0|0))
                             ([~'x00__]
-                             (ifs
-                              ((Array/get
-                                ~'defn-self-reference|__1|input0|types
-                                0)
-                               ~'x00__)
-                              (.invoke ~(tag (str `long>Object) 'defn-self-reference|__1|0) ~'x00__)
-                              (unsupported! `defn-self-reference [~'x00__] 0)))))))]
+                              (ifs
+                                ((Array/get ~'defn-self-reference|__1|input0|types 0) ~'x00__)
+                                (.invoke ~(tag (str `long>Object) 'defn-self-reference|__1|0)
+                                         ~'x00__)
+                                (unsupported! `defn-self-reference [~'x00__] 0)))))))]
       (testing "code equivalence" (is-code= actual expected))
       (testing "functionality"
         (eval actual)
@@ -1350,6 +1348,8 @@
       (let [actual
               (macroexpand '
                 (self/defn dependent-type
+                  ;; 1. Expand/analyze `tt/boolean?` -> `(t/isa? Boolean)`
+                  ;; 2. Expand/analyze `(type x)` -> `(t/isa? Boolean)`
                   ([x tt/boolean? > (type x)] x))
             expected
               (case (env-lang)
@@ -1364,6 +1364,12 @@
         (let [actual
                 (macroexpand '
                   (self/defn dependent-type-nest
+                    #_"1. Analyze `x` = `tt/boolean?`
+                          -> Put `x` in env as `(t/isa? Boolean)`
+                       2. Analyze out-type = `(t/or t/number? (type x))`
+                          1. Analyze `(type x)`
+                             -> `(t/isa? Boolean)`
+                          -> `(t/or (t/isa? Number) (t/isa? Boolean))`"
                     ([x tt/boolean? > (t/or t/number? (type x))] (if x x 1)))
               expected
                 (case (env-lang)
@@ -1373,24 +1379,48 @@
           (testing "functionality"
             (eval actual)
             (eval '(do ...))))))
-     (testing "With arg shadowing"
-       (let [actual
-               (macroexpand '
-                 (self/defn dependent-type-shadow
-                   ([x tt/boolean? > (let [x (>long-checked "123")]
-                                       (t/or t/number? (type x)))] (if x x 1)))
-             expected
-               (case (env-lang)
-                 :clj
-                   ($ (do ...)))]
-         (testing "code equivalence" (is-code= actual expected))
-         (testing "functionality"
-           (eval actual)
-           (eval '(do ...))))))))
+      (testing "With arg shadowing"
+        (let [actual
+                (macroexpand '
+                  (self/defn dependent-type-nest-shadow
+                    #_"1. Analyze `x` = `tt/boolean?`
+                          -> Put `x` in env as `(t/isa? Boolean)`
+                       2. Analyze out-type = `(let [x (>long-checked \"123\")]
+                                                (t/or t/number? (type x)))`
+                          1. Analyze `(>long-checked \"123\")`
+                             -> Put `x` in env as `(t/isa? Long)`
+                          2. Analyze `(t/or t/number? (type x))`
+                             1. Analyze `(type x)`
+                                -> `(t/isa? Long)`
+                             -> `(t/or (t/isa? Number) (t/isa? Long))`"
+                    ([x tt/boolean? > (let [x (>long-checked "123")]
+                                        (t/or t/number? (type x)))] (if x x 1)))
+              expected
+                (case (env-lang)
+                  :clj
+                    ($ (do ...)))]
+          (testing "code equivalence" (is-code= actual expected))
+          (testing "functionality"
+            (eval actual)
+            (eval '(do ...))))))))
   (testing "Output type dependent on splittable but non-primitive-splittable input"
     (let [actual
             (macroexpand '
               (self/defn dependent-type-split
+                #_"1. Analyze `x` = `(t/or tt/boolean? tt/string?)`. Splittable.
+                   2. Split `(t/or tt/boolean? tt/string?)`:
+                      [[x tt/boolean? > (type x)]
+                       [x tt/string?  > (type x)]]
+                   3. Analyze split 0.
+                      1. Analyze `x` = `tt/boolean?`
+                         -> Put `x` in env as `(t/isa? Boolean)`
+                      2. Analyze out-type = `(type x)`
+                         -> `(t/isa? Boolean)`
+                   4. Analyze split 1.
+                      1. Analyze `x` = `tt/string?`
+                         -> Put `x` in env as `(t/isa? String)`
+                      2. Analyze out-type = `(type x)`
+                         -> `(t/isa? String)`"
                 ([x (t/or tt/boolean? tt/string?) > (type x)] x))
           expected
             (case (env-lang)
@@ -1404,6 +1434,16 @@
     (let [actual
             (macroexpand '
               (self/defn dependent-type-psplit
+                #_"1. Analyze `x` = `t/any?`. Primitive-splittable.
+                   2. Split `t/any?`:
+                      [[x tt/boolean? > (type x)]
+                       [x ... > (type x)]]
+                   3. Analyze split 0.
+                      1. Analyze `x` = `tt/boolean?`
+                         -> Put `x` in env as `(t/isa? Boolean)`
+                      2. Analyze out-type = `(type x)`
+                         -> `(t/isa? Boolean)`
+                   4. Analyze rest of splits in the same way."
                 ([x t/any? > (type x)] x)))
           expected
             (case (env-lang)
@@ -1414,35 +1454,67 @@
         (eval actual)
         (eval '(do ...)))))
   (testing "Input type dependent on other input type"
-    (let [actual
-            (macroexpand '
-              (self/defn dependent-type-input
-                ([a tt/byte?, b (type a)] a)))
-          expected
-            (case (env-lang)
-              :clj
-                ($ (do ...)))]
-      (testing "code equivalence" (is-code= actual expected))
-      (testing "functionality"
-        (eval actual)
-        (eval '(do ...)))))
+    (testing "Dependent type is not for first input"
+      (let [actual
+              (macroexpand '
+                (self/defn dependent-type-input
+                  #_"1. Analyze `a` = `tt/byte?`
+                        -> Put `a` in env as `(t/isa? Byte)`
+                     2. Analyze `b` = `(type a)`
+                        -> Put `b` in env as `(t/isa? Byte)`"
+                  ([a tt/byte?, b (type a)] a)))
+            expected
+              (case (env-lang)
+                :clj
+                  ($ (do ...)))]
+        (testing "code equivalence" (is-code= actual expected))
+        (testing "functionality"
+          (eval actual)
+          (eval '(do ...)))))
+    (testing "Dependent type is for first input"
+      (let [actual
+              (macroexpand '
+                (self/defn dependent-type-input-first
+                  #_"1. Analyze `a` = `(type b)`.
+                        2. Analyze `b` = `tt/byte?`
+                           -> Put `b` in env as `(t/isa? Byte)`
+                        -> Put `a` in env as `(t/isa? Byte)`"
+                  ([a (type b), b tt/byte?] a)))
+            expected
+              (case (env-lang)
+                :clj
+                  ($ (do ...)))]
+        (testing "code equivalence" (is-code= actual expected))
+        (testing "functionality"
+          (eval actual)
+          (eval '(do ...))))))
   (testing "Output type dependent on input type which is dependent on other input type"
-    (let [actual
-            (macroexpand '
-              (self/defn dependent-type-2input
-                ([a tt/byte?, b (type a) > (type b)] b)))
-          expected
-            (case (env-lang)
-              :clj
-                ($ (do ...)))]
-      (testing "code equivalence" (is-code= actual expected))
-      (testing "functionality"
-        (eval actual)
-        (eval '(do ...)))))
+    (testing "First input not splittable; second input not splittable"
+      (let [actual
+              (macroexpand '
+                (self/defn dependent-type-2input
+                  #_"1. Analyze `a` = `tt/byte?`
+                        -> Put `a` in env as `(t/isa? Byte)`
+                     2. Analyze `b` = `(type a)`
+                        -> Put `b` in env as `(t/isa? Byte)`
+                     3. Analyze out-type = `(type b)`
+                        -> `(t/isa? Byte)`"
+                  ([a tt/byte?, b (type a) > (type b)] b)))
+            expected
+              (case (env-lang)
+                :clj
+                  ($ (do ...)))]
+        (testing "code equivalence" (is-code= actual expected))
+        (testing "functionality"
+          (eval actual)
+          (eval '(do ...))))))
   (testing "Two input types directly depend on each other"
     (let [actual
             (macroexpand '
               (self/defn dependent-type-directin
+                #_"1. Analyze `a` = `(type b)`
+                      1. Analyze `b` = `(type a)`
+                         -> ERROR: `a` already in stack; circular dependency detected"
                 ([a (type b), b (type a)] b)))]
       (testing "functionality"
         (throws? (eval actual)))))
@@ -1450,6 +1522,10 @@
     (let [actual
             (macroexpand '
               (self/defn dependent-type-indirectin
+                #_"1. Analyze `a` = `(type b)`
+                      1. Analyze `b` = `(type c)`
+                         1. Analyze `c` = `(type a)`
+                            -> ERROR `a` already in stack; circular dependency detected"
                 ([a (type b), b (type c), c (type a)] b)))]
       (testing "functionality"
         (throws? (eval actual))))))
