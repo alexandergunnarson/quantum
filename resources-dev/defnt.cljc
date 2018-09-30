@@ -59,29 +59,15 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  [1 .] Fix `quantum.untyped.core.analyze`:
-        Error Message: Multiple, equally specific methods for class match the arg types
-        Data:
-        {:class java.nio.ByteBuffer,
-         :form (. (.putLong (ByteBuffer/allocate (int 8)) x) array),
-         :methods [#M{:name 'array',
-                      :out-class java.lang.Object,
-                      :arg-classes #class<>[],
-                      :kind :instance}
-                   #M{:name 'array',
-                      :out-class '[B',
-                      :arg-classes #class<>[],
-                      :kind :instance}],
-         :arg-types []}
-  [2 .] t/type
+  [1 .] t/type
       - dependent types: `[x arr/array? > (t/type x)]`
-  [3] t/value-of
+  [2] t/value-of
     - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
-  [4] - t/input-type
+  [3] - t/input-type
       - `(t/input-type >namespace :?)` meaning the possible input types to the first input to `>namespace`
       - `(t/input-type reduce :_ :_ :?)`
       - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
-  [5] - No trailing `>` means `> ?`
+  [4] - No trailing `>` means `> ?`
       - ? : type inference
         - use logic programming and variable unification e.g. `?1` `?2` ?
         - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`

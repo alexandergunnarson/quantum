@@ -96,12 +96,12 @@
                  vals
                  (c/map with-most-specific-out-class))]
     (->> (.getMethods c)
-         (c/map+      (fn [^java.lang.reflect.Method x]
-                        (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
-                          (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
-                              :static
-                              :instance))))
-         (c/group-by  (fn [^Method x] (:name x))) ; TODO all of these need to be into !vector and !hash-map
+         (c/map+ (fn [^java.lang.reflect.Method x]
+                   (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
+                     (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
+                         :static
+                         :instance))))
+         (c/group-by (fn [^Method x] (:name x))) ; TODO all of these need to be into !vector and !hash-map
          (c/map-vals+
            (fn->> (c/group-by (fn [^Method x] (count (:arg-classes x))))
                   (c/map-vals+
@@ -109,7 +109,7 @@
                            (c/map-vals+ with-distinct-arg-class-seqs)
                            (r/join {})))
                   (r/join {})))
-         (r/join      {})))))
+         (r/join {})))))
 
 
 (defonce class>methods|with-cache
