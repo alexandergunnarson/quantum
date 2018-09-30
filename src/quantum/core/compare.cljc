@@ -30,7 +30,8 @@
     [quantum.core.reducers           :as red
       :refer [reduce, transduce]]
     [quantum.core.vars
-      :refer [defalias defaliases]])
+      :refer [defalias defaliases]]
+    [quantum.untyped.core.compare    :as ucomp])
 #?(:cljs (:require-macros
     [quantum.core.compare            :as self
       :refer [< > <= >=]]))
@@ -209,28 +210,8 @@
 (defn reduce-comp-keys      [      compf kf xs] (transduce (gen-comp-keys-into:rf vector compf  kf      ) xs)) ; TODO use this/>
 (defn reduce-comp-keys-into [initf compf kf xs] (transduce (gen-comp-keys-into:rf initf  compf  kf      ) xs)) ; TODO use this/>
 
-(defn rcompare
-  "Reverse comparator."
-  {:attribution "taoensso.encore, possibly via weavejester.medley"}
-  [x y] (compare y x))
 
-(defn greatest
-  "Returns the 'greatest' element in coll in O(n) time."
-  {:attribution "taoensso.encore, possibly via weavejester.medley"}
-  [coll & [?comparator]]
-  (let [comparator (or ?comparator rcompare)]
-    (reduce
-      (fn ([] nil) ([a b] (if (pos? (comparator a b)) b a)))
-      coll)))
-
-(defn least
-  "Returns the 'least' element in coll in O(n) time."
-  {:attribution "taoensso.encore, possibly via weavejester.medley"}
-  [coll & [?comparator]]
-  (let [comparator (or ?comparator rcompare)]
-    (reduce
-      (fn ([] nil) ([a b] (if (neg? (comparator a b)) b a)))
-      coll)))
+(defaliases ucomp greatest least rcompare)
 
 (defn unsorted-by
   "Returns which elements are unsorted, as by `kf` and `comparef`."

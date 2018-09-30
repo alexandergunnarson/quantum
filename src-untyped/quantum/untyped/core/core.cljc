@@ -37,6 +37,8 @@
 (defn >sentinel [] #?(:clj (Object.) :cljs #js {}))
 (def >object >sentinel)
 
+(defonce sentinel (>sentinel))
+
 ;; From `quantum.untyped.core.form.evaluate` — used below in `defalias`
 
 (defn cljs-env?

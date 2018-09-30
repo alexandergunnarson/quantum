@@ -11,11 +11,11 @@
    the inputs are internally commutative if applicable (e.g. if `a` is an `AndType`, ensures that
    it is commutative).
    The basis comparison is the first input."
-  [c #_ucomp/comparisons a #_set? b #_set?]
+  [c #_uset/comparisons a #_set? b #_set?]
   `(let [c# ~c, a# ~a, b# ~b]
      ;; Symmetry
-     (is= c#                (uset/compare a# b#))
-     (is= (ucomp/invert c#) (uset/compare b# a#)))))
+     (is= c#                          (uset/compare a# b#))
+     (is= (uset/invert-comparison c#) (uset/compare b# a#)))))
 
 (deftest test|set
   (testing "< , >"

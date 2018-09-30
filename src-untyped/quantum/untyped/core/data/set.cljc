@@ -45,33 +45,74 @@
 
 (defalias + union)
 
-;; ===== Comparison ===== ;;
+;; ===== Set-specific comparison ===== ;;
+
+(def ^:const <ident -1) ; subset
+(def ^:const =ident  0) ; value-identical
+(def ^:const >ident  1) ; superset
+(def ^:const ><ident 2) ; intersect
+(def ^:const <>ident 3) ; disjoint
+
+(def comparisons #{<ident =ident >ident ><ident <>ident})
+(def comparison? comparisons)
+
+(defn invert-comparison [c #_comparison? #_> #_comparison?]
+  (case c
+    -1      >ident
+     1      <ident
+    (0 2 3) c))
 
 (defn compare [s0 #_set?, s1 #_set?]
   (if (empty? s0)
-      (if (empty? s1) ucomp/=ident ucomp/<ident)
+      (if (empty? s1) =ident <ident)
       (if (empty? s1)
-          ucomp/>ident
+          >ident
           ;; TODO do fewer comparisons here
           (let [diff0 (- s0 s1), diff1 (- s1 s0)]
             (if (empty? diff0)
                 (if (empty? diff1)
-                    ucomp/=ident
-                    ucomp/<ident)
+                    =ident
+                    <ident)
                 (if (empty? diff1)
-                    ucomp/>ident
+                    >ident
                     (if (some #(contains? s1 %) s0)
-                        ucomp/><ident
-                        ucomp/<>ident)))))))
+                        ><ident
+                        <>ident)))))))
 
-(defn <     [x0 x1] (ucomp/compf<  compare x0 x1))
+(defn comparison<     [c] (identical? c <ident))
+(defn comparison<=    [c] (or (identical? c <ident) (identical? c =ident)))
+(defn comparison=     [c] (identical? c =ident))
+(defn comparison-not= [c] (not (identical? c =ident)))
+(defn comparison>=    [c] (or (identical? c >ident) (identical? c =ident)))
+(defn comparison>     [c] (identical? c >ident))
+(defn comparison><    [c] (identical? c ><ident))
+(defn comparison<>    [c] (identical? c <>ident))
+
+(defn comp<     ([      x0 x1] (comp<            compare x0 x1))
+                ([compf x0 x1] (comparison<     (compf   x0 x1))))
+(defn comp<=    ([      x0 x1] (comp<=           compare x0 x1))
+                ([compf x0 x1] (comparison<=    (compf   x0 x1))))
+(defn comp=     ([      x0 x1] (comp=            compare x0 x1))
+                ([compf x0 x1] (comparison=     (compf   x0 x1))))
+(defn comp-not= ([      x0 x1] (comp-not=        compare x0 x1))
+                ([compf x0 x1] (comparison-not= (compf   x0 x1))))
+(defn comp>=    ([      x0 x1] (comp>=           compare x0 x1))
+                ([compf x0 x1] (comparison>=    (compf   x0 x1))))
+(defn comp>     ([      x0 x1] (comp>            compare x0 x1))
+                ([compf x0 x1] (comparison>     (compf   x0 x1))))
+(defn comp><    ([      x0 x1] (comp><           compare x0 x1))
+                ([compf x0 x1] (comparison><    (compf   x0 x1))))
+(defn comp<>    ([      x0 x1] (comp<>           compare x0 x1))
+                ([compf x0 x1] (comparison<>    (compf   x0 x1))))
+
+(defn <     [x0 x1] (comp<  x0 x1))
 (defalias proper-subset? <)
-(defn <=    [x0 x1] (ucomp/compf<= compare x0 x1))
+(defn <=    [x0 x1] (comp<= x0 x1))
 (defalias subset? <=)
-(defn >=    [x0 x1] (ucomp/compf>= compare x0 x1))
+(defn >=    [x0 x1] (comp>= x0 x1))
 (defalias superset? >=)
-(defn >     [x0 x1] (ucomp/compf>  compare x0 x1))
+(defn >     [x0 x1] (comp>  x0 x1))
 (defalias proper-superset? >)
-(defn ><    [x0 x1] (ucomp/compf>< compare x0 x1))
-(defn <>    [x0 x1] (ucomp/compf<> compare x0 x1))
+(defn ><    [x0 x1] (comp>< x0 x1))
+(defn <>    [x0 x1] (comp<> x0 x1))
 (defalias disjoint? <>)

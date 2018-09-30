@@ -25,7 +25,6 @@
                          (next xs0')
                          (next xs1'))))))
 
-
 ;; TODO incorporate into `quantum.core.loops`
 #?(:clj
 (defmacro doseq

@@ -1298,6 +1298,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - quantum.core.data.bits
       - quantum.core.convert.primitive
   - List of corresponding untyped namespaces to incorporate:
+    - [ ] quantum.untyped.core.compare
     - [ ] quantum.untyped.core.core
     - [ ] quantum.untyped.core.ns
     - [ ] quantum.untyped.core.vars
