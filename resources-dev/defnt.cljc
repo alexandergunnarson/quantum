@@ -67,8 +67,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - `(t/input-type >namespace :?)` meaning the possible input types to the first input to `>namespace`
       - `(t/input-type reduce :_ :_ :?)`
       - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
-  [4] - Direct dispatch needs to actually work correctly in `t/defn`
-  [5] - No trailing `>` means `> ?`
+  [4] - t/output-type
+  [5] - Direct dispatch needs to actually work correctly in `t/defn`
+  [6] - No trailing `>` means `> ?`
       - ? : type inference
         - use logic programming and variable unification e.g. `?1` `?2` ?
         - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
