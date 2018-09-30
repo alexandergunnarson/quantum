@@ -611,6 +611,7 @@
                           (get inputs-ct)))})))
     :dispatchable-overloads-seq))
 
+;; TODO break this fn up. It's "clean" but just not broken up
 (defns- analyze-seq*
   "Analyze a seq after it has been macro-expanded.
    The ->`form` is post- incremental macroexpansion."
@@ -626,62 +627,69 @@
     quote    (analyze-seq|quote opts env form)
     new      (analyze-seq|new   opts env form)
     throw    (analyze-seq|throw opts env form)
-    (let [caller|node (analyze* opts env caller|form)
-          caller|type (:type caller|node)
-          inputs-ct   (count body)]
-            ;; TODO fix this line of code and extend t/compare so the comparison checks below
-            ;;      will work with t/fn
-      (case (if (utr/fn-type? caller|type)
-                -1
-                (t/compare caller|type t/callable?))
-        (1 2)  (err! "It is not known whether form can be called" {:node caller|node})
-        3      (err! "Form cannot be called" {:node caller|node})
-        (-1 0) (let [caller-kind
-                       (ifs (utr/fn-type? caller|type)             :fnt
-                            (t/<= caller|type t/keyword?)          :keyword
-                            (t/<= caller|type t/+map|built-in?)    :map
-                            (t/<= caller|type t/+vector|built-in?) :vector
-                            (t/<= caller|type t/+set|built-in?)    :set
-                            (t/<= caller|type t/fn?)               :fn
-                            ;; If it's callable but not fn, we might have missed something in
-                            ;; this dispatch so for now we throw
-                            (err! "Don't know how how to handle non-fn callable"
-                                  {:caller caller|node}))
-                     assert-valid-inputs-ct
-                       (case caller-kind
-                         (:keyword :map)
-                           (when-not (or (= inputs-ct 1) (= inputs-ct 2))
-                             (err! (str "Keywords and `clojure.core` persistent maps must be "
-                                        "provided with exactly one or two inputs when calling "
-                                        "them")
-                                   {:inputs-ct inputs-ct :caller caller|node}))
+    (if-let [caller-form-dependent-type-call?
+              (and (:arglist-context? opts)
+                   (case caller|form
+                     (quantum.core.type/type
+                      quantum.core.untyped.type/type) true
+                     false))]
+      (analyze-dependent-type-call opts env form)
+      (let [caller|node (analyze* opts env caller|form)
+            caller|type (:type caller|node)
+            inputs-ct   (count body)]
+              ;; TODO fix this line of code and extend t/compare so the comparison checks below
+              ;;      will work with t/fn
+        (case (if (utr/fn-type? caller|type)
+                  -1
+                  (t/compare caller|type t/callable?))
+          (1 2)  (err! "It is not known whether form can be called" {:node caller|node})
+          3      (err! "Form cannot be called" {:node caller|node})
+          (-1 0) (let [caller-kind
+                         (ifs (utr/fn-type? caller|type)             :fnt
+                              (t/<= caller|type t/keyword?)          :keyword
+                              (t/<= caller|type t/+map|built-in?)    :map
+                              (t/<= caller|type t/+vector|built-in?) :vector
+                              (t/<= caller|type t/+set|built-in?)    :set
+                              (t/<= caller|type t/fn?)               :fn
+                              ;; If it's callable but not fn, we might have missed something in
+                              ;; this dispatch so for now we throw
+                              (err! "Don't know how how to handle non-fn callable"
+                                    {:caller caller|node}))
+                       assert-valid-inputs-ct
+                         (case caller-kind
+                           (:keyword :map)
+                             (when-not (or (= inputs-ct 1) (= inputs-ct 2))
+                               (err! (str "Keywords and `clojure.core` persistent maps must be "
+                                          "provided with exactly one or two inputs when calling "
+                                          "them")
+                                     {:inputs-ct inputs-ct :caller caller|node}))
 
-                         (:vector :set)
-                           (when-not (= inputs-ct 1)
-                              (err! (str "`clojure.core` persistent vectors and `clojure.core` "
-                                         "persistent sets must be provided with exactly one "
-                                         "input when calling them")
-                                    {:inputs-ct inputs-ct :caller caller|node}))
+                           (:vector :set)
+                             (when-not (= inputs-ct 1)
+                                (err! (str "`clojure.core` persistent vectors and `clojure.core` "
+                                           "persistent sets must be provided with exactly one "
+                                           "input when calling them")
+                                      {:inputs-ct inputs-ct :caller caller|node}))
 
-                         :fnt
-                           (when-not (-> caller|type utr/fn-type>arities (contains? inputs-ct))
-                             (err! "Unhandled number of inputs for fnt"
-                                   {:inputs-ct inputs-ct :caller caller|node}))
-                           ;; For non-typed fns, unknown; we will have to risk runtime exception
-                           ;; because we can't necessarily rely on metadata to tell us the
-                           ;; whole truth
-                         :fn nil)
-                     {:keys [input-nodes out-type]}
-                       (call>input-nodes+out-type
-                         opts env caller|node caller|type caller-kind inputs-ct body)
-                     call-node
-                       (uast/call-node
-                         {:env    env
-                          :form   form
-                          :caller caller|node
-                          :args   input-nodes
-                          :type   out-type})]
-                 call-node)))))
+                           :fnt
+                             (when-not (-> caller|type utr/fn-type>arities (contains? inputs-ct))
+                               (err! "Unhandled number of inputs for fnt"
+                                     {:inputs-ct inputs-ct :caller caller|node}))
+                             ;; For non-typed fns, unknown; we will have to risk runtime exception
+                             ;; because we can't necessarily rely on metadata to tell us the
+                             ;; whole truth
+                           :fn nil)
+                       {:keys [input-nodes out-type]}
+                         (call>input-nodes+out-type
+                           opts env caller|node caller|type caller-kind inputs-ct body)
+                       call-node
+                         (uast/call-node
+                           {:env    env
+                            :form   form
+                            :caller caller|node
+                            :args   input-nodes
+                            :type   out-type})]
+                   call-node)))))
 
 (defns- analyze-seq [opts ::opts, env ::env, form _]
   (let [expanded-form (ufeval/macroexpand form)]
@@ -737,8 +745,28 @@
          (analyze-seq opts env form)
        (throw (ex-info "Unrecognized form" {:form form}))))
 
+;; ===== Dependent types functionality ===== ;;
+
+
+
+;; ===== End dependent types functionality ===== ;;
+
 (defns analyze
-  "Special metadata directives are defined in `special-metadata-keys`. They include:
+  "Opts may include:
+   - :arglist-context?        : p/boolean?
+                              : If you use `analyze-arg-syms` you won't have to set this yourself.
+                              : When this is enabled, each AST node is tagged with additional
+                              : information about dependent type analysis, namely:
+                              : - :arglist-syms|queue      : (dc/set-of id/simple-symbol?)
+                              : - :arglist-syms|unanalyzed : (dc/set-of id/simple-symbol?)
+   - :arg-sym->arg-type-form  : (dc/map-of id/simple-symbol? t/any?)
+                              : If you use `analyze-arg-syms` you won't have to set this yourself.
+   - :arglist-syms|queue      : (dc/set-of id/simple-symbol?)
+                              : If you use `analyze-arg-syms` you won't have to set this yourself.
+   - :arglist-syms|unanalyzed : (dc/set-of id/simple-symbol?)
+                              : If you use `analyze-arg-syms` you won't have to set this yourself.
+
+    Special metadata directives are defined in `special-metadata-keys`. They include:
    - `:val` : Causes the analyzer to assume that the return value of the dot-form satisfies
               `t/val?`. Useful for doing method/dot-chaining in which the methods return
               non-primitives."
@@ -748,3 +776,25 @@
   ([opts ::opts, env ::env, form _]
     (reset! *analyze-depth 0)
     (analyze* opts env form)))
+
+(s/def ::arg-sym->arg-type-form (s/map-of uid/simple-symbol? t/any?))
+
+(defns analyze-arg-syms
+  ([arg-sym->arg-type-form ::arg-sym->arg-type-form] (analyze-arg-syms {} {}))
+  ([opts ::opts, env ::env arg-sym->arg-type-form ::arg-sym->arg-type-form]
+    (loop [env                     env
+           arglist-syms|queue      #{}
+           arglist-syms|unanalyzed (-> arg-sym->arg-type-form keys set)]
+      (if (empty? arglist-syms|unanalyzed)
+          env ; TODO maybe `(select-keys env (keys arg-sym->arg-type-form))` ?
+          (let [arg-sym (first arglist-syms|unanalyzed)
+                arg-type-form (arg-sym->arg-type-form arg-sym)
+                analyzed (analyze (assoc opts :arglist-context?        true
+                                    :arg-sym->arg-type-form  arg-sym->arg-type-form
+                                    :arglist-syms|queue      arglist-syms|queue
+                                    :arglist-syms|unanalyzed arglist-syms|unanalyzed)
+                           env arg-type-form)]
+            (recur (:env                     analyzed)
+                   (:arglist-syms|queue      analyzed)
+                   (:arglist-syms|unanalyzed analyzed)))))
+      )))
