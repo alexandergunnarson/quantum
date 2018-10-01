@@ -30,7 +30,7 @@
 ;; TODO technically this belongs in like `quantum.core.data.effects` or something
 (defprotocol IAtomic
   (atomic-apply [target f]
-    "Atomically applies `f` to `target`, with the following caveats:
+    "Atomically applies `f` to `target`, outputting whatever `f` does, with the following caveats:
      - Atomicity here means only that the effects of `f` on `target` are guaranteed to be rolled
        back or undone in the case of a failed application of `f` (e.g. in the case of an exception).
        This implies concurrency-safety only for concurrency-safe `target`s, not for `target`s safe
@@ -41,17 +41,17 @@
      It is the burden of the implementation to call the 1-arity function `f` in one of the following
      ways:
 
-     A) Given an immutable `target`, the `target` is supplied to `f`, and `f` returns an updated
+     A) Given an immutable `target`, the `target` is supplied to `f`, and `f` outputs an updated
         immutable version of it. The original `target` is by definition unaffected.
         - Example: Any built-in Clojure immutable data structure like a map, vector, set, etc.
      B) Given a `target` consisting of a container for an immutable value, the immutable value in
-        question is supplied to `f`, and `f` returns an updated immutable value which is atomically
+        question is supplied to `f`, and `f` outputs an updated immutable value which is atomically
         applied to the container.
         - Example: A Clojure atom wrapping e.g. an immutable Clojure map
         - Example: A 'box' type having a mutable, thread-unsafe field which may be set any number of
                    times to refer only to immutable values.
      C) Given a `target` consisting of an 'opaque' structure that supports atomic modification, the
-        `target` is supplied to `f`, and `f` returns the modified/updated `target`.
+        `target` is supplied to `f`, and `f` outputs the modified/updated `target`.
         - Example: A JDBC connection, in which the connection *itself* might not be modified but a
                    caller may request modifications to be transactionally (and thus atomically)
                    applied to the underlying DB.
@@ -66,7 +66,16 @@
      inner one a no-op.
 
      This differs from `core/swap!` in that `swap!`, by convention, only supports case B), and that
-     only for concurrency-safe `target`s (if in a concurrent environment)."))
+     only for concurrency-safe `target`s (if in a concurrent environment).")
+  (atomic-apply-val [target f]
+    "Atomically applies `f` to `target` in exactly the same way as `atomic-apply` but instead of
+     expecting an updated `target` as the output value of `f`, expects a tuple of
+     [<updated-target>, <value>], which `atomic-apply-val` then outputs.")
+  (atomic-apply-vals [target f]
+    "Atomically applies `f` to `target` in exactly the same way as `atomic-apply` but instead of
+     expecting an updated `target` as the output value of `f`, expects a tuple of
+     [<updated-target>, <value>]. `atomic-apply-vals`, similarly to `core/swap-vals!`, then outputs
+     [<original-target-input-to-f>, <updated-target>, <value>]."))
 
 (def atom?     (t/isa?|direct #?(:clj clojure.lang.IAtom :cljs cljs.core/IAtom)))
 
