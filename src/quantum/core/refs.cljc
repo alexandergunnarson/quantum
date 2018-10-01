@@ -66,22 +66,20 @@
      inner one a no-op.
 
      This differs from `core/swap!` in that `swap!`, by convention, only supports case B), and that
-     only for concurrency-safe `target`s (if in a concurrent environment).")
-  (atomic-apply-val [target f]
-    "Atomically applies `f` to `target` in exactly the same way as `atomic-apply` but instead of
-     expecting an updated `target` as the output value of `f`, expects a tuple of
-     [<updated-target>, <value>], which `atomic-apply-val` then outputs."))
+     only for concurrency-safe `target`s (if in a concurrent environment)."))
 
-(defn atomic-apply-vals
+(defn atomic-apply-val
   "Atomically applies `f` to `target` in exactly the same way as `atomic-apply` but instead of
    expecting an updated `target` as the output value of `f`, expects a tuple of
-   [<updated-target>, <value>]. `atomic-apply-vals`, similarly to `core/swap-vals!`, then outputs
-   [<original-target-input-to-f>, <updated-target>, <value>]."
+   [<updated-target>, <value>], which `atomic-apply-val` then outputs."
   [target f]
-  (atomic-apply-val target
-    (fn [target']
-      (let [[target'' v] (f target')]
-        [target' target'' v]))))
+  (let [v-box (volatile! nil)
+        target'' (atomic-apply target
+                   (fn [target']
+                     (let [[target'' v] (f target')]
+                       (vreset! v-box v)
+                       target'')))]
+    [target'' @v-box]))
 
 (def atom?     (t/isa?|direct #?(:clj clojure.lang.IAtom :cljs cljs.core/IAtom)))
 
