@@ -37,6 +37,7 @@
        only for single-threaded use.
      - Some implementations may run `f` multiple times in an effort to atomically apply it, so in
        those cases `f` must be free of side-effects not applied to the `target`.
+     - Some implementations may run `f` in another thread.
 
      It is the burden of the implementation to call the 1-arity function `f` in one of the following
      ways:
