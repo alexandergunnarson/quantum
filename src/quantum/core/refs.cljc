@@ -70,12 +70,18 @@
   (atomic-apply-val [target f]
     "Atomically applies `f` to `target` in exactly the same way as `atomic-apply` but instead of
      expecting an updated `target` as the output value of `f`, expects a tuple of
-     [<updated-target>, <value>], which `atomic-apply-val` then outputs.")
-  (atomic-apply-vals [target f]
-    "Atomically applies `f` to `target` in exactly the same way as `atomic-apply` but instead of
-     expecting an updated `target` as the output value of `f`, expects a tuple of
-     [<updated-target>, <value>]. `atomic-apply-vals`, similarly to `core/swap-vals!`, then outputs
-     [<original-target-input-to-f>, <updated-target>, <value>]."))
+     [<updated-target>, <value>], which `atomic-apply-val` then outputs."))
+
+(defn atomic-apply-vals
+  "Atomically applies `f` to `target` in exactly the same way as `atomic-apply` but instead of
+   expecting an updated `target` as the output value of `f`, expects a tuple of
+   [<updated-target>, <value>]. `atomic-apply-vals`, similarly to `core/swap-vals!`, then outputs
+   [<original-target-input-to-f>, <updated-target>, <value>]."
+  [target f]
+  (atomic-apply-val target
+    (fn [target']
+      (let [[target'' v] (f target')]
+        [target' target'' v]))))
 
 (def atom?     (t/isa?|direct #?(:clj clojure.lang.IAtom :cljs cljs.core/IAtom)))
 
