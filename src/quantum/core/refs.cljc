@@ -28,16 +28,20 @@
     [com.google.common.util.concurrent AtomicDouble])))
 
 ;; TODO technically this belongs in like `quantum.core.data.effects` or something
-(defprotocol IAtomic
-  (atomic-apply [target f]
-    "Atomically applies `f` to `target`, outputting whatever `f` does, with the following caveats:
-     - Atomicity here means only that the effects of `f` on `target` are guaranteed to be rolled
-       back or undone in the case of a failed application of `f` (e.g. in the case of an exception).
-       This implies concurrency-safety only for concurrency-safe `target`s, not for `target`s safe
-       only for single-threaded use.
-     - Some implementations may run `f` multiple times in an effort to atomically apply it, so in
-       those cases `f` must be free of side-effects not applied to the `target`.
-     - Some implementations may run `f` in another thread.
+(defprotocol Transactional
+  (transact [target f] [target f opts]
+    "Transactionally applies `f` to `target`, outputting whatever `f` does. Subject to the
+     following caveats:
+     - Transactionality here means at least atomicity — i.e. that any effects of `f` on `target` are
+       guaranteed to be rolled back or undone in the case of a failed application of `f` (e.g. in
+       the case of an exception).
+     - Here transactionality says nothing whatsoever about referential integrity or durability; and
+       whether the operation is `Serializable`, `Linearizable`, or both is up to the implementation
+       and is marked as such. For example, targets intended only for single-threaded use do not satisfy linearizability ('thread-safety') by definition in multi-threaded contexts, but may
+       yet be atomic and thus satisfy this narrow definition of transactionality.
+     - Some implementations may run `f` multiple times in an effort to transactionally apply it, so
+       in those cases `f` must be free of side-effects not applied to the `target`.
+     - Some implementations may run `f` in another thread or even on another machine.
 
      It is the burden of the implementation to call the 1-arity function `f` in one of the following
      ways:
@@ -46,41 +50,44 @@
         immutable version of it. The original `target` is by definition unaffected.
         - Example: Any built-in Clojure immutable data structure like a map, vector, set, etc.
      B) Given a `target` consisting of a container for an immutable value, the immutable value in
-        question is supplied to `f`, and `f` outputs an updated immutable value which is atomically
-        applied to the container.
+        question is supplied to `f`, and `f` outputs an updated immutable value which is
+        transactionally applied to the container.
         - Example: A Clojure atom wrapping e.g. an immutable Clojure map
-        - Example: A 'box' type having a mutable, thread-unsafe field which may be set any number of
-                   times to refer only to immutable values.
-     C) Given a `target` consisting of an 'opaque' structure that supports atomic modification, the
-        `target` is supplied to `f`, and `f` outputs the modified/updated `target`.
+        - Example: A 'box' type having a mutable, non-linearizable / thread-unsafe field which may
+                   be set any number of times to refer only to immutable values.
+     C) Given a `target` consisting of an 'opaque' structure that supports transactional
+        modification, the `target` is supplied to `f`, and `f` outputs the modified/updated
+        `target`.
         - Example: A JDBC connection, in which the connection *itself* might not be modified but a
-                   caller may request modifications to be transactionally (and thus atomically)
-                   applied to the underlying DB.
-        - Example: A Redis cache to which transactional (and thus atomic) updates may be applied.
-        - Example: A version of (the mutable, thread-unsafe) `java.util.HashMap` which keeps track
-                   of modifications made to it within an atomic function application and rolls them
-                   back in the case of a failed application (e.g. in the case of an exception).
+                   caller may request modifications to be transactionally applied to the underlying
+                   DB.
+        - Example: A Redis cache to which atomic updates may be applied.
+        - Example: A version of (the mutable, non-linearizable / thread-unsafe) `java.util.HashMap`
+                   which keeps track of modifications made to it within an atomic function
+                   application and rolls them back in the case of a failed application (e.g. in the
+                   case of an exception).
 
-     It is also the burden of the implementation to handle nested atomic applications on at least a
-     per-thread basis. That is, if `atomic-apply` is called inside of another `atomic-apply` on the
-     same thread, the implementation must ensure that both calls are atomic, usually by making the
-     inner one a no-op.
+     It is also the burden of the implementation to handle nested transactions on at least a per-
+     thread basis. That is, if `transact` is called inside of another `transact` on the same thread,
+     the implementation must ensure that both calls are transactional, usually by making the inner
+     one a no-op.
 
      This differs from `core/swap!` in that `swap!`, by convention, only supports case B), and that
-     only for concurrency-safe `target`s (if in a concurrent environment)."))
+     only for linearizable `target`s (if in a concurrent environment)."))
 
-(defn atomic-apply-val
-  "Atomically applies `f` to `target` in exactly the same way as `atomic-apply` but instead of
-   expecting an updated `target` as the output value of `f`, expects a tuple of
-   [<updated-target>, <value>], which `atomic-apply-val` then outputs."
-  [target f]
-  (let [v-box (volatile! nil)
-        target'' (atomic-apply target
-                   (fn [target']
-                     (let [[target'' v] (f target')]
-                       (vreset! v-box v)
-                       target'')))]
-    [target'' @v-box]))
+(defprotocol
+  ^{:doc "A marker protocol — 'serializable' in the sense that its `transact` implementation
+          satisfies serializability, i.e. Isolation (the 'I' in ACID)."}
+  Serializable)
+
+(defprotocol
+  ^{:doc "A marker protocol — 'linearizable' i.e. 'strongly consistent' in the sense that reads
+          within its `transact` implementation are guaranteed to yield the most recently written
+          value. If combined with the `Serializable` marker protocol, this means that the 'most
+          recently written value' means the value of the `target` at the moment of the beginning of
+          the transaction, and thereafter the value of the `target` only as modified within the
+          transaction."}
+  Linearizable)
 
 (def atom?     (t/isa?|direct #?(:clj clojure.lang.IAtom :cljs cljs.core/IAtom)))
 
