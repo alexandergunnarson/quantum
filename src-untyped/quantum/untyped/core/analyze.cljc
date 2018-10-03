@@ -18,6 +18,7 @@
       :refer [TODO err!]]
     [quantum.untyped.core.fn
       :refer [<- fn-> fn->>]]
+    [quantum.untyped.core.form              :as uform]
     [quantum.untyped.core.form.evaluate     :as ufeval]
     [quantum.untyped.core.form.type-hint    :as ufth]
     [quantum.untyped.core.identifiers       :as uident
@@ -229,11 +230,11 @@
 (defns- analyze-seq|do [opts ::opts, env ::env, [_ _ & body|form _ :as form] _ > uast/do?]
   (if (empty? body|form)
       (uast/do {:env             env
-                :unexpanded-form form
+                :unanalyzed-form form
                 :form            form
                 :body            []
                 :type            t/nil?})
-      (let [{expanded-form :form body :body}
+      (let [{analyzed-form :form body :body}
               (analyze-non-map-seqable opts env body|form []
                 (fn [accum ast-data _]
                   ;; The env should be the same as whatever it was originally because no new scopes
@@ -242,8 +243,8 @@
                       (update :form conj! (:form ast-data))
                       (update :body conj! ast-data))))]
         (uast/do {:env             env
-                  :unexpanded-form form
-                  :form            (with-meta (list* 'do expanded-form) (meta expanded-form))
+                  :unanalyzed-form form
+                  :form            (with-meta (list* 'do analyzed-form) (meta analyzed-form))
                   :body            body
                   ;; To types, only the last sub-AST-node ever matters, as each is independent from
                   ;; the others
@@ -267,7 +268,7 @@
         {body|form' :form body|type :type body :body}
           (analyze-seq|do opts env' (list* 'do body|form))]
     (uast/let* {:env             env
-                :unexpanded-form form
+                :unanalyzed-form form
                 :form            (list* 'let* bindings|form' (rest body|form'))
                 :bindings        bindings-map
                 :body            body
@@ -361,12 +362,13 @@
               "Not yet able to statically validate whether primitive cast will succeed at runtime"
               {:form form}))]
     (uast/method-call
-      {:env    env
-       :form   form
-       :target target
-       :method method-form
-       :args   args|analyzed
-       :type   (-> call-sites first :out-class (maybe-with-assume-val form))})))
+      {:env             env
+       :unanalyzed-form form
+       :form            (list* '. (:form target) method-form (map :form args|analyzed))
+       :target          target
+       :method          method-form
+       :args            args|analyzed
+       :type            (-> call-sites first :out-class (maybe-with-assume-val form))})))
 
 (defns- analyze-seq|dot|method-call
   "A note will be made of what methods match the argument types.
@@ -459,11 +461,12 @@
                     (analyze-seq|method-or-constructor-call|incrementally-analyze opts env form c
                       args|form constructors-for-ct "constructors")]
               (uast/new-node
-                {:env   env
-                 :form  (list* 'new c|form (map :form args|analyzed))
-                 :class c
-                 :args  args|analyzed
-                 :type  (t/isa? c)})))))))
+                {:env             env
+                 :unanalyzed-form form
+                 :form            (list* 'new c|form (map :form args|analyzed))
+                 :class           c
+                 :args            args|analyzed
+                 :type            (t/isa? c)})))))))
 
 ;; TODO move this
 (defns truthy-node? [{:as ast t [:type _]} _ > (t/? t/boolean?)]
@@ -484,13 +487,14 @@
           whole-node
             (delay
               (uast/if-node
-                {:env        env
-                 :form       (list 'if (:form pred-node) (:form @true-node) (:form @false-node))
-                 :pred-node  pred-node
-                 :true-node  @true-node
-                 :false-node @false-node
-                 :type       (apply t/or (->> [(:type @true-node) (:type @false-node)]
-                                              (remove nil?)))}))]
+                {:env             env
+                 :unanalyzed-form form
+                 :form           (list 'if (:form pred-node) (:form @true-node) (:form @false-node))
+                 :pred-node       pred-node
+                 :true-node       @true-node
+                 :false-node      @false-node
+                 :type            (apply t/or (->> [(:type @true-node) (:type @false-node)]
+                                                   (remove nil?)))}))]
       (case (truthy-node? pred-node)
         true  (do (log/ppr :warn "Predicate in `if` node is always true" {:pred pred-form})
                   (assoc @true-node :env env))
@@ -509,11 +513,12 @@
         (if-not (-> arg|analyzed :type (t/<= t/throwable?))
           (err! "`throw` requires a throwable; received" {:arg arg :type (:type arg|analyzed)})
           (uast/throw-node
-            {:env  env
-             :form (list 'throw (:form arg|analyzed))
-             :arg  arg|analyzed
-             ;; `t/none?` because nothing is actually returned
-             :type t/none?})))))
+            {:env             env
+             :unanalyzed-form form
+             :form            (list 'throw (:form arg|analyzed))
+             :arg             arg|analyzed
+                              ;; `t/none?` because nothing is actually returned
+             :type            t/none?})))))
 
 (defn- filter-dynamic-dispatchable-overloads
   "An example of dynamic dispatch:
@@ -611,6 +616,22 @@
                           (get inputs-ct)))})))
     :dispatchable-overloads-seq))
 
+(defns- analyze-dependent-type-call
+  [opts ::opts, env ::env, [caller|form _, arg-form _ & extra-args-form _ :as form] _ > uast/node?]
+  (if (not (empty? extra-args-form))
+      (err! "Incorrect number of args passed to dependent type call"
+            {:form form :args-ct (-> extra-args-form count inc)})
+      (let [node (analyze* opts env arg-form)
+            caller|node (analyze* opts env caller|form)]
+        (uast/call-node
+          {:env             env
+                            ;; We replace the `form` with the form of the arg type
+           :unanalyzed-form form
+           :form            (-> node :type uform/>form)
+           :caller          caller|node
+           :args            [arg-form]
+           :type            (:type node)}))))
+
 ;; TODO break this fn up. It's "clean" but just not broken up
 (defns- analyze-seq*
   "Analyze a seq after it has been macro-expanded.
@@ -631,7 +652,7 @@
               (and (:arglist-context? opts)
                    (case caller|form
                      (quantum.core.type/type
-                      quantum.core.untyped.type/type) true
+                      quantum.untyped.core.type/type) true
                      false))]
       (analyze-dependent-type-call opts env form)
       (let [caller|node (analyze* opts env caller|form)
@@ -681,15 +702,14 @@
                            :fn nil)
                        {:keys [input-nodes out-type]}
                          (call>input-nodes+out-type
-                           opts env caller|node caller|type caller-kind inputs-ct body)
-                       call-node
-                         (uast/call-node
-                           {:env    env
-                            :form   form
-                            :caller caller|node
-                            :args   input-nodes
-                            :type   out-type})]
-                   call-node)))))
+                           opts env caller|node caller|type caller-kind inputs-ct body)]
+                   (uast/call-node
+                     {:env             env
+                      :unanalyzed-form form
+                      :form            (list* (:form caller|node) (map :form input-nodes))
+                      :caller          caller|node
+                      :args            input-nodes
+                      :type            out-type})))))))
 
 (defns- analyze-seq [opts ::opts, env ::env, form _]
   (let [expanded-form (ufeval/macroexpand form)]
@@ -700,6 +720,7 @@
         (uast/macro-call
           {:env             env
            :unexpanded-form form
+           :unanalyzed-form expanded-form'
            :form            (:form expanded)
            :expanded        expanded
            :type            (:type expanded)})))))
@@ -777,24 +798,39 @@
     (reset! *analyze-depth 0)
     (analyze* opts env form)))
 
-(s/def ::arg-sym->arg-type-form (s/map-of uid/simple-symbol? t/any?))
+(s/def ::arg-sym->arg-type-form (s/map-of simple-symbol? t/any?))
+
+(def analyze-arg-syms|max-iter 100)
 
 (defns analyze-arg-syms
-  ([arg-sym->arg-type-form ::arg-sym->arg-type-form] (analyze-arg-syms {} {}))
-  ([opts ::opts, env ::env arg-sym->arg-type-form ::arg-sym->arg-type-form]
-    (loop [env                     env
-           arglist-syms|queue      #{}
-           arglist-syms|unanalyzed (-> arg-sym->arg-type-form keys set)]
-      (if (empty? arglist-syms|unanalyzed)
-          env ; TODO maybe `(select-keys env (keys arg-sym->arg-type-form))` ?
-          (let [arg-sym (first arglist-syms|unanalyzed)
-                arg-type-form (arg-sym->arg-type-form arg-sym)
-                analyzed (analyze (assoc opts :arglist-context?        true
-                                    :arg-sym->arg-type-form  arg-sym->arg-type-form
-                                    :arglist-syms|queue      arglist-syms|queue
-                                    :arglist-syms|unanalyzed arglist-syms|unanalyzed)
-                           env arg-type-form)]
-            (recur (:env                     analyzed)
-                   (:arglist-syms|queue      analyzed)
-                   (:arglist-syms|unanalyzed analyzed)))))
-      )))
+  ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _]
+    (analyze-arg-syms {} {} arg-sym->arg-type-form out-type-form))
+  ([opts ::opts, env ::env arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _
+    > (s/kv {:env ::env :out-type-node uast/node?})]
+    (let [opts' (assoc opts :arglist-context?       true
+                            :arg-sym->arg-type-form arg-sym->arg-type-form)]
+      (loop [env                     env
+             arglist-syms|queue      #{}
+             arglist-syms|unanalyzed (-> arg-sym->arg-type-form keys set)
+             n|iter                  0]
+        (println "env" env
+                 "arglist-syms|queue" arglist-syms|queue
+                 "arglist-syms|unanalyzed" arglist-syms|unanalyzed
+                 "n|iter" n|iter)
+        (ifs (empty? arglist-syms|unanalyzed)
+               (let [out-type-analyzed (analyze opts' env out-type-form)]
+                 {:env env :out-type-node out-type-analyzed})
+             (>= n|iter analyze-arg-syms|max-iter)
+               (err! "Max number of iterations reached for `analyze-arg-syms" {:n n|iter})
+             (let [arg-sym (first arglist-syms|unanalyzed)
+                   arg-type-form (arg-sym->arg-type-form arg-sym)
+                   analyzed (analyze (assoc opts'
+                                       :arglist-syms|queue     arglist-syms|queue
+                                       :arglist-syms|unanalyzed arglist-syms|unanalyzed)
+                              env arg-type-form)
+                   env' (assoc (:env analyzed) arg-sym analyzed)]
+               (quantum.untyped.core.print/ppr analyzed)
+               (recur env'
+                      (:arglist-syms|queue      analyzed)
+                      (:arglist-syms|unanalyzed analyzed)
+                      (inc n|iter))))))))

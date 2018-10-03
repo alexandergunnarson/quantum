@@ -112,11 +112,12 @@
 (defn quoted? [x] (instance? Quoted x))
 
 (defrecord Let*
-  [env      #_::env
-   form     #_::t/body
-   bindings #_::env
-   body     #_(t/and t/sequential? t/indexed? (t/every? ::node))
-   type     #_t/type?]
+  [env             #_::env
+   unanalyzed-form #_::t/form
+   form            #_::t/body
+   bindings        #_::env
+   body            #_(t/and t/sequential? t/indexed? (t/every? ::node))
+   type            #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -127,11 +128,11 @@
 (defn let*? [x] (instance? Let* x))
 
 (defrecord Do
-  [env  #_::env
-   form #_::t/form
-   unexpanded-form #_::t/form
-   body #_(t/and t/sequential? t/indexed? (t/every? ::node))
-   type #_t/type?]
+  [env             #_::env
+   unanalyzed-form #_::t/form
+   form            #_::t/form
+   body            #_(t/and t/sequential? t/indexed? (t/every? ::node))
+   type            #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -143,8 +144,9 @@
 
 (defrecord MacroCall
   [env             #_::env
-   unexpanded-form #_::t/form
-   form            #_::t/form ; the *fully* expanded form
+   unexpanded-form #_::t/form ; the original form
+   unanalyzed-form #_::t/form ; the expanded-once form, pre-analysis
+   form            #_::t/form ; the *fully* expanded form, post-analysis
    expanded        #_::node
    type            #_t/type?]
   INode
@@ -157,12 +159,13 @@
 (defn macro-call? [x] (instance? MacroCall x))
 
 (defrecord IfNode
-  [env        #_::env
-   form       #_::t/form
-   pred-node  #_::node
-   true-node  #_::node
-   false-node #_::node
-   type       #_t/type?]
+  [env             #_::env
+   unanalyzed-form #_::t/form
+   form            #_::t/form
+   pred-node       #_::node
+   true-node       #_::node
+   false-node      #_::node
+   type            #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -175,11 +178,11 @@
 ;; ===== RUNTIME CALLS ===== ;;
 
 (defrecord FieldAccess
-  [env    #_::env
-   form   #_::t/form
-   target #_::node
-   field  #_unqualified-symbol?
-   type   #_t/type?]
+  [env             #_::env
+   form            #_::t/form
+   target          #_::node
+   field           #_unqualified-symbol?
+   type            #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -191,12 +194,13 @@
 (defn field-access? [x] (instance? FieldAccess x))
 
 (defrecord MethodCall
-  [env    #_::env
-   form   #_::t/form
-   target #_::node
-   method #_::unqualified-symbol?
-   args   #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
-   type   #_t/type?]
+  [env             #_::env
+   unanalyzed-form #_::t/form
+   form            #_::t/form
+   target          #_::node
+   method          #_::unqualified-symbol?
+   args            #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
+   type            #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -208,11 +212,12 @@
 (defn method-call? [x] (instance? MethodCall x))
 
 (defrecord CallNode ; by a `t/callable?`
-  [env    #_::env
-   form   #_::t/form
-   caller #_::node
-   args   #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
-   type   #_t/type?]
+  [env             #_::env
+   unanalyzed-form #_::t/form
+   form            #_::t/form
+   caller          #_::node
+   args            #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
+   type            #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -223,11 +228,12 @@
 (defn call-node? [x] (instance? CallNode x))
 
 (defrecord NewNode
-  [env   #_::env
-   form  #_::t/form
-   class #_t/class?
-   args  #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
-   type  #_t/type?]
+  [env             #_::env
+   unanalyzed-form #_::t/form
+   form            #_::t/form
+   class           #_t/class?
+   args            #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
+   type            #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -239,10 +245,11 @@
 (defn new-node? [x] (instance? NewNode x))
 
 (defrecord ThrowNode
-  [env  #_::env
-   form #_::t/form
-   arg  #_::node
-   type #_t/nil?]
+  [env             #_::env
+   unanalyzed-form #_::t/form
+   form            #_::t/form
+   arg             #_::node
+   type            #_t/nil?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
