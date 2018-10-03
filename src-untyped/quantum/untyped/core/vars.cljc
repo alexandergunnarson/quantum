@@ -12,6 +12,7 @@
 (ucore/log-this-ns)
 
 #?(:clj  (defn unbound? [x] (instance? clojure.lang.Var$Unbound x)))
+#?(:clj  (defn dynamic? [x] (.isDynamic ^clojure.lang.Var x)))
 #?(:cljs (defn defined? [x] (not (undefined? x))))
 
 ;; ===== Metadata ===== ;;
