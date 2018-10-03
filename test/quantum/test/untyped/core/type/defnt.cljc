@@ -1348,10 +1348,6 @@
       (let [actual
               (macroexpand '
                 (self/defn dependent-type
-                  #_"1. Analyze `x` = `tt/boolean?`
-                        -> Put `x` in env as `(t/isa? Boolean)`
-                     2. Analyze out-type = `(t/type x)`
-                        -> `(t/isa? Boolean)`"
                   ([x tt/boolean? > (t/type x)] x))
             expected
               (case (env-lang)
@@ -1366,12 +1362,6 @@
         (let [actual
                 (macroexpand '
                   (self/defn dependent-type-nest
-                    #_"1. Analyze `x` = `tt/boolean?`
-                          -> Put `x` in env as `(t/isa? Boolean)`
-                       2. Analyze out-type = `(t/or t/byte? (t/type x))`
-                          1. Analyze `(t/type x)`
-                             -> `(t/isa? Boolean)`
-                          -> `(t/or (t/isa? Byte) (t/isa? Boolean))`"
                     ([x tt/boolean? > (t/or t/byte? (t/type x))] (if x x 1)))
               expected
                 (case (env-lang)
@@ -1385,16 +1375,6 @@
         (let [actual
                 (macroexpand '
                   (self/defn dependent-type-nest-shadow
-                    #_"1. Analyze `x` = `tt/boolean?`
-                          -> Put `x` in env as `(t/isa? Boolean)`
-                       2. Analyze out-type = `(let [x (>long-checked \"123\")]
-                                                (t/or t/number? (t/type x)))`
-                          1. Analyze `(>long-checked \"123\")`
-                             -> Put `x` in env as `(t/isa? Long)`
-                          2. Analyze `(t/or t/number? (t/type x))`
-                             1. Analyze `(t/type x)`
-                                -> `(t/isa? Long)`
-                             -> `(t/or (t/isa? Number) (t/isa? Long))`"
                     ([x tt/boolean? > (let [x (>long-checked "123")]
                                         (t/or t/number? (t/type x)))] (if x x 1)))
               expected
