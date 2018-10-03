@@ -1,7 +1,7 @@
 (ns quantum.untyped.core.analyze.expr
   "An expression is an object whose form is retained and editable to form new objects."
   (:refer-clojure :exclude
-    [flatten get ==])
+    [flatten ==])
   (:require
     [clojure.core                               :as core]
     [quantum.untyped.core.form.generate.deftype :as udt #?@(:cljs [:include-macros true])] ; should be obvious but oh well
@@ -53,75 +53,6 @@
   fipp.ednize/IEdn
     (-edn [this] sym))
 
-;; ===== LOGIC ===== ;;
-
-(defrecord Expr|casef
-  [f #_t/fn?, cases #_t/+map?]
-  IExpr ICall
-  #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)
-    (#?(:clj invoke :cljs -invoke) [_ x]
-      (let [dispatch (f x)]
-        (if-let [[_ then] (find cases dispatch)]
-          (if (call? then) (then x) then)
-          (err! "No matching clause found" {:dispatch dispatch}))))
-  fipp.ednize/IOverride
-  fipp.ednize/IEdn
-    (-edn [this]
-      (if upr/*print-as-code?*
-          (list* `casef (expr>form f) (map upr/>group cases))
-          (list* `casef f cases))))
-
-(defn casef [f & cases]
-  (new Expr|casef f (->> cases (partition-all+ 2) (join {}))))
-
-(defrecord Expr|condpf->
-  [pred #_t/fn?, f #_t/fn?, clauses #_(t/and* t/sequential? t/indexed?)]
-  IExpr ICall
-  #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)
-    (#?(:clj invoke :cljs -invoke) [_ x]
-      (let [v (f x)]
-        (if-let [[_ then :as matching-clause]
-                   (->> clauses
-                        (filter (fn [clause]
-                                  (or (-> clause count (= 1))
-                                      (let [[condition then] clause]
-                                        (pred v condition)))))
-                        first)]
-          (if (call? then) (then x) then)
-          (err! "No matching clause found" {:v v}))))
-  fipp.ednize/IOverride
-  fipp.ednize/IEdn
-    (-edn [this]
-      (if upr/*print-as-code?*
-          (list* `condpf->
-            (expr>form pred)
-            (expr>form f)
-            (map upr/>group clauses))
-          (list* `condpf-> pred f clauses))))
-
-(defn condpf-> [pred f & clauses]
-  (new Expr|condpf-> pred f (->> clauses (partition-all+ 2) join)))
-
-(defrecord Expr|get [k]
-  IExpr
-  #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)
-    (#?(:clj invoke :cljs -invoke) [this m] (core/get m k))
-  fipp.ednize/IOverride
-  fipp.ednize/IEdn
-    (-edn [this] (list `get k)))
-
-(defn get [k] (new Expr|get k))
-
-(defrecord Expr|fn [name arities]
-  IExpr
-  #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)
-    (#?(:clj invoke :cljs -invoke) [this]       ((core/get arities 0)))
-    (#?(:clj invoke :cljs -invoke) [this a0]    ((core/get arities 1) a0))
-    (#?(:clj invoke :cljs -invoke) [this a0 a1] ((core/get arities 2) a0 a1))
-  fipp.ednize/IOverride
-  fipp.ednize/IEdn
-    (-edn [this] (concat [`fn] (when name [name]) arities)))
-
 (udt/deftype
   ^{:doc "All possible behaviors of `form` (e.g. `get`/`update`/`conj`) are inherited except
           function-callability, which is used for calling the evaled form itself.
@@ -154,9 +85,9 @@
                                                           (= evaled (.-evaled that))
                                                           (= form   (.-form   that))))))}
    ?Counted       {count       ([this]         (count form))}
-   ?Indexed       {nth         ([this i]       (with-form this (nth      form i)))}
-   ?Lookup        {get         (([this k]      (with-form this (core/get form k)))
-                              #_([this k else] (with-form this (core/get form k else))))} ; TODO   make it work
+   ?Indexed       {nth         ([this i]       (with-form this (nth form i)))}
+   ?Lookup        {get         (([this k]      (with-form this (get form k)))
+                              #_([this k else] (with-form this (get form k else))))} ; TODO   make it work
    ?Meta          {meta        ([this]         (meta form))
                    with-meta   ([this meta']   (Expression. (with-meta form meta') evaled))}
    ?Reversible    {rseq        ([this]         (with-form this (rseq  form)))}

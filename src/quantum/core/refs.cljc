@@ -37,7 +37,8 @@
        the case of an exception).
      - Here transactionality says nothing whatsoever about referential integrity or durability; and
        whether the operation is `Serializable`, `Linearizable`, or both is up to the implementation
-       and is marked as such. For example, targets intended only for single-threaded use do not satisfy linearizability ('thread-safety') by definition in multi-threaded contexts, but may
+       and is marked as such. For example, targets intended only for single-threaded use do not
+       satisfy linearizability ('thread-safety') by definition in multi-threaded contexts, but may
        yet be atomic and thus satisfy this narrow definition of transactionality.
      - Some implementations may run `f` multiple times in an effort to transactionally apply it, so
        in those cases `f` must be free of side-effects not applied to the `target`.
