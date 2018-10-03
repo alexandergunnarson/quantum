@@ -167,6 +167,12 @@
   "Creates a type whose extension is the singleton set containing only the value `v`."
   [v _] (ValueType. uhash/default uhash/default nil v))
 
+(defns unvalue
+  [t utr/type?]
+  (ifs (utr/value-type? t)   (utr/value-type>value t)
+       (c/= t universal-set) t
+       (err! "Don't know how to handle `unvalue` for type" {:t t})))
+
 ;; ----- `isa?` / Class-Inheritance ----- ;;
 
 (defn isa? [x]
@@ -458,8 +464,8 @@
 ;; ===== Dependent types ===== ;;
 
 (defns type
-  "Treated specially by the type analyzer when used within the type declaration of a function input.
-   For runtime use, just defaults to `(t/value x)`."
+  "When used within the type declaration of a function input, returns the compile-time type of `x`.
+   For all other cases, returns `(t/value x)` at runtime."
   [x _ > type?] (value x))
 
 ;; TODO figure this out
@@ -653,7 +659,7 @@
   (isa?|direct #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
 
 ;; Used by `quantum.untyped.core.analyze` via `t/callable?`
-(def fnt? (and fn? (>expr (fn-> c/meta ::type))))
+(def fnt? (and fn? (>expr (fn-> c/meta ::type utr/fn-type?))))
 
 ;; TODO should we allow java.lang.Runnable, java.util.concurrent.Callable, and other
 ;; functional interfaces to be `callable?`?
