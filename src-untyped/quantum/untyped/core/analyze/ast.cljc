@@ -2,9 +2,7 @@
   "Facilities for creating AST nodes (for now, just for Clojure).
    No actual analysis is done here."
   (:refer-clojure :exclude
-    [symbol Symbol #?(:cljs ->Symbol) symbol?
-     ==
-     unbound?])
+    [== symbol Symbol #?(:cljs ->Symbol) symbol? unbound? var var?])
   (:require
     [quantum.untyped.core.analyze.expr      :as uxp]
     [quantum.untyped.core.compare           :as comp
@@ -55,7 +53,12 @@
 
 ;; ===== Nodes ===== ;;
 
-(defrecord Unbound [env #_::env, form #_symbol?, minimum-type #_t/type?, type #_t/type?] ;; TODO `type` should be `t/deducible-type?`
+;; Does not include unbound vars; this is specifically for arguments
+(defrecord Unbound
+  [env          #_::env
+   form         #_symbol?
+   minimum-type #_t/type?
+   type         #_t/type?] ;; TODO should be `t/deducible-type?`
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -68,7 +71,9 @@
 
 (defn unbound? [x] (instance? Unbound x))
 
-(defrecord Literal [env #_::env, form #_::t/literal, type #_t/type?]
+(defrecord
+  ^{:doc "AST node whose `type` is `(t/value form)`."}
+  Literal [env #_::env, form #_t/literal?, type #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -80,19 +85,58 @@
 
 (defn literal? [x] (instance? Literal x))
 
-(defrecord Symbol
+(defrecord
+  ^{:doc "AST node generated from the value of a non-dynamic var.
+          The `type` may not always be `(t/value value)` because in the case of e.g. `t/defn`s,
+          their corresponding var value may just be a `core/defn`, but the type of the `t/defn` is
+          annotated in the var's metadata."}
+  VarValue
   [env   #_::env
-   form  #_symbol?
+   form  #_qualified-symbol?
    value #_t/any?
    type  #_t/type?]
+  INode
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] (list `var-value form type)))
+
+(defn var-value
+  ([form v t] (var-value nil form v t))
+  ([env form v t] (VarValue. env (ufth/with-type-hint form (>type-hint form t)) v t)))
+
+(defn var-value? [x] (instance? VarValue x))
+
+(defrecord
+  ^{:doc "AST node reserved only for dynamic vars."}
+  Var
+  [env   #_::env
+   form  ; (list 'var <qualified-symbol?>)
+   value #_core/var?
+   type  #_t/type?]
+  INode
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] (list `var* form type)))
+
+(defn var*
+  ([form value t] (var* nil form value t))
+  ([env form value t] (Var. env form value t)))
+
+(defn var? [x] (instance? Var x))
+
+(defrecord Symbol
+  [env  #_::env
+   form #_id/symbol?
+   node #_t/any?
+   type #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (list `symbol (into (array-map) this))))
 
 (defn symbol
-  ([form value t] (symbol nil form value t))
-  ([env form value t] (Symbol. env (ufth/with-type-hint form (>type-hint form t)) value t)))
+  ([form node t] (symbol nil form node t))
+  ([env form node t] (Symbol. env (ufth/with-type-hint form (>type-hint form t)) node t)))
 
 (defn symbol? [x] (instance? Symbol x))
 
