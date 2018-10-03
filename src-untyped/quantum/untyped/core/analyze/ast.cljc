@@ -90,6 +90,22 @@
 
 (defn literal? [x] (instance? Literal x))
 
+(defrecord ClassValue
+  [env   #_::env
+   form  #_simple-symbol?
+   value #_t/class?
+   type  #_(t/value value)]
+  INode
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] (list `class-value (std-print-structure this))))
+
+(defn class-value
+  ([form v] (class-value nil form v))
+  ([env form v] (ClassValue. env form v (t/value v))))
+
+(defn class-value? [x] (instance? ClassValue x))
+
 (defrecord
   ^{:doc "AST node generated from the value of a non-dynamic var.
           The `type` may not always be `(t/value value)` because in the case of e.g. `t/defn`s,

@@ -630,6 +630,12 @@
                           (get inputs-ct)))})))
     :dispatchable-overloads-seq))
 
+(defn- dependent-type-call-node? [x]
+  (and (uast/call-node? x)
+       (case (-> x :unanalyzed-form first)
+         (quantum.core.type/type quantum.untyped.core.type/type) true
+         false)))
+
 (defns- analyze-dependent-type-call
   [opts ::opts, env ::env, [caller|form _, arg-form _ & extra-args-form _ :as form] _ > uast/node?]
   (if (not (empty? extra-args-form))
@@ -745,7 +751,7 @@
     {:resolved local :resolved-via :env}
     (let [resolved (uvar/resolve *ns* sym)]
       (ifs resolved
-             {:resolved resolved :resolved-via :var}
+             {:resolved resolved :resolved-via :resolve}
            (some->> sym namespace symbol (uvar/resolve *ns*) class?)
              {:resolved     (analyze-seq|dot
                               opts env (list '. (-> sym namespace symbol) (-> sym name symbol)))
@@ -759,12 +765,15 @@
     (err! "Could not resolve symbol" {:sym form})
     (let [node (case resolved-via
                  (:env :dot) resolved
-                 :var (let [form (list 'var (uid/>symbol resolved))]
-                        (if (uvar/dynamic? resolved)
-                            (uast/var* env form resolved (t/value resolved))
-                            (let [v (var-get resolved)]
-                              (uast/var-value env form v
-                                (or (-> resolved meta :quantum.core.type/type) (t/value v)))))))]
+                 :resolve
+                   (if (var? resolved)
+                       (let [form (list 'var (uid/>symbol resolved))]
+                         (if (uvar/dynamic? resolved)
+                             (uast/var* env form resolved (t/value resolved))
+                             (let [v (var-get resolved)]
+                               (uast/var-value env form v
+                                 (or (-> resolved meta :quantum.core.type/type) (t/value v))))))
+                       (uast/class-value env (uid/>symbol resolved) resolved)))]
       (if (uast/symbol? node)
           (assoc node :env env)
           (uast/symbol env form node (:type node))))))
@@ -820,6 +829,9 @@
 
 (def analyze-arg-syms|max-iter 100)
 
+(defns- unvalue-node [node uast/node? > uast/node?]
+  (cond-> node (not (dependent-type-call-node? node)) (update :type t/unvalue)))
+
 (defns analyze-arg-syms
   ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _]
     (analyze-arg-syms {} {} arg-sym->arg-type-form out-type-form))
@@ -831,23 +843,32 @@
              arglist-syms|queue      #{}
              arglist-syms|unanalyzed (-> arg-sym->arg-type-form keys set)
              n|iter                  0]
-        (println "env" env
-                 "arglist-syms|queue" arglist-syms|queue
-                 "arglist-syms|unanalyzed" arglist-syms|unanalyzed
-                 "n|iter" n|iter)
+        (binding [quantum.untyped.core.analyze.ast/*print-env?* false
+                  quantum.untyped.core.print/*collapse-symbols?* true]
+          (quantum.untyped.core.print/ppr
+            (kw-map env arglist-syms|queue arglist-syms|unanalyzed n|iter)))
         (ifs (empty? arglist-syms|unanalyzed)
-               (let [out-type-analyzed (analyze opts' env out-type-form)]
-                 {:env env :out-type-node out-type-analyzed})
+               (let [out-type-node (unvalue-node (analyze opts' env out-type-form))
+                     ret {:env env :out-type-node out-type-node}]
+                 (binding [quantum.untyped.core.analyze.ast/*print-env?* false
+                           quantum.untyped.core.print/*collapse-symbols?* true]
+                   (quantum.untyped.core.print/ppr ret))
+                 (assoc ret
+                   :arg-sym->arg-type (->> env (c/map-vals' :type))
+                   :out-type          (:type out-type-node)))
              (>= n|iter analyze-arg-syms|max-iter)
                (err! "Max number of iterations reached for `analyze-arg-syms" {:n n|iter})
              (let [arg-sym (first arglist-syms|unanalyzed)
                    arg-type-form (arg-sym->arg-type-form arg-sym)
-                   analyzed (analyze (assoc opts'
-                                       :arglist-syms|queue     arglist-syms|queue
-                                       :arglist-syms|unanalyzed arglist-syms|unanalyzed)
-                              env arg-type-form)
+                   analyzed (-> (analyze (assoc opts'
+                                           :arglist-syms|queue      arglist-syms|queue
+                                           :arglist-syms|unanalyzed arglist-syms|unanalyzed)
+                                  env arg-type-form)
+                                unvalue-node)
                    env' (assoc (:env analyzed) arg-sym analyzed)]
-               (quantum.untyped.core.print/ppr analyzed)
+               (binding [quantum.untyped.core.analyze.ast/*print-env?* false
+                         quantum.untyped.core.print/*collapse-symbols?* true]
+                 (quantum.untyped.core.print/ppr {:analyzed analyzed}))
                (recur env'
                       (:arglist-syms|queue      analyzed)
                       (:arglist-syms|unanalyzed analyzed)
