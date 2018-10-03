@@ -14,6 +14,11 @@
 
 (ucore/log-this-ns)
 
+(def ^:dynamic *print-env?* true)
+
+(defn std-print-structure [record]
+  (cond-> (into (array-map) record) (not *print-env?*) (dissoc :env)))
+
 (defn >type-hint
   "Applied on every `form` of every AST node created in order to avoid reflection wherever
    possible."
@@ -62,7 +67,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `unbound form {:minimum minimum-type :deduced type})))
+    (-edn [this] (list `unbound (std-print-structure this))))
 
 (defn unbound
   ([form t] (unbound nil form t))
@@ -77,7 +82,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `literal form type)))
+    (-edn [this] (list `literal (std-print-structure this))))
 
 (defn literal
   ([form t] (literal nil form t))
@@ -98,7 +103,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `var-value form type)))
+    (-edn [this] (list `var-value (std-print-structure this))))
 
 (defn var-value
   ([form v t] (var-value nil form v t))
@@ -116,7 +121,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `var* form type)))
+    (-edn [this] (list `var* (std-print-structure this))))
 
 (defn var*
   ([form value t] (var* nil form value t))
@@ -132,7 +137,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `symbol (into (array-map) this))))
+    (-edn [this] (list `symbol (std-print-structure this))))
 
 (defn symbol
   ([form node t] (symbol nil form node t))
@@ -147,7 +152,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `quoted form type)))
+    (-edn [this] (list `quoted (std-print-structure this))))
 
 (defn quoted
   ([form t] (quoted nil form t))
@@ -165,7 +170,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `let* (into (array-map) this))))
+    (-edn [this] (list `let* (std-print-structure this))))
 
 (defn let* [m] (-> m map->Let* with-type-hint))
 
@@ -180,7 +185,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `do (into (array-map) this))))
+    (-edn [this] (list `do (std-print-structure this))))
 
 (defn do [m] (-> m map->Do with-type-hint))
 
@@ -196,7 +201,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `macro-call (into (array-map) this))))
+    (-edn [this] (list `macro-call (std-print-structure this))))
 
 (defn macro-call [m] (-> m map->MacroCall with-type-hint))
 
@@ -213,7 +218,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `if-node (into (array-map) this))))
+    (-edn [this] (list `if-node (std-print-structure this))))
 
 (defn if-node [m] (-> m map->IfNode with-type-hint))
 
@@ -230,7 +235,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `field-access (into (array-map) this))))
+    (-edn [this] (list `field-access (std-print-structure this))))
 
 ;; Not type hinted because it's inferred
 (defn field-access [m] (map->FieldAccess m))
@@ -248,7 +253,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `method-call (into (array-map) this))))
+    (-edn [this] (list `method-call (std-print-structure this))))
 
 ;; Not type hinted because it's inferred
 (defn method-call [m] (map->MethodCall m))
@@ -265,7 +270,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `call-node (into (array-map) this))))
+    (-edn [this] (list `call-node (std-print-structure this))))
 
 (defn call-node [m] (-> m map->CallNode with-type-hint))
 
@@ -281,7 +286,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `new-node (into (array-map) this))))
+    (-edn [this] (list `new-node (std-print-structure this))))
 
 ;; Not type hinted because it's inferred
 (defn new-node [m] (map->NewNode m))
@@ -297,7 +302,7 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `throw-node (into (array-map) this))))
+    (-edn [this] (list `throw-node (std-print-structure this))))
 
 ;; Not type hinted because there's no point
 (defn throw-node [m] (map->ThrowNode m))
