@@ -21,8 +21,7 @@
     [quantum.untyped.core.form              :as uform]
     [quantum.untyped.core.form.evaluate     :as ufeval]
     [quantum.untyped.core.form.type-hint    :as ufth]
-    [quantum.untyped.core.identifiers       :as uident
-      :refer [>symbol]]
+    [quantum.untyped.core.identifiers       :as uid]
     [quantum.untyped.core.log               :as log
       :refer [prl!]]
     [quantum.untyped.core.logic             :as l
@@ -502,16 +501,19 @@
                   (assoc @false-node :env env))
         nil   @whole-node))))
 
-(defns- analyze-seq|quote [opts ::opts, env ::env, [_ _ & body _ :as form] _ > uast/quoted?]
-  (uast/quoted env form (t/value (list* body))))
+(defns- analyze-seq|quote [opts ::opts, env ::env, [_ _, arg-form _ :as form] _ > uast/quoted?]
+  (if (-> form count (not= 2))
+      (err! "Must supply exactly one input to `quote`" {:form form})
+      (uast/quoted env form (t/value arg-form))))
 
-(defns- analyze-seq|throw [opts ::opts, env ::env, form _ [arg _ :as body] _ > uast/throw-node?]
-  (if (-> body count (not= 1))
-      (err! "Must supply exactly one input to `throw`; supplied" {:body body})
-      (let [arg|analyzed (analyze* opts env arg)]
+(defns- analyze-seq|throw [opts ::opts, env ::env, [_ _, arg-form _ :as form] _ > uast/throw-node?]
+  (if (-> form count (not= 2))
+      (err! "Must supply exactly one input to `throw`" {:form form})
+      (let [arg|analyzed (analyze* opts env arg-form)]
         ;; TODO this is not quite true for CLJS but it's good practice at least
         (if-not (-> arg|analyzed :type (t/<= t/throwable?))
-          (err! "`throw` requires a throwable; received" {:arg arg :type (:type arg|analyzed)})
+          (err! "`throw` requires a throwable; received"
+                {:arg-form arg-form :type (:type arg|analyzed)})
           (uast/throw-node
             {:env             env
              :unanalyzed-form form
@@ -519,6 +521,15 @@
              :arg             arg|analyzed
                               ;; `t/none?` because nothing is actually returned
              :type            t/none?})))))
+
+(defns- analyze-seq|var [opts ::opts, env ::env, [_ _, arg-form _ :as form] _ > uast/var?]
+  (ifs (-> form count (not= 2))
+         (err! "Must supply exactly one input to `var`" {:form form})
+       (not (symbol? arg-form))
+         (err! "`var` accepts a symbol argument" {:form form})
+       (if-let [resolved (ns-resolve *ns* arg-form)]
+         (uast/var* env (list 'var (uid/>symbol resolved)) resolved (t/value resolved))
+         (err! "Could not resolve var from symbol" {:symbol arg-form}))))
 
 (defn- filter-dynamic-dispatchable-overloads
   "An example of dynamic dispatch:
@@ -621,16 +632,16 @@
   (if (not (empty? extra-args-form))
       (err! "Incorrect number of args passed to dependent type call"
             {:form form :args-ct (-> extra-args-form count inc)})
-      (let [node (analyze* opts env arg-form)
+      (let [arg-node (analyze* opts env arg-form)
             caller|node (analyze* opts env caller|form)]
         (uast/call-node
           {:env             env
                             ;; We replace the `form` with the form of the arg type
            :unanalyzed-form form
-           :form            (-> node :type uform/>form)
+           :form            (-> arg-node :type uform/>form)
            :caller          caller|node
-           :args            [arg-form]
-           :type            (:type node)}))))
+           :args            [arg-node]
+           :type            (:type arg-node)}))))
 
 ;; TODO break this fn up. It's "clean" but just not broken up
 (defns- analyze-seq*
@@ -648,6 +659,7 @@
     quote    (analyze-seq|quote opts env form)
     new      (analyze-seq|new   opts env form)
     throw    (analyze-seq|throw opts env form)
+    var      (analyze-seq|var   opts env form)
     (if-let [caller-form-dependent-type-call?
               (and (:arglist-context? opts)
                    (case caller|form
@@ -725,31 +737,34 @@
            :expanded        expanded
            :type            (:type expanded)})))))
 
-(defns ?resolve-with-env [opts ::opts, env ::env, sym symbol?]
+(defns- ?resolve [opts ::opts, env ::env, sym symbol?]
   (if-let [[_ local] (find env sym)]
-    {:value local}
+    {:resolved local :resolved-via :env}
     (let [resolved (ns-resolve *ns* sym)]
       (ifs resolved
-             {:value resolved}
-           (some-> sym namespace symbol resolve class?)
-             {:value (analyze-seq|dot
-                       opts env (list '. (-> sym namespace symbol) (-> sym name symbol)))}
+             {:resolved resolved :resolved-via :var}
+           (some->> sym namespace symbol (ns-resolve *ns*) class?)
+             {:resolved     (analyze-seq|dot
+                              opts env (list '. (-> sym namespace symbol) (-> sym name symbol)))
+              :resolved-via :dot}
            nil))))
 
-(defns- analyze-symbol [opts ::opts, env ::env, form symbol? > uast/symbol?]
-  (if-not-let [{resolved :value} (?resolve-with-env opts env form)]
+(defns- analyze-symbol
+  "Analyzes vars as if their value is constant, unless they're marked as dynamic."
+  [opts ::opts, env ::env, form symbol? > uast/symbol?]
+  (if-not-let [{:keys [resolved resolved-via]} (?resolve opts env form)]
     (err! "Could not resolve symbol" {:sym form})
-    (uast/symbol env form resolved
-      (ifs (uast/node? resolved)
-             (:type resolved)
-           (or (t/literal? resolved) (class? resolved))
-             (t/value resolved)
-           (var? resolved)
-             (or (-> resolved meta :quantum.core.type/type) (t/value @resolved))
-           (uvar/unbound? resolved)
-             ;; Because the var could be anything and cannot have metadata (type or otherwise)
-             t/any?
-           (TODO "Unsure of what to do in this case" (kw-map env form resolved))))))
+    (let [node (case resolved-via
+                 (:env :dot) resolved
+                 :var (let [form (list 'var (uid/>symbol resolved))]
+                        (if (uvar/dynamic? resolved)
+                            (uast/var* env form resolved (t/value resolved))
+                            (let [v (var-get resolved)]
+                              (uast/var-value env form v
+                                (or (-> resolved meta :quantum.core.type/type) (t/value v)))))))]
+      (if (uast/symbol? node)
+          (assoc node :env env)
+          (uast/symbol env form node (:type node))))))
 
 (defns- analyze* [opts ::opts, env ::env, form _ > uast/node?]
   (when (> (swap! *analyze-depth inc) 200) (throw (ex-info "Stack too deep" {:form form})))
