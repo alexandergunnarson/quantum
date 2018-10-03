@@ -108,6 +108,12 @@
 
 (def var? (t/isa? #?(:clj clojure.lang.Var :cljs cljs.core/Var)))
 
+;; TODO maybe extend to CLJS?
+#?(:clj (t/defn var-defined? [x var?] (.hasRoot x)))
+
+;; TODO maybe extend to CLJS?
+#?(:clj (t/defn dynamic? [x var?] (.isDynamic x)))
+
 #?(:clj (t/extend-defn! id/>name      (^:inline [x var?] (-> x >meta :name id/>name))))
 #?(:clj (t/extend-defn! id/>namespace (^:inline [x var?] (-> x >meta :ns   id/>name))))
 #?(:clj (t/extend-defn! id/>symbol    (^:inline [x var?]
@@ -136,8 +142,6 @@
 
 ;; TODO TYPED
 #?(:clj (uvar/defaliases uvar defalias defaliases defaliases'))
-
-#?(:clj (t/defn var-defined? [x var?] (.hasRoot x)))
 
 ;; TODO TYPED — need to do `apply`, and `apply` with t/defn; also `merge`, `str`, `deref`
 #_(:clj
