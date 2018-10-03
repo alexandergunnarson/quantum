@@ -282,4 +282,4 @@
 #?(:clj
 (defaliases uns
   ns>alias ns-name>alias clear-ns-interns! search-var ns-exclude with-ns with-temp-ns import-static
-  load-ns load-nss loaded-libs load-lib! load-package! load-dep! assert-ns-aliased))
+  load-ns load-nss loaded-libs load-lib! load-package! load-dep! assert-ns-aliased ?resolve))

@@ -1,8 +1,11 @@
 (ns quantum.untyped.core.vars
-         (:refer-clojure :exclude [defonce])
+         (:refer-clojure :exclude
+           [defonce resolve])
          (:require
            [clojure.core                       :as core]
            [quantum.untyped.core.core          :as ucore]
+           [quantum.untyped.core.logic
+             :refer [ifs]]
            [quantum.untyped.core.form.evaluate
              :refer [case-env case-env*]]
            [quantum.untyped.core.form.generate :as ufgen])
@@ -82,7 +85,6 @@
                    (throw (IllegalArgumentException. (str "Macro '" '~name "' not defined."))))]
           (cons ~orig-sym-f ~args-sym)))))))
 
-
 #?(:clj
 (defmacro def
   "Like `clojure.core/def`, but allows for docstring and metadata placement
@@ -94,3 +96,41 @@
         `(quantum.untyped.core.vars/def ~sym ~doc-or-meta nil          ~v)
         `(quantum.untyped.core.vars/def ~sym nil          ~doc-or-meta ~v)))
   ([sym -doc -meta v] `(~'def ~(with-meta sym (assoc -meta :doc -doc)) ~v))))
+
+;; ===== Symbol Resolution ===== ;;
+
+(defn resolve-ns
+  "Resolves the namespace of a symbol, checking in aliases first.
+   Totally distinct from `core/ns-resolve`."
+  {:incorporated {'clojure.lang.Compiler/namespaceFor "10/3/2018"}}
+  ([sym] (resolve-ns *ns* sym))
+  ([ns-val #_namespace?, sym]
+    (let [ns-sym (-> sym namespace symbol)]
+      (or (.lookupAlias ^clojure.lang.Namespace ns-val ns-sym)
+          (find-ns ns-sym)))))
+
+(defn resolve
+  "Combines `core/resolve` with `core/ns-resolve` and does not throw an exception when a class can't
+   be resolved."
+  {:incorporated {'clojure.core/resolve                 "10/3/2018"
+                  'clojure.core/ns-resolve              "10/3/2018"
+                  'clojure.lang.Compiler/maybeResolveIn "10/3/2018"}}
+  ([sym] (resolve *ns* sym))
+  ([ns-val #_namespace?, sym] (resolve ns-val nil sym))
+  ([ns-val #_namespace?, env #_map?, sym]
+    (if (contains? env sym)
+        (get env sym)
+        (if (some? (namespace sym))
+            (when-let [sym-ns-val (resolve-ns sym)]
+              (.findInternedVar ^clojure.lang.Namespace sym-ns-val (-> sym name symbol)))
+            (let [^String sym-name (name sym)]
+              (ifs (or (and (pos? (.indexOf sym-name "."))
+                            (not (.endsWith sym-name ".")))
+                       (= (.charAt sym-name 0) \[))
+                     (try (clojure.lang.RT/classForName sym-name)
+                       (catch ClassNotFoundException _ nil))
+                   (= sym 'ns)
+                     #'core/ns
+                   (= sym 'in-ns)
+                     #'core/in-ns
+                   (.getMapping ^clojure.lang.Namespace ns-val sym)))))))

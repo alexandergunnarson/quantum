@@ -527,9 +527,12 @@
          (err! "Must supply exactly one input to `var`" {:form form})
        (not (symbol? arg-form))
          (err! "`var` accepts a symbol argument" {:form form})
-       (if-let [resolved (ns-resolve *ns* arg-form)]
-         (uast/var* env (list 'var (uid/>symbol resolved)) resolved (t/value resolved))
-         (err! "Could not resolve var from symbol" {:symbol arg-form}))))
+       (let [resolved (uvar/resolve *ns* arg-form)]
+         (ifs (nil? resolved)
+                (err! "Could not resolve var from symbol" {:symbol arg-form})
+              (not (var? resolved))
+                (err! "Expected var, but found" {:form form :resolved resolved})
+              (uast/var* env (list 'var (uid/>symbol resolved)) resolved (t/value resolved))))))
 
 (defn- filter-dynamic-dispatchable-overloads
   "An example of dynamic dispatch:
@@ -740,10 +743,10 @@
 (defns- ?resolve [opts ::opts, env ::env, sym symbol?]
   (if-let [[_ local] (find env sym)]
     {:resolved local :resolved-via :env}
-    (let [resolved (ns-resolve *ns* sym)]
+    (let [resolved (uvar/resolve *ns* sym)]
       (ifs resolved
              {:resolved resolved :resolved-via :var}
-           (some->> sym namespace symbol (ns-resolve *ns*) class?)
+           (some->> sym namespace symbol (uvar/resolve *ns*) class?)
              {:resolved     (analyze-seq|dot
                               opts env (list '. (-> sym namespace symbol) (-> sym name symbol)))
               :resolved-via :dot}
