@@ -1118,7 +1118,7 @@
                             (~(tag "long" 'invoke) [_## ~(tag "java.lang.Object" 'x)]
                               (let* [~(tag "clojure.lang.Ratio" 'x) ~'x]
                                 ;; Resolved from `(>long (.bigIntegerValue x))`
-                                ;; In this case, `(t/compare (type-of '(.bigIntegerValue x)) overload-type)`:
+                                ;; In this case, `(t/compare (t/type-of '(.bigIntegerValue x)) overload-type)`:
                                 ;; - `(t/- tt/boolean? tt/boolean? float? double?)`  -> t/<>
                                 ;; - `(t/and (t/or double? float?) ...)`         -> t/<>
                                 ;; - `(t/and (t/isa? clojure.lang.BigInt) ...)`  -> t/<>
@@ -1348,9 +1348,11 @@
       (let [actual
               (macroexpand '
                 (self/defn dependent-type
-                  ;; 1. Expand/analyze `tt/boolean?` -> `(t/isa? Boolean)`
-                  ;; 2. Expand/analyze `(type x)` -> `(t/isa? Boolean)`
-                  ([x tt/boolean? > (type x)] x))
+                  #_"1. Analyze `x` = `tt/boolean?`
+                        -> Put `x` in env as `(t/isa? Boolean)`
+                     2. Analyze out-type = `(t/type x)`
+                        -> `(t/isa? Boolean)`"
+                  ([x tt/boolean? > (t/type x)] x))
             expected
               (case (env-lang)
                 :clj
@@ -1366,11 +1368,11 @@
                   (self/defn dependent-type-nest
                     #_"1. Analyze `x` = `tt/boolean?`
                           -> Put `x` in env as `(t/isa? Boolean)`
-                       2. Analyze out-type = `(t/or t/number? (type x))`
-                          1. Analyze `(type x)`
+                       2. Analyze out-type = `(t/or t/number? (t/type x))`
+                          1. Analyze `(t/type x)`
                              -> `(t/isa? Boolean)`
                           -> `(t/or (t/isa? Number) (t/isa? Boolean))`"
-                    ([x tt/boolean? > (t/or t/number? (type x))] (if x x 1)))
+                    ([x tt/boolean? > (t/or t/number? (t/type x))] (if x x 1)))
               expected
                 (case (env-lang)
                   :clj
@@ -1386,15 +1388,15 @@
                     #_"1. Analyze `x` = `tt/boolean?`
                           -> Put `x` in env as `(t/isa? Boolean)`
                        2. Analyze out-type = `(let [x (>long-checked \"123\")]
-                                                (t/or t/number? (type x)))`
+                                                (t/or t/number? (t/type x)))`
                           1. Analyze `(>long-checked \"123\")`
                              -> Put `x` in env as `(t/isa? Long)`
-                          2. Analyze `(t/or t/number? (type x))`
-                             1. Analyze `(type x)`
+                          2. Analyze `(t/or t/number? (t/type x))`
+                             1. Analyze `(t/type x)`
                                 -> `(t/isa? Long)`
                              -> `(t/or (t/isa? Number) (t/isa? Long))`"
                     ([x tt/boolean? > (let [x (>long-checked "123")]
-                                        (t/or t/number? (type x)))] (if x x 1)))
+                                        (t/or t/number? (t/type x)))] (if x x 1)))
               expected
                 (case (env-lang)
                   :clj
@@ -1409,19 +1411,19 @@
               (self/defn dependent-type-split
                 #_"1. Analyze `x` = `(t/or tt/boolean? tt/string?)`. Splittable.
                    2. Split `(t/or tt/boolean? tt/string?)`:
-                      [[x tt/boolean? > (type x)]
-                       [x tt/string?  > (type x)]]
+                      [[x tt/boolean? > (t/type x)]
+                       [x tt/string?  > (t/type x)]]
                    3. Analyze split 0.
                       1. Analyze `x` = `tt/boolean?`
                          -> Put `x` in env as `(t/isa? Boolean)`
-                      2. Analyze out-type = `(type x)`
+                      2. Analyze out-type = `(t/type x)`
                          -> `(t/isa? Boolean)`
                    4. Analyze split 1.
                       1. Analyze `x` = `tt/string?`
                          -> Put `x` in env as `(t/isa? String)`
-                      2. Analyze out-type = `(type x)`
+                      2. Analyze out-type = `(t/type x)`
                          -> `(t/isa? String)`"
-                ([x (t/or tt/boolean? tt/string?) > (type x)] x))
+                ([x (t/or tt/boolean? tt/string?) > (t/type x)] x))
           expected
             (case (env-lang)
               :clj
@@ -1436,15 +1438,15 @@
               (self/defn dependent-type-psplit
                 #_"1. Analyze `x` = `t/any?`. Primitive-splittable.
                    2. Split `t/any?`:
-                      [[x tt/boolean? > (type x)]
-                       [x ... > (type x)]]
+                      [[x tt/boolean? > (t/type x)]
+                       [x ... > (t/type x)]]
                    3. Analyze split 0.
                       1. Analyze `x` = `tt/boolean?`
                          -> Put `x` in env as `(t/isa? Boolean)`
-                      2. Analyze out-type = `(type x)`
+                      2. Analyze out-type = `(t/type x)`
                          -> `(t/isa? Boolean)`
                    4. Analyze rest of splits in the same way."
-                ([x t/any? > (type x)] x)))
+                ([x t/any? > (t/type x)] x)))
           expected
             (case (env-lang)
               :clj
@@ -1460,9 +1462,9 @@
                 (self/defn dependent-type-input
                   #_"1. Analyze `a` = `tt/byte?`
                         -> Put `a` in env as `(t/isa? Byte)`
-                     2. Analyze `b` = `(type a)`
+                     2. Analyze `b` = `(t/type a)`
                         -> Put `b` in env as `(t/isa? Byte)`"
-                  ([a tt/byte?, b (type a)] a)))
+                  ([a tt/byte?, b (t/type a)] a)))
             expected
               (case (env-lang)
                 :clj
@@ -1475,11 +1477,11 @@
       (let [actual
               (macroexpand '
                 (self/defn dependent-type-input-first
-                  #_"1. Analyze `a` = `(type b)`.
+                  #_"1. Analyze `a` = `(t/type b)`.
                         2. Analyze `b` = `tt/byte?`
                            -> Put `b` in env as `(t/isa? Byte)`
                         -> Put `a` in env as `(t/isa? Byte)`"
-                  ([a (type b), b tt/byte?] a)))
+                  ([a (t/type b), b tt/byte?] a)))
             expected
               (case (env-lang)
                 :clj
@@ -1495,11 +1497,11 @@
                 (self/defn dependent-type-2input
                   #_"1. Analyze `a` = `tt/byte?`
                         -> Put `a` in env as `(t/isa? Byte)`
-                     2. Analyze `b` = `(type a)`
+                     2. Analyze `b` = `(t/type a)`
                         -> Put `b` in env as `(t/isa? Byte)`
-                     3. Analyze out-type = `(type b)`
+                     3. Analyze out-type = `(t/type b)`
                         -> `(t/isa? Byte)`"
-                  ([a tt/byte?, b (type a) > (type b)] b)))
+                  ([a tt/byte?, b (t/type a) > (t/type b)] b)))
             expected
               (case (env-lang)
                 :clj
@@ -1514,17 +1516,17 @@
                 (self/defn dependent-type-2input-0split
                   #_"1. Analyze `a` = `(t/or tt/boolean? tt/byte?)`. Splittable.
                      2. Split:
-                        [[a tt/boolean?, b (type a) > (type b)]
-                         [a tt/byte?   , b (type a) > (type b)]]
+                        [[a tt/boolean?, b (t/type a) > (t/type b)]
+                         [a tt/byte?   , b (t/type a) > (t/type b)]]
                      3. Analyze split 0.
                         1. Analyze `a` = `tt/boolean?`
                            -> Put `a` in env as `(t/isa? Boolean)`
-                        2. Analyze `b` = `(type a)`
+                        2. Analyze `b` = `(t/type a)`
                            -> Put `b` in env as `(t/isa? Boolean)`
-                        3. Analyze out-type = `(type b)`
+                        3. Analyze out-type = `(t/type b)`
                            -> `(t/isa? Boolean)`
                      4. Analyze split 1 in the same way."
-                  ([a (t/or tt/boolean? tt/byte?), b (type a) > (type b)] b)))
+                  ([a (t/or tt/boolean? tt/byte?), b (t/type a) > (t/type b)] b)))
             expected
               (case (env-lang)
                 :clj
@@ -1537,38 +1539,38 @@
     (let [actual
             (macroexpand '
               (self/defn dependent-type-combo
-                #_"1. Analyze `a` = `(type (>long-checked \"23\"))`
+                #_"1. Analyze `a` = `(t/type (>long-checked \"23\"))`
                       1. Analyze `(>long-checked \"23\")`
                          -> `(t/value 23)`
                       -> Put `out` in env as `(t/value 23)`"
-                [out (type (>long-checked "23"))]
+                [out (t/type (>long-checked "23"))]
                 (self/fn dependent-type-combo-inner
                   ;; This test overview was put up in ~30 minutes during a seemingly random walk of
                   ;; thoughts without any testing or research whatsoever that happened to actually
                   ;; coalesce into a working, clear, simple algorithm for handling dependent types.
                   ;; Not sure if listening to Bach Passacaglia & Fugue In C Minor for organ and
                   ;; then orchestra helped, but there you go :)
-                  #_"1. Analyze `a` = `(t/or tt/boolean? (type b))`
+                  #_"1. Analyze `a` = `(t/or tt/boolean? (t/type b))`
                         - Put `a` on queue
                         1. Analyze `tt/boolean?`
                            -> `(t/isa? Boolean)`
-                        2. Analyze `(type b)`
-                           1. Analyze `b` = `(t/or tt/byte? (type d))`
+                        2. Analyze `(t/type b)`
+                           1. Analyze `b` = `(t/or tt/byte? (t/type d))`
                               - Put `b` on queue
                               1. Analyze `tt/byte?`
                                  -> `(t/isa? Byte)`
-                              2. Analyze `(type d)`
+                              2. Analyze `(t/type d)`
                                  1. Analyze `d` = `(let [b (t/- tt/char? tt/long?)]
-                                                     (t/or tt/char? (type b) (type c)))`
+                                                     (t/or tt/char? (t/type b) (t/type c)))`
                                     - Put `d` on queue
                                     1. Analyze `b` = `(t/- tt/char? tt/long?)`
                                        -> Put `b` in env as `t/none?`
-                                    2. Analyze `(t/or tt/char? (type b) (type c))`
+                                    2. Analyze `(t/or tt/char? (t/type b) (t/type c))`
                                        1. Analyze `tt/char?`
                                           -> `(t/isa? Character)`
-                                       2. Analyze `(type b)`
+                                       2. Analyze `(t/type b)`
                                           -> `t/none-type?`  <-- be careful of this
-                                       3. Analyze `(type c)`
+                                       3. Analyze `(t/type c)`
                                           1. Analyze `c` = `(t/or tt/short? tt/char?)`
                                              1. Analyze `tt/short?`
                                                 -> `(t/isa? Short)`
@@ -1578,18 +1580,18 @@
                                                 `(t/or (t/isa? Short) (t/isa? Character))`
                                                 Splittable.
                                              - Split:
-                                               [[a (t/or tt/boolean? (type b))
-                                                 b (t/or tt/byte? (type d))
+                                               [[a (t/or tt/boolean? (t/type b))
+                                                 b (t/or tt/byte? (t/type d))
                                                  c (t/isa? Short)
                                                  d (let [b (t/- tt/char? tt/long?)]
-                                                     (t/or tt/char? (type b) (type c)))
-                                                 > (t/or (type b) (type d))]
-                                                [a (t/or tt/boolean? (type b))
-                                                 b (t/or tt/byte? (type d))
+                                                     (t/or tt/char? (t/type b) (t/type c)))
+                                                 > (t/or (t/type b) (t/type d))]
+                                                [a (t/or tt/boolean? (t/type b))
+                                                 b (t/or tt/byte? (t/type d))
                                                  c (t/isa? Character)
                                                  d (let [b (t/- tt/char? tt/long?)]
-                                                     (t/or tt/char? (type b) (type c)))
-                                                 > (t/or (type b) (type d))]]
+                                                     (t/or tt/char? (t/type b) (t/type c)))
+                                                 > (t/or (t/type b) (t/type d))]]
                                              - We continue with only Split 0 for brevity. Other
                                                splits should be handled the same.
                                              -> Put `c` in env as `(t/isa? Short)`
@@ -1605,21 +1607,21 @@
                                               (t/isa? Short))`.
                                        Splittable.
                                     - Split:
-                                      [[a (t/or tt/boolean? (type b))
-                                        b (t/or tt/byte? (type d))
+                                      [[a (t/or tt/boolean? (t/type b))
+                                        b (t/or tt/byte? (t/type d))
                                         c (t/isa? Short)
                                         d (t/isa? Character)
-                                        > (t/or (type b) (type d))]
-                                       [a (t/or tt/boolean? (type b))
-                                        b (t/or tt/byte? (type d))
+                                        > (t/or (t/type b) (t/type d))]
+                                       [a (t/or tt/boolean? (t/type b))
+                                        b (t/or tt/byte? (t/type d))
                                         c (t/isa? Short)
                                         d t/none-type?
-                                        > (t/or (type b) (type d))]
-                                       [a (t/or tt/boolean? (type b))
-                                        b (t/or tt/byte? (type d))
+                                        > (t/or (t/type b) (t/type d))]
+                                       [a (t/or tt/boolean? (t/type b))
+                                        b (t/or tt/byte? (t/type d))
                                         c (t/isa? Short)
                                         d (t/isa? Short)
-                                        > (t/or (type b) (type d))]]
+                                        > (t/or (t/type b) (t/type d))]]
                                     - We continue with only Split 0 for brevity. Other splits
                                       should be handled the same.
                                     -> Put `d` in env as `(t/isa? Character)`
@@ -1630,16 +1632,16 @@
                               `(t/or (t/isa? Byte) (t/isa? Character))`
                               Splittable.
                            - Split:
-                             [[a (t/or tt/boolean? (type b))
+                             [[a (t/or tt/boolean? (t/type b))
                                b (t/isa? Byte)
                                c (t/isa? Short)
                                d (t/isa? Character)
-                               > (t/or (type b) (type d))]
-                              [a (t/or tt/boolean? (type b))
+                               > (t/or (t/type b) (t/type d))]
+                              [a (t/or tt/boolean? (t/type b))
                                b (t/isa? Character)
                                c (t/isa? Short)
                                d (t/isa? Character)
-                               > (t/or (type b) (type d))]]
+                               > (t/or (t/type b) (t/type d))]]
                            - We continue with only Split 0 for brevity. Other splits should be
                              handled the same.
                            -> Put `b` in env as `(t/isa? Byte)`
@@ -1653,25 +1655,25 @@
                          b (t/isa? Byte)
                          c (t/isa? Short)
                          d (t/isa? Character)
-                         > (t/or (type b) (type d))]
+                         > (t/or (t/type b) (t/type d))]
                         [a (t/isa? Byte)
                          b (t/isa? Character)
                          c (t/isa? Short)
                          d (t/isa? Character)
-                         > (t/or (type b) (type d))]]
+                         > (t/or (t/type b) (t/type d))]]
                      - We continue with only Split 0 for brevity. Other splits should be handled
                        the same.
                      -> Put `a` in env as `(t/isa? Boolean)`
-                     2. Analyze out-type = `(t/or (type b) (type d))`
+                     2. Analyze out-type = `(t/or (t/type b) (t/type d))`
                         -> (Cutting obvious corners) `(t/or (t/isa? Byte) (t/isa? Character))`
                         - No splitting necessary because out-type
                      - All input types are in env and output-type was analyzed. DONE"
-                  ([a (t/or tt/boolean? (type b))
-                    b (t/or tt/byte? (type d))
+                  ([a (t/or tt/boolean? (t/type b))
+                    b (t/or tt/byte? (t/type d))
                     c (t/or tt/short? tt/char?)
                     d (let [b (t/- tt/char? tt/long?)]
-                        (t/or tt/char? (type b) (type c)))
-                    > (t/or (type b) (type d))] b)))
+                        (t/or tt/char? (t/type b) (t/type c)))
+                    > (t/or (t/type b) (t/type d))] b)))
           expected
             (case (env-lang)
               :clj
@@ -1685,40 +1687,40 @@
       (let [actual
               (macroexpand '
                 (self/defn dependent-type-directin
-                  #_"1. Analyze `a` = `(type b)`
+                  #_"1. Analyze `a` = `(t/type b)`
                         - Put `a` on queue
-                        1. Analyze `b` = `(type a)`
+                        1. Analyze `b` = `(t/type a)`
                            - Put `b` on queue
                            -> ERROR: `a` not in environment and `a` already on queue; circular
                                      dependency detected"
-                  ([a (type b), b (type a)] b)))]
+                  ([a (t/type b), b (t/type a)] b)))]
         (testing "functionality"
           (throws? (eval actual)))))
     (testing "Non-symbolically"
       (let [actual
               (macroexpand '
                 (self/defn dependent-type-directin
-                  #_"1. Analyze `a` = `(type b)`
+                  #_"1. Analyze `a` = `(t/type b)`
                         - Put `a` on queue
-                        1. Analyze `b` = `(type [a])`
+                        1. Analyze `b` = `(t/type [a])`
                            - Put `b` on queue
                            1. Analyze `[a]`
                               1. Analyze `a`
                                  -> ERROR: `a` not in environment and `a` already on queue;
                                            circular dependency detected"
-                  ([a (type b), b (type [a])] b)))]
+                  ([a (t/type b), b (t/type [a])] b)))]
         (testing "functionality"
           (throws? (eval actual))))))
   (testing "Two input types indirectly depend on each other"
     (let [actual
             (macroexpand '
               (self/defn dependent-type-indirectin
-                #_"1. Analyze `a` = `(type b)`
-                      1. Analyze `b` = `(type c)`
-                         1. Analyze `c` = `(type a)`
+                #_"1. Analyze `a` = `(t/type b)`
+                      1. Analyze `b` = `(t/type c)`
+                         1. Analyze `c` = `(t/type a)`
                             -> ERROR `a` not in environment and `a` already in queue; circular
                                      dependency detected"
-                ([a (type b), b (type c), c (type a)] b)))]
+                ([a (t/type b), b (t/type c), c (t/type a)] b)))]
       (testing "functionality"
         (throws? (eval actual))))))
 
