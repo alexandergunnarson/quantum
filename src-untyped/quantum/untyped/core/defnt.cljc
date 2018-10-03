@@ -9,8 +9,6 @@
         :refer [any?]]
       [quantum.untyped.core.data
         :refer [seqable?]]
-      [quantum.untyped.core.data.map
-        :refer [om]]
       [quantum.untyped.core.form.evaluate  :as ufeval]
       [quantum.untyped.core.identifiers
         :refer [>keyword ident? qualified-keyword? simple-symbol?]]
@@ -220,9 +218,9 @@
                      (apply concat))
               ~@(when varargs [:varargs most-complex-positional-destructurer-sym]))
           kv-spec#
-            (us/kv (om ~@(apply concat
-                           (cond-> (->> args (map (fn [{:keys [k spec]}] [k spec])))
-                             varargs (concat [[(:k varargs) (:spec varargs)]])))))
+            (us/kv (hash-map ~@(apply concat
+                                 (cond-> (->> args (map (fn [{:keys [k spec]}] [k spec])))
+                                   varargs (concat [[(:k varargs) (:spec varargs)]])))))
           or|conformer#
             (us/conformer
               (fn or|conformer# [m#]
@@ -350,7 +348,7 @@
                             (-> ret (cond-> varargs? (update :fn-arglist conj '&))
                                     (update :fn-arglist conj  binding-)
                                     (update :kw-args    assoc binding- arg-ident))))
-                        {:fn-arglist [] :kw-args (om)}
+                        {:fn-arglist [] :kw-args (hash-map)}
                         (cond-> args varargs (conj (assoc varargs :varargs? true))))
                     overload-form     (list* fn-arglist body)
                     arity-ident       (keyword (str "arity-" (if varargs "varargs" (count args))))
