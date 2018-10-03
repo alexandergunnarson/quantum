@@ -1368,11 +1368,11 @@
                   (self/defn dependent-type-nest
                     #_"1. Analyze `x` = `tt/boolean?`
                           -> Put `x` in env as `(t/isa? Boolean)`
-                       2. Analyze out-type = `(t/or t/number? (t/type x))`
+                       2. Analyze out-type = `(t/or t/byte? (t/type x))`
                           1. Analyze `(t/type x)`
                              -> `(t/isa? Boolean)`
-                          -> `(t/or (t/isa? Number) (t/isa? Boolean))`"
-                    ([x tt/boolean? > (t/or t/number? (t/type x))] (if x x 1)))
+                          -> `(t/or (t/isa? Byte) (t/isa? Boolean))`"
+                    ([x tt/boolean? > (t/or t/byte? (t/type x))] (if x x 1)))
               expected
                 (case (env-lang)
                   :clj

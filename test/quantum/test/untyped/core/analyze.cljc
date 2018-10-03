@@ -16,10 +16,7 @@
              (get-in ana [:env 'x :type]))))
     (testing "Nested within another type"
       (testing "Without arg shadowing"
-        (let [ana (self/analyze-arg-syms {'x `tt/boolean?} `(t/or t/number? (t/type ~x)))]
+        (let [ana (quantum.untyped.core.print/ppr
+                    (self/analyze-arg-syms {'x `tt/boolean?} `(t/or tt/byte? (t/type ~'x))))]
           (is= t/boolean?
                (get-in ana [:env 'x :type])))))))
-
-
-(quantum.untyped.core.print/ppr
-  )
