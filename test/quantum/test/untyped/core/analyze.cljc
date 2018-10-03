@@ -1,10 +1,11 @@
 (ns quantum.test.untyped.core.analyze
   (:require
-    [quantum.test.untyped.core.type :as tt]
-    [quantum.untyped.core.analyze   :as self]
+    [quantum.test.untyped.core.type   :as tt]
+    [quantum.untyped.core.analyze     :as self]
+    [quantum.untyped.core.analyze.ast :as uast]
     [quantum.untyped.core.test
       :refer [deftest is is= testing]]
-    [quantum.untyped.core.type      :as t]))
+    [quantum.untyped.core.type        :as t]))
 
 ;; More dependent type tests in `quantum.test.untyped.core.type.defnt` but those are more like
 ;; integration tests
@@ -13,10 +14,13 @@
     (testing "Not nested within another type"
       (let [ana (self/analyze-arg-syms {} {} {'x `tt/boolean?} `(t/type ~'x))]
         (is= t/boolean?
-             (get-in ana [:env 'x :type]))))
+             (get-in ana [:env 'x :type]))
+        (is= t/boolean?
+             (get-in ana [:out-type-node :type]))))
     (testing "Nested within another type"
       (testing "Without arg shadowing"
-        (let [ana (quantum.untyped.core.print/ppr
-                    (self/analyze-arg-syms {'x `tt/boolean?} `(t/or tt/byte? (t/type ~'x))))]
+        (let [ana (self/analyze-arg-syms {'x `tt/boolean?} `(t/or tt/byte? (t/type ~'x)))]
           (is= t/boolean?
-               (get-in ana [:env 'x :type])))))))
+               (get-in ana [:env 'x :type]))
+          (is= (t/or tt/byte? tt/boolean?)
+               (get-in ana [:out-type-node :type])))))))

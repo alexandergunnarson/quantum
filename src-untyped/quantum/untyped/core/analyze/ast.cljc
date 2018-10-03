@@ -14,7 +14,7 @@
 
 (ucore/log-this-ns)
 
-(def ^:dynamic *print-env?* true)
+(def ^:dynamic ^{:doc "Controls whether `:env` is printed on AST nodes."} *print-env?* true)
 
 (defn std-print-structure [record]
   (cond-> (into (array-map) record) (not *print-env?*) (dissoc :env)))
