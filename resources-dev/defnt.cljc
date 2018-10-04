@@ -1015,6 +1015,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           http://hg.openjdk.java.net/jdk10/jdk10/hotspot/file/5ab7a67bc155/src/share/vm/classfile/vmSymbols.hpp
           Those marked with a number or numbers mean they are specific to only those JDK versions.
           Only starts at Java 8.
+          Note that Java 10 didn't add any intrinsics.
           Unsafe = sun.misc.Unsafe for Java 8
           Unsafe = jdk.internal.misc.Unsafe for Java >= 9
           - [ ] <Object>.hashCode() > int
