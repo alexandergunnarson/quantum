@@ -4,4 +4,4 @@
     [quantum.core.type         :as t]))
 
 ;; TODO is this the right place to put this?
-#?(:cljs (t/defn date>millis [x js/Date > (t/assume dnum/ni-double?)] (.valueOf x)))
+#?(:cljs (t/defn date>millis [x js/Date > (t/assume dnum/std-fixint?)] (.valueOf x)))
