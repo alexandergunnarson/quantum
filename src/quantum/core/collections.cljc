@@ -1219,11 +1219,7 @@
     (loop [[part & parts] work]
       (if-let [[pivot & xs] (seq part)]
         (let [smaller? #(< % pivot)]
-          (recur (list*
-                  (lfilter smaller? xs)
-                  pivot
-                  (lremove smaller? xs)
-                  parts)))
+          (recur (list* (lfilter smaller? xs) pivot (lremove smaller? xs) parts)))
         (when-let [[x & parts] parts]
           (cons x (sort-parts parts)))))))
 
@@ -1234,6 +1230,10 @@
   (sort-parts (list elems)))
 
 ; TODO subarray-only sort
+
+;; TODO incorporate highly tuned radix sort with better performance than quicksort on n < 10000
+;; - http://fastutil.di.unimi.it/docs/it/unimi/dsi/fastutil/ints/IntArrays.html#radixSort-int:A-int-int-
+;; - http://fastutil.di.unimi.it/docs/overview-summary.html
 
 #?(:clj
 (defnt heap-sort!
