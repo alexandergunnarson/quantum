@@ -34,7 +34,7 @@
 
 ;; Incorporated `clojure.core/int?`
 ;; Incorporated `cljs.core/int?`
-(var/def fixint? "The set of all fixed-precision integers."
+(var/def fixint? "The set of all fixed-precision (though not necessarily primitive) integers."
   (t/or #?@(:clj [p/byte? p/short?]) p/int? p/long?))
 
 #?(:clj (def java-bigint? (t/isa? java.math.BigInteger)))
@@ -233,7 +233,15 @@
 
 (def numerically-integer-primitive? (t/and p/primitive? numerically-integer?))
 
+;; TODO excise?
 (def std-integer? (t/or integer? #?(:cljs numerically-integer-double?)))
+
+(def std-fixint? #?(:clj long? :cljs numerically-integer-double?))
+
+(t/defn >std-fixint
+  "Converts input to a `std-fixint?` in a way that may involve truncation or rounding."
+  > std-fixint?
+#?(:cljs ([x double? > (t/assume std-fixint?)] (js/Math.round x))))
 
 ;; TODO TYPED
 (t/defn read-rational
