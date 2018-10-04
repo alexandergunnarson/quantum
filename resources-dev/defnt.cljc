@@ -81,6 +81,19 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           ([n dnum/std-integer?, xs ?] ...)
   - (comp/t== x)
      - dependent type such that the passed input must be identical to x
+  - Type Logic and Predicates
+    - We should probably have a 'normal form' so we can correctly hash if we do spec lookup
+    - t/- : fix
+      - (t/- (t/isa? java.util.Queue) (t/or ?!+queue? !!queue?))
+    - t/numerically : e.g. a double representing exactly what a float is able to represent
+      - and variants thereof: `numerically-long?` etc.
+      - t/numerically-integer?
+    - dc/of
+      - (dc/of number?) ; implicitly the container is a `reducible?`
+      - (dc/of map/+map? symbol? dstr/string?)
+      - (dc/of t/seq? namespace?)
+      - dc/map-of
+      - dc/seq-of
   - Analysis
     - Better analysis of compound literals
       - Literal vectors need to be analyzed — (t/finite-of t/built-in-vector? a-type b-type ...)
@@ -113,21 +126,11 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         (#?(:clj  clojure.core.protocols/coll-reduce
             :cljs cljs.core/-reduce) xs rf init))
     - (if (A) ...) should be (if ^boolean (A) ...) if A returns a `p/boolean?`
-  - t/- : fix
-    - (t/- (t/isa? java.util.Queue) (t/or ?!+queue? !!queue?))
-  - t/numerically : e.g. a double representing exactly what a float is able to represent
-    - and variants thereof: `numerically-long?` etc.
-    - t/numerically-integer?
   - We should not rely on the value of dynamic vars e.g. `*math-context*` unless specifically typed
     - We'll have to make a special class or *something* like that to ensure that typed bindings are only
       bound within typed contexts.
+  - `t/defn` declaration: `(t/defn >std-fixint > std-fixint?)`
   - t/extend-defn!
-  - dc/of
-    - (dc/of number?) ; implicitly the container is a `reducible?`
-    - (dc/of map/+map? symbol? dstr/string?)
-    - (dc/of t/seq? namespace?)
-    - dc/map-of
-    - dc/seq-of
   - t/defrecord
   - t/def-concrete-type (i.e. `t/deftype`)
   - expressions (`quantum.untyped.core.analyze.expr`)
@@ -181,8 +184,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [xs (t/fn [x (t/isa? clojure.lang.Range)] ...)]
   - No return value means that it should infer
 - NOTE on namespace organization:
-  - Conversion functions belong in the namespace that their destination types belong in, not in one
-    giant namespace of all conversion
+  - The initial definition of conversion functions belongs in the namespace that their destination
+    type belongs in, and it may be extended in every namespace in which there is a source type.
 - TODO transition the quantum.core.* namespaces:
   ->>>>>> TODO need to add *all* quantum namespaces in here
   - Legend:
