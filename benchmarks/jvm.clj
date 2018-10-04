@@ -1,20 +1,20 @@
 (ns quantum.test.benchmarks.jvm
   (:require
-    [quantum.core.macros.defnt
+    [criterium.core
+      :refer [bench quick-bench]]
+    #_[quantum.core.macros.defnt
       :refer [defnt defnt' defntp]]
-    [quantum.core.collections :as coll
-      :refer [reduce-pair]]
-    [quantum.core.meta.bench
-      :refer [bench complete-bench]]
     [quantum.untyped.core.form.type-hint
-      :refer [static-cast]])
+      :refer [static-cast]]
+    [quantum.untyped.core.reducers
+      :refer [reduce-pair]])
   (:import
     [quantum.core Numeric Fn]
     [quantum.core.data Array]
     [clojure.lang BigInt]
+    [it.unimi.dsi.fastutil.ints Int2ObjectOpenHashMap]
     [java.util Map HashMap IdentityHashMap]
-    [java.lang.invoke MethodHandle MethodHandles MethodType]
-  #_[cern.colt.map OpenIntObjectHashMap]))
+    [java.lang.invoke MethodHandle MethodHandles MethodType]))
 
 ; TODO try to use static methods instead of `invokevirtual` on the `reify`?
 
@@ -283,123 +283,66 @@
                                       ~(compile-hash Double)    (+*-static (double x#) (double y#))))))
 ; ===== LOOKUP MAP, IMMUTABLE ===== ;
 
+;; Could have done something like `(reify Primitive (invoke [^whatever0 x ^whatever1 y] ...))` but
+;; then when we went to call the retrieved fn we wouldn't know what input classes to call it with
 (defn gen-dispatch-map [create-map]
   (create-map
     Byte       (create-map
-                 Byte      (fn [x y] (+*-static (byte   x) (byte   y)))
-                 Character (fn [x y] (+*-static (byte   x) (char   y)))
-                 Short     (fn [x y] (+*-static (byte   x) (short  y)))
-                 Integer   (fn [x y] (+*-static (byte   x) (int    y)))
-                 Long      (fn [x y] (+*-static (byte   x) (long   y)))
-                 Float     (fn [x y] (+*-static (byte   x) (float  y)))
-                 Double    (fn [x y] (+*-static (byte   x) (double y))))
+                 Byte      (fn [x y] (Numeric/add (unchecked-byte   x) (unchecked-byte   y)))
+                 Character (fn [x y] (Numeric/add (unchecked-byte   x) (unchecked-char   y)))
+                 Short     (fn [x y] (Numeric/add (unchecked-byte   x) (unchecked-short  y)))
+                 Integer   (fn [x y] (Numeric/add (unchecked-byte   x) (unchecked-int    y)))
+                 Long      (fn [x y] (Numeric/add (unchecked-byte   x) (unchecked-long   y)))
+                 Float     (fn [x y] (Numeric/add (unchecked-byte   x) (unchecked-float  y)))
+                 Double    (fn [x y] (Numeric/add (unchecked-byte   x) (unchecked-double y))))
     Character  (create-map
-                 Byte      (fn [x y] (+*-static (char   x) (byte   y)))
-                 Character (fn [x y] (+*-static (char   x) (char   y)))
-                 Short     (fn [x y] (+*-static (char   x) (short  y)))
-                 Integer   (fn [x y] (+*-static (char   x) (int    y)))
-                 Long      (fn [x y] (+*-static (char   x) (long   y)))
-                 Float     (fn [x y] (+*-static (char   x) (float  y)))
-                 Double    (fn [x y] (+*-static (char   x) (double y))))
+                 Byte      (fn [x y] (Numeric/add (unchecked-char   x) (unchecked-byte   y)))
+                 Character (fn [x y] (Numeric/add (unchecked-char   x) (unchecked-char   y)))
+                 Short     (fn [x y] (Numeric/add (unchecked-char   x) (unchecked-short  y)))
+                 Integer   (fn [x y] (Numeric/add (unchecked-char   x) (unchecked-int    y)))
+                 Long      (fn [x y] (Numeric/add (unchecked-char   x) (unchecked-long   y)))
+                 Float     (fn [x y] (Numeric/add (unchecked-char   x) (unchecked-float  y)))
+                 Double    (fn [x y] (Numeric/add (unchecked-char   x) (unchecked-double y))))
     Short      (create-map
-                 Byte      (fn [x y] (+*-static (short  x) (byte   y)))
-                 Character (fn [x y] (+*-static (short  x) (char   y)))
-                 Short     (fn [x y] (+*-static (short  x) (short  y)))
-                 Integer   (fn [x y] (+*-static (short  x) (int    y)))
-                 Long      (fn [x y] (+*-static (short  x) (long   y)))
-                 Float     (fn [x y] (+*-static (short  x) (float  y)))
-                 Double    (fn [x y] (+*-static (short  x) (double y))))
+                 Byte      (fn [x y] (Numeric/add (unchecked-short  x) (unchecked-byte   y)))
+                 Character (fn [x y] (Numeric/add (unchecked-short  x) (unchecked-char   y)))
+                 Short     (fn [x y] (Numeric/add (unchecked-short  x) (unchecked-short  y)))
+                 Integer   (fn [x y] (Numeric/add (unchecked-short  x) (unchecked-int    y)))
+                 Long      (fn [x y] (Numeric/add (unchecked-short  x) (unchecked-long   y)))
+                 Float     (fn [x y] (Numeric/add (unchecked-short  x) (unchecked-float  y)))
+                 Double    (fn [x y] (Numeric/add (unchecked-short  x) (unchecked-double y))))
     Integer    (create-map
-                 Byte      (fn [x y] (+*-static (int    x) (byte   y)))
-                 Character (fn [x y] (+*-static (int    x) (char   y)))
-                 Short     (fn [x y] (+*-static (int    x) (short  y)))
-                 Integer   (fn [x y] (+*-static (int    x) (int    y)))
-                 Long      (fn [x y] (+*-static (int    x) (long   y)))
-                 Float     (fn [x y] (+*-static (int    x) (float  y)))
-                 Double    (fn [x y] (+*-static (int    x) (double y))))
+                 Byte      (fn [x y] (Numeric/add (unchecked-int    x) (unchecked-byte   y)))
+                 Character (fn [x y] (Numeric/add (unchecked-int    x) (unchecked-char   y)))
+                 Short     (fn [x y] (Numeric/add (unchecked-int    x) (unchecked-short  y)))
+                 Integer   (fn [x y] (Numeric/add (unchecked-int    x) (unchecked-int    y)))
+                 Long      (fn [x y] (Numeric/add (unchecked-int    x) (unchecked-long   y)))
+                 Float     (fn [x y] (Numeric/add (unchecked-int    x) (unchecked-float  y)))
+                 Double    (fn [x y] (Numeric/add (unchecked-int    x) (unchecked-double y))))
     Long       (create-map
-                 Byte      (fn [x y] (+*-static (long   x) (byte   y)))
-                 Character (fn [x y] (+*-static (long   x) (char   y)))
-                 Short     (fn [x y] (+*-static (long   x) (short  y)))
-                 Integer   (fn [x y] (+*-static (long   x) (int    y)))
-                 Long      (fn [x y] (+*-static (long   x) (long   y)))
-                 Float     (fn [x y] (+*-static (long   x) (float  y)))
-                 Double    (fn [x y] (+*-static (long   x) (double y))))
+                 Byte      (fn [x y] (Numeric/add (unchecked-long   x) (unchecked-byte   y)))
+                 Character (fn [x y] (Numeric/add (unchecked-long   x) (unchecked-char   y)))
+                 Short     (fn [x y] (Numeric/add (unchecked-long   x) (unchecked-short  y)))
+                 Integer   (fn [x y] (Numeric/add (unchecked-long   x) (unchecked-int    y)))
+                 Long      (fn [x y] (Numeric/add (unchecked-long   x) (unchecked-long   y)))
+                 Float     (fn [x y] (Numeric/add (unchecked-long   x) (unchecked-float  y)))
+                 Double    (fn [x y] (Numeric/add (unchecked-long   x) (unchecked-double y))))
     Float      (create-map
-                 Byte      (fn [x y] (+*-static (float  x) (byte   y)))
-                 Character (fn [x y] (+*-static (float  x) (char   y)))
-                 Short     (fn [x y] (+*-static (float  x) (short  y)))
-                 Integer   (fn [x y] (+*-static (float  x) (int    y)))
-                 Long      (fn [x y] (+*-static (float  x) (long   y)))
-                 Float     (fn [x y] (+*-static (float  x) (float  y)))
-                 Double    (fn [x y] (+*-static (float  x) (double y))))
+                 Byte      (fn [x y] (Numeric/add (unchecked-float  x) (unchecked-byte   y)))
+                 Character (fn [x y] (Numeric/add (unchecked-float  x) (unchecked-char   y)))
+                 Short     (fn [x y] (Numeric/add (unchecked-float  x) (unchecked-short  y)))
+                 Integer   (fn [x y] (Numeric/add (unchecked-float  x) (unchecked-int    y)))
+                 Long      (fn [x y] (Numeric/add (unchecked-float  x) (unchecked-long   y)))
+                 Float     (fn [x y] (Numeric/add (unchecked-float  x) (unchecked-float  y)))
+                 Double    (fn [x y] (Numeric/add (unchecked-float  x) (unchecked-double y))))
     Double     (create-map
-                 Byte      (fn [x y] (+*-static (double x) (byte   y)))
-                 Character (fn [x y] (+*-static (double x) (char   y)))
-                 Short     (fn [x y] (+*-static (double x) (short  y)))
-                 Integer   (fn [x y] (+*-static (double x) (int    y)))
-                 Long      (fn [x y] (+*-static (double x) (long   y)))
-                 Float     (fn [x y] (+*-static (double x) (float  y)))
-                 Double    (fn [x y] (+*-static (double x) (double y))))))
-
-(defn gen-inlined-dispatch-map [create-map]
-  (create-map
-    Byte       (create-map
-                 Byte      (fn [x y] (Numeric/add (byte   x) (byte   y)))
-                 Character (fn [x y] (Numeric/add (byte   x) (char   y)))
-                 Short     (fn [x y] (Numeric/add (byte   x) (short  y)))
-                 Integer   (fn [x y] (Numeric/add (byte   x) (int    y)))
-                 Long      (fn [x y] (Numeric/add (byte   x) (long   y)))
-                 Float     (fn [x y] (Numeric/add (byte   x) (float  y)))
-                 Double    (fn [x y] (Numeric/add (byte   x) (double y))))
-    Character  (create-map
-                 Byte      (fn [x y] (Numeric/add (char   x) (byte   y)))
-                 Character (fn [x y] (Numeric/add (char   x) (char   y)))
-                 Short     (fn [x y] (Numeric/add (char   x) (short  y)))
-                 Integer   (fn [x y] (Numeric/add (char   x) (int    y)))
-                 Long      (fn [x y] (Numeric/add (char   x) (long   y)))
-                 Float     (fn [x y] (Numeric/add (char   x) (float  y)))
-                 Double    (fn [x y] (Numeric/add (char   x) (double y))))
-    Short      (create-map
-                 Byte      (fn [x y] (Numeric/add (short  x) (byte   y)))
-                 Character (fn [x y] (Numeric/add (short  x) (char   y)))
-                 Short     (fn [x y] (Numeric/add (short  x) (short  y)))
-                 Integer   (fn [x y] (Numeric/add (short  x) (int    y)))
-                 Long      (fn [x y] (Numeric/add (short  x) (long   y)))
-                 Float     (fn [x y] (Numeric/add (short  x) (float  y)))
-                 Double    (fn [x y] (Numeric/add (short  x) (double y))))
-    Integer    (create-map
-                 Byte      (fn [x y] (Numeric/add (int    x) (byte   y)))
-                 Character (fn [x y] (Numeric/add (int    x) (char   y)))
-                 Short     (fn [x y] (Numeric/add (int    x) (short  y)))
-                 Integer   (fn [x y] (Numeric/add (int    x) (int    y)))
-                 Long      (fn [x y] (Numeric/add (int    x) (long   y)))
-                 Float     (fn [x y] (Numeric/add (int    x) (float  y)))
-                 Double    (fn [x y] (Numeric/add (int    x) (double y))))
-    Long       (create-map
-                 Byte      (fn [x y] (Numeric/add (long   x) (byte   y)))
-                 Character (fn [x y] (Numeric/add (long   x) (char   y)))
-                 Short     (fn [x y] (Numeric/add (long   x) (short  y)))
-                 Integer   (fn [x y] (Numeric/add (long   x) (int    y)))
-                 Long      (fn [x y] (Numeric/add (long   x) (long   y)))
-                 Float     (fn [x y] (Numeric/add (long   x) (float  y)))
-                 Double    (fn [x y] (Numeric/add (long   x) (double y))))
-    Float      (create-map
-                 Byte      (fn [x y] (Numeric/add (float  x) (byte   y)))
-                 Character (fn [x y] (Numeric/add (float  x) (char   y)))
-                 Short     (fn [x y] (Numeric/add (float  x) (short  y)))
-                 Integer   (fn [x y] (Numeric/add (float  x) (int    y)))
-                 Long      (fn [x y] (Numeric/add (float  x) (long   y)))
-                 Float     (fn [x y] (Numeric/add (float  x) (float  y)))
-                 Double    (fn [x y] (Numeric/add (float  x) (double y))))
-    Double     (create-map
-                 Byte      (fn [x y] (Numeric/add (double x) (byte   y)))
-                 Character (fn [x y] (Numeric/add (double x) (char   y)))
-                 Short     (fn [x y] (Numeric/add (double x) (short  y)))
-                 Integer   (fn [x y] (Numeric/add (double x) (int    y)))
-                 Long      (fn [x y] (Numeric/add (double x) (long   y)))
-                 Float     (fn [x y] (Numeric/add (double x) (float  y)))
-                 Double    (fn [x y] (Numeric/add (double x) (double y))))))
+                 Byte      (fn [x y] (Numeric/add (unchecked-double x) (unchecked-byte   y)))
+                 Character (fn [x y] (Numeric/add (unchecked-double x) (unchecked-char   y)))
+                 Short     (fn [x y] (Numeric/add (unchecked-double x) (unchecked-short  y)))
+                 Integer   (fn [x y] (Numeric/add (unchecked-double x) (unchecked-int    y)))
+                 Long      (fn [x y] (Numeric/add (unchecked-double x) (unchecked-long   y)))
+                 Float     (fn [x y] (Numeric/add (unchecked-double x) (unchecked-float  y)))
+                 Double    (fn [x y] (Numeric/add (unchecked-double x) (unchecked-double y))))))
 
 (def dispatch-map (gen-dispatch-map hash-map))
 
@@ -410,35 +353,53 @@
 
 ; ===== LOOKUP MAP, MUTABLE ===== ;
 
-(defn map!* [constructor & args]
-  (assert (-> args count even?))
-  (reduce-pair (fn [ret k v] (.put ^Map ret k v) ret) (constructor) args))
+(defn map!* [constructor & kvs]
+  (assert (-> kvs count even?))
+  (reduce-pair (fn [ret k v] (.put ^Map ret k v) ret) (constructor) kvs))
 
 (def hash-map! (partial map!* #(HashMap.)))
 
-(def ^HashMap dispatch-map-mutable (gen-dispatch-map hash-map!))
+(def ^HashMap !dispatch-map (gen-dispatch-map hash-map!))
 
-(defn dispatch-with-map-mutable [x y]
-  (let [f (some-> dispatch-map-mutable ^HashMap (.get (class x)) (.get (class y)))]
-    (assert (some? f))
-    (f x y)))
+(defn dispatch-with-!map [x y]
+  (if-some [a0 (.get !dispatch-map (clojure.lang.Util/classOf x))]
+    (if-some [a1 (.get ^HashMap a0 (clojure.lang.Util/classOf y))]
+      (.invoke ^clojure.lang.IFn a1 x y)
+      (throw (Exception. "Method not found")))
+    (throw (Exception. "Method not found"))))
 
 ; ===== LOOKUP MAP, IDENTITY MUTABLE ===== ;
 
 (def identity-hash-map! (partial map!* #(IdentityHashMap.)))
 
-(def ^IdentityHashMap dispatch-identity-map-mutable (gen-dispatch-map identity-hash-map!))
+(def ^IdentityHashMap !dispatch-identity-map (gen-dispatch-map identity-hash-map!))
 
-(defn dispatch-with-identity-map-mutable [x y]
-  (if-let [a0 (.get dispatch-identity-map-mutable (clojure.lang.Util/classOf x))]
-    (if-let [a1 (.get ^IdentityHashMap a0 (clojure.lang.Util/classOf y))]
-      (a1 x y)
+(defn dispatch-with-!identity-map [x y]
+  (if-some [a0 (.get !dispatch-identity-map (clojure.lang.Util/classOf x))]
+    (if-some [a1 (.get ^IdentityHashMap a0 (clojure.lang.Util/classOf y))]
+      (.invoke ^clojure.lang.IFn a1 x y)
       (throw (Exception. "Method not found")))
     (throw (Exception. "Method not found"))))
 
 ; ===== LOOKUP MAP, INT->OBJECT MUTABLE ===== ;
 
-; Colt's OpenIntObjectHashMap doesn't help here
+(defn >!int-map [& kvs]
+  (assert (-> kvs count even?))
+  (reduce-pair
+    (fn [ret k v] (.put ^Int2ObjectOpenHashMap ret (System/identityHashCode k) v) ret)
+    (Int2ObjectOpenHashMap.)
+    kvs))
+
+(def ^Int2ObjectOpenHashMap !dispatch-int-map (gen-dispatch-map >!int-map))
+
+(defn dispatch-with-!int-map [x y]
+  (if-some [a0 (.get !dispatch-int-map
+                     (-> x clojure.lang.Util/classOf System/identityHashCode))]
+    (if-some [a1 (.get ^Int2ObjectOpenHashMap a0
+                       (-> y clojure.lang.Util/classOf System/identityHashCode))]
+      (.invoke ^clojure.lang.IFn a1 x y)
+      (throw (Exception. "Method not found")))
+    (throw (Exception. "Method not found"))))
 
 ; ===== CUSTOMIZED (CLOJURE NUMERICS) ===== ;
 
@@ -456,11 +417,11 @@
   (.unreflect Fn/fnLookup (.getMethod (class +*-static-reified) "_PLUS__STAR_Static")))
 
 ; 13.650164 ns
-(complete-bench (do (Fn/invoke method-double-double +*-static-reified 1.0 3.0)
-                    #_(Fn/invoke method +*-static-reified 1   3  )))
+(bench (do (Fn/invoke method-double-double +*-static-reified 1.0 3.0)
+         #_(Fn/invoke method +*-static-reified 1   3  )))
 
-(complete-bench (do (Fn/invoke method +*-static-reified 1.0 3.0)
-                    #_(Fn/invoke method +*-static-reified 1   3  )))
+(bench (do (Fn/invoke method +*-static-reified 1.0 3.0)
+         #_(Fn/invoke method +*-static-reified 1   3  )))
 
 ; ===== BENCHMARKS ===== ;
 
@@ -468,74 +429,78 @@
 ; It's more fair to benchmark this way.
 ; Also, all benchmarks were run multiple times to ensure complete and utter JVM warmup.
 
-; 4.911254 ns
-(complete-bench (do (+ 1.0 3.0)
-                    (+ 1   3  )))
+; 4.911254 ns (2.983740 ns new computer)
+(bench (do (+ 1.0 3.0)
+           (+ 1   3  )))
 ; Same time
-(complete-bench (do (Numeric/add 1.0 3.0)
-                    (Numeric/add 1   3  )))
+(bench (do (Numeric/add 1.0 3.0)
+           (Numeric/add 1   3  )))
 
 ; 5.970614 ns
 ; May currently have slightly worse performance since it isn't inlined, and is an instance instead of a static method
 (let [^quantum.test.benchmarks.jvm._PLUS__STAR_StaticInterface
         +*-static-reified-direct @#'+*-static-reified] ; to get rid of var indirection, which can't be optimized away by the JVM because is marked as `volatile`
-  (complete-bench (do (. +*-static-reified-direct _PLUS__STAR_Static 1.0 3.0)
+  (bench (do (. +*-static-reified-direct _PLUS__STAR_Static 1.0 3.0)
                       (. +*-static-reified-direct _PLUS__STAR_Static 1   3  ))))
 
 ; 6.361026 ns
 ; May currently have slightly worse performance since it isn't inlined, and is an instance instead of a static method
-(complete-bench (do (+*-static 1.0 3.0)
-                    (+*-static 1   3  )))
+(bench (do (+*-static 1.0 3.0)
+           (+*-static 1   3  )))
 
-; 22.369795 ns (4.55x)
-(complete-bench (do (argtypes-unknown 1.0 3.0)
-                    (argtypes-unknown 1   3  )))
+; 14.300336 ns new computer, 4.79x
+(bench (do (dispatch-with-!int-map 1.0 3.0)
+           (dispatch-with-!int-map 1   3  )))
+
+; 22.369795 ns (4.55x) (18.556532 ns new computer)
+(bench (do (argtypes-unknown 1.0 3.0)
+           (argtypes-unknown 1   3  )))
 
 ; 30.778042 ns (6.27x) (on first run is 23.467812 ns, 4.78x)
-(complete-bench (do (Fn/dispatch2 dispatch-identity-map-mutable 1.0 3.0)
-                    (Fn/dispatch2 dispatch-identity-map-mutable 1   3  )))
+(bench (do (Fn/dispatch2 !dispatch-identity-map 1.0 3.0)
+           (Fn/dispatch2 !dispatch-identity-map 1   3  )))
 
 ; 34.343497 ns
-#_(complete-bench (do (Fn/dispatch2 dispatch-map-mutable 1.0 3.0)
-                    (Fn/dispatch2 dispatch-map-mutable 1   3  )))
+#_(bench (do (Fn/dispatch2 !dispatch-map 1.0 3.0)
+             (Fn/dispatch2 !dispatch-map 1   3  )))
 
 ; 37.636059 ns (7.66x)
-(complete-bench (do (case-hash-dispatch 1.0 3.0)
-                    (case-hash-dispatch 1   3  )))
+(bench (do (case-hash-dispatch 1.0 3.0)
+           (case-hash-dispatch 1   3  )))
 
 ; 38.843166 ns
-(complete-bench (do (case-string-dispatch 1.0 3.0)
-                    (case-string-dispatch 1   3  )))
+(bench (do (case-string-dispatch 1.0 3.0)
+           (case-string-dispatch 1   3  )))
 
 ; 51.184897 ns (10.42x) (on first run is 33.707466 ns, 6.86x)
-(complete-bench (do (+*-protocol-0 1.0 3.0)
-                    (+*-protocol-0 1   3  )))
+(bench (do (+*-protocol-0 1.0 3.0)
+           (+*-protocol-0 1   3  )))
 
-; 40.611242 ns
-(complete-bench (do (dispatch-with-identity-map-mutable 1.0 3.0)
-                    (dispatch-with-identity-map-mutable 1   3  )))
+; 40.611242 ns (15.944187 ns new computer)
+(bench (do (dispatch-with-!identity-map 1.0 3.0)
+           (dispatch-with-!identity-map 1   3  )))
 
-; 42.714549 ns
-(complete-bench (do (dispatch-with-map-mutable 1.0 3.0)
-                    (dispatch-with-map-mutable 1   3  )))
+; 42.714549 ns (19.076145 ns new computer)
+(bench (do (dispatch-with-!map 1.0 3.0)
+           (dispatch-with-!map 1   3  )))
 
 ; 48.844710 ns
-(complete-bench (do (dispatch 1.0 3.0)
-                    (dispatch 1   3  )))
+(bench (do (dispatch 1.0 3.0)
+           (dispatch 1   3  )))
 
 ; 79.343540 ns
-#_(complete-bench (do (dispatch-with-int->object-map-mutable 1.0 3.0)
+#_(bench (do (dispatch-with-int->object-map-mutable 1.0 3.0)
                     (dispatch-with-int->object-map-mutable 1   3  )))
 
 ; 188.686935 ns
-(complete-bench (.invokeWithArguments method (Array/newObjectArray +*-static-reified 1.0 3.0)))
+(bench (.invokeWithArguments method (Array/newObjectArray +*-static-reified 1.0 3.0)))
 
 ; 212.066270 ns
-(complete-bench (do (dispatch-with-map 1.0 3.0)
-                    (dispatch-with-map 1   3  )))
+(bench (do (dispatch-with-map 1.0 3.0)
+           (dispatch-with-map 1   3  )))
 
 ; Didn't even complete
-(complete-bench
+(bench
   (Fn/invoke (.findVirtual Fn/fnLookup
                            (compile-time-class +*-static-boxed-reified)
                            "_PLUS__STAR_StaticBoxed"
@@ -564,37 +529,107 @@
 
 ; 5.580126 ns
 (let [v [1 2 3 4 5]]
-  (complete-bench (.get v 3)))
+  (bench (.get v 3)))
 
 ; 7.644827 ns ; will be same as direct dispatch when inlined
 (let [v [1 2 3 4 5]]
-  (complete-bench (quantum.core.collections.core/get v 3)))
+  (bench (quantum.core.collections.core/get v 3)))
 
 ; 10.542661 ns
 (let [v [1 2 3 4 5]]
-  (complete-bench (clojure.core/get v 3)))
+  (bench (clojure.core/get v 3)))
 
 ; 10.686585 ns ; because it's on the fast track
 (let [v [1 2 3 4 5]]
-  (complete-bench (quantum.core.collections.core/get-protocol v 3)))
+  (bench (quantum.core.collections.core/get-protocol v 3)))
 
 
 ; 7.438636 ns
 (let [v (long-array [1 2 3 4 5])]
-  (complete-bench (clojure.core/aget v 3)))
+  (bench (clojure.core/aget v 3)))
 
 ; 7.649213 ns — statistically equivalent
 (let [v (long-array [1 2 3 4 5])]
-  (complete-bench (quantum.core.data.Array/get v 3)))
+  (bench (quantum.core.data.Array/get v 3)))
 
 ; 8.691139 ns
 (let [v (long-array [1 2 3 4 5])]
-  (complete-bench (quantum.core.collections.core/get v 3)))
+  (bench (quantum.core.collections.core/get v 3)))
 
 ; 15.832480 ns ; good performance, but not on the fast track
 (let [v (long-array [1 2 3 4 5])]
-  (complete-bench (quantum.core.collections.core/get-protocol v 3)))
+  (bench (quantum.core.collections.core/get-protocol v 3)))
 
 ; 53.855997 ns ; semi-reflection going on here
 (let [v (long-array [1 2 3 4 5])]
-  (complete-bench (clojure.core/get v 3)))
+  (bench (clojure.core/get v 3)))
+
+;; =================================================================================================
+;; Memory strategies: off-heap vs. on-heap
+;;
+;; Key takeaways:
+;; - Perhaps in the small, there isn't much difference
+;;   - That said, off-heap allocation is an order of magnitude more expensive than on-heap
+;; - The real advantages of off-heap are:
+;;   - Cache locality / memory contiguity
+;;   - GC-lessness and thus GC-pauselessness
+
+(def ^sun.misc.Unsafe unsafe
+  (-> (.getDeclaredField sun.misc.Unsafe "theUnsafe")
+      (doto (.setAccessible true))
+      (.get nil)))
+
+;; allocating one byte of off-heap memory: avg 90.23 ns
+;; NOTE: This benchmark will allocate a lot of memory that won't be reclaimed till process killed
+;; In one case with 161031248 calls it allocated 161031248/1024/1024 -> 154 MB
+(let [^sun.misc.Unsafe u unsafe]
+  (bench (do (.allocateMemory u 1)
+             (.allocateMemory u 1)
+             (.allocateMemory u 1)
+             (.allocateMemory u 1)
+             (.allocateMemory u 1))))
+
+;; allocating one byte of heap memory: avg 0.698 ns (or less depending on bench overhead)
+(bench (do (Array/newUninitialized1dByteArray 1)
+           (Array/newUninitialized1dByteArray 1)
+           (Array/newUninitialized1dByteArray 1)
+           (Array/newUninitialized1dByteArray 1)
+           (Array/newUninitialized1dByteArray 1)))
+
+;; writing one byte of off-heap memory: avg 0.636 ns (or less depending on bench overhead)
+(let [^sun.misc.Unsafe u unsafe
+      pointer (.allocateMemory u 1)
+      b (byte 1)]
+  (bench (.putByte u pointer b)
+         (.putByte u pointer b)
+         (.putByte u pointer b)
+         (.putByte u pointer b)
+         (.putByte u pointer b)))
+
+;; writing one byte of on-heap memory: avg 0.6698 ns (or less depending on bench overhead)
+(let [bs (Array/newUninitialized1dByteArray 1)
+      b (byte 1)
+      i (int 0)]
+  (bench (Array/set bs b i)
+         (Array/set bs b i)
+         (Array/set bs b i)
+         (Array/set bs b i)
+         (Array/set bs b i)))
+
+;; accessing one byte of off-heap memory: 0.7052 ns (or less depending on bench overhead)
+(let [^sun.misc.Unsafe u unsafe
+      pointer (.allocateMemory u 1)]
+  (bench (do (.getByte u pointer)
+             (.getByte u pointer)
+             (.getByte u pointer)
+             (.getByte u pointer)
+             (.getByte u pointer))))
+
+;; accessing one byte of on-heap memory: 0.7302 ns (or less depending on bench overhead)
+(let [bs (Array/newUninitialized1dByteArray 1)
+      i (int 0)]
+  (bench (do (Array/get bs i)
+             (Array/get bs i)
+             (Array/get bs i)
+             (Array/get bs i)
+             (Array/get bs i))))
