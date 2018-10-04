@@ -4,6 +4,7 @@
          [string?])
        (:require
          [quantum.core.data.meta      :as meta]
+         [quantum.core.data.numeric   :as num]
          [quantum.core.data.primitive :as p]
          [quantum.core.type           :as t]
          ;; TODO TYPED excise
@@ -141,6 +142,77 @@
              (if more
                  (recur (.append sb (str (first more))) (next more))
                  (>string sb)))))
+
+;; TODO TYPED add t/fn
+(def radix?
+  (t/fn [x integer?]
+    (comp/<= #?(:clj Character/MIN_RADIX :cljs 2) x #?(:clj Character/MAX_RADIX :cljs 36))))
+
+(t/extend-defn! p/>boolean
+  ([x (t/value "true")] true)
+  ([x (t/value "false")] false))
+
+(t/extend-defn! p/>byte
+  ([x string?]
+    #?(:clj  (Byte/parseByte x)
+              ;; NOTE could use `js/parseInt` but it's very 'unsafe'
+              ;; TODO implement based on `Byte/parseByte`
+       :cljs (throw (ex-info "Parsing not implemented" {:string x}))))
+  ([x string?, radix radix?]
+    #?(:clj  (Byte/parseByte x (>int radix))
+             ;; NOTE could use `js/parseInt` but it's very 'unsafe'
+             ;; TODO implement based on `Byte/parseByte`
+       :cljs (throw (ex-info "Parsing not implemented" {:string x})))))
+
+(t/extend-defn! p/>short
+  ([x string?]
+    #?(:clj  (Short/parseShort x)
+              ;; NOTE could use `js/parseInt` but it's very 'unsafe'
+              ;; TODO implement based on `Short/parseShort`
+       :cljs (throw (ex-info "Parsing not implemented" {:string x}))))
+  ([x string?, radix radix?]
+    #?(:clj  (Short/parseShort x (>int radix))
+             ;; NOTE could use `js/parseInt` but it's very 'unsafe'
+             ;; TODO implement based on `Short/parseShort`
+       :cljs (throw (ex-info "Parsing not implemented" {:string x})))))
+
+(t/extend-defn! p/>int
+  ([x string?]
+    #?(:clj  (Integer/parseInteger x)
+             ;; NOTE could use `js/parseInt` but it's very 'unsafe'
+             ;; TODO implement based on `Integer/parseInteger`
+       :cljs (throw (ex-info "Parsing not implemented" {:string x}))))
+  ([x string?, radix radix?]
+    #?(:clj  (Integer/parseInteger x (p/>int radix))
+             ;; NOTE could use `js/parseInt` but it's very 'unsafe'
+             ;; TODO implement based on `Integer/parseInteger`
+       :cljs (throw (ex-info "Parsing not implemented" {:string x})))))
+
+(t/extend-defn! p/>long
+  ([x string?]
+    #?(:clj  (Long/parseLong x)
+              ;; NOTE could use `js/parseInt` but it's very 'unsafe'
+              ;; TODO implement based on `Long/parseLong`
+       :cljs (throw (ex-info "Parsing not implemented" {:string x}))))
+  ([x string?, radix radix?]
+    #?(:clj  (Long/parseLong x (>int radix))
+             ;; NOTE could use `js/parseInt` but it's very 'unsafe'
+             ;; TODO implement based on `Long/parseLong`
+       :cljs (throw (ex-info "Parsing not implemented" {:string x})))))
+
+(t/extend-defn! p/>float
+  ([x string?]
+    #?(:clj  (Float/parseFloat x)
+              ;; NOTE could use `js/parseFloat` but it's very 'unsafe'
+              ;; TODO implement based on `Float/parseFloat`
+       :cljs (throw (ex-info "Parsing not implemented" {:string x})))))
+
+(t/extend-defn! p/>double
+  ([x string?]
+    #?(:clj  (Double/parseDouble x)
+             ;; NOTE could use `js/parseFloat` but it's very 'unsafe'
+             ;; TODO implement based on `Double/parseDouble`
+       :cljs (throw (ex-info "Parsing not implemented" {:string x})))))
 
 ;; ----- Metable immutable strings ----- ;;
 
