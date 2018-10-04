@@ -1,5 +1,11 @@
 (ns quantum.core.data.bits
-  "Useful bit/binary operations."
+  "Useful bit/binary operations.
+
+   Note that bitwise operators on CLJS doubles behave differently than on CLJ doubles: the bitwise
+   operators `<<`, `>>`, `&`, `|` and `~` are defined in terms of operations on 32-bit integers.
+   Doing a bitwise operation converts the number to a 32-bit signed int, losing any fractions and
+   higher-place bits than 32, before doing the calculation and then converting back to Number."
+  {:todo #{"Port http://graphics.stanford.edu/~seander/bithacks.html"}}
         (:refer-clojure :exclude
           [and conj contains? empty not or])
         (:require
@@ -13,8 +19,32 @@
 #?(:clj (:import
           [quantum.core Numeric])))
 
+;; TODO make sure that for all bit ops here, there's a checked and unchecked version Because
+;; currently the CLJS version just truncates the input without warning
+
 (def bit-false 0)
 (def bit-true  1)
+
+;; ===== Decremented bit sizes of types ===== ;;
+;; For bit-manipulation purposes
+
+(var/def dec-boolean-bits (core/dec p/boolean-bits))
+(var/def dec-byte-bits    (core/dec p/byte-bits)))
+(var/def dec-short-bits   (core/dec p/short-bits)))
+(var/def dec-int-bits     (core/dec p/int-bits)))
+(var/def dec-long-bits    (core/dec p/long-bits)))
+(var/def dec-float-bits   (core/dec p/float-bits)))
+(var/def dec-double-bits  (core/dec p/double-bits)))
+
+(t/defn ^:inline dec-bits-of
+  "For bit manipulation purposes"
+        ([x p/boolean?] dec-boolean-bits)
+#?(:clj ([x p/byte?]    dec-byte-bits))
+#?(:clj ([x p/short?]   dec-short-bits))
+#?(:clj ([x p/int?]     dec-int-bits))
+#?(:clj ([x p/long?]    dec-long-bits))
+#?(:clj ([x p/float?]   dec-float-bits))
+        ([x p/double?]  dec-double-bits))
 
 ;; ===== Logical bit-operations ===== ;;
 ;; NOTE: we won't be supporting `and-not`
@@ -32,7 +62,7 @@
              ([x p/float?   > p/float?]   (Numeric/bitNot x))
              ([x p/double?  > p/double?]  (Numeric/bitNot x))]
       :cljs [([x p/boolean? > p/boolean?] (if x false true))
-             ([x p/double?  > p/double?]  (core/bit-not x))]))
+             ([x p/double?  > (t/assume numerically-int?)] (core/bit-not x))]))
 
 ;; TODO make variadic
 ;; TODO TYPED we can shorten this by having dependent types
@@ -72,7 +102,8 @@
            ([a p/float?  , b (t/or p/long? p/double?)      > p/double?]  (Numeric/bitAnd a b))
            ([a p/double? , b (t/- p/primitive? p/boolean?) > p/double?]  (Numeric/bitAnd a b))]
     :cljs [([a p/boolean?, b p/boolean?                    > p/boolean?] (core/and a b))
-           ([a p/double? , b p/double?                     > p/double?]  (core/bit-and a b))]))
+           ([a p/double? , b p/double?                     > (t/assume numerically-int?)]
+             (core/bit-and a b))]))
 
 ;; TODO make variadic
 ;; TODO TYPED we can shorten this by having dependent types
@@ -112,7 +143,8 @@
            ([a p/float?  , b (t/or p/long? p/double?)      > p/double?]  (Numeric/bitOr a b))
            ([a p/double? , b (t/- p/primitive? p/boolean?) > p/double?]  (Numeric/bitOr a b))]
     :cljs [([a p/boolean?, b p/boolean?                    > p/boolean?] (core/or a b))
-           ([a p/double? , b p/double?                     > p/double?]  (core/bit-or a b))]))
+           ([a p/double? , b p/double?                     > (t/assume numerically-int?)]
+             (core/bit-or a b))]))
 
 ;; TODO make variadic
 ;; TODO TYPED we can shorten this by having dependent types
@@ -152,7 +184,8 @@
            ([a p/float?  , b (t/or p/long? p/double?)      > p/double?]  (Numeric/bitXOr a b))
            ([a p/double? , b (t/- p/primitive? p/boolean?) > p/double?]  (Numeric/bitXOr a b))]
     :cljs [([a p/boolean?, b p/boolean?                    > p/boolean?] (js* "(~{} !=== ~{})" a b))
-           ([a p/double? , b p/double?                     > p/double?]  (core/bit-xor a b))]))
+           ([a p/double? , b p/double?                     > (t/assume numerically-int?)]
+             (core/bit-xor a b))]))
 
 ;; ===== Bit-shifts ===== ;;
 
@@ -164,29 +197,29 @@
   "Unsigned (logical) bitwise shift left"
 #?@(:clj  [#_([x (t/- p/primitive? t/boolean?), n p/integral? > (t/type x)]
                (Numeric/bitOr x n))
-           ([x p/byte?  , n p/integral?            > p/byte?]   (Numeric/shiftLeft x n))
-           ([x p/short? , n p/integral?            > p/short?]  (Numeric/shiftLeft x n))
+           ([x p/byte?  , n p/integral? > p/byte?]   (Numeric/shiftLeft x n))
+           ([x p/short? , n p/integral? > p/short?]  (Numeric/shiftLeft x n))
            ;; TODO implement this correctly because it likely isn't correct just to do `<<` in Java
          #_([x p/char?  , n p/integral?            > p/char?]   (Numeric/shiftLeft x n))
-           ([x p/int?   , n p/integral?            > p/int?]    (Numeric/shiftLeft x n))
-           ([x p/long?  , n p/integral?            > p/long?]   (Numeric/shiftLeft x n))
-           ([x p/float? , n p/integral?            > p/float?]  (Numeric/shiftLeft x n))
-           ([x p/double?, n p/integral?            > p/double?] (Numeric/shiftLeft x n))]
-    :cljs [([x p/double?, n t/numerically-integer? > p/double?] (core/bit-shift-left x n))]))
+           ([x p/int?   , n p/integral? > p/int?]    (Numeric/shiftLeft x n))
+           ([x p/long?  , n p/integral? > p/long?]   (Numeric/shiftLeft x n))
+           ([x p/float? , n p/integral? > p/float?]  (Numeric/shiftLeft x n))
+           ([x p/double?, n p/integral? > p/double?] (Numeric/shiftLeft x n))]
+    :cljs [([x p/double?, n std-fixint? > (t/assume numerically-int?)] (core/bit-shift-left x n))]))
 
 ;; TODO TYPED we can shorten this by having dependent types
 (defnt ^:inline >>>
   "Unsigned (logical) bitwise shift right"
 #?@(:clj  [#_([x (t/- p/primitive? t/boolean?), n p/integral? > (t/type x)]
                (Numeric/bitOr a b))
-           ([x p/byte?  , n p/integral?            > p/byte?]   (Numeric/uShiftRight x n))
-           ([x p/short? , n p/integral?            > p/short?]  (Numeric/uShiftRight x n))
-           ([x p/char?  , n p/integral?            > p/char?]   (Numeric/uShiftRight x n))
-           ([x p/int?   , n p/integral?            > p/int?]    (Numeric/uShiftRight x n))
-           ([x p/long?  , n p/integral?            > p/long?]   (Numeric/uShiftRight x n))
-           ([x p/float? , n p/integral?            > p/float?]  (Numeric/uShiftRight x n))
-           ([x p/double?, n p/integral?            > p/double?] (Numeric/uShiftRight x n))]
-    :cljs [([x p/double?, n t/numerically-integer? > p/double?]
+           ([x p/byte?  , n p/integral? > p/byte?]   (Numeric/uShiftRight x n))
+           ([x p/short? , n p/integral? > p/short?]  (Numeric/uShiftRight x n))
+           ([x p/char?  , n p/integral? > p/char?]   (Numeric/uShiftRight x n))
+           ([x p/int?   , n p/integral? > p/int?]    (Numeric/uShiftRight x n))
+           ([x p/long?  , n p/integral? > p/long?]   (Numeric/uShiftRight x n))
+           ([x p/float? , n p/integral? > p/float?]  (Numeric/uShiftRight x n))
+           ([x p/double?, n p/integral? > p/double?] (Numeric/uShiftRight x n))]
+    :cljs [([x p/double?, n std-fixint? > (t/assume numerically-int?)]
              (core/unsigned-bit-shift-right x n))]))
 
 ;; ----- Arithmetic bit-shifts ----- ;;
@@ -196,28 +229,29 @@
   "Arithmetic bitwise shift left"
 #?@(:clj  [#_([x (t/- p/primitive? t/boolean?), n p/integral? > (t/type x)]
                (Numeric/bitOr a b))
-           ([x p/byte?  , n p/integral?            > p/byte?]   (Numeric/shiftLeft x n))
-           ([x p/short? , n p/integral?            > p/short?]  (Numeric/shiftLeft x n))
-           ([x p/char?  , n p/integral?            > p/char?]   (Numeric/shiftLeft x n))
-           ([x p/int?   , n p/integral?            > p/int?]    (Numeric/shiftLeft x n))
-           ([x p/long?  , n p/integral?            > p/long?]   (Numeric/shiftLeft x n))
-           ([x p/float? , n p/integral?            > p/float?]  (Numeric/shiftLeft x n))
-           ([x p/double?, n p/integral?            > p/double?] (Numeric/shiftLeft x n))]
-    :cljs [([x p/double?, n t/numerically-integer? > p/double?] (core/bit-shift-left x n))]))
+           ([x p/byte?  , n p/integral? > p/byte?]   (Numeric/shiftLeft x n))
+           ([x p/short? , n p/integral? > p/short?]  (Numeric/shiftLeft x n))
+           ([x p/char?  , n p/integral? > p/char?]   (Numeric/shiftLeft x n))
+           ([x p/int?   , n p/integral? > p/int?]    (Numeric/shiftLeft x n))
+           ([x p/long?  , n p/integral? > p/long?]   (Numeric/shiftLeft x n))
+           ([x p/float? , n p/integral? > p/float?]  (Numeric/shiftLeft x n))
+           ([x p/double?, n p/integral? > p/double?] (Numeric/shiftLeft x n))]
+    :cljs [([x p/double?, n std-fixint? > (t/assume numerically-int?)] (core/bit-shift-left x n))]))
 
 ;; TODO TYPED we can shorten this by having dependent types
 (defnt ^:inline >>
   "Arithmetic bitwise shift right"
 #?@(:clj  [#_([x (t/- p/primitive? t/boolean?), n p/integral? > (t/type x)]
                (Numeric/bitOr a b))
-           ([x p/byte?  , n p/integral?            > p/byte?]   (Numeric/shiftRight x n))
-           ([x p/short? , n p/integral?            > p/short?]  (Numeric/shiftRight x n))
-           ([x p/char?  , n p/integral?            > p/char?]   (Numeric/shiftRight x n))
-           ([x p/int?   , n p/integral?            > p/int?]    (Numeric/shiftRight x n))
-           ([x p/long?  , n p/integral?            > p/long?]   (Numeric/shiftRight x n))
-           ([x p/float? , n p/integral?            > p/float?]  (Numeric/shiftRight x n))
-           ([x p/double?, n p/integral?            > p/double?] (Numeric/shiftRight x n))]
-    :cljs [([x p/double?, n t/numerically-integer? > p/double?] (core/bit-shift-right x n))]))
+           ([x p/byte?  , n p/integral? > p/byte?]   (Numeric/shiftRight x n))
+           ([x p/short? , n p/integral? > p/short?]  (Numeric/shiftRight x n))
+           ([x p/char?  , n p/integral? > p/char?]   (Numeric/shiftRight x n))
+           ([x p/int?   , n p/integral? > p/int?]    (Numeric/shiftRight x n))
+           ([x p/long?  , n p/integral? > p/long?]   (Numeric/shiftRight x n))
+           ([x p/float? , n p/integral? > p/float?]  (Numeric/shiftRight x n))
+           ([x p/double?, n p/integral? > p/double?] (Numeric/shiftRight x n))]
+    :cljs [([x p/double?, n std-fixint? > (t/assume numerically-int?)]
+             (core/bit-shift-right x n))]))
 
 ;; ===== Single-bit operations ===== ;;
 
@@ -230,14 +264,14 @@
    Equivalent to `clojure.core/bit-clear`."
   {:todo #{"Extend index to non-longs"}}
 #?@(:clj  [#_([x (t/- p/primitive? t/boolean?), i p/long? > (t/type x)] (Numeric/bitClear x i))
-           ([x p/byte?  , i p/long?                > p/byte?]   (Numeric/bitClear x i))
-           ([x p/short? , i p/long?                > p/short?]  (Numeric/bitClear x i))
-           ([x p/char?  , i p/long?                > p/char?]   (Numeric/bitClear x i))
-           ([x p/int?   , i p/long?                > p/int?]    (Numeric/bitClear x i))
-           ([x p/long?  , i p/long?                > p/long?]   (Numeric/bitClear x i))
-           ([x p/float? , i p/long?                > p/float?]  (Numeric/bitClear x i))
-           ([x p/double?, i p/long?                > p/double?] (Numeric/bitClear x i))]
-    :cljs [([x p/double?, i t/numerically-integer? > p/double?] (core/bit-clear x i))]))
+           ([x p/byte?  , i p/long?     > p/byte?]   (Numeric/bitClear x i))
+           ([x p/short? , i p/long?     > p/short?]  (Numeric/bitClear x i))
+           ([x p/char?  , i p/long?     > p/char?]   (Numeric/bitClear x i))
+           ([x p/int?   , i p/long?     > p/int?]    (Numeric/bitClear x i))
+           ([x p/long?  , i p/long?     > p/long?]   (Numeric/bitClear x i))
+           ([x p/float? , i p/long?     > p/float?]  (Numeric/bitClear x i))
+           ([x p/double?, i p/long?     > p/double?] (Numeric/bitClear x i))]
+    :cljs [([x p/double?, i std-fixint? > (t/assume numerically-int?)] (core/bit-clear x i))]))
 
 ;; TODO TYPED we can shorten this by having dependent types
 (defnt ^:inline bit-set-true*
@@ -246,14 +280,14 @@
    Equivalent to `clojure.core/bit-set`."
   {:todo #{"Extend index to non-longs"}}
 #?@(:clj  [#_([x (t/- p/primitive? t/boolean?), i p/long? > (t/type x)] (Numeric/bitSet x i))
-           ([x p/byte?  , i p/long?                > p/byte?]   (Numeric/bitSet x i))
-           ([x p/short? , i p/long?                > p/short?]  (Numeric/bitSet x i))
-           ([x p/char?  , i p/long?                > p/char?]   (Numeric/bitSet x i))
-           ([x p/int?   , i p/long?                > p/int?]    (Numeric/bitSet x i))
-           ([x p/long?  , i p/long?                > p/long?]   (Numeric/bitSet x i))
-           ([x p/float? , i p/long?                > p/float?]  (Numeric/bitSet x i))
-           ([x p/double?, i p/long?                > p/double?] (Numeric/bitSet x i))]
-    :cljs [([x p/double?, i t/numerically-integer? > p/double?] (core/bit-set x i))]))
+           ([x p/byte?  , i p/long?     > p/byte?]   (Numeric/bitSet x i))
+           ([x p/short? , i p/long?     > p/short?]  (Numeric/bitSet x i))
+           ([x p/char?  , i p/long?     > p/char?]   (Numeric/bitSet x i))
+           ([x p/int?   , i p/long?     > p/int?]    (Numeric/bitSet x i))
+           ([x p/long?  , i p/long?     > p/long?]   (Numeric/bitSet x i))
+           ([x p/float? , i p/long?     > p/float?]  (Numeric/bitSet x i))
+           ([x p/double?, i p/long?     > p/double?] (Numeric/bitSet x i))]
+    :cljs [([x p/double?, i std/fixint? > (t/assume numerically-int?)] (core/bit-set x i))]))
 
 ;; TODO TYPED we can shorten this by having dependent types
 (defnt ^:inline bit-not*
@@ -262,22 +296,23 @@
    Equivalent to `clojure.core/bit-flip`."
   {:todo #{"Extend index to non-longs"}}
 #?@(:clj  [#_([x (t/- p/primitive? t/boolean?), i p/long? > (t/type x)] (Numeric/bitFlip x i))
-           ([x p/byte?  , i p/long?                > p/byte?]   (Numeric/bitFlip x i))
-           ([x p/short? , i p/long?                > p/short?]  (Numeric/bitFlip x i))
-           ([x p/char?  , i p/long?                > p/char?]   (Numeric/bitFlip x i))
-           ([x p/int?   , i p/long?                > p/int?]    (Numeric/bitFlip x i))
-           ([x p/long?  , i p/long?                > p/long?]   (Numeric/bitFlip x i))
-           ([x p/float? , i p/long?                > p/float?]  (Numeric/bitFlip x i))
-           ([x p/double?, i p/long?                > p/double?] (Numeric/bitFlip x i))]
-    :cljs [([x p/double?, i t/numerically-integer? > p/double?] (core/bit-flip x i))]))
+           ([x p/byte?  , i p/long?     > p/byte?]   (Numeric/bitFlip x i))
+           ([x p/short? , i p/long?     > p/short?]  (Numeric/bitFlip x i))
+           ([x p/char?  , i p/long?     > p/char?]   (Numeric/bitFlip x i))
+           ([x p/int?   , i p/long?     > p/int?]    (Numeric/bitFlip x i))
+           ([x p/long?  , i p/long?     > p/long?]   (Numeric/bitFlip x i))
+           ([x p/float? , i p/long?     > p/float?]  (Numeric/bitFlip x i))
+           ([x p/double?, i p/long?     > p/double?] (Numeric/bitFlip x i))]
+    :cljs [([x p/double?, i std-fixint? > (t/assume numerically-int?)]
+             (core/bit-flip x i))]))
 
 (defnt ^:inline bit-true?*
   "Outputs whether the bit at the provided index ->`i` is `bit-true`.
    Unchecked w.r.t. the bit index.
    Equivalent to `clojure.core/bit-test`."
   {:todo #{"Extend index to non-longs"}}
-#?(:clj  ([x (t/- p/primitive? p/boolean?), i p/long? > p/boolean?] (Numeric/bitTest x i))
-   :cljs ([x p/double?, i t/numerically-integer? > p/boolean?] (core/bit-test x i))))
+#?(:clj  ([x (t/- p/primitive? p/boolean?), i p/long?     > p/boolean?] (Numeric/bitTest x i))
+   :cljs ([x p/double?                    , i std-fixint? > p/boolean?] (core/bit-test x i))))
 
 (defalias ? test*)
 

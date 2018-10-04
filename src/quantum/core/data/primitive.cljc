@@ -108,6 +108,16 @@
   ([x (t/ref float?)   > float?]   (.floatValue   x))
   ([x (t/ref double?)  > double?]  (.doubleValue  x))))
 
+;; ===== Bit lengths ===== ;;
+
+(var/def boolean-bits "Implementationally might not be bit-manipulable but logically 1 bit" 1)
+(def byte-bits   8)
+(def short-bits  16)
+(def int-bits    32)
+(def long-bits   64)
+(def float-bits  32)
+(def double-bits 64)
+
 ;; ===== Extreme magnitudes and values ===== ;;
 
 (t/defn ^:inline >min-magnitude
