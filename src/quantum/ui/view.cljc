@@ -1,35 +1,41 @@
-(ns quantum.ui.view)
+(ns quantum.ui.view
+  (:require
+    [quantum.core.vars
+      :refer [def-]]))
+
+#?(:cljs
+(defn full-screen? []
+  (or (.-fullscreenElement       js/document)
+      (.-mozFullScreenElement    js/document)
+      (.-webkitFullscreenElement js/document)
+      (.-msFullscreenElement     js/document))))
+
+#?(:cljs
+(def- *enable-full-screen!
+  (delay
+    (let [de (.-documentElement js/document)]
+      (or (.-requestFullscreen       de)
+          (.-msRequestFullscreen     de)
+          (.-mozRequestFullscreen    de)
+          (.-webkitRequestFullscreen de))))))
+
+#?(:cljs
+(defn enable-full-screen! [] (@*enable-full-screen!)))
+
+#?(:cljs
+(def- *disable-full-screen!
+  (delay
+    (or (.-exitFullscreen       js/document)
+        (.-msExitFullscreen     js/document)
+        (.-mozCancelFullScreen  js/document)
+        (.-webkitExitFullscreen js/document)))))
+
+#?(:cljs (defn disable-full-screen! [] (@*disable-full-screen!)))
 
 #?(:cljs
 (defn toggle-full-screen!
-  {:from "https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API"
-   :todo ["More elegant way to do this"]}
+  {:adapted-from "https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API"}
   []
-  (if (and (not (.-fullscreenElement       js/document))
-           (not (.-mozFullScreenElement    js/document))
-           (not (.-webkitFullscreenElement js/document))
-           (not (.-msFullscreenElement     js/document)))
-      (cond
-        (-> js/document .-documentElement .-requestFullscreen)
-        (-> js/document .-documentElement .requestFullscreen )
-  
-        (-> js/document .-documentElement .-msRequestFullscreen)
-        (-> js/document .-documentElement .msRequestFullscreen )
-  
-        (-> js/document .-documentElement .-mozRequestFullscreen)
-        (-> js/document .-documentElement .mozRequestFullscreen )
-  
-        (-> js/document .-documentElement .-webkitRequestFullscreen)
-        (-> js/document .-documentElement (.webkitRequestFullscreen js/Element.ALLOW_KEYBOARD_INPUT)))
-      (cond
-        (-> js/document (.-exitFullscreen))
-        (-> js/document (.-exitFullscreen))
- 
-        (-> js/document (.-msExitFullscreen))
-        (-> js/document (.-msExitFullscreen))
- 
-        (-> js/document (.-mozCancelFullScreen))
-        (-> js/document (.-mozCancelFullScreen))
- 
-        (-> js/document (.-webkitExitFullscreen))
-        (-> js/document (.-webkitExitFullscreen))))))
+  (if (full-screen?)
+      (disable-full-screen!)
+      (enable-full-screen!))))
