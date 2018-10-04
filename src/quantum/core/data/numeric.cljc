@@ -229,9 +229,11 @@
 (def numeric-primitive? p/numeric?)
 
 (def numerically-integer-double? (t/and p/double? numerically-integer?))
-(def ni-double? numerically-integer-double?)
 
 (def numerically-integer-primitive? (t/and p/primitive? numerically-integer?))
+
+(def numerically-int-double? (t/and p/double? numerically-int?))
+(def ni-double? numerically-int-double?)
 
 ;; TODO excise?
 (def std-integer? (t/or integer? #?(:cljs numerically-integer-double?)))
