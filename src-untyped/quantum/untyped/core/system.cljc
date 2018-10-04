@@ -55,13 +55,13 @@
         (.-chrome global)
         :chrome
         ; Firefox 1.0+
-        (.-InstallTrigger global)
+        (aget global "InstallTrigger")
         :firefox
         ; At least Safari 3+: "[object HTMLElementConstructor]"
         (-> js/Object .-prototype .-toString
             (.call (.-HTMLElement global))
             (.indexOf "Constructor")
-            (> 0))
+            pos?)
         :safari
         ; At least IE6
         (-> global .-document .-documentMode)
