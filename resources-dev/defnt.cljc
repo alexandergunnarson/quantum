@@ -1014,6 +1014,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           http://hg.openjdk.java.net/jdk9/jdk9/hotspot/file/b756e7a2ec33/src/share/vm/classfile/vmSymbols.hpp
           http://hg.openjdk.java.net/jdk10/jdk10/hotspot/file/5ab7a67bc155/src/share/vm/classfile/vmSymbols.hpp
           Those marked with a number or numbers mean they are specific to only those JDK versions.
+          Only starts at Java 8.
+          Unsafe = sun.misc.Unsafe for Java 8
+          Unsafe = jdk.internal.misc.Unsafe for Java >= 9
           - [ ] <Object>.hashCode() > int
           - [ ] System.identityHashCode(Object) > int
           - [ ] <Object>.getClass() > Class
@@ -1048,6 +1051,11 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] Math.subtractExact(long, long) > long
           - [ ] >=9 : Math.fma(float, float, float) > float
           - [ ] >=9 : Math.fma(double, double, double) > double
+          - [ ] >=9 : BigInteger.implMultiplyToLen(ints, int, ints, int, ints) > ints
+          - [ ] >=9 : BigInteger.implSquareToLen(ints, int, ints, int) > ints
+          - [ ] >=9 : BigInteger.implMulAdd(ints, ints, int, int, int) > int
+          - [ ] >=9 : BigInteger.implMontgomeryMultiply(ints, ints, ints, int, long, ints) > ints
+          - [ ] >=9 : BigInteger.implMontgomerySquare(ints, ints, int, long, ints) > ints
           - [ ] Float.floatToRawIntBits(float) > int
           - [ ] Float.floatToIntBits(float) > int
           - [ ] Float.intBitsToFloat(int) > float
@@ -1081,103 +1089,222 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] java.util.Arrays.copyOf(objects, int, Class) > objects
           - [ ] java.util.Arrays.copyOfRange(objects, int, int, Class) > objects
           - [ ] java.util.Arrays.equals(chars, chars) > boolean
+          - [ ] java.util.ArraysSupport.vectorizedMismatch(Object, long, Object, long, int, int) > int
           - [ ] <String>.compareTo(String) > int
           - [ ] <String>.equals(Object) > boolean
           - [ ] <String>.indexOf(String) > int
-          - [ ] sun.nio.cs.ISO_8859_1$Encoder.encodeISOArray(chars, int, bytes, int, int) > int
           - [ ] sun.reflect.Reflection.getCallerClass() > Class
           - [ ] sun.reflect.Reflection.getClassAccessFlags(Class) > int
           - [ ] Thread.currentThread() > Thread
           - [ ] Thread.isInterrupted(boolean) > boolean
           - [ ] >=9 : Thread.onSpinWait()
-
           - [ ] <java.lang.ref.Reference>.get() > Object
-          - [ ] <com.sun.crypto.provider.AESCrypt>.decryptBlock(bytes, int, bytes, int)
-          - [ ] <com.sun.crypto.provider.AESCrypt>.encryptBlock(bytes, int, bytes, int)
-          - [ ] <com.sun.crypto.provider.CipherBlockChaining>.decrypt(bytes, int, int, bytes, int)
-          - [ ] <com.sun.crypto.provider.CipherBlockChaining>.encrypt(bytes, int, int, bytes, int)
+          - [ ] 8   : <com.sun.crypto.provider.AESCrypt>.decryptBlock(bytes, int, bytes, int)
+          - [ ] 8   : <com.sun.crypto.provider.AESCrypt>.encryptBlock(bytes, int, bytes, int)
+          - [ ] >=9 : <com.sun.crypto.provider.AESCrypt>.implDecryptBlock(bytes, int, bytes, int)
+          - [ ] >=9 : <com.sun.crypto.provider.AESCrypt>.implEncryptBlock(bytes, int, bytes, int)
+          - [ ] 8   : <com.sun.crypto.provider.CipherBlockChaining>.decrypt(bytes, int, int, bytes, int)
+          - [ ] 8   : <com.sun.crypto.provider.CipherBlockChaining>.encrypt(bytes, int, int, bytes, int)
+          - [ ] >=9 : <com.sun.crypto.provider.CipherBlockChaining>.implDecrypt(bytes, int, int, bytes, int)
+          - [ ] >=9 : <com.sun.crypto.provider.CipherBlockChaining>.implEncrypt(bytes, int, int, bytes, int)
+          - [ ] >=9 : <com.sun.crypto.provider.CounterMode>.implCrypt(bytes, int, int, bytes, int) > int
+          - [ ] >=9 : <com.sun.security.provider.SHA>.implCompress0(bytes, int)
+          - [ ] >=9 : <com.sun.security.provider.SHA2>.implCompress0(bytes, int)
+          - [ ] >=9 : <com.sun.security.provider.SHA5>.implCompress0(bytes, int)
+          - [ ] >=9 : <com.sun.security.provider.DigestBase>.implCompressMultiBlock0(bytes, int, int) > int
+          - [ ] >=9 : com.sun.crypto.provider.GHASH.processBlocks(bytes, int, int, longs, longs)
           - [ ] <java.util.zip.CRC32>.update(int, int) > int
-          - [ ] <java.util.zip.CRC32>.updateByteBuffer(int, long, int, int) > int
-          - [ ] <java.util.zip.CRC32>.updateBytes(int, bytes, int, int) > int
-          - [ ] <sun.misc.Unsafe>.allocateInstance(Class) > Object
-          - [ ] <sun.misc.Unsafe>.copyMemory(Object, long, Object, long, long)
-          - [ ] <sun.misc.Unsafe>.park(boolean, long)
-          - [ ] <sun.misc.Unsafe>.unpark(Object)
-          - [ ] <sun.misc.Unsafe>.loadFence()
-          - [ ] <sun.misc.Unsafe>.storeFence()
-          - [ ] <sun.misc.Unsafe>.fullFence()
-          - [ ] <sun.misc.Unsafe>.getObject (Object, long         ) > Object
-          - [ ] <sun.misc.Unsafe>.putObject (Object, long, Object )
-          - [ ] <sun.misc.Unsafe>.getBoolean(Object, long         ) > boolean
-          - [ ] <sun.misc.Unsafe>.putBoolean(Object, long, boolean)
-          - [ ] <sun.misc.Unsafe>.getByte   (Object, long         ) > byte
-          - [ ] <sun.misc.Unsafe>.putByte   (Object, long, byte   )
-          - [ ] <sun.misc.Unsafe>.getShort  (Object, long         ) > short
-          - [ ] <sun.misc.Unsafe>.putShort  (Object, long, short  )
-          - [ ] <sun.misc.Unsafe>.getChar   (Object, long         ) > char
-          - [ ] <sun.misc.Unsafe>.putChar   (Object, long, char   )
-          - [ ] <sun.misc.Unsafe>.getInt    (Object, long         ) > int
-          - [ ] <sun.misc.Unsafe>.putInt    (Object, long, int    )
-          - [ ] <sun.misc.Unsafe>.getLong   (Object, long         ) > long
-          - [ ] <sun.misc.Unsafe>.putLong   (Object, long, long   )
-          - [ ] <sun.misc.Unsafe>.getFloat  (Object, long         ) > float
-          - [ ] <sun.misc.Unsafe>.putFloat  (Object, long, float  )
-          - [ ] <sun.misc.Unsafe>.getDouble (Object, long         ) > double
-          - [ ] <sun.misc.Unsafe>.putDouble (Object, long, double )
-          - [ ] <sun.misc.Unsafe>.getObjectVolatile (Object, long         ) > Object
-          - [ ] <sun.misc.Unsafe>.putObjectVolatile (Object, long, Object )
-          - [ ] <sun.misc.Unsafe>.getBooleanVolatile(Object, long         ) > boolean
-          - [ ] <sun.misc.Unsafe>.putBooleanVolatile(Object, long, boolean)
-          - [ ] <sun.misc.Unsafe>.getByteVolatile   (Object, long         ) > byte
-          - [ ] <sun.misc.Unsafe>.putByteVolatile   (Object, long, byte   )
-          - [ ] <sun.misc.Unsafe>.getShortVolatile  (Object, long         ) > short
-          - [ ] <sun.misc.Unsafe>.putShortVolatile  (Object, long, short  )
-          - [ ] <sun.misc.Unsafe>.getCharVolatile   (Object, long         ) > char
-          - [ ] <sun.misc.Unsafe>.putCharVolatile   (Object, long, char   )
-          - [ ] <sun.misc.Unsafe>.getIntVolatile    (Object, long         ) > int
-          - [ ] <sun.misc.Unsafe>.putIntVolatile    (Object, long, int    )
-          - [ ] <sun.misc.Unsafe>.getLongVolatile   (Object, long         ) > long
-          - [ ] <sun.misc.Unsafe>.putLongVolatile   (Object, long, long   )
-          - [ ] <sun.misc.Unsafe>.getFloatVolatile  (Object, long         ) > float
-          - [ ] <sun.misc.Unsafe>.putFloatVolatile  (Object, long, float  )
-          - [ ] <sun.misc.Unsafe>.getDoubleVolatile (Object, long         ) > double
-          - [ ] <sun.misc.Unsafe>.putDoubleVolatile (Object, long, double )
-          - [ ] <sun.misc.Unsafe>.getObject (long         ) > Object
-          - [ ] <sun.misc.Unsafe>.putObject (long, Object )
-          - [ ] <sun.misc.Unsafe>.getBoolean(long         ) > boolean
-          - [ ] <sun.misc.Unsafe>.putBoolean(long, boolean)
-          - [ ] <sun.misc.Unsafe>.getByte   (long         ) > byte
-          - [ ] <sun.misc.Unsafe>.putByte   (long, byte   )
-          - [ ] <sun.misc.Unsafe>.getShort  (long         ) > short
-          - [ ] <sun.misc.Unsafe>.putShort  (long, short  )
-          - [ ] <sun.misc.Unsafe>.getChar   (long         ) > char
-          - [ ] <sun.misc.Unsafe>.putChar   (long, char   )
-          - [ ] <sun.misc.Unsafe>.getInt    (long         ) > int
-          - [ ] <sun.misc.Unsafe>.putInt    (long, int    )
-          - [ ] <sun.misc.Unsafe>.getLong   (long         ) > long
-          - [ ] <sun.misc.Unsafe>.putLong   (long, long   )
-          - [ ] <sun.misc.Unsafe>.getFloat  (long         ) > float
-          - [ ] <sun.misc.Unsafe>.putFloat  (long, float  )
-          - [ ] <sun.misc.Unsafe>.getDouble (long         ) > double
-          - [ ] <sun.misc.Unsafe>.putDouble (long, double )
-          - [ ] <sun.misc.Unsafe>.getAddress(long         ) > long
-          - [ ] <sun.misc.Unsafe>.putAddress(long, long   )
-          - [ ] <sun.misc.Unsafe>.compareAndSwapInt   (Object, long, int   , int   ) > boolean
-          - [ ] <sun.misc.Unsafe>.compareAndSwapLong  (Object, long, long  , long  ) > boolean
-          - [ ] <sun.misc.Unsafe>.compareAndSwapObject(Object, long, Object, Object) > boolean
-          - [ ] <sun.misc.Unsafe>.putOrderedInt       (Object, long, int)
-          - [ ] <sun.misc.Unsafe>.putOrderedLong      (Object, long, long)
-          - [ ] <sun.misc.Unsafe>.putOrderedObject    (Object, long, Object)
-          - [ ] <sun.misc.Unsafe>.getAndAddInt        (Object, long, int   ) > int
-          - [ ] <sun.misc.Unsafe>.getAndAddLong       (Object, long, long  ) > long
-          - [ ] <sun.misc.Unsafe>.getAndSetInt        (Object, long, int   ) > int
-          - [ ] <sun.misc.Unsafe>.getAndSetLong       (Object, long, long  ) > long
-          - [ ] <sun.misc.Unsafe>.getAndSetObject     (Object, long, Object) > Object
-          - [ ] <sun.misc.Unsafe>.prefetchRead        (Object, long)
-          - [ ] <sun.misc.Unsafe>.prefetchWrite       (Object, long)
-          - [ ] <sun.misc.Unsafe>.prefetchReadStatic  (Object, long)
-          - [ ] <sun.misc.Unsafe>.prefetchWriteStatic (Object, long)
-          - [ ] <Throwable>.fillInStackTrace() > Throwable
+          - [ ] 8   : java.util.zip.CRC32.updateByteBuffer(int, long, int, int) > int
+          - [ ] >=9 : java.util.zip.CRC32.updateByteBuffer0(int, long, int, int) > int
+          - [ ] 8   : java.util.zip.CRC32.updateBytes(int, bytes, int, int) > int
+          - [ ] >=9 : java.util.zip.CRC32.updateBytes0(int, bytes, int, int) > int
+          - [ ] >=9 : java.util.zip.CRC32C.updateBytes(int, bytes, int, int) > int
+          - [ ] >=9 : java.util.zip.CRC32C.updateDirectByteBuffer(int, long, int, int) > int
+          - [ ] >=9 : java.util.zip.Adler32.updateBytes(int, bytes, int, int) > int
+          - [ ] >=9 : java.util.zip.Adler32.updateByteBuffer(int, long, int, int) > int
+          - [ ] <Unsafe>.allocateInstance(Class) > Object
+          - [ ] >=9 : <Unsafe>.allocateUninitializedArray0(Class, int) > Object
+          - [ ] 8   : <Unsafe>.copyMemory(Object, long, Object, long, long)
+          - [ ] >=9 : <Unsafe>.copyMemory0(Object, long, Object, long, long)
+          - [ ] <Unsafe>.park(boolean, long)
+          - [ ] <Unsafe>.unpark(Object)
+          - [ ] <Unsafe>.loadFence()
+          - [ ] <Unsafe>.storeFence()
+          - [ ] <Unsafe>.fullFence()
+          - [ ] <Unsafe>.getObject (Object, long         ) > Object
+          - [ ] <Unsafe>.putObject (Object, long, Object )
+          - [ ] <Unsafe>.getBoolean(Object, long         ) > boolean
+          - [ ] <Unsafe>.putBoolean(Object, long, boolean)
+          - [ ] <Unsafe>.getByte   (Object, long         ) > byte
+          - [ ] <Unsafe>.putByte   (Object, long, byte   )
+          - [ ] <Unsafe>.getShort  (Object, long         ) > short
+          - [ ] <Unsafe>.putShort  (Object, long, short  )
+          - [ ] <Unsafe>.getChar   (Object, long         ) > char
+          - [ ] <Unsafe>.putChar   (Object, long, char   )
+          - [ ] <Unsafe>.getInt    (Object, long         ) > int
+          - [ ] <Unsafe>.putInt    (Object, long, int    )
+          - [ ] <Unsafe>.getLong   (Object, long         ) > long
+          - [ ] <Unsafe>.putLong   (Object, long, long   )
+          - [ ] <Unsafe>.getFloat  (Object, long         ) > float
+          - [ ] <Unsafe>.putFloat  (Object, long, float  )
+          - [ ] <Unsafe>.getDouble (Object, long         ) > double
+          - [ ] <Unsafe>.putDouble (Object, long, double )
+          - [ ] <Unsafe>.getObjectVolatile (Object, long         ) > Object
+          - [ ] <Unsafe>.putObjectVolatile (Object, long, Object )
+          - [ ] <Unsafe>.getBooleanVolatile(Object, long         ) > boolean
+          - [ ] <Unsafe>.putBooleanVolatile(Object, long, boolean)
+          - [ ] <Unsafe>.getByteVolatile   (Object, long         ) > byte
+          - [ ] <Unsafe>.putByteVolatile   (Object, long, byte   )
+          - [ ] <Unsafe>.getShortVolatile  (Object, long         ) > short
+          - [ ] <Unsafe>.putShortVolatile  (Object, long, short  )
+          - [ ] <Unsafe>.getCharVolatile   (Object, long         ) > char
+          - [ ] <Unsafe>.putCharVolatile   (Object, long, char   )
+          - [ ] <Unsafe>.getIntVolatile    (Object, long         ) > int
+          - [ ] <Unsafe>.putIntVolatile    (Object, long, int    )
+          - [ ] <Unsafe>.getLongVolatile   (Object, long         ) > long
+          - [ ] <Unsafe>.putLongVolatile   (Object, long, long   )
+          - [ ] <Unsafe>.getFloatVolatile  (Object, long         ) > float
+          - [ ] <Unsafe>.putFloatVolatile  (Object, long, float  )
+          - [ ] <Unsafe>.getDoubleVolatile (Object, long         ) > double
+          - [ ] <Unsafe>.putDoubleVolatile (Object, long, double )
+          - [ ] <Unsafe>.getObjectVolatile (Object, long         ) > Object
+          - [ ] <Unsafe>.putObjectVolatile (Object, long, Object )
+          - [ ] >=9 : <Unsafe>.getBooleanOpaque (Object, long         ) > boolean
+          - [ ] >=9 : <Unsafe>.putBooleanOpaque (Object, long, boolean)
+          - [ ] >=9 : <Unsafe>.getByteOpaque    (Object, long         ) > byte
+          - [ ] >=9 : <Unsafe>.putByteOpaque    (Object, long, byte   )
+          - [ ] >=9 : <Unsafe>.getShortOpaque   (Object, long         ) > short
+          - [ ] >=9 : <Unsafe>.putShortOpaque   (Object, long, short  )
+          - [ ] >=9 : <Unsafe>.getCharOpaque    (Object, long         ) > char
+          - [ ] >=9 : <Unsafe>.putCharOpaque    (Object, long, char   )
+          - [ ] >=9 : <Unsafe>.getIntOpaque     (Object, long         ) > int
+          - [ ] >=9 : <Unsafe>.putIntOpaque     (Object, long, int    )
+          - [ ] >=9 : <Unsafe>.getLongOpaque    (Object, long         ) > long
+          - [ ] >=9 : <Unsafe>.putLongOpaque    (Object, long, long   )
+          - [ ] >=9 : <Unsafe>.getFloatOpaque   (Object, long         ) > float
+          - [ ] >=9 : <Unsafe>.putFloatOpaque   (Object, long, float  )
+          - [ ] >=9 : <Unsafe>.getDoubleOpaque  (Object, long         ) > double
+          - [ ] >=9 : <Unsafe>.putDoubleOpaque  (Object, long, double )
+          - [ ] >=9 : <Unsafe>.getBooleanRelease(Object, long         ) > boolean
+          - [ ] >=9 : <Unsafe>.putBooleanRelease(Object, long, boolean)
+          - [ ] >=9 : <Unsafe>.getByteRelease   (Object, long         ) > byte
+          - [ ] >=9 : <Unsafe>.putByteRelease   (Object, long, byte   )
+          - [ ] >=9 : <Unsafe>.getShortRelease  (Object, long         ) > short
+          - [ ] >=9 : <Unsafe>.putShortRelease  (Object, long, short  )
+          - [ ] >=9 : <Unsafe>.getCharRelease   (Object, long         ) > char
+          - [ ] >=9 : <Unsafe>.putCharRelease   (Object, long, char   )
+          - [ ] >=9 : <Unsafe>.getIntRelease    (Object, long         ) > int
+          - [ ] >=9 : <Unsafe>.putIntRelease    (Object, long, int    )
+          - [ ] >=9 : <Unsafe>.getLongRelease   (Object, long         ) > long
+          - [ ] >=9 : <Unsafe>.putLongRelease   (Object, long, long   )
+          - [ ] >=9 : <Unsafe>.getFloatRelease  (Object, long         ) > float
+          - [ ] >=9 : <Unsafe>.putFloatRelease  (Object, long, float  )
+          - [ ] >=9 : <Unsafe>.getDoubleRelease (Object, long         ) > double
+          - [ ] >=9 : <Unsafe>.putDoubleRelease (Object, long, double )
+          - [ ] >=9 : <Unsafe>.getBooleanAcquire(Object, long         ) > boolean
+          - [ ] >=9 : <Unsafe>.putBooleanAcquire(Object, long, boolean)
+          - [ ] >=9 : <Unsafe>.getByteAcquire   (Object, long         ) > byte
+          - [ ] >=9 : <Unsafe>.putByteAcquire   (Object, long, byte   )
+          - [ ] >=9 : <Unsafe>.getShortAcquire  (Object, long         ) > short
+          - [ ] >=9 : <Unsafe>.putShortAcquire  (Object, long, short  )
+          - [ ] >=9 : <Unsafe>.getCharAcquire   (Object, long         ) > char
+          - [ ] >=9 : <Unsafe>.putCharAcquire   (Object, long, char   )
+          - [ ] >=9 : <Unsafe>.getIntAcquire    (Object, long         ) > int
+          - [ ] >=9 : <Unsafe>.putIntAcquire    (Object, long, int    )
+          - [ ] >=9 : <Unsafe>.getLongAcquire   (Object, long         ) > long
+          - [ ] >=9 : <Unsafe>.putLongAcquire   (Object, long, long   )
+          - [ ] >=9 : <Unsafe>.getFloatAcquire  (Object, long         ) > float
+          - [ ] >=9 : <Unsafe>.putFloatAcquire  (Object, long, float  )
+          - [ ] >=9 : <Unsafe>.getDoubleAcquire (Object, long         ) > double
+          - [ ] >=9 : <Unsafe>.putDoubleAcquire (Object, long, double )
+          - [ ] >=9 : <Unsafe>.getShortUnaligned(Object, long         ) > short
+          - [ ] >=9 : <Unsafe>.putShortUnaligned(Object, long, short  )
+          - [ ] >=9 : <Unsafe>.getCharUnaligned (Object, long         ) > char
+          - [ ] >=9 : <Unsafe>.putCharUnaligned (Object, long, char   )
+          - [ ] >=9 : <Unsafe>.getIntUnaligned  (Object, long         ) > int
+          - [ ] >=9 : <Unsafe>.putIntUnaligned  (Object, long, int    )
+          - [ ] >=9 : <Unsafe>.getLongUnaligned (Object, long         ) > long
+          - [ ] >=9 : <Unsafe>.putLongUnaligned (Object, long, long   )
+          - [ ] 8 : <Unsafe>.getObject (long         ) > Object
+          - [ ] 8 : <Unsafe>.putObject (long, Object )
+          - [ ] 8 : <Unsafe>.getBoolean(long         ) > boolean
+          - [ ] 8 : <Unsafe>.putBoolean(long, boolean)
+          - [ ] 8 : <Unsafe>.getByte   (long         ) > byte
+          - [ ] 8 : <Unsafe>.putByte   (long, byte   )
+          - [ ] 8 : <Unsafe>.getShort  (long         ) > short
+          - [ ] 8 : <Unsafe>.putShort  (long, short  )
+          - [ ] 8 : <Unsafe>.getChar   (long         ) > char
+          - [ ] 8 : <Unsafe>.putChar   (long, char   )
+          - [ ] 8 : <Unsafe>.getInt    (long         ) > int
+          - [ ] 8 : <Unsafe>.putInt    (long, int    )
+          - [ ] 8 : <Unsafe>.getLong   (long         ) > long
+          - [ ] 8 : <Unsafe>.putLong   (long, long   )
+          - [ ] 8 : <Unsafe>.getFloat  (long         ) > float
+          - [ ] 8 : <Unsafe>.putFloat  (long, float  )
+          - [ ] 8 : <Unsafe>.getDouble (long         ) > double
+          - [ ] 8 : <Unsafe>.putDouble (long, double )
+          - [ ] 8 : <Unsafe>.getAddress(long         ) > long
+          - [ ] 8 : <Unsafe>.putAddress(long, long   )
+          - [ ] 8 : <Unsafe>.compareAndSwapInt   (Object, long, int   , int   ) > boolean
+          - [ ] 8 : <Unsafe>.compareAndSwapLong  (Object, long, long  , long  ) > boolean
+          - [ ] 8 : <Unsafe>.compareAndSwapObject(Object, long, Object, Object) > boolean
+          - [ ] 8 : <Unsafe>.putOrderedInt       (Object, long, int)
+          - [ ] 8 : <Unsafe>.putOrderedLong      (Object, long, long)
+          - [ ] 8 : <Unsafe>.putOrderedObject    (Object, long, Object)
+          - [ ] >=9 : <Unsafe>.compareAndSetByte              (Object, long, byte  , byte  ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetByte          (Object, long, byte  , byte  ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetBytePlain     (Object, long, byte  , byte  ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetByteAcquire   (Object, long, byte  , byte  ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetByteRelease   (Object, long, byte  , byte  ) > boolean
+          - [ ] >=9 : <Unsafe>.compareAndExchangeByte         (Object, long, byte  , byte  ) > byte
+          - [ ] >=9 : <Unsafe>.compareAndExchangeByteAcquire  (Object, long, byte  , byte  ) > byte
+          - [ ] >=9 : <Unsafe>.compareAndExchangeByteRelease  (Object, long, byte  , byte  ) > byte
+          - [ ] >=9 : <Unsafe>.compareAndSetShort             (Object, long, short , short ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetShort         (Object, long, short , short ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetShortPlain    (Object, long, short , short ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetShortAcquire  (Object, long, short , short ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetShortRelease  (Object, long, short , short ) > boolean
+          - [ ] >=9 : <Unsafe>.compareAndExchangeShort        (Object, long, short , short ) > short
+          - [ ] >=9 : <Unsafe>.compareAndExchangeShortAcquire (Object, long, short , short ) > short
+          - [ ] >=9 : <Unsafe>.compareAndExchangeShortRelease (Object, long, short , short ) > short
+          - [ ] >=9 : <Unsafe>.compareAndSetInt               (Object, long, int   , int   ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetInt           (Object, long, int   , int   ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetIntPlain      (Object, long, int   , int   ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetIntAcquire    (Object, long, int   , int   ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetIntRelease    (Object, long, int   , int   ) > boolean
+          - [ ] >=9 : <Unsafe>.compareAndExchangeInt          (Object, long, int   , int   ) > int
+          - [ ] >=9 : <Unsafe>.compareAndExchangeIntAcquire   (Object, long, int   , int   ) > int
+          - [ ] >=9 : <Unsafe>.compareAndExchangeIntRelease   (Object, long, int   , int   ) > int
+          - [ ] >=9 : <Unsafe>.compareAndSetLong              (Object, long, long  , long  ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetLong          (Object, long, long  , long  ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetLongPlain     (Object, long, long  , long  ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetLongAcquire   (Object, long, long  , long  ) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetLongRelease   (Object, long, long  , long  ) > boolean
+          - [ ] >=9 : <Unsafe>.compareAndExchangeLong         (Object, long, long  , long  ) > long
+          - [ ] >=9 : <Unsafe>.compareAndExchangeLongAcquire  (Object, long, long  , long  ) > long
+          - [ ] >=9 : <Unsafe>.compareAndExchangeLongRelease  (Object, long, long  , long  ) > long
+          - [ ] >=9 : <Unsafe>.compareAndSetObject            (Object, long, Object, Object) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetObject        (Object, long, Object, Object) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetObjectPlain   (Object, long, Object, Object) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetObjectAcquire (Object, long, Object, Object) > boolean
+          - [ ] >=9 : <Unsafe>.weakCompareAndSetObjectRelease (Object, long, Object, Object) > boolean
+          - [ ] >=9 : <Unsafe>.compareAndExchangeObject       (Object, long, Object, Object) > Object
+          - [ ] >=9 : <Unsafe>.compareAndExchangeObjectAcquire(Object, long, Object, Object) > Object
+          - [ ] >=9 : <Unsafe>.compareAndExchangeObjectRelease(Object, long, Object, Object) > Object
+          - [ ] >=9 : <Unsafe>.getAndAddByte  (Object, long, byte  ) > byte
+          - [ ] >=9 : <Unsafe>.getAndAddShort (Object, long, short ) > short
+          - [ ]       <Unsafe>.getAndAddInt   (Object, long, int   ) > int
+          - [ ]       <Unsafe>.getAndAddLong  (Object, long, long  ) > long
+          - [ ] >=9 : <Unsafe>.getAndSetByte  (Object, long, byte  ) > byte
+          - [ ] >=9 : <Unsafe>.getAndSetShort (Object, long, short ) > short
+          - [ ]       <Unsafe>.getAndSetInt   (Object, long, int   ) > int
+          - [ ]       <Unsafe>.getAndSetLong  (Object, long, long  ) > long
+          - [ ]       <Unsafe>.getAndSetObject(Object, long, Object) > Object
+          - [ ] 8 : <Unsafe>.prefetchRead       (Object, long)
+          - [ ] 8 : <Unsafe>.prefetchWrite      (Object, long)
+          - [ ] 8 : <Unsafe>.prefetchReadStatic (Object, long)
+          - [ ] 8 : <Unsafe>.prefetchWriteStatic(Object, long)
+          - [ ] 8 : <Throwable>.fillInStackTrace() > Throwable
           - [ ] >=9 : StringUTF16.compress(chars, int, bytes, int, int) > int
           - [ ] >=9 : StringUTF16.compress(bytes, int, bytes, int, int) > int
           - [ ] >=9 : StringLatin1.inflate(bytes, int, chars, int, int)
@@ -1199,6 +1326,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] >=9 : StringUTF16.indexOfChar(bytes, int, int, int) > int
           - [ ] >=9 : StringLatin1.equals(bytes, bytes) > boolean
           - [ ] >=9 : StringUTF16.equals(bytes, bytes) > boolean
+          - [ ] >=9 : StringCoding.hasNegatives(bytes, int, int) > boolean
+          - [ ] sun.nio.cs.ISO_8859_1$Encoder.encodeISOArray(chars, int, bytes, int, int) > int
+          - [ ] >=9 : StringCoding.encodeISOArray(bytes, int, bytes, int, int) > int
           - [ ] new StringBuilder()
           - [ ] new StringBuilder(int)
           - [ ] new StringBuilder(String)
@@ -1224,6 +1354,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] java.lang.invoke.MethodHandle.linkToStatic(*)
           - [ ] java.lang.invoke.MethodHandle.linkToSpecial(*)
           - [ ] java.lang.invoke.MethodHandle.linkToInterface(*)
+          - [ ] >=9 : java.lang.invoke.MethodHandleImpl.profileBoolean(boolean, ints) > boolean
+          - [ ] >=9 : java.lang.invoke.MethodHandleImpl.isCompileConstant(object) > boolean
           - [x] <Boolean>  .booleanValue() > boolean
           - [x] <Byte>     .byteValue   () > byte
           - [x] <Short>    .shortValue  () > short
