@@ -1354,7 +1354,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - uncheckedDoubleCast
   - Standard metadata
     - e.g. `{:alternate-implementations #{'cljs.tools.reader/merge-meta}}`
-    - :adapted-from <namespace-or-class-symbol>
+    - :adapted-from (t/or namespace-symbol? class-symbol? url-string?)
     - :source <namespace-or-class-symbol>
     - :todo #{<todo-string>}
     - :attribution <github-username-symbol | string-description>
