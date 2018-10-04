@@ -2,11 +2,19 @@
       :todo ["Possibly rename 'quantum.ui.platform'?"]}
   quantum.ui.features
   (:require
-    [quantum.core.vars
+    [quantum.core.vars           :as var
       :refer [defaliases]]
     [quantum.untyped.ui.features :as u]))
 
 #?(:cljs (defaliases u flex-test feature-test))
+
+#?(:cljs
+(var/def mobile-user-agent?
+  "From https://github.com/thi-ng/domus/blob/master/src/detect.org"
+  (and (re-find #"(?i)mobile|tablet|ip(ad|hone|od)|android|silk" (.-userAgent js/navigator))
+       (not (re-find #"(?i)crios" (.-userAgent js/navigator))))))
+
+#?(:cljs (def websocket-enabled? (some? (aget js/window "WebSocket"))))
 
 #?(:cljs
 (def touch-events
