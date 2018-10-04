@@ -17,6 +17,11 @@
       :refer [pos?]])
   #?(:clj (:import java.math.BigDecimal clojure.lang.Ratio)))
 
+;; TODO js/Math.trunc for CLJS
+;; TODO js/Math.round for CLJS
+;; TODO js/Math.fround for CLJS
+;; TODO js/Math.rint for CLJS
+
 #?(:clj
 (defnt' rint
   "The double value that is closest in value to ->`x` and is equal to a mathematical integer."

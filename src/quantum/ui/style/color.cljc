@@ -1,4 +1,6 @@
 (ns quantum.ui.style.color
+  "TODO import:
+   - https://github.com/thi-ng/color"
   (:require
     [quantum.core.vars              :as var
       :refer [defaliases]]
