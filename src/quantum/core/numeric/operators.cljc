@@ -5,10 +5,12 @@
            numerator denominator])
          (:require
            [clojure.core                      :as core]
+           ;; TODO TYPED remove
   #?(:cljs [com.gfredericks.goog.math.Integer :as int])
-           ;; TODO TYPED re-enable
-         #_[quantum.core.data.numeric         :as dnum
-             :refer [bigdec? clj-bigint? numerator numeric? denominator]]
+           [quantum.core.data.bits            :as bit
+             :refer [<< >> >>>]]
+           [quantum.core.data.numeric         :as dnum
+             :refer [bigdec? clj-bigint? denominator numerator numeric? numerically-int?]]
            [quantum.core.data.primitive       :as p]
            [quantum.core.data.refs            :as ref]
            ;; TODO TYPED re-enable
@@ -271,12 +273,22 @@
                    (+* x 1))))
    :cljs (defalias inc' inc          ))
 
+(t/defn abs > nneg?
+#?(:clj  (^:inline [x char?] x))
+         (^{:adapted-from 'thi.ng.math.bits
+            :doc          "Faster than using conditionals to determine the absolute value"}
+           [x #?(:clj (t/or p/byte? p/short? p/int? p/long?) :cljs ni-double?)
+            > (t/and (t/type x) (t/assume nneg?))]
+           (let [mask (>> x (bit/dec-bits-of x))]
+             (- (bit/xor x mask) mask)))
+#?(:clj  (^:intrinsic ^:inline [x p/float? > (t/and p/float? (t/assume nneg?))] (Math/abs x)))
+#?(:clj  (^:inline [x p/double? ...])
+   :cljs (^:inline [x p/double? > (t/assume (t/and p/double? nneg?))] (js/Math.abs x)))
+#?(:clj  (^:inline [x bigdec?   > (t/and bigdec? (t/assume nneg?))] (.abs x)))
+)
+
+;; TODO TYPED incorporate
 #?(:clj (defnt abs'
-          ([#{int long double} x] (Math/abs x))
-          (^float ^:intrinsic [^float  x] (Math/abs x))
-          ([#{byte char short} x] (if (Numeric/isNeg x) (-' x) x)) ; TODO abstract this
-          (^BigDecimal [^BigDecimal x]
-            (.abs x))
           (^BigDecimal [^BigDecimal x math-context]
             (.abs x math-context))
           (^BigInteger [^BigInteger x]
@@ -289,8 +301,6 @@
             (/ (abs' (numerator   x))
                (abs' (denominator x)))))
    :cljs (defnt abs' ([x] (TODO "incomplete") (js/Math.abs x))))
-
-#?(:clj (defalias abs abs'))
 
 #?(:clj (defmacro int-nil [x] `(let [x# ~x] (if (nil? x#) 0 x#))))
 
