@@ -77,8 +77,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - ? : type inference
         - use logic programming and variable unification e.g. `?1` `?2` ?
         - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
-          ([n dnum/std-integer?, xs dc/counted?] (count xs))
-          ([n dnum/std-integer?, xs ?] ...)
+          ([n dn/std-integer?, xs dc/counted?] (count xs))
+          ([n dn/std-integer?, xs ?] ...)
   - (comp/t== x)
      - dependent type such that the passed input must be identical to x
   - Type Logic and Predicates
@@ -1010,6 +1010,237 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] Util.equiv(boolean,boolean)
           - [ ] Util.equiv(double,double)
     - [ ] Java intrinsics
+          http://hg.openjdk.java.net/jdk8/jdk8/hotspot/file/87ee5ee27509/src/share/vm/classfile/vmSymbols.hpp
+          http://hg.openjdk.java.net/jdk9/jdk9/hotspot/file/b756e7a2ec33/src/share/vm/classfile/vmSymbols.hpp
+          http://hg.openjdk.java.net/jdk10/jdk10/hotspot/file/5ab7a67bc155/src/share/vm/classfile/vmSymbols.hpp
+          Those marked with a number or numbers mean they are specific to only those JDK versions.
+          - [ ] <Object>.hashCode() > int
+          - [ ] System.identityHashCode(Object) > int
+          - [ ] <Object>.getClass() > Class
+          - [ ] <Object>.clone()
+          - [ ] >=9 : <Object>.notify()
+          - [ ] >=9 : <Object>.notifyAll()
+          - [ ] System.currentTimeMillis() > int
+          - [ ] System.nanoTime() > int
+          - [ ] Math.abs(double) > double
+          - [ ] Math.sin(double) > double
+          - [ ] Math.cos(double) > double
+          - [ ] Math.tan(double) > double
+          - [ ] Math.atan2(double, double) > double
+          - [ ] Math.sqrt(double) > double
+          - [ ] Math.log(double) > double
+          - [ ] Math.log10(double) > double
+          - [ ] Math.pow(double, double) > double
+          - [ ] Math.exp(double) > double
+          - [ ] Math.min(int, int) > int
+          - [ ] Math.max(int, int) > int
+          - [ ] Math.addExact(int, int) > int
+          - [ ] Math.addExact(long, long) > long
+          - [ ] Math.decrementExact(int) > int
+          - [ ] Math.decrementExact(long, long) > long
+          - [ ] Math.incrementExact(int) > int
+          - [ ] Math.incrementExact(long, long) > long
+          - [ ] Math.multiplyExact(int, int) > int
+          - [ ] Math.multiplyExact(long, long) > long
+          - [ ] Math.negateExact(int) > int
+          - [ ] Math.negateExact(long) > long
+          - [ ] Math.subtractExact(int, int) > int
+          - [ ] Math.subtractExact(long, long) > long
+          - [ ] >=9 : Math.fma(float, float, float) > float
+          - [ ] >=9 : Math.fma(double, double, double) > double
+          - [ ] Float.floatToRawIntBits(float) > int
+          - [ ] Float.floatToIntBits(float) > int
+          - [ ] Float.intBitsToFloat(int) > float
+          - [ ] Double.doubleToRawLongBits(double) > long
+          - [ ] Double.doubleToLongBits(double) > long
+          - [ ] Double.longBitsToDouble(long) > double
+          - [ ] Integer.numberOfLeadingZeros(int) > int
+          - [ ] Long.numberOfLeadingZeros(long) > long
+          - [ ] Integer.numberOfTrailingZeros(int) > int
+          - [ ] Long.numberOfTrailingZeros(long) > long
+          - [ ] Integer.bitCount(int) > int
+          - [ ] Long.bitCount(long) > int
+          - [ ] Short.reverseBytes(short) > short
+          - [ ] Character.reverseBytes(char) > char
+          - [ ] Integer.reverseBytes(int) > int
+          - [ ] Long.reverseBytes(long) > long
+          - [ ] System.arrayCopy(objects, int, objects, int, int)
+          - [ ] <Class>.getComponentType() > Class
+          - [ ] <Class>.getModifiers() > int
+          - [ ] <Class>.getSuperclass() > Class
+          - [ ] <Class>.isArray() > boolean
+          - [ ] <Class>.isAssignableFrom(Class) > boolean
+          - [ ] <Class>.isInstance(Class) > boolean
+          - [ ] <Class>.isInterface() > boolean
+          - [ ] <Class>.isPrimitive() > boolean
+          - [ ] >=9 : <Class>.cast(Object) > Object
+          - [ ] java.lang.reflect.Array.getLength(Object) > int
+          - [ ] java.lang.reflect.Array.newArray(Class, int) > Object
+          - [ ] <java.nio.Buffer>.checkIndex(int) > int
+          - [ ] >=9 : jdk.internal.util.Preconditions.checkIndex(int, int, java.util.function.BiFunction) > int
+          - [ ] java.util.Arrays.copyOf(objects, int, Class) > objects
+          - [ ] java.util.Arrays.copyOfRange(objects, int, int, Class) > objects
+          - [ ] java.util.Arrays.equals(chars, chars) > boolean
+          - [ ] <String>.compareTo(String) > int
+          - [ ] <String>.equals(Object) > boolean
+          - [ ] <String>.indexOf(String) > int
+          - [ ] sun.nio.cs.ISO_8859_1$Encoder.encodeISOArray(chars, int, bytes, int, int) > int
+          - [ ] sun.reflect.Reflection.getCallerClass() > Class
+          - [ ] sun.reflect.Reflection.getClassAccessFlags(Class) > int
+          - [ ] Thread.currentThread() > Thread
+          - [ ] Thread.isInterrupted(boolean) > boolean
+          - [ ] >=9 : Thread.onSpinWait()
+
+          - [ ] <java.lang.ref.Reference>.get() > Object
+          - [ ] <com.sun.crypto.provider.AESCrypt>.decryptBlock(bytes, int, bytes, int)
+          - [ ] <com.sun.crypto.provider.AESCrypt>.encryptBlock(bytes, int, bytes, int)
+          - [ ] <com.sun.crypto.provider.CipherBlockChaining>.decrypt(bytes, int, int, bytes, int)
+          - [ ] <com.sun.crypto.provider.CipherBlockChaining>.encrypt(bytes, int, int, bytes, int)
+          - [ ] <java.util.zip.CRC32>.update(int, int) > int
+          - [ ] <java.util.zip.CRC32>.updateByteBuffer(int, long, int, int) > int
+          - [ ] <java.util.zip.CRC32>.updateBytes(int, bytes, int, int) > int
+          - [ ] <sun.misc.Unsafe>.allocateInstance(Class) > Object
+          - [ ] <sun.misc.Unsafe>.copyMemory(Object, long, Object, long, long)
+          - [ ] <sun.misc.Unsafe>.park(boolean, long)
+          - [ ] <sun.misc.Unsafe>.unpark(Object)
+          - [ ] <sun.misc.Unsafe>.loadFence()
+          - [ ] <sun.misc.Unsafe>.storeFence()
+          - [ ] <sun.misc.Unsafe>.fullFence()
+          - [ ] <sun.misc.Unsafe>.getObject (Object, long         ) > Object
+          - [ ] <sun.misc.Unsafe>.putObject (Object, long, Object )
+          - [ ] <sun.misc.Unsafe>.getBoolean(Object, long         ) > boolean
+          - [ ] <sun.misc.Unsafe>.putBoolean(Object, long, boolean)
+          - [ ] <sun.misc.Unsafe>.getByte   (Object, long         ) > byte
+          - [ ] <sun.misc.Unsafe>.putByte   (Object, long, byte   )
+          - [ ] <sun.misc.Unsafe>.getShort  (Object, long         ) > short
+          - [ ] <sun.misc.Unsafe>.putShort  (Object, long, short  )
+          - [ ] <sun.misc.Unsafe>.getChar   (Object, long         ) > char
+          - [ ] <sun.misc.Unsafe>.putChar   (Object, long, char   )
+          - [ ] <sun.misc.Unsafe>.getInt    (Object, long         ) > int
+          - [ ] <sun.misc.Unsafe>.putInt    (Object, long, int    )
+          - [ ] <sun.misc.Unsafe>.getLong   (Object, long         ) > long
+          - [ ] <sun.misc.Unsafe>.putLong   (Object, long, long   )
+          - [ ] <sun.misc.Unsafe>.getFloat  (Object, long         ) > float
+          - [ ] <sun.misc.Unsafe>.putFloat  (Object, long, float  )
+          - [ ] <sun.misc.Unsafe>.getDouble (Object, long         ) > double
+          - [ ] <sun.misc.Unsafe>.putDouble (Object, long, double )
+          - [ ] <sun.misc.Unsafe>.getObjectVolatile (Object, long         ) > Object
+          - [ ] <sun.misc.Unsafe>.putObjectVolatile (Object, long, Object )
+          - [ ] <sun.misc.Unsafe>.getBooleanVolatile(Object, long         ) > boolean
+          - [ ] <sun.misc.Unsafe>.putBooleanVolatile(Object, long, boolean)
+          - [ ] <sun.misc.Unsafe>.getByteVolatile   (Object, long         ) > byte
+          - [ ] <sun.misc.Unsafe>.putByteVolatile   (Object, long, byte   )
+          - [ ] <sun.misc.Unsafe>.getShortVolatile  (Object, long         ) > short
+          - [ ] <sun.misc.Unsafe>.putShortVolatile  (Object, long, short  )
+          - [ ] <sun.misc.Unsafe>.getCharVolatile   (Object, long         ) > char
+          - [ ] <sun.misc.Unsafe>.putCharVolatile   (Object, long, char   )
+          - [ ] <sun.misc.Unsafe>.getIntVolatile    (Object, long         ) > int
+          - [ ] <sun.misc.Unsafe>.putIntVolatile    (Object, long, int    )
+          - [ ] <sun.misc.Unsafe>.getLongVolatile   (Object, long         ) > long
+          - [ ] <sun.misc.Unsafe>.putLongVolatile   (Object, long, long   )
+          - [ ] <sun.misc.Unsafe>.getFloatVolatile  (Object, long         ) > float
+          - [ ] <sun.misc.Unsafe>.putFloatVolatile  (Object, long, float  )
+          - [ ] <sun.misc.Unsafe>.getDoubleVolatile (Object, long         ) > double
+          - [ ] <sun.misc.Unsafe>.putDoubleVolatile (Object, long, double )
+          - [ ] <sun.misc.Unsafe>.getObject (long         ) > Object
+          - [ ] <sun.misc.Unsafe>.putObject (long, Object )
+          - [ ] <sun.misc.Unsafe>.getBoolean(long         ) > boolean
+          - [ ] <sun.misc.Unsafe>.putBoolean(long, boolean)
+          - [ ] <sun.misc.Unsafe>.getByte   (long         ) > byte
+          - [ ] <sun.misc.Unsafe>.putByte   (long, byte   )
+          - [ ] <sun.misc.Unsafe>.getShort  (long         ) > short
+          - [ ] <sun.misc.Unsafe>.putShort  (long, short  )
+          - [ ] <sun.misc.Unsafe>.getChar   (long         ) > char
+          - [ ] <sun.misc.Unsafe>.putChar   (long, char   )
+          - [ ] <sun.misc.Unsafe>.getInt    (long         ) > int
+          - [ ] <sun.misc.Unsafe>.putInt    (long, int    )
+          - [ ] <sun.misc.Unsafe>.getLong   (long         ) > long
+          - [ ] <sun.misc.Unsafe>.putLong   (long, long   )
+          - [ ] <sun.misc.Unsafe>.getFloat  (long         ) > float
+          - [ ] <sun.misc.Unsafe>.putFloat  (long, float  )
+          - [ ] <sun.misc.Unsafe>.getDouble (long         ) > double
+          - [ ] <sun.misc.Unsafe>.putDouble (long, double )
+          - [ ] <sun.misc.Unsafe>.getAddress(long         ) > long
+          - [ ] <sun.misc.Unsafe>.putAddress(long, long   )
+          - [ ] <sun.misc.Unsafe>.compareAndSwapInt   (Object, long, int   , int   ) > boolean
+          - [ ] <sun.misc.Unsafe>.compareAndSwapLong  (Object, long, long  , long  ) > boolean
+          - [ ] <sun.misc.Unsafe>.compareAndSwapObject(Object, long, Object, Object) > boolean
+          - [ ] <sun.misc.Unsafe>.putOrderedInt       (Object, long, int)
+          - [ ] <sun.misc.Unsafe>.putOrderedLong      (Object, long, long)
+          - [ ] <sun.misc.Unsafe>.putOrderedObject    (Object, long, Object)
+          - [ ] <sun.misc.Unsafe>.getAndAddInt        (Object, long, int   ) > int
+          - [ ] <sun.misc.Unsafe>.getAndAddLong       (Object, long, long  ) > long
+          - [ ] <sun.misc.Unsafe>.getAndSetInt        (Object, long, int   ) > int
+          - [ ] <sun.misc.Unsafe>.getAndSetLong       (Object, long, long  ) > long
+          - [ ] <sun.misc.Unsafe>.getAndSetObject     (Object, long, Object) > Object
+          - [ ] <sun.misc.Unsafe>.prefetchRead        (Object, long)
+          - [ ] <sun.misc.Unsafe>.prefetchWrite       (Object, long)
+          - [ ] <sun.misc.Unsafe>.prefetchReadStatic  (Object, long)
+          - [ ] <sun.misc.Unsafe>.prefetchWriteStatic (Object, long)
+          - [ ] <Throwable>.fillInStackTrace() > Throwable
+          - [ ] >=9 : StringUTF16.compress(chars, int, bytes, int, int) > int
+          - [ ] >=9 : StringUTF16.compress(bytes, int, bytes, int, int) > int
+          - [ ] >=9 : StringLatin1.inflate(bytes, int, chars, int, int)
+          - [ ] >=9 : StringLatin1.inflate(bytes, int, bytes, int, int)
+          - [ ] >=9 : StringUTF16.toBytes(chars, int, int) > bytes
+          - [ ] >=9 : StringUTF16.getChars(bytes, int, int, chars, int)
+          - [ ] >=9 : StringUTF16.getChar(bytes, int) > char
+          - [ ] >=9 : StringUTF16.putChar(bytes, int, int)
+          - [ ] >=9 : StringLatin1.compareTo(bytes, bytes) > int
+          - [ ] >=9 : StringUTF16.compareTo(bytes, bytes) > int
+          - [ ] >=9 : StringLatin1.compareToUTF16(bytes, bytes) > int
+          - [ ] >=9 : StringUTF16.compareToLatin1(bytes, bytes) > int
+          - [ ] >=9 : StringLatin1.indexOf(bytes, bytes) > int
+          - [ ] >=9 : StringUTF16.indexOf(bytes, bytes) > int
+          - [ ] >=9 : StringUTF16.indexOfLatin1(bytes, bytes) > int
+          - [ ] >=9 : StringLatin1.indexOf(bytes, int, bytes, int, int) > int
+          - [ ] >=9 : StringUTF16.indexOf(bytes, int, bytes, int, int) > int
+          - [ ] >=9 : StringUTF16.indexOfLatin1(bytes, int, bytes, int, int) > int
+          - [ ] >=9 : StringUTF16.indexOfChar(bytes, int, int, int) > int
+          - [ ] >=9 : StringLatin1.equals(bytes, bytes) > boolean
+          - [ ] >=9 : StringUTF16.equals(bytes, bytes) > boolean
+          - [ ] new StringBuilder()
+          - [ ] new StringBuilder(int)
+          - [ ] new StringBuilder(String)
+          - [ ] <StringBuilder>.append(char) > StringBuilder
+          - [ ] <StringBuilder>.append(int) > StringBuilder
+          - [ ] <StringBuilder>.append(String) > StringBuilder
+          - [ ] <StringBuilder>.toString() > String
+          - [ ] new StringBuffer()
+          - [ ] new StringBuffer(int)
+          - [ ] new StringBuffer(String)
+          - [ ] <StringBuffer>.append(char) > StringBuffer
+          - [ ] <StringBuffer>.append(int) > StringBuffer
+          - [ ] <StringBuffer>.append(String) > StringBuffer
+          - [ ] <StringBuffer>.toString() > String
+          - [ ] Integer.toString(int) > String
+          - [ ] new String(String)
+          - [ ] new Object()
+          - [ ] <java.lang.reflect.Method>.invoke(Object, objects) > Object
+          - [ ] <java.lang.invoke.MethodHandle>.invoke(*)
+          - [ ] <java.lang.invoke.MethodHandle>.invokeBasic(*)
+          - [ ] java.lang.invoke.MethodHandle.invokeVirtual(*)
+          - [ ] java.lang.invoke.MethodHandle.linkToVirtual(*)
+          - [ ] java.lang.invoke.MethodHandle.linkToStatic(*)
+          - [ ] java.lang.invoke.MethodHandle.linkToSpecial(*)
+          - [ ] java.lang.invoke.MethodHandle.linkToInterface(*)
+          - [x] <Boolean>  .booleanValue() > boolean
+          - [x] <Byte>     .byteValue   () > byte
+          - [x] <Short>    .shortValue  () > short
+          - [x] <Character>.charValue   () > char
+          - [x] <Integer>  .intValue    () > int
+          - [x] <Long>     .longValue   () > long
+          - [x] <Float>    .floatValue  () > float
+          - [x] <Double>   .doubleValue () > double
+          - [x] Boolean  .valueOf(boolean) > Boolean
+          - [x] Byte     .valueOf(byte   ) > Byte
+          - [x] Short    .valueOf(short  ) > Short
+          - [x] Character.valueOf(char   ) > Character
+          - [x] Integer  .valueOf(int    ) > Integer
+          - [x] Long     .valueOf(long   ) > Long
+          - [x] Float    .valueOf(float  ) > Float
+          - [x] Double   .valueOf(double ) > Double
+          - [ ] >=9 : <java.util.stream.StreamsRangeIntSpliterator>.forEachRemaining(java.util.function.IntConsumer)
     - [.] clojure.lang.RT
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/RT.java
           - [ ] aclone
@@ -1233,7 +1464,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [.] quantum.core.refs -> quantum.core.data.refs ?
     - [ ] quantum.core.logic
           - (def nneg?    (l/fn-not neg?))
-          - (def pos-int? (l/fn-and dnum/integer? pos?))
+          - (def pos-int? (l/fn-and dn/integer? pos?))
     - [.] quantum.core.fn
           - [ ] `apply`
                 - especially with `t/defn` as the caller
