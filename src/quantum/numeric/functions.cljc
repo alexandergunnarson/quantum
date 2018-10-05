@@ -11,6 +11,7 @@
 
 ; ===== GAMMA ===== ;
 
+;; TODO incorporate https://github.com/thi-ng/math/blob/master/src/gamma.org
 (defn ^double gamma
   "Gamma function. The extension of the factorial function to the reals.
    Breeze: exp(lgamma(a))
