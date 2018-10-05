@@ -26,6 +26,9 @@
            [it.unimi.dsi.fastutil.objects Reference2LongOpenHashMap]]
     :cljs [[goog.structs AvlTree LinkedMap]])))
 
+;; TODO make a wrapper fn/type for associative data structures such that it maintains a
+;; bidirectional mapping/index between keys and values
+
 ;; TO EXPLORE
 ;; - Optimizing Hash-Array Mapped Tries for Fast and Lean Immutable JVM Collections
 ;;   - Actual usable implementation: https://github.com/usethesource/capsule
