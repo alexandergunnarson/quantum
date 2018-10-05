@@ -1,7 +1,4 @@
-(ns
-  ^{:doc "Image library. Conversion, compression, etc."
-    :attribution "alexandergunnarson"}
-  quantum.media.imaging.core
+(ns quantum.graphics.core
   #?(:clj (:import javax.imageio.ImageIO
                    java.awt.image.BufferedImage)))
 
