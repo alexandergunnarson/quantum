@@ -1,6 +1,8 @@
-(ns quantum.ui.plots)
+(ns quantum.ui.visualization)
 
 ; TO EXPLORE
+
+; https://github.com/thi-ng/geom/blob/master/geom-viz/src/core.org
 
 ; Mathematica
 ; - 2D and 3D data, function and geo visualization and animation tools
