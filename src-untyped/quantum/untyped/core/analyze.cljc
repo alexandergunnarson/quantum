@@ -29,7 +29,7 @@
     [quantum.untyped.core.print
       :refer [ppr]]
     [quantum.untyped.core.reducers          :as r
-      :refer [educe reducei]]
+      :refer [educe join reducei]]
     [quantum.untyped.core.spec              :as s]
     [quantum.untyped.core.type              :as t
       :refer [?]]
@@ -869,8 +869,20 @@
             quantum.untyped.core.print/*collapse-symbols?* true]
     (quantum.untyped.core.print/ppr x)))
 
+#?(:clj
+(uvar/def sort-guide "for use in arglist sorting, in increasing conceptual (and bit) size"
+  {t/boolean? 0
+   t/byte?    1
+   t/short?   2
+   t/char?    3
+   t/int?     4
+   t/long?    5
+   t/float?   6
+   t/double?  7
+   t/object?  8}))
+
 ;; TODO move?
-(defns split-type
+(defns type>split
   "Only `t/or`s are splittable for now"
   [t t/type? > (s/vec-of t/type?)]
   (if (utr/or-type? t)
@@ -897,10 +909,13 @@
              env' (update env :opts
                     #(assoc % :arglist-syms|queue      (conj arglist-syms|queue arg-sym)
                               :arglist-syms|unanalyzed arglist-syms|unanalyzed))
-             _ (println "About to analyze")
              analyzed (-> (analyze env' arg-type-form) (update :type t/unvalue))
-             ;; If a deduced argtype needs to be split, we don't put it in the env yet
-             t-split (-> analyzed :type split-type)]
+             primitive-subtypes
+               (->> analyzed :type
+                    t/type>primitive-subtypes
+                    (sort-by sort-guide) ; For cleanliness and reproducibility in tests
+                    vec)
+             t-split (c/distinct (join primitive-subtypes (-> analyzed :type type>split)))]
          (pr! {:t (:type analyzed) :t-split t-split} #_{:analyzed analyzed})
          (if (-> t-split count (= 1))
              (let [env' (assoc (:env analyzed) arg-sym analyzed)]
@@ -911,14 +926,15 @@
                       (:arglist-syms|unanalyzed analyzed)
                       (inc n|iter)))
              (->> t-split
-                  (c/mapcat+ (fn [t]
-                               (analyze-arg-syms*
-                                 (assoc (:env analyzed) arg-sym (assoc analyzed :type t))
-                                 arg-sym->arg-type-form
-                                 out-type-form
-                                 (:arglist-syms|queue      analyzed)
-                                 (:arglist-syms|unanalyzed analyzed)
-                                 (inc n|iter))))
+                  (c/mapcat+
+                    (fn [t]
+                      (analyze-arg-syms*
+                        (assoc (:env analyzed) arg-sym (assoc analyzed :type t))
+                        arg-sym->arg-type-form
+                        out-type-form
+                        (:arglist-syms|queue      analyzed)
+                        (:arglist-syms|unanalyzed analyzed)
+                        (inc n|iter))))
                   r/join)))))
 
 (defns analyze-arg-syms
@@ -940,23 +956,3 @@
                   :arg-sym->arg-type-form arg-sym->arg-type-form
                   :out-type-form          out-type-form))
       arg-sym->arg-type-form out-type-form #{} (-> arg-sym->arg-type-form keys set) 0)))
-
-#_"
-[a b c > out]
-   split?=true
--> [a0 b c > out]
-   -> [a0 b0 c > out]
-      -> [a0 b0 c0 > out] done!
-         [a0 b0 c1 > out]
-      [a0 b1 c > out]
-      -> [a0 b1 c0 > out]
-         [a0 b1 c1 > out]
-   [a1 b c > out]
-   -> [a1 b0 c > out]
-      -> [a1 b0 c0 > out]
-         [a1 b0 c1 > out]
-      [a1 b1 c > out]
-      -> [a1 b1 c0 > out]
-         [a1 b1 c1 > out]
-We want all the leaves to make it in but not the rest
-"

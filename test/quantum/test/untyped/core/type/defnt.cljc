@@ -1401,17 +1401,7 @@
   (testing "Output type dependent on primitive-splittable input"
     (let [actual
             (macroexpand '
-              (self/defn dependent-type-psplit
-                #_"1. Analyze `x` = `t/any?`. Primitive-splittable.
-                   2. Split `t/any?`:
-                      [[x tt/boolean? > (t/type x)]
-                       [x ... > (t/type x)]]
-                   3. Analyze split 0.
-                      1. Analyze `x` = `tt/boolean?`
-                         -> Put `x` in env as `(t/isa? Boolean)`
-                      2. Analyze out-type = `(t/type x)`
-                         -> `(t/isa? Boolean)`
-                   4. Analyze rest of splits in the same way."
+              (self/defn dependent-type-split
                 ([x t/any? > (t/type x)] x)))
           expected
             (case (env-lang)

@@ -268,6 +268,8 @@
 (def      remove-vals+ (pred-vals remove+))
 (defeager remove-vals  remove-vals+ 1)
 
+(defn keys+ [xs] (->> xs (map+ key)))
+
 (defn indexed+ [xs] (map-indexed+ vector xs))
 (defn lindexed [xs] (lmap-indexed vector xs))
 (defeager indexed indexed+ 0)

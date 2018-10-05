@@ -152,18 +152,6 @@
 ;; time the function gets run; e.g. extern it
 (core/defn >with-post-type|form [body post-type|form] `(t/validate ~body ~post-type|form))
 
-#?(:clj
-(uvar/def sort-guide "for use in arity sorting, in increasing conceptual (and bit) size"
-  {Object       0
-   tdef/boolean 1
-   tdef/byte    2
-   tdef/short   3
-   tdef/char    4
-   tdef/int     5
-   tdef/long    6
-   tdef/float   7
-   tdef/double  8}))
-
 ;; TODO move
 (def index? #(and (integer? %) (>= % 0)))
 
@@ -177,18 +165,6 @@
   (if (t/primitive-class? c) c java.lang.Object)))
 
 #?(:clj
-(defns class>most-primitive-class [c (s/nilable class?), nilable? t/boolean? > (s/nilable class?)]
-  (if nilable? c (or (tcore/boxed->unboxed c) c))))
-
-#?(:clj
-(defns type>most-primitive-classes [t t/type? > (s/set-of (s/nilable class?))]
-  (let [cs       (t/type>classes t)
-        nilable? (or (-> t meta :quantum.core.type/ref?) (contains? cs nil))]
-    (->> cs
-         (c/map+ #(class>most-primitive-class % nilable?))
-         (r/join #{})))))
-
-#?(:clj
 (defns out-type>class [t t/type? > (s/nilable class?)]
   (if (-> t meta :quantum.core.type/ref?)
       java.lang.Object
@@ -198,23 +174,10 @@
             ;; NOTE: we don't need to vary the output class if there are multiple output possibilities
             ;; or just nil
             java.lang.Object
-            (-> (class>most-primitive-class (first cs') (contains? cs nil))
-                class>simplest-class))))))
+            (-> (first cs')
+                (cond-> (not (contains? cs nil)) t/class>most-primitive-class) class>simplest-class))))))
 
-#?(:clj
-(defns arg-type>arg-classes-seq|primitivized [arg-type t/type? > (s/seq-of class?)]
-  (if (-> arg-type meta :quantum.core.type/ref?)
-      (-> arg-type t/type>classes (disj nil) seq)
-      (let [cs (type>most-primitive-classes arg-type)
-            base-classes
-            (cond-> cs
-                    (contains? cs nil) (-> (disj nil) (conj java.lang.Object)))]
-        (->> cs
-             (c/map+ tcore/class>prim-subclasses)
-             (educe (aritoid nil identity uset/union) base-classes)
-             ;; for purposes of cleanliness and reproducibility in tests
-             (sort-by sort-guide))))))
-
+;; TODO rework in light of new type splitting
 #?(:clj
 (defns arg-types>arg-classes-seq|primitivized
   "'primitivized' meaning given an arglist whose types are `[t/any?]` this will output:
@@ -230,7 +193,7 @@
    which includes all primitive subclasses of the type."
   [arg-types (s/seq-of t/type?) > (s/seq-of ::expanded-overload|arg-classes)]
   (->> arg-types
-       (c/lmap arg-type>arg-classes-seq|primitivized)
+       (c/lmap uana/arg-type>arg-classes-seq|primitivized)
        (apply ucombo/cartesian-product)
        (c/lmap >vec))))
 
@@ -339,6 +302,7 @@
                        ;; supported
                        (assert kind :sym)
                        binding-)))
+        ;; TODO this splitting and expansion is rendered unnecessary by the dep. type analyzer
         arg-types|split
           (->> arg-types (c/map uana/split-type))
         arg-types|expanded-seq (->> arg-types|split

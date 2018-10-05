@@ -86,4 +86,26 @@
                 `(t/type ~'x))]
       (is= [[{'x tt/boolean?} tt/boolean?]
             [{'x tt/string?}  tt/string?]]
+           (transform-ana ana))))
+  (testing "Output type dependent on primitive-splittable input"
+    #_"1. Analyze `x` = `t/any?`. Primitive-splittable.
+       2. Split `t/any?`:
+          [[x tt/boolean? > (t/type x)]
+           [x ... > (t/type x)]]
+       3. Analyze split 0.
+          1. Analyze `x` = `tt/boolean?`
+             -> Put `x` in env as `(t/isa? Boolean)`
+          2. Analyze out-type = `(t/type x)`
+             -> `(t/isa? Boolean)`
+       4. Analyze rest of splits in the same way."
+    (let [ana (self/analyze-arg-syms {'x 't/any?} `(t/type ~'x))]
+      (is= [[{'x tt/boolean?} tt/boolean?]
+            [{'x tt/byte?}    tt/byte?]
+            [{'x tt/short?}   tt/short?]
+            [{'x tt/char?}    tt/char?]
+            [{'x tt/int?}     tt/int?]
+            [{'x tt/long?}    tt/long?]
+            [{'x tt/float?}   tt/float?]
+            [{'x tt/double?}  tt/double?]
+            [{'x t/any?}      t/any?]]
            (transform-ana ana)))))

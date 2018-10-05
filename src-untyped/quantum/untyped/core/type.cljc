@@ -15,6 +15,7 @@
             type])
          (:require
            [clojure.core                               :as c]
+           [clojure.set]
            [clojure.string                             :as str]
            [quantum.untyped.core.analyze.expr
              :refer [>expr #?(:cljs Expression)]]
@@ -501,6 +502,8 @@
    Float/TYPE     Float
    Double/TYPE    Double}))
 
+#?(:clj (def boxed-class->unboxed-class (clojure.set/map-invert unboxed-class->boxed-class)))
+
 ;; TODO figure out the best place to put this
 #?(:clj
 (def boxed-class->unboxed-symbol
@@ -539,9 +542,40 @@
           (err! "Not sure how to handle type" t)))
 
 (defns type>classes
-  "Outputs the set of all the classes ->`t` can embody according to its various conditional
-   branches, if any. Ignores nils, treating in Clojure simply as a `java.lang.Object`."
+  "Outputs the set of all the classes ->`t` can embody, possibly including nil."
   [t utr/type? > (us/set-of (us/nilable #?(:clj c/class? :cljs c/fn?)))] (-type>classes t #{}))
+
+;; TODO move
+#?(:clj
+(defns class>boxed-subclasses+ [c (us/nilable c/class?) #_> #_(educer-of c/class?)]
+  (when (some? c)
+    (->> boxed-class->unboxed-class
+         uc/keys+
+         (uc/filter+ (fn [^Class uc] (.isAssignableFrom ^Class c uc)))))))
+
+;; TODO move
+#?(:clj
+(defns class>most-primitive-class
+  "Unboxes the class if possible."
+  [c (us/nilable c/class?) > (us/nilable c/class?)]
+  (c/or (boxed-class->unboxed-class c) c)))
+
+#?(:clj
+(defns type>most-primitive-classes
+  "The same as `type>classes` except unboxes all possible classes.
+   Distinct from primitive-expansion / primitivization."
+  [t type? > (us/set-of (us/nilable c/class?))]
+  (let [cs (type>classes t)]
+    (if-let [nilable? (c/or (-> t c/meta :quantum.core.type/ref?) (contains? cs nil))]
+      cs
+      (->> cs (uc/map+ class>most-primitive-class) (ur/join #{}))))))
+
+#?(:clj
+(defns type>primitive-subtypes [t type? > (us/vec-of type?)]
+  (->> t type>classes
+       (uc/mapcat+ class>boxed-subclasses+)
+       (join #{})
+       (uc/map isa?))))
 
 #?(:clj
 (defns- -type>?class-value [t utr/type?, type-nilable? c/boolean?]
