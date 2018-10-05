@@ -4,7 +4,7 @@
     [quantum.core.type.core                 :as tcore]
     [quantum.untyped.core.analyze.ast       :as uast]
     [quantum.untyped.core.analyze.expr      :as uxp]
-    [quantum.untyped.core.collections       :as c
+    [quantum.untyped.core.collections       :as uc
       :refer [>vec]]
     [quantum.untyped.core.collections.logic :as clogic]
     [quantum.untyped.core.compare           :as ucomp]
@@ -92,21 +92,21 @@
         ;; (http://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html#jls-8.4.2) and that the bug
         ;; only exists in Java 6 or 7 on Oracle's JDK, OpenJDK, and IBM's JDK: https://stackoverflow.com/questions/5561436/can-two-java-methods-have-same-name-with-different-return-types
         with-distinct-arg-class-seqs
-          (fn->> (c/group-by (fn-> :arg-classes vec))
+          (fn->> (uc/group-by (fn-> :arg-classes vec))
                  vals
-                 (c/map with-most-specific-out-class))]
+                 (uc/map with-most-specific-out-class))]
     (->> (.getMethods c)
-         (c/map+ (fn [^java.lang.reflect.Method x]
-                   (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
-                     (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
-                         :static
-                         :instance))))
-         (c/group-by (fn [^Method x] (:name x))) ; TODO all of these need to be into !vector and !hash-map
-         (c/map-vals+
-           (fn->> (c/group-by (fn [^Method x] (count (:arg-classes x))))
-                  (c/map-vals+
-                    (fn->> (c/group-by (fn [^Method x] (:kind x)))
-                           (c/map-vals+ with-distinct-arg-class-seqs)
+         (uc/map+ (fn [^java.lang.reflect.Method x]
+                    (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
+                      (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
+                          :static
+                          :instance))))
+         (uc/group-by (fn [^Method x] (:name x))) ; TODO all of these need to be into !vector and !hash-map
+         (uc/map-vals+
+           (fn->> (uc/group-by (fn [^Method x] (count (:arg-classes x))))
+                  (uc/map-vals+
+                    (fn->> (uc/group-by (fn [^Method x] (:kind x)))
+                           (uc/map-vals+ with-distinct-arg-class-seqs)
                            (r/join {})))
                   (r/join {})))
          (r/join {})))))
@@ -127,7 +127,7 @@
   "Returns all the public constructors associated with a class, as a vector."
   [^Class c class? > vector?]
   (->> (.getConstructors c)
-       (c/map (fn [^java.lang.reflect.Constructor x] (Constructor. (.getParameterTypes x)))))))
+       (uc/map (fn [^java.lang.reflect.Constructor x] (Constructor. (.getParameterTypes x)))))))
 
 (defonce class>constructors|with-cache
   (memoize (fn [c] (class>constructors c))))
@@ -142,12 +142,12 @@
   "Returns all the public fields associated with a class, as a map from field name to field."
   [^Class c class? > map?]
   (->> (.getFields c)
-       (c/map+ (fn [^java.lang.reflect.Field x]
-                 [(.getName x)
-                  (Field. (.getName x) (.getType x)
-                    (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
-                        :static
-                        :instance))]))
+       (uc/map+ (fn [^java.lang.reflect.Field x]
+                  [(.getName x)
+                   (Field. (.getName x) (.getType x)
+                     (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
+                         :static
+                         :instance))]))
        (r/join {})))) ; TODO !hash-map
 
 #?(:clj
@@ -247,11 +247,11 @@
                   :body            body
                   ;; To types, only the last sub-AST-node ever matters, as each is independent from
                   ;; the others
-                  :type            (-> body c/last :type)}))))
+                  :type            (-> body uc/last :type)}))))
 
 (defns analyze-seq|let*|bindings [opts ::opts, env ::env, bindings|form _]
   (->> bindings|form
-       (c/partition-all+ 2)
+       (uc/partition-all+ 2)
        (reduce (fn [{env' :env !bindings :form :keys [bindings-map]} [sym form :as binding|form]]
                  (let [node (analyze* opts env' form)] ; environment is additive with each binding
                    {:env          (assoc env' sym node)
@@ -302,7 +302,7 @@
          (reduce
            (fn [call-sites' i]
              (->> call-sites'
-                  (c/map+ (fn [{:keys [^"[Ljava.lang.Object;" arg-classes]}] (aget arg-classes i)))
+                  (uc/map+ (fn [{:keys [^"[Ljava.lang.Object;" arg-classes]}] (aget arg-classes i)))
                   (ucomp/comp-mins-of compare-class-specificity)))
            call-sites))))
 
@@ -317,7 +317,7 @@
                          arg|analyzed|type (:type arg|analyzed)
                          call-sites'
                            (->> call-sites
-                                (c/filter
+                                (uc/filter
                                   (fn [{:keys [^"[Ljava.lang.Object;" arg-classes]}]
                                     (t/<= arg|analyzed|type
                                           (class>type (aget arg-classes i|arg))))))]
@@ -377,17 +377,17 @@
    method-form simple-symbol?, args|form _ #_(seq-of form?) > uast/method-call?]
   ;; TODO cache type by method
   (if-not-let [methods-for-name (-> target-class class>methods|with-cache
-                                    (c/get (name method-form)))]
+                                    (uc/get (name method-form)))]
     (if (empty? args|form)
         (err! "No such method or field in class" {:class target-class :method-or-field method-form})
         (err! "No such method in class"          {:class target-class :methods        method-form}))
-    (if-not-let [methods-for-ct (c/get methods-for-name (c/count args|form))]
+    (if-not-let [methods-for-ct (uc/get methods-for-name (uc/count args|form))]
       (err! "Incorrect number of arguments for method"
             {:class           target-class
              :method          method-form
              :possible-counts (->> methods-for-name keys (apply sorted-set))})
       (let [[kind non-kind] (if static? [:static :instance] [:instance :static])]
-        (if-not-let [methods-for-ct-and-kind (c/get methods-for-ct kind)]
+        (if-not-let [methods-for-ct-and-kind (uc/get methods-for-ct kind)]
           (err! (istr "Method found for arg-count, but was ~non-kind, not ~kind")
                 {:class target-class :method method-form :args args|form})
           (analyze-seq|dot|method-call|incrementally-analyze opts env form target target-class
@@ -436,7 +436,7 @@
                   {:form form :target-type (:type target)})
             (if-let [field (and (empty? args-forms)
                                 (-> target-class class>fields|with-cache
-                                    (c/get (name method-or-field))))]
+                                    (uc/get (name method-or-field))))]
               (analyze-seq|dot|field-access opts env form target method-or-field field)
               (analyze-seq|dot|method-call opts env form target target-class
                 (boolean ?target-static-class-map) method-or-field args-forms)))))))
@@ -452,8 +452,8 @@
             constructors (-> c class>constructors|with-cache)
             args-ct (count args|form)
             constructors-for-ct (->> constructors
-                                     (c/filter (fn [{:keys [^"[Ljava.lang.Object;" arg-classes]}]
-                                                 (= (alength arg-classes) args-ct))))]
+                                     (uc/filter (fn [{:keys [^"[Ljava.lang.Object;" arg-classes]}]
+                                                  (= (alength arg-classes) args-ct))))]
         (if (empty? constructors-for-ct)
             (err! "No constructors for class match the arg ct" {:class c :args|form args|form})
             (let [{:keys [args|analyzed call-sites]}
@@ -551,7 +551,7 @@
                    (reduce
                      (fn [ret {:as overload :keys [input-types]}]
                        (if-let [or-types-that-match
-                                  (->> or-types (c/lfilter #(t/<= % (get input-types i))) seq)]
+                                  (->> or-types (uc/lfilter #(t/<= % (get input-types i))) seq)]
                          (-> ret
                              (update :dispatchable-overloads-seq' conj overload)
                              (update :non-dispatchable-or-types
@@ -560,7 +560,7 @@
                      {:dispatchable-overloads-seq' []
                       :non-dispatchable-or-types (set or-types)}))]
         (if (or (empty? dispatchable-overloads-seq')
-                (c/contains? non-dispatchable-or-types))
+                (uc/contains? non-dispatchable-or-types))
             (err! "No overloads satisfy the inputs, whether direct or dynamic"
                   {:caller             caller|node
                    :inputs             body
@@ -575,7 +575,7 @@
   [{:as ret :keys [dispatchable-overloads-seq]} input|analyzed i caller|node body]
   (if-let [dispatchable-overloads-seq'
             (->> dispatchable-overloads-seq
-                 (c/lfilter
+                 (uc/lfilter
                    (fn [{:keys [input-types]}]
                      (t/<= (:type input|analyzed) (get input-types i))))
                  seq)]
@@ -586,7 +586,7 @@
   (case dispatch-type
     :direct  (-> dispatchable-overloads-seq first :output-type)
     :dynamic (->> dispatchable-overloads-seq
-                  (c/lmap :output-type)
+                  (uc/lmap :output-type)
                   ;; Technically we could do a complex conditional instead of a simple `t/or` but
                   ;; no need
                   (apply t/or))))
@@ -604,7 +604,7 @@
                ;; We could do a little smarter analysis here but we'll keep it simple for now
                t/any?)}
         (->> body
-             (c/map+ #(analyze* opts env %))
+             (uc/map+ #(analyze* opts env %))
              (reducei
                (fn [{:as ret :keys [dispatch-type]} input|analyzed i]
                  (if (= :fnt caller-kind)
@@ -656,8 +656,8 @@
 
 (defns- apply-arg-type-combine [combinef fn?, input-nodes _ > t/value-type?]
   (->> input-nodes
-       (c/map+ :type)
-       (c/map+ t/unvalue)
+       (uc/map+ :type)
+       (uc/map+ t/unvalue)
        r/join
        (apply combinef)
        t/value))
@@ -883,9 +883,7 @@
                  (binding [quantum.untyped.core.analyze.ast/*print-env?* false
                            quantum.untyped.core.print/*collapse-symbols?* true]
                    (quantum.untyped.core.print/ppr ret))
-                 (assoc ret
-                   :arg-sym->arg-type (->> env (c/map-vals' :type))
-                   :out-type          (:type out-type-node)))
+                 [ret])
              (>= n|iter analyze-arg-syms|max-iter)
                (err! "Max number of iterations reached for `analyze-arg-syms" {:n n|iter})
              (let [arg-sym (first arglist-syms|unanalyzed)
