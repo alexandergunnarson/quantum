@@ -11,6 +11,9 @@
 
    Many of them are aliased from other namespaces like
    quantum.core.collections.core, or quantum.core.reducers."
+  {:todo #{"Incorporate System.arrayCopy"
+           "Incorporate java.util.Arrays"
+           "Incorporate java.util.ArraysSupport"}}
   (:refer-clojure :exclude
     [for doseq reduce transduce dotimes
      contains?
