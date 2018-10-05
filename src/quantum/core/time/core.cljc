@@ -27,7 +27,7 @@
     [quantum.core.numeric           :as num]
     [quantum.core.spec              :as s]
     [quantum.core.vars              :as var
-      :refer [defalias]]
+      :refer [def- defalias]]
     [quantum.measure.convert        :as uconv
       :refer [convert]])
 #?(:cljs
@@ -42,6 +42,17 @@
                Period Duration]
     [java.time.format DateTimeFormatter]
     [java.time.temporal Temporal TemporalAccessor ChronoField])))
+
+#?(:cljs
+(def- now-nanos*
+  (or (.-now       js/performance)
+      (.-webkitNow js/performance)
+      (.-mozNow    js/performance)
+      (.-msNow     js/performance)
+      (.-oNow      js/performance))))
+
+(t/defn ^:inline now-nanos > #?(:clj long? :cljs (t/assume std-fixint?)) []
+  #?(:clj (System/nanoTime) :cljs (now-nanos*)))
 
 ; ===== ABOUT =====
 ; https://www.npmjs.com/package/js-joda
