@@ -170,7 +170,7 @@
   [x t/ref?] (#?(:clj clojure.lang.Reduced. :cljs cljs.core/Reduced.) x))
 
 (def reducible?
-  (t/or p/nil? dstr/string? vec/!+vector? arr/array? dnum/numerically-integer?
+  (t/or p/nil? dstr/string? vec/!+vector? arr/array? dn/numerically-integer?
         ;; TODO what about `transformer?`
         dasync/read-chan?
         (t/isa? fast_zip.core.ZipperLocation)

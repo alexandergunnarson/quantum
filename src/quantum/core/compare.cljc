@@ -25,7 +25,7 @@
       :refer [- -' + abs inc div:natural]]
     [quantum.core.numeric.predicates :as pred
       :refer [neg? pos? zero?]]
-    [quantum.core.data.numeric       :as dnum]
+    [quantum.core.data.numeric       :as dn]
     [quantum.core.data.time          :as dtime]
     [quantum.core.reducers           :as red
       :refer [reduce, transduce]]

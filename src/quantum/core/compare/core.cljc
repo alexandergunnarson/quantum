@@ -21,7 +21,7 @@
         #_[quantum.core.numeric.convert
             :refer [->num ->num&]]
           ;; TODO TYPED excise
-        #_[quantum.core.data.numeric       :as dnum]
+        #_[quantum.core.data.numeric       :as dn]
           [quantum.core.data.primitive     :as p]
           [quantum.core.type               :as t]
           ;; TODO TYPED excise
