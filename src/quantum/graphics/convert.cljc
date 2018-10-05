@@ -1,16 +1,12 @@
-(ns
-  ^{:doc "Image library. Conversion."
-    :attribution "alexandergunnarson"}
-  quantum.media.imaging.convert
+(ns quantum.graphics.convert
   (:refer-clojure :exclude [contains?])
   (:require
     [quantum.core.process :as proc
-      :refer [proc!]              ]
-    [quantum.core.io      :as io  ]
-    [quantum.core.paths   :as path
-      :include-macros true        ]
+      :refer [proc!]]
+    [quantum.core.io      :as io]
+    [quantum.core.paths   :as path]
     [quantum.core.collections
-      :refer [contains? in?]        ]))
+      :refer [contains? in?]]))
 
 (def supported-types #{:jpg :png :tiff :jpeg :gif :pdf})
 
@@ -22,6 +18,7 @@
         (str #_[to-type   ":"] (-> to   path/file-str))]
        {:dir (path/file-str [:resources "Images"])}))
 
+;; TODO extend `quantum.core.convert/convert" instead of doing this
 (defn convert!
   "DOC http://libjpeg-turbo.virtualgl.org"
   {:usage
@@ -41,3 +38,13 @@
         (assert (in? from-type supported-types))
         (assert (in? to-type   supported-types))
         (convert!* from-type from to-type to)))))
+
+
+(defn ocr
+  "Uses the open-source tool `tesseract` to perform OCR on a document.
+   Refer to the Tesseract GitHub for help and setup.
+
+   To OCR a PDF:
+   `gs -o <output-TIFF> -sDEVICE=tiffg4 <input-PDF> && tesseract <output-TIFF> stdout pdf > <output-PDF>`"
+  [in out opts]
+  (TODO))
