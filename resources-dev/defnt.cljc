@@ -102,6 +102,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - Peformance analysis (this comes very much later)
       - We should be able to do complexity analysis. Similarly to how we can combine and manipulate
         types, we could do like `(cplex/assume (cplex/o :n))` or `(cplex/assume (cplex/o :n2))` etc.
+        - For `reduce` we'd always know it's up to N operations, so O(n * <complexity of `rf`>)
       - Record performance for each relevant part and cache?
     - (if (dcoll/reduced? ret)
           ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`
