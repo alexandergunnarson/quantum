@@ -87,26 +87,26 @@
 
 #?(:clj
 (t/defn ^:inline box
-  ([x boolean? > (t/assume (t/ref boolean?))] (Boolean/valueOf   x))
-  ([x byte?    > (t/assume (t/ref byte?))]    (Byte/valueOf      x))
-  ([x char?    > (t/assume (t/ref char?))]    (Character/valueOf x))
-  ([x short?   > (t/assume (t/ref short?))]   (Short/valueOf     x))
-  ([x int?     > (t/assume (t/ref int?))]     (Integer/valueOf   x))
-  ([x long?    > (t/assume (t/ref long?))]    (Long/valueOf      x))
-  ([x float?   > (t/assume (t/ref float?))]   (Float/valueOf     x))
-  ([x double?  > (t/assume (t/ref double?))]  (Double/valueOf    x))
-  ([x t/ref?] x)))
+  (^:intrinsic [x boolean? > (t/assume (t/ref boolean?))] (Boolean/valueOf   x))
+  (^:intrinsic [x byte?    > (t/assume (t/ref byte?))]    (Byte/valueOf      x))
+  (^:intrinsic [x char?    > (t/assume (t/ref char?))]    (Character/valueOf x))
+  (^:intrinsic [x short?   > (t/assume (t/ref short?))]   (Short/valueOf     x))
+  (^:intrinsic [x int?     > (t/assume (t/ref int?))]     (Integer/valueOf   x))
+  (^:intrinsic [x long?    > (t/assume (t/ref long?))]    (Long/valueOf      x))
+  (^:intrinsic [x float?   > (t/assume (t/ref float?))]   (Float/valueOf     x))
+  (^:intrinsic [x double?  > (t/assume (t/ref double?))]  (Double/valueOf    x))
+  (            [x t/ref?] x)))
 
 #?(:clj
 (t/defn ^:inline unbox
-  ([x (t/ref boolean?) > boolean?] (.booleanValue x))
-  ([x (t/ref byte?)    > byte?]    (.byteValue    x))
-  ([x (t/ref char?)    > char?]    (.charValue    x))
-  ([x (t/ref short?)   > short?]   (.shortValue   x))
-  ([x (t/ref int?)     > int?]     (.intValue     x))
-  ([x (t/ref long?)    > long?]    (.longValue    x))
-  ([x (t/ref float?)   > float?]   (.floatValue   x))
-  ([x (t/ref double?)  > double?]  (.doubleValue  x))))
+  (^:intrinsic [x (t/ref boolean?) > boolean?] (.booleanValue x))
+  (^:intrinsic [x (t/ref byte?)    > byte?]    (.byteValue    x))
+  (^:intrinsic [x (t/ref char?)    > char?]    (.charValue    x))
+  (^:intrinsic [x (t/ref short?)   > short?]   (.shortValue   x))
+  (^:intrinsic [x (t/ref int?)     > int?]     (.intValue     x))
+  (^:intrinsic [x (t/ref long?)    > long?]    (.longValue    x))
+  (^:intrinsic [x (t/ref float?)   > float?]   (.floatValue   x))
+  (^:intrinsic [x (t/ref double?)  > double?]  (.doubleValue  x))))
 
 ;; ===== Bit lengths ===== ;;
 
@@ -206,7 +206,7 @@
          ([x boolean?] (if x #?(:clj (byte 1) :cljs 1) #?(:clj (byte 0) :cljs 0)))
 #?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-byte?)] (>byte* (.lpart x))))
 #?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-byte?)] (.byteValue x)))
-#?(:clj  ([x (t/and dnum/ratio? numerically-byte?)] (-> x .bigIntegerValue .byteValue))))
+#?(:clj  ([x (t/and dn/ratio? numerically-byte?)] (-> x .bigIntegerValue .byteValue))))
 
 ;; ----- Short ----- ;;
 
@@ -228,7 +228,7 @@
          ([x boolean?] (if x #?(:clj (short 1) :cljs 1) #?(:clj (short 0) :cljs 0)))
 #?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-short?)] (>short* (.lpart x))))
 #?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-short?)] (.shortValue x)))
-#?(:clj  ([x (t/and dnum/ratio? numerically-short?)] (-> x .bigIntegerValue .shortValue))))
+#?(:clj  ([x (t/and dn/ratio? numerically-short?)] (-> x .bigIntegerValue .shortValue))))
 
 ;; ----- Char ----- ;;
 
@@ -251,7 +251,7 @@
          ([x boolean?] (if x #?(:clj (char 1) :cljs 1) #?(:clj (char 0) :cljs 0)))
 #?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-char?)] (>char* (.lpart x))))
 #?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-char?)] (.charValue x)))
-#?(:clj  ([x (t/and dnum/ratio? numerically-char?)] (-> x .bigIntegerValue .charValue))))
+#?(:clj  ([x (t/and dn/ratio? numerically-char?)] (-> x .bigIntegerValue .charValue))))
 
 ;; ----- Int ----- ;;
 
@@ -274,7 +274,7 @@
          ([x boolean?] (if x #?(:clj (int 1) :cljs 1) #?(:clj (int 0) :cljs 0)))
 #?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-int?)] (>int* (.lpart x))))
 #?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-int?)] (.intValue x)))
-#?(:clj  ([x (t/and dnum/ratio? numerically-int?)] (-> x .bigIntegerValue .intValue))))
+#?(:clj  ([x (t/and dn/ratio? numerically-int?)] (-> x .bigIntegerValue .intValue))))
 
 ;; ----- Long ----- ;;
 
@@ -304,7 +304,7 @@
                     numerically-long?
                     ;; TODO This might be faster than `numerically-long?`
                   #_(fnt [x ?] (< (.bitLength x) 64)))] (.longValue x)))
-#?(:clj  ([x (t/and dnum/ratio? numerically-long?)] (-> x .bigIntegerValue .longValue))))
+#?(:clj  ([x (t/and dn/ratio? numerically-long?)] (-> x .bigIntegerValue .longValue))))
 
 ;; ----- Float ----- ;;
 
@@ -326,7 +326,7 @@
          ([x boolean?] (if x #?(:clj (float 1) :cljs 1) #?(:clj (float 0) :cljs 0)))
 #?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-float?)] (>float* (.lpart x))))
 #?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-float?)] (.floatValue x)))
-#?(:clj  ([x (t/and dnum/ratio? numerically-float?)] (-> x .bigIntegerValue .floatValue))))
+#?(:clj  ([x (t/and dn/ratio? numerically-float?)] (-> x .bigIntegerValue .floatValue))))
 
 ;; ----- Double ----- ;;
 
@@ -347,7 +347,7 @@
         ([x boolean?] (if x #?(:clj 1.0 :cljs 1) #?(:clj 1.0 :cljs 0)))
 #?(:clj ([x (t/and (t/isa? clojure.lang.BigInt) numerically-double?)] (>double* (.lpart x))))
 #?(:clj ([x (t/and (t/isa? java.math.BigInteger) numerically-double?)] (.doubleValue x)))
-#?(:clj ([x (t/and dnum/ratio? numerically-double?)] (-> x .bigIntegerValue .doubleValue))))
+#?(:clj ([x (t/and dn/ratio? numerically-double?)] (-> x .bigIntegerValue .doubleValue))))
 
 ;; ===== Unsigned ===== ;;
 
