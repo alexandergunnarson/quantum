@@ -16,6 +16,10 @@
     [java.util Map HashMap IdentityHashMap]
     [java.lang.invoke MethodHandle MethodHandles MethodType]))
 
+;; To avoid extraneous overhead from a loop
+(defmacro repeat-test [n expr]
+  `(do ~@(for [i (range n)] expr)))
+
 ; TODO try to use static methods instead of `invokevirtual` on the `reify`?
 
 ; ===== STATIC ===== ;
@@ -579,57 +583,63 @@
       (doto (.setAccessible true))
       (.get nil)))
 
-;; allocating one byte of off-heap memory: avg 90.23 ns
+;; Allocating one byte of off-heap memory: avg 91.902 ns
 ;; NOTE: This benchmark will allocate a lot of memory that won't be reclaimed till process killed
 ;; In one case with 161031248 calls it allocated 161031248/1024/1024 -> 154 MB
 (let [^sun.misc.Unsafe u unsafe]
-  (bench (do (.allocateMemory u 1)
-             (.allocateMemory u 1)
-             (.allocateMemory u 1)
-             (.allocateMemory u 1)
-             (.allocateMemory u 1))))
+  (bench (repeat-test 100 (.allocateMemory u 1))))
 
-;; allocating one byte of heap memory: avg 0.698 ns (or less depending on bench overhead)
-(bench (do (Array/newUninitialized1dByteArray 1)
-           (Array/newUninitialized1dByteArray 1)
-           (Array/newUninitialized1dByteArray 1)
-           (Array/newUninitialized1dByteArray 1)
-           (Array/newUninitialized1dByteArray 1)))
+;; Allocating one byte of heap memory: avg 0.0384 ns (or less depending on bench overhead)
+;; My guess is that it's being optimized and it knows that it's just being thrown away
+(bench (repeat-test 100 (Array/newUninitialized1dByteArray 1)))
 
-;; writing one byte of off-heap memory: avg 0.636 ns (or less depending on bench overhead)
+(defmacro gen-off-heap-set-test [n]
+  `(do ~@(for [i (range n)]
+           (let [x (byte (rand-int Byte/MAX_VALUE))] `(.putByte ~'u ~'pointer ~x)))))
+
+;; Writing one byte of off-heap memory: avg 0.0318 ns (or less depending on bench overhead)
+;; My guess is that somehow it knows where it's being set and/or knows it's already set?
 (let [^sun.misc.Unsafe u unsafe
       pointer (.allocateMemory u 1)
       b (byte 1)]
-  (bench (.putByte u pointer b)
-         (.putByte u pointer b)
-         (.putByte u pointer b)
-         (.putByte u pointer b)
-         (.putByte u pointer b)))
+  (bench (gen-off-heap-set-test 100)))
 
-;; writing one byte of on-heap memory: avg 0.6698 ns (or less depending on bench overhead)
+(defmacro gen-heap-set-test [n]
+  `(do ~@(for [i (range n)]
+           (let [x (byte (rand-int Byte/MAX_VALUE))] `(Array/set ~'bs ~x ~'i)))))
+
+;; Writing one byte of on-heap memory: avg 0.0329 ns (or less depending on bench overhead)
+;; My guess is that somehow it knows where it's being set and/or knows it's already set?
 (let [bs (Array/newUninitialized1dByteArray 1)
-      b (byte 1)
       i (int 0)]
-  (bench (Array/set bs b i)
-         (Array/set bs b i)
-         (Array/set bs b i)
-         (Array/set bs b i)
-         (Array/set bs b i)))
+  (bench (gen-heap-set-test 100)))
 
-;; accessing one byte of off-heap memory: 0.7052 ns (or less depending on bench overhead)
+;; Accessing one byte of off-heap memory: avg 0.0367 ns (or less depending on bench overhead)
+;; My guess is that once it's in the register then it only reads from L1 cache at that point
 (let [^sun.misc.Unsafe u unsafe
+      n 100
       pointer (.allocateMemory u 1)]
-  (bench (do (.getByte u pointer)
-             (.getByte u pointer)
-             (.getByte u pointer)
-             (.getByte u pointer)
-             (.getByte u pointer))))
+  (bench (repeat-test 100 (.getByte u pointer))))
 
-;; accessing one byte of on-heap memory: 0.7302 ns (or less depending on bench overhead)
+;; Accessing one byte of on-heap memory: 0.0371 ns (or less depending on bench overhead)
+;; My guess is that once it's in the register then it only reads from L1 cache at that point
 (let [bs (Array/newUninitialized1dByteArray 1)
       i (int 0)]
-  (bench (do (Array/get bs i)
-             (Array/get bs i)
-             (Array/get bs i)
-             (Array/get bs i)
-             (Array/get bs i))))
+  (bench (repeat-test 100 (Array/get bs i))))
+
+;; ===== Miscellaneous
+
+(defmacro gen-incrementing-test [f x n]
+  `(do ~@(for [i (range n)] `(~f ~(+ x i)))))
+
+(defmacro abs-bit-shift-test [x]
+  `(let [mask# (bit-shift-right ~x 32)]
+     (- (bit-xor ~x mask#) mask#)))
+
+(defmacro abs-simple-test [x] `(if (< ~x 0) (- ~x) ~x))
+
+;; 0.0374 ns avg
+(bench (gen-incrementing-test abs-bit-shift-test -100203 100))
+
+;; 0.0378 ns avg
+(bench (gen-incrementing-test abs-simple-test    -100203 100))
