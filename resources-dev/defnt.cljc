@@ -100,6 +100,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - Literal sets need to be analyzed — (t/finite-of t/built-in-set? a-type b-type ...)
       - Literal maps need to be better analyzed — (t/finite-of t/built-in-map?  [ak-type av-type] ...)
       - Literal seqs need to be better analyzed — (t/finite-of t/built-in-list? [ak-type av-type] ...)
+    - Peformance analysis (this comes very much later)
+      - We should be able to do complexity analysis. Similarly to how we can combine and manipulate
+        types, we could do like `(cplex/assume (cplex/o :n))` or `(cplex/assume (cplex/o :n2))` etc.
+      - Record performance for each relevant part and cache?
     - (if (dcoll/reduced? ret)
           ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`
           (ref/deref ret)
