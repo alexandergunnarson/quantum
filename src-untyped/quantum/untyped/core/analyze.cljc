@@ -654,6 +654,25 @@
            :args            [arg-node]
            :type            (t/value (:type arg-node))}))))
 
+(defns- apply-arg-type-combine [combinef fn?, input-nodes _ > t/value-type?]
+  (->> input-nodes
+       (c/map+ :type)
+       (c/map+ t/unvalue)
+       r/join
+       (apply combinef)
+       t/value))
+
+;; TODO this is probably not a great way to do this; rethink this
+;; Maybe it would work more cleanly if we added the `::t/type` metadata to each `t/` operator after
+;; the fact?
+(defns- handle-type-combinators
+  [caller|node uast/node?, input-nodes _, out-type t/type? > t/type?]
+  (condp = (:type caller|node)
+    (t/value t/isa?) (apply-arg-type-combine t/isa? input-nodes)
+    (t/value t/or)   (apply-arg-type-combine t/or   input-nodes)
+    (t/value t/and)  (apply-arg-type-combine t/and  input-nodes)
+    out-type))
+
 (defns- analyze-seq|call
   [opts ::opts, env ::env, [caller|form _ & args-form _ :as form] _ > uast/call-node?]
   (let [caller|node (analyze* opts env caller|form)
@@ -704,22 +723,9 @@
                    {:keys [input-nodes out-type]}
                      (call>input-nodes+out-type
                        opts env caller|node caller|type caller-kind inputs-ct args-form)
-                   apply-arg-type-combine
-                    (fn [combinef]
-                      (->> input-nodes
-                           (c/map+ :type)
-                           (c/map+ t/unvalue)
-                           r/join
-                           (apply t/or)
-                           t/value))
                    out-type'
                      (if (:arglist-context? opts)
-                         ;; TODO this is probably not a great way to do this; rethink this
-                         (condp = (:type caller|node)
-                           (t/value t/isa?) (apply-arg-type-combine t/isa?)
-                           (t/value t/or)   (apply-arg-type-combine t/or)
-                           (t/value t/and)  (apply-arg-type-combine t/and)
-                           out-type)
+                         (handle-type-combinators caller|node input-nodes out-type)
                          out-type)]
                (uast/call-node
                  {:env             env
