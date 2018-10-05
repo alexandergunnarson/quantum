@@ -1376,7 +1376,7 @@
                 (macroexpand '
                   (self/defn dependent-type-nest-shadow
                     ([x tt/boolean? > (let [x (>long-checked "123")]
-                                        (t/or t/number? (t/type x)))] (if x x 1)))
+                                        (t/or (t/isa? Byte) (t/type x)))] (if x x 1)))
               expected
                 (case (env-lang)
                   :clj

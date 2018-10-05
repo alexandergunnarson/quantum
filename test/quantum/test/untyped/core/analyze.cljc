@@ -54,8 +54,7 @@
             2. Analyze `(t/or t/number? (t/type x))`
                1. Analyze `(t/type x)`
                   -> `(t/isa? Long)`
-               -> `(t/or (t/isa? Number) (t/isa? Long))
-               -> (t/isa? Number)`"
+               -> `(t/or (t/isa? Byte) (t/isa? Long))"
         (let [ana (self/analyze-arg-syms
                     {'x `tt/boolean?}
                     `(let [~'x (>long-checked "123")]
