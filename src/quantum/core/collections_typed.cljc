@@ -8,7 +8,7 @@
     [quantum.core.data.compare     :as dcomp]
     [quantum.core.data.identifiers :as id]
     [quantum.core.data.map         :as map]
-    [quantum.core.data.numeric     :as dnum]
+    [quantum.core.data.numeric     :as dn]
     [quantum.core.data.primitive   :as p]
     [quantum.core.data.string      :as dstr]
     [quantum.core.data.vector      :as vec]
@@ -266,7 +266,7 @@
 #?(:clj  (^:inline [rf rf?, init t/any?
                     xs (t/or (t/isa? clojure.lang.PersistentVector) chunked-seq?)]
            (reduce-chunked rf init xs)))
-         ([rf rf?, init t/any?, n dnum/numerically-integer?]
+         ([rf rf?, init t/any?, n dn/numerically-integer?]
            (loop [i 0, ret init]
              (if (comp/< i n)
                  (let [ret' (rf ret i)]
@@ -378,25 +378,25 @@
         ([ct ?, _ ?] (num/inc ct))))
 
 ;; TODO make sure !+vector is handled for CLJS
-(t/defn ^:inline count > dnum/std-integer?
+(t/defn ^:inline count > dn/std-integer?
   {:todo #{"handle persistent maps"}
    :incorporated '{clojure.lang.RT/count     "9/2018"
                    clojure.lang.RT/countFrom "9/2018"
                    clojure.core/count        "9/2018"
                    cljs.core/count           "9/26/2018"}}
          ;; Counted
-         ([x  p/nil?           > #?(:clj p/long? :cljs dnum/nip?)] 0)
-#?(:cljs ([xs dstr/string?     > (t/assume dnum/nip?)] (.-length xs)))
-#?(:cljs ([xs dstr/!string?    > (t/assume dnum/nip?)] (.getLength xs)))
-         ([xs dc/icounted?     > #?(:clj p/int? :cljs (t/* dnum/nip?))]
+         ([x  p/nil?           > #?(:clj p/long? :cljs dn/std-fixint?)] 0)
+#?(:cljs ([xs dstr/string?     > (t/assume dn/std-fixint?)] (.-length xs)))
+#?(:cljs ([xs dstr/!string?    > (t/assume dn/std-fixint?)] (.getLength xs)))
+         ([xs dc/icounted?     > #?(:clj p/int? :cljs (t/* dn/std-fixint?))]
            (#?(:clj .count :cljs cljs.core/-count) xs))
 #?(:clj  ([xs dstr/char-seq?   > p/int?] (.length xs)))
-         ([xs tup/tuple?       > #?(:clj p/int? :cljs (t/assume dnum/nip?))]
+         ([xs tup/tuple?       > #?(:clj p/int? :cljs (t/assume dn/std-fixint?))]
            (-> xs .-vs count))
-         ([xs dasync/m2m-chan? > #?(:clj p/int? :cljs dnum/nip?)]
+         ([xs dasync/m2m-chan? > #?(:clj p/int? :cljs dn/std-fixint?)]
            (-> xs #?(:clj .buf :cljs .-buf) count))
 #?(:clj  ([xs tup/map-entry?   > p/long?] 2))
-         ([xs arr/std-array?   > #?(:clj p/int? :cljs (t/assume dnum/nip?))]
+         ([xs arr/std-array?   > #?(:clj p/int? :cljs (t/assume dn/std-fixint?))]
            (#?(:clj Array/count :cljs .-length) xs))
 #?(:clj  ([xs arr/array?       > p/int?] (java.lang.reflect.Array/getLength xs)))
          ;; Possibly counted
@@ -407,15 +407,15 @@
          ;; Not counted
          ([xs (t/input-type educe :_ :_ :?)] (educe count|rf xs)))
 
-(t/defn ^:inline gen-bounded-count|rf [n dnum/std-integer?]
+(t/defn ^:inline gen-bounded-count|rf [n dn/std-integer?]
   (t/fn {:inline true}
     ([] 0)
     ([ct ?] ct)
     ([ct ?, _ ?] (if (dcomp/< ct n) (num/inc ct) (?/reduced ct)))))
 
-(t/defn ^:inline bounded-count > dnum/std-integer?
-  ([n dnum/std-integer?, xs dc/counted?] (count xs))
-  ([n dnum/std-integer?, xs (t/input-type educe :_ :_ :?)] (educe (gen-bounded-count|rf n) xs)))
+(t/defn ^:inline bounded-count > dn/std-integer?
+  ([n dn/std-integer?, xs dc/counted?] (count xs))
+  ([n dn/std-integer?, xs (t/input-type educe :_ :_ :?)] (educe (gen-bounded-count|rf n) xs)))
 
 (t/def ^:inline empty?|rf
   (fn/aritoid
