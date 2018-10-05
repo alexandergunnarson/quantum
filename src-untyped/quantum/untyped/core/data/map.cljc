@@ -1,6 +1,4 @@
-(ns
-  ^{:doc "Useful map functions. |map-entry|, a better merge, sorted-maps, etc."
-    :attribution "alexandergunnarson"}
+(ns "Map functions. |map-entry|, a better merge, sorted-maps, etc."
   quantum.untyped.core.data.map
   (:refer-clojure :exclude
     [split-at, merge, sorted-map sorted-map-by, array-map, hash-map])
