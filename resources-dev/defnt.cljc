@@ -62,9 +62,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   [1 .] t/type
         - [x] Make sure that (t/type t/boolean?) is not (t/value t/boolean?) but rather t/boolean?.
               We need to 'un-`t/value`' it somehow?
-        - [.] We need to ensure that operators are recognized as such. `t/or` should not return
-              `t/any?` but rather the `t/or` of its arguments. In fact maybe it would work if we
-              added the `::t/type` metadata to it after the fact.
+        - [x] We need to ensure that operators are recognized as such. `t/or` should not return
+              `t/any?` but rather the `t/or` of its arguments.
   [2] t/value-of
       - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
   [3] - t/input-type
