@@ -1,6 +1,7 @@
 (ns quantum.core.numeric.exponents
   (:require
     [clojure.core                   :as core]
+    [quantum.core.data.bits         :as bit]
     [quantum.core.numeric.operators :as no]
     [quantum.core.type              :as t]
     [quantum.core.vars
@@ -105,6 +106,11 @@
 (defalias ln log-e)
 
 #?(:clj (def ^:const ^double ln-2 (ln 2)))
+
+(t/defn log-2?
+  {:adapted-from 'thi.ng.math.bits/log2?}
+  (            [x dn/integer?] (and (no/zero? (bit/and x (no/dec x))) (??/not (no/zero? x))))
+  (^:intrinsic [x dn/number?] false))
 
 #?(:clj  (defnt log-2 [^double x] (/ (ln x) ln-2))
    :cljs (defnt log-2 [^number? x] (js/Math.log2 x)))
