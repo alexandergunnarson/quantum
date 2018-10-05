@@ -4,7 +4,7 @@
         (:require
  #?(:cljs [com.gfredericks.goog.math.Integer :as int])
           [quantum.core.compare.core         :as comp]
-          [quantum.core.data.numeric         :as dnum
+          [quantum.core.data.numeric         :as dn
             :refer [bigdec? bigint? clj-bigint? java-bigint? numeric-primitive?]]
           [quantum.core.data.primitive       :as p]
           [quantum.core.logic                :as l]
@@ -23,7 +23,7 @@
                               (-> x .lpart          neg?)
                               (-> x .bipart .signum neg?))))
 #?(:cljs ([x bigint?] (.isNegative x)))
-#?(:clj  ([x dnum/ratio?] (-> x .numerator .signum neg?))))
+#?(:clj  ([x dn/ratio?] (-> x .numerator .signum neg?))))
 
        ;; TODO TYPED
        (t/defn ^:inline pos? > p/boolean?
@@ -33,7 +33,7 @@
                               (-> x .lpart          pos?)
                               (-> x .bipart .signum pos?))))
 #?(:cljs ([x bigint?] (l/not (.isNegative x))))
-#?(:clj  ([x dnum/ratio?] (-> x .numerator .signum pos?))))
+#?(:clj  ([x dn/ratio?] (-> x .numerator .signum pos?))))
 
        ;; TODO TYPED
        (t/defn ^:inline zero? > p/boolean?
@@ -43,7 +43,7 @@
                               (-> x .lpart          zero?)
                               (-> x .bipart .signum zero?))))
 #?(:cljs ([x bigint?] (.isZero x)))
-#?(:clj  ([x dnum/ratio?] (-> x .numerator .signum zero?))))
+#?(:clj  ([x dn/ratio?] (-> x .numerator .signum zero?))))
 
        (t/defnt ^:inline nan? > p/boolean?
 #?(:clj  ([x p/float?]  (Float/isNaN x)))
@@ -52,9 +52,9 @@
 
 (def npos?     (l/fn-not pos?))
 (def nneg?     (l/fn-not neg?))
-(def pos-int?  (l/fn-and dnum/integer? pos?))
-(def neg-int?  (l/fn-and dnum/integer? neg?))
-(def npos-int? (l/fn-and dnum/integer? npos?))
-(def nneg-int? (l/fn-and dnum/integer? nneg?))
+(def pos-int?  (l/fn-and dn/integer? pos?))
+(def neg-int?  (l/fn-and dn/integer? neg?))
+(def npos-int? (l/fn-and dn/integer? npos?))
+(def nneg-int? (l/fn-and dn/integer? nneg?))
 
 (t/defn exact? > p/boolean? [x p/numeric?] (TODO))

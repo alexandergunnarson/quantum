@@ -10,7 +10,7 @@
      #?@(:clj  [bigint biginteger bigdec numerator denominator inc' dec'])])
   (:require
     [clojure.core                      :as c]
-    [quantum.core.data.numeric         :as dnum]
+    [quantum.core.data.numeric         :as dn]
     [quantum.core.vars                 :as var
       :refer [defalias defaliases]]
     [quantum.core.numeric.convert   ]

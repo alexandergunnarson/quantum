@@ -9,7 +9,7 @@
   #?(:cljs [com.gfredericks.goog.math.Integer :as int])
            [quantum.core.data.bits            :as bit
              :refer [<< >> >>>]]
-           [quantum.core.data.numeric         :as dnum
+           [quantum.core.data.numeric         :as dn
              :refer [bigdec? clj-bigint? denominator numerator numeric? numerically-int?]]
            [quantum.core.data.primitive       :as p]
            [quantum.core.data.refs            :as ref]
@@ -40,7 +40,7 @@
 
 ;; ----- Addition ----- ;;
 
-      ;; TODO we're missing CLJS bigdec/bigint (`dnum/-add`) as well as other type combos
+      ;; TODO we're missing CLJS bigdec/bigint (`dn/-add`) as well as other type combos
       (t/defn ^:inline +*
         "Lax `+`. Continues on overflow/underflow."
         > numeric?
@@ -54,7 +54,7 @@
               (.add x y)
               (.add x y *math-context*)))))
 
-      ;; TODO we're missing CLJS bigdec/bigint (`dnum/-add`) as well as other type combos
+      ;; TODO we're missing CLJS bigdec/bigint (`dn/-add`) as well as other type combos
       (t/defn ^:inline +'
         "Strict `+`. Throws exception on overflow/underflow."
         > numeric?
@@ -65,7 +65,7 @@
         ;; A Java intrinsic, so we keep this arity
 #?(:clj ([x p/long?, y p/long? > p/long?] (Math/addExact x y))))
 
-      ;; TODO we're missing CLJS bigdec/bigint (`dnum/-add`) as well as other type combos
+      ;; TODO we're missing CLJS bigdec/bigint (`dn/-add`) as well as other type combos
       (t/defn ^:inline +
         "Natural `+`. Promotes on overflow/underflow."
         > numeric?
@@ -74,7 +74,7 @@
 
 ;; ----- Subtraction ----- ;;
 
-      ;; TODO we're missing CLJS bigdec/bigint (`dnum/-subtract`, `dnum/-negate`) as well as other
+      ;; TODO we're missing CLJS bigdec/bigint (`dn/-subtract`, `dn/-negate`) as well as other
       ;; type combos
       (t/defn ^:inline -*
         "Lax `-`. Continues on overflow/underflow."
@@ -86,7 +86,7 @@
         ([x numeric-primitive?, y numeric-primitive? > ?]
           (#?(:clj Numeric/subtract :cljs cljs.core/-) x y))))
 
-      ;; TODO we're missing CLJS bigdec/bigint (`dnum/-subtract`, `dnum/-negate`) as well as other
+      ;; TODO we're missing CLJS bigdec/bigint (`dn/-subtract`, `dn/-negate`) as well as other
       ;; type combos
       (t/defn ^:inline -'
         "Strict `-`. Throws exception on overflow/underflow."
@@ -108,7 +108,7 @@
            (^long  [^long   x] (if (Numeric/eq x Long/MIN_VALUE   ) (num-ex) (-* x))))
    :cljs (defalias -'-bin core/-))
 
-      ;; TODO we're missing CLJS bigdec/bigint (`dnum/-subtract`, `dnum/-negate`) as well as other
+      ;; TODO we're missing CLJS bigdec/bigint (`dn/-subtract`, `dn/-negate`) as well as other
       ;; type combos
       (t/defn ^:inline -
         "Natural `-`. Promotes on overflow/underflow."
@@ -132,7 +132,7 @@
    :cljs (defn **-bin "Lax `*`. Continues on overflow/underflow."
            ([] 0)
            ([x] x)
-           ([x y] (TODO "fix") (dnum/-multiply x y))))
+           ([x y] (TODO "fix") (dn/-multiply x y))))
 
 #?(:cljs (defn *'-bin- [x y] (TODO))) ; TODO only to fix CLJS arithmetic warning here
 
@@ -179,11 +179,11 @@
                  (.divide n d)
                  (.divide n d *math-context*))))
    :cljs (defnt div*-bin "Lax `/`. Continues on overflow/underflow."
-           ([^ratio? x  ] (TODO "fix") (dnum/-invert x))
+           ([^ratio? x  ] (TODO "fix") (dn/-invert x))
            ([^ratio? x y]
              (TODO "fix")
               ;(* x (-invert (apply * y more)))
-              (* x (dnum/-invert y)))
+              (* x (dn/-invert y)))
            ([^double? x  ] (core// x))
            ([^double? x y] (div*-bin- x y))))
 
@@ -275,7 +275,7 @@
 
 (t/defn abs > nneg?
 #?(:clj  (^:inline [x char?] x))
-         (^{:adapted-from 'thi.ng.math.bits
+         (^{:adapted-from 'thi.ng.math.bits/abs
             :doc          "Faster than using conditionals to determine the absolute value"}
            [x #?(:clj (t/or p/byte? p/short? p/int? p/long?) :cljs ni-double?)
             > (t/and (t/type x) (t/assume nneg?))]
