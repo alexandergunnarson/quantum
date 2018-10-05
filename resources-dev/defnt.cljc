@@ -130,9 +130,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         (#?(:clj  clojure.core.protocols/coll-reduce
             :cljs cljs.core/-reduce) xs rf init))
     - (if (A) ...) should be (if ^boolean (A) ...) if A returns a `p/boolean?`
-  - We should not rely on the value of dynamic vars e.g. `*math-context*` unless specifically typed
-    - We'll have to make a special class or *something* like that to ensure that typed bindings are only
-      bound within typed contexts.
+  - We'll should make a special class or *something* like that to ensure that typed bindings are only
+    bound within typed contexts.
   - `t/defn` declaration: `(t/defn >std-fixint > std-fixint?)`
   - t/extend-defn!
   - t/defrecord

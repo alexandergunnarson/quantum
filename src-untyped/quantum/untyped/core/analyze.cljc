@@ -523,7 +523,8 @@
                               ;; `t/none?` because nothing is actually returned
              :type            t/none?})))))
 
-(defns- analyze-seq|var [opts ::opts, env ::env, [_ _, arg-form _ :as form] _ > uast/var?]
+(defns- analyze-seq|var
+  [opts ::opts, env ::env, [_ _, arg-form _ :as form] _ > uast/var?]
   (ifs (-> form count (not= 2))
          (err! "Must supply exactly one input to `var`" {:form form})
        (not (symbol? arg-form))

@@ -659,7 +659,7 @@
   (isa?|direct #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
 
 ;; Used by `quantum.untyped.core.analyze` via `t/callable?`
-(def fnt? (and fn? (>expr (fn-> c/meta ::type utr/fn-type?))))
+(def fnt? (and fn? (>expr (fn-> c/meta :quantum.core.type/type utr/fn-type?))))
 
 ;; TODO should we allow java.lang.Runnable, java.util.concurrent.Callable, and other
 ;; functional interfaces to be `callable?`?
