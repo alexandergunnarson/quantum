@@ -12,7 +12,8 @@
 (self/analyze-arg-syms {'x `tt/boolean?} `(tt/value tt/byte))
 (self/analyze-arg-syms {'x `tt/boolean?} `(t/isa? Byte))
 
-(defn fake-typed-defn
+;; Simulates a typed fn
+(defn >long-checked
   {:quantum.core.type/type (t/ftype nil [t/string? :> tt/long?])}
   [])
 
@@ -57,9 +58,9 @@
                -> (t/isa? Number)`"
         (let [ana (self/analyze-arg-syms
                     {'x `tt/boolean?}
-                    `(let [~'x (fake-typed-defn "123")]
-                       (t/or (t/isa? Number) (t/type ~'x))))]
+                    `(let [~'x (>long-checked "123")]
+                       (t/or (t/isa? Byte) (t/type ~'x))))]
           (is= t/boolean?
                (get-in ana [:arg-sym->arg-type 'x]))
-          (is= (t/or tt/byte? tt/boolean?)
+          (is= (t/or tt/byte? tt/long?)
                (get-in ana [:out-type])))))))

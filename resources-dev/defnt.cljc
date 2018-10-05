@@ -66,7 +66,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
               `t/any?` but rather the `t/or` of its arguments. In fact maybe it would work if we
               added the `::t/type` metadata to it after the fact.
   [2] t/value-of
-    - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
+      - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
   [3] - t/input-type
       - `(t/input-type >namespace :?)` meaning the possible input types to the first input to `>namespace`
       - `(t/input-type reduce :_ :_ :?)`
