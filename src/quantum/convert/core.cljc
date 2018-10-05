@@ -9,6 +9,7 @@
   (:import
     [javax.imageio.metadata IIOAttr IIOMetadataNode]))
 
+;; TODO MOVE
 (defnt ->hiccup [^IIOMetadataNode x]
   ; .getPrefix
   ; .getLocalName
@@ -29,4 +30,3 @@
               (conj! !children (->hiccup child))
               (reduced !children))))
       (range))))
-

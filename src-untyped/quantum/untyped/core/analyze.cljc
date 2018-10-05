@@ -473,6 +473,7 @@
        (or (t/> t t/nil?) (t/> t t/false?)) nil ; representing "unknown"
        true))
 
+;; TODO this should be adding analysis information on every predicate it finds to be true or not true
 (defns- analyze-seq|if
   "Performs conditional branch pruning."
   [opts ::opts, env ::env, [_ _ & [pred-form _, true-form _, false-form _ :as body] _ :as form] _

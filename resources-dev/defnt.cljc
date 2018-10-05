@@ -1009,6 +1009,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] Util.equiv(long,long)
           - [ ] Util.equiv(boolean,boolean)
           - [ ] Util.equiv(double,double)
+    - [ ] JS built-in functions (the most common/relevant ones)
+          - ...
     - [ ] Java intrinsics
           http://hg.openjdk.java.net/jdk8/jdk8/hotspot/file/87ee5ee27509/src/share/vm/classfile/vmSymbols.hpp
           http://hg.openjdk.java.net/jdk9/jdk9/hotspot/file/b756e7a2ec33/src/share/vm/classfile/vmSymbols.hpp
