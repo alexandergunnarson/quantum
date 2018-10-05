@@ -1,42 +1,63 @@
-(ns
-  ^{:doc "Useful array functions. Array creation, joining, reversal, etc.
-          Arrays are Sequential, Associative (specifically, whose keys are sequential, dense integer
-          values), and not extensible."
-    :attribution 'alexandergunnarson
-    :todo ["Incorporate amap, areduce, etc."]}
-  quantum.core.data.array
+(ns quantum.core.data.array
+  "Useful array functions. Array creation, joining, reversal, etc.
+   Arrays are Sequential, Associative (specifically, whose keys are sequential, dense integer
+   values), and not extensible."
   (:refer-clojure :exclude
-    [== reverse boolean-array byte-array char-array short-array
-     int-array long-array float-array double-array])
+    [== reverse boolean-array byte-array char-array short-array int-array long-array float-array
+     double-array])
   (:require
-    [clojure.core                  :as core]
-#_(:clj
-    [loom.alg-generic              :as alg]) ; temporarily
-    #_[quantum.core.type.core        :as tcore]
-    #_[quantum.core.fn               :as fn
-      :refer [fn->]]
-    #_[quantum.core.log              :as log]
-    #_[quantum.core.macros.type-hint :as th]
-    #_[quantum.core.compare          :as comp]
-    #_[quantum.core.numeric          :as num]
-    [quantum.core.data.identifiers :as id]
-    [quantum.core.type             :as t
-      :refer [defnt]]
-    [quantum.core.vars             :as var
-      :refer [defalias]]
-    ;; TODO TYPED (?)
-    [quantum.untyped.core.form.generate :as ufgen])
-#?(:cljs
-  (:require-macros
-    [quantum.core.data.array       :as self]))
-#?(:clj
-  (:import
-    [quantum.core.data Array]
-    [java.io File FileInputStream BufferedInputStream InputStream ByteArrayOutputStream]
-    [java.nio ByteBuffer]
-    [java.util ArrayList])))
+          [clojure.core                       :as core]
+  #_(:clj [loom.alg-generic                   :as alg]) ; temporarily
+        #_[quantum.core.type.core             :as tcore]
+        #_[quantum.core.macros.type-hint      :as th]
+        #_[quantum.core.compare               :as comp]
+        #_[quantum.core.numeric               :as num]
+          [quantum.core.data.identifiers      :as id]
+          [quantum.core.type                  :as t
+            :refer [defnt]]
+          [quantum.core.vars                  :as var
+            :refer [defalias]]
+          ;; TODO TYPED (?)
+          [quantum.untyped.core.form.generate :as ufgen]
+          [quantum.untyped.core.log           :as ulog]
+          [quantum.untyped.core.system        :as usys])
+#?(:clj (:import
+          [quantum.core.data Array]
+          [java.io File FileInputStream BufferedInputStream InputStream ByteArrayOutputStream]
+          [java.nio ByteBuffer]
+          [java.util ArrayList])))
 
-(log/this-ns)
+(ulog/this-ns)
+
+(def typed-arrays-supported? (p/val? (aget usys/global "ArrayBuffer")))
+
+;; A polyfill for the `.slice` prototype method missing in Safari and some mobile browser versions
+;; Adapted from `thi.ng.typedarrays.core`
+(when typed-arrays-supported?
+  (->> ["Int8Array" "Uint8Array" "Uint8ClampedArray" "Int16Array" "Uint16Array"
+        "Int32Array" "Uint32Array" "Float32Array" "Float64Array"]
+       (run!
+         (fn [type-str]
+           (when-not (-> usys/global (aget type-str) .-prototype .-slice)
+             (set! (-> usys/global (aget type-str) .-prototype .-slice)
+               (fn [from to]
+                 (this-as this
+                   (let [from (if (neg? from)
+                                  (int (unchecked-add (.-length this) from))
+                                  (int from))
+                         to   (if (goog/isNumber to)
+                                  (if (neg? to)
+                                      (int (unchecked-add (.-length this) to))
+                                      (js/Math.min to (.-length this)))
+                                  (.-length this))
+                         len  (js/Math.max (unchecked-subtract to from) 0)
+                         ctor (.-constructor this)
+                         dest (js* "new ~{}(~{})" ctor len)]
+                     (loop [i 0]
+                       (when (< i len)
+                         (aset dest i (aget this (unchecked-add from i)))
+                         (recur (unchecked-inc i))))
+                     dest)))))))))
 
 #?(:clj
 (defnt >array-nd-type [kind id/symbol?, n num/pos-int? > t/class-type?]
