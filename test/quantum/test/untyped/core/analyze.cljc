@@ -5,6 +5,8 @@
     [quantum.untyped.core.analyze.ast :as uast]
     [quantum.untyped.core.collections :as uc]
     [quantum.untyped.core.data.map    :as umap]
+    [quantum.untyped.core.fn
+      :refer [<-]]
     [quantum.untyped.core.test
       :refer [deftest is is= testing]]
     [quantum.untyped.core.type        :as t]))
@@ -21,7 +23,7 @@
 
 (defn- transform-ana [ana]
   (->> ana
-       (mapv #(do [(->> % :env (uc/map-vals' :type))
+       (mapv #(do [(->> % :env (<- (dissoc :opts)) (uc/map-vals' :type))
                    (-> % :out-type-node :type)]))))
 
 ;; More dependent type tests in `quantum.test.untyped.core.type.defnt` but those are more like

@@ -340,9 +340,7 @@
                        (assert kind :sym)
                        binding-)))
         arg-types|split
-          ;; NOTE Only `t/or`s are splittable for now
-          (->> arg-types
-               (c/map (fn [t] (if (utr/or-type? t) (utr/or-type>args t) [t]))))
+          (->> arg-types (c/map uana/split-type))
         arg-types|expanded-seq (->> arg-types|split
                                     (apply ucombo/cartesian-product)
                                     (c/map vec))
