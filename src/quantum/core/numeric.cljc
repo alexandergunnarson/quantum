@@ -1,6 +1,9 @@
 (ns quantum.core.numeric
   "Numeric functions.
    Aliases all subnamespaces."
+  {:todo #{"Incorporate https://github.com/thi-ng/math/blob/master/src/bits.org"
+           "Incorporate https://github.com/thi-ng/math/blob/master/src/core.org"
+           "Add mutable numeric operations like `+!` or `-!` etc."}}
   (:refer-clojure :exclude
     [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? pos-int?
      min max quot mod format
@@ -9,7 +12,7 @@
     [clojure.core                      :as c]
 #?@(:cljs
    [[com.gfredericks.goog.math.Integer :as int]])
-    [quantum.core.data.numeric         :as dnum]
+    [quantum.core.data.numeric         :as dn]
     [quantum.core.data.primitive
       :refer [#?(:clj >long)]]
     [quantum.core.log                  :as log]
@@ -180,8 +183,8 @@
 
 ; ===== NON-TRANSFORMATIVE OPERATIONS ===== ;
 
-(defalias numerator   dnum/numerator)
-(defalias denominator dnum/denominator)
+(defalias numerator   dn/numerator)
+(defalias denominator dn/denominator)
 ;_____________________________________________________________________
 ;==================={         CONVERT          }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
