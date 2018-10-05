@@ -1,8 +1,24 @@
 (ns quantum.numeric.tensors
   "1D array: vector
    2D array: matrix
-   3D array: (no special name)
-   ND array: tensor"
+   ND array: tensor
+
+   Note: (Java-only) Colt performs atrociously."
+  {:todo #{"Incorporate https://github.com/thi-ng/geom/blob/master/geom-core/src/vector.org"
+           "Incorporate https://github.com/thi-ng/geom/blob/master/geom-core/src/matrix.org"
+           "Incorporate https://github.com/thi-ng/geom/blob/master/geom-core/src/quaternion.org"
+           "Probably use core.matrix API"
+           "Incorporate core.matrix"
+           "EJML if performance on small matrices is more important than features"
+           "Neanderthal if performance on large (n >= 50) matrices is needed.
+            Even for very small matrices (except for matrices smaller than 5x5), Neanderthal is
+            faster than the pure Java library Vectorz.
+            - http://blog.mikiobraun.de/2009/04/some-benchmark-numbers-for-jblas.html"
+           "MTJ="
+           "spark.mllib -> breeze                     -> netlib-java -> BLAS/LAPACK
+                           matrix-toolkits-java (MTJ) -> netlib-java -> BLAS/LAPACK"
+           "Mathematica
+            - Matrix and data manipulation tools including support for sparse arrays"}}
   (:refer-clojure :exclude
     [max count get subvec swap! first last empty contains?
      for dotimes, reduce])
@@ -44,22 +60,6 @@
     (:import
       [org.apache.spark.mllib.linalg BLAS DenseVector]
       [uncomplicate.neanderthal.protocols Vector RealVector RealMatrix RealChangeable])))
-
-; TODO probably use core.matrix API
-
-; TO EXPLORE
-; - core.matrix — incorporate!
-; - EJML if performance on small matrices is more important than features
-; - Neanderthal if performance on large (n >= 50) matrices is needed
-; http://blog.mikiobraun.de/2009/04/some-benchmark-numbers-for-jblas.html
-; - (Java-only) Colt performs atrociously
-; Even for very small matrices (except for matrices smaller than 5x5),
-; Neanderthal is faster than pure Java library Vectorz.
-; MTJ=matrix-toolkits-java
-; spark.mllib -> breeze -> netlib-java -> BLAS/LAPACK
-;                MTJ    -> netlib-java -> BLAS/LAPACK
-; - Mathematica
-;   - Matrix and data manipulation tools including support for sparse arrays
 
 ; =================================
 
