@@ -46,6 +46,20 @@
   xor xnor
   implies?]))
 
+#?(:clj
+(defmacro and*
+  "Like `clojure.core/and`, but avoids intermediate let bindings and only ever returns a boolean."
+  ([] true)
+  ([x] `(if ~x true false))
+  ([x & xs] `(if ~x (and* ~@xs) false))))
+
+#?(:clj
+(defmacro or*
+  "Like `clojure.core/or`, but avoids intermediate let bindings and only ever returns a boolean."
+  ([] false)
+  ([x] `(if ~x true false))
+  ([x & xs] `(if ~x true (or* ~@xs)))))
+
 ;; ===== Function-logical operators ===== ;;
 
 #?(:clj
