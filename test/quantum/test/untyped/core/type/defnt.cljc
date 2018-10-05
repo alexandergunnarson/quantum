@@ -1389,20 +1389,6 @@
     (let [actual
             (macroexpand '
               (self/defn dependent-type-split
-                #_"1. Analyze `x` = `(t/or tt/boolean? tt/string?)`. Splittable.
-                   2. Split `(t/or tt/boolean? tt/string?)`:
-                      [[x tt/boolean? > (t/type x)]
-                       [x tt/string?  > (t/type x)]]
-                   3. Analyze split 0.
-                      1. Analyze `x` = `tt/boolean?`
-                         -> Put `x` in env as `(t/isa? Boolean)`
-                      2. Analyze out-type = `(t/type x)`
-                         -> `(t/isa? Boolean)`
-                   4. Analyze split 1.
-                      1. Analyze `x` = `tt/string?`
-                         -> Put `x` in env as `(t/isa? String)`
-                      2. Analyze out-type = `(t/type x)`
-                         -> `(t/isa? String)`"
                 ([x (t/or tt/boolean? tt/string?) > (t/type x)] x))
           expected
             (case (env-lang)
