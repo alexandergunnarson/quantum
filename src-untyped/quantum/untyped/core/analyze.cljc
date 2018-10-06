@@ -943,12 +943,12 @@
      the provided arglist.
    - The maximum number of generated arglists is equal to the product of the cardinalities of the
      deduced types of the inputs. In other words, in the worst case scenario each of the arg types
-     would be a 'splittable' type like `t/or` (whose cardinality is the number of arguments to it
+     might be a 'splittable' type like `t/or` (whose cardinality is the number of arguments to it
      when simplified) which would require a Cartesian product of the splits of the arg types."
-  > vector? ; one level deep
+  > vector? #_(s/vec-of (s/kv {:env ::env :out-type-node uast/node?}))
   ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _]
     (analyze-arg-syms {} arg-sym->arg-type-form out-type-form))
-  ([env ::env arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _
+  ([env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _
     > (s/kv {:env ::env :out-type-node uast/node?})]
     (analyze-arg-syms*
       (update env :opts
