@@ -6,7 +6,8 @@
   (:require
     [clojure.core                  :as core]
     [fast-zip.core                 :as zip]
-    [quantum.untyped.core.core     :as ucore]
+    [quantum.untyped.core.core     :as ucore
+      :refer [sentinel]]
     [quantum.untyped.core.data
       :refer [transient?]]
     [quantum.untyped.core.data
@@ -396,3 +397,28 @@
                (or a-nil?
                    (and (eq-f (first a) (first b))
                         (recur (next a) (next b))))))))))
+
+(defn >combinatoric-tree
+  "Assumes all are sorted and of the same count."
+  {:todo #{"Generalize to handle uneven input lengths"}}
+  ([n xs] (>combinatoric-tree n = conj conj xs))
+  ([n eq-f rf combinef xs]
+    (if (<= n 1)
+        (->> xs (map+ (fn [[k [x*]]] [x* k])) (educe rf))
+        (let [ct (-> xs first second count)
+              terminate-group
+                (fn [grouped curr-group curr-x*]
+                  (combinef grouped
+                    [curr-x* (>combinatoric-tree (dec n) eq-f rf combinef curr-group)]))]
+          (->> xs
+               (educe (fn ([] [(combinef) (rf) sentinel])
+                          ([[grouped curr-group curr-x*]]
+                            (terminate-group grouped curr-group curr-x*))
+                          ([[grouped curr-group curr-x*] [k [x* & xs*]]]
+                            (ifs (identical? curr-x* sentinel)
+                                   [grouped [[k xs*]]               x*]
+                                 (eq-f curr-x* x*)
+                                   [grouped (rf curr-group [k xs*]) curr-x*]
+                                 [(terminate-group grouped curr-group curr-x*)
+                                  [[k xs*]]
+                                  x*])))))))))

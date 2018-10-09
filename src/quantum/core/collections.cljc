@@ -113,6 +113,7 @@
      :cljs (:import goog.string.StringBuffer)))
 
 (defalias val? quantum.core.type-old/val?)
+(defalias >combinatoric-tree u/>combinatoric-tree)
 
 #?(:clj
 (defmacro getf
