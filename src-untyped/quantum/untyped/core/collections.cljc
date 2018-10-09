@@ -1,8 +1,8 @@
 (ns quantum.untyped.core.collections
   "Operations on collections."
   (:refer-clojure :exclude
-    [#?(:cljs array?) assoc-in cat contains? count distinct distinct? first get group-by filter
-     flatten last map map-indexed mapcat partition-all pmap remove reverse zipmap])
+    [#?(:cljs array?) assoc-in cat conj! contains? count distinct distinct? first get group-by
+     filter flatten last map map-indexed mapcat partition-all pmap remove reverse zipmap])
   (:require
     [clojure.core                  :as core]
     [fast-zip.core                 :as zip]
@@ -32,6 +32,17 @@
 
 (defn ?persistent! [x]
   (if (transient? x) (persistent! x) x))
+
+(def conj!|rf
+  (fn ([] (transient []))
+      ([x] (persistent! x))
+      ([xs x] (core/conj! xs x))))
+
+(defn conj!
+  ([] (transient []))
+  ([xs] xs)
+  ([xs x0] (core/conj! xs x0))
+  ([xs x0 x1] (-> xs (conj! x0) (conj! x1))))
 
 (def first|rf (aritoid ufn/fn-nil identity (fn [_ x] (reduced x))))
 
