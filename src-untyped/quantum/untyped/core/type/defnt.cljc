@@ -11,7 +11,7 @@
     [quantum.untyped.core.analyze               :as uana]
     [quantum.untyped.core.analyze.ast           :as uast]
     [quantum.untyped.core.core
-      :refer [istr]] ; TODO use quantum.untyped.core.string/istr instead
+      :refer [istr sentinel]] ; TODO use quantum.untyped.core.string/istr instead
     [quantum.untyped.core.defnt
       :refer [defns defns- fns]]
     [quantum.untyped.core.collections           :as c
@@ -103,25 +103,23 @@
          ;; When present, varargs are considered to be of class Object
          :variadic?                   t/boolean?}))
 
-(s/def ::reify
-  (s/kv {:form     t/any?
-         :name     simple-symbol?
-         :overload ::overload}))
-
 (s/def ::input-types-decl
-  (s/kv {:form           t/any?
-         :name           simple-symbol?
-         :arg-type|split (s/vec-of t/type?)}))
+  (s/kv {:form t/any?
+         :name simple-symbol?}))
+
+(s/def ::reify
+  (s/kv {:form      t/any?
+         :interface class?
+         :name      simple-symbol?
+         :overload  ::overload}))
 
 (s/def ::direct-dispatch-data
-  (s/kv {:i-arg->input-types-decl (s/vec-of ::input-types-decl)
-         :reify-seq               (s/vec-of ::reify)}))
-
-(s/def ::i-overload->direct-dispatch-data (s/vec-of ::direct-dispatch-data))
+  (s/kv {:input-types-decl ::input-types-decl
+         :reify            ::reify}))
 
 (s/def ::direct-dispatch
-  (s/kv {:form                             t/any?
-         :i-overload->direct-dispatch-data ::i-overload->direct-dispatch-data}))
+  (s/kv {:form                     t/any?
+         :direct-dispatch-data-seq (s/vec-of ::direct-dispatch-data)}))
 
 #_(:clj
 (core/defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
@@ -250,9 +248,8 @@
   [{:as   overload
     :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, out-class _]} ::overload
    {:as opts :keys [gen-gensym _]} ::opts
-   {:keys [fn|name _]}  ::fn|globals
-   i|unanalyzed-overload index?
-   i|overload            index?
+   {:keys [fn|name _]} ::fn|globals
+   i|overload index?
    > ::reify]
   (let [interface-k {:out out-class :in arg-classes}
         interface
@@ -267,14 +264,15 @@
                          (fn [i|arg arg|form]
                            (ufth/with-type-hint arg|form
                              (-> arg-classes (c/get i|arg) ufth/>arglist-embeddable-tag)))))))
-        reify-name (>symbol (str fn|name "|__" i|unanalyzed-overload "|" i|overload))
+        reify-name (>symbol (str fn|name "|__" i|overload))
         form `(~'def ~reify-name
                 (reify* [~(-> interface >name >symbol)]
                   (~(ufth/with-type-hint reify-method-sym (ufth/>arglist-embeddable-tag out-class))
                     ~arglist-code ~body-form)))]
-    {:form     form
-     :name     reify-name
-     :overload overload})))
+    {:form      form
+     :interface interface
+     :name      reify-name
+     :overload  overload})))
 
 ;; TODO spec
 ;; TODO use!!
@@ -303,111 +301,135 @@
 
 ;; ----- Direct dispatch: putting it all together ----- ;;
 
-(defns >input-type-decl|name
-  [fn|name ::uss/fn|name, i|fnt-overload index?, i|arg index? > simple-symbol?]
-  (>symbol (str fn|name "|__" i|fnt-overload "|input" i|arg "|types")))
-
-(defns >i-arg->input-types-decl
+(defns >input-types-decl
   "The evaluated `form` of each input-types-decl is an array of non-primitivized types that the
    dynamic dispatch uses to dispatch off input types."
-  [{:keys [fn|name _]} ::fn|globals
-   arg-types|split ::expanded-overload-groups|arg-types|split, i|fnt-overload index?
-   > (s/vec-of ::input-types-decl)]
-  (->> arg-types|split
-       (c/map-indexed
-         (fn [i|arg arg-type|split]
-           (let [decl-name (>input-type-decl|name fn|name i|fnt-overload i|arg)
-                 form      (list 'def (ufth/with-type-hint decl-name "[Ljava.lang.Object;")
-                                      (list* `uarr/*<> (map >form arg-type|split)))]
-             (assoc (kw-map form arg-type|split) :name decl-name))))))
+  [{:keys [fn|name _]} ::fn|globals, arg-types (s/vec-of t/type?), i|overload index?
+   > ::input-types-decl]
+  (let [decl-name (>symbol (str fn|name "|__" i|overload "|types"))
+        form      (list 'def (ufth/with-type-hint decl-name "[Ljava.lang.Object;")
+                             (list* `uarr/*<> (c/lmap >form arg-types)))]
+    {:form form :name decl-name}))
 
 (defns >direct-dispatch
   [{:as fn|globals :keys [fn|name _]} ::fn|globals
    {:as opts       :keys [gen-gensym _, lang _]} ::opts
-   ; expanded-overload-groups-by-fnt-overload
    overloads (s/vec-of ::overload)
    > ::direct-dispatch]
   (case lang
-    :clj  (let [i-overload->direct-dispatch-data
-                  (->> expanded-overload-groups-by-fnt-overload
+    :clj  (let [direct-dispatch-data-seq
+                  (->> overloads
                        (c/map-indexed
-                         (fn [i|fnt-overload {:keys [arg-types|split expanded-overload-group-seq]}]
-                           {:i-arg->input-types-decl
-                              (>i-arg->input-types-decl fn|globals arg-types|split i|fnt-overload)
-                            :reify (overload>reify overload opts fn|globals
-                                     i|unanalyzed-overload i|overload)})))
-                form (->> i-overload->direct-dispatch-data
-                          (c/map (fn [{:keys [i-arg->input-types-decl reify-seq]}]
-                                  (concat (c/lmap :form i-arg->input-types-decl)
-                                          (c/lmap :form reify-seq))))
-                          c/lcat)]
-            (kw-map form i-overload->direct-dispatch-data))
+                         (fn [i|overload {:keys [arg-types]}]
+                           {:input-types-decl
+                              (>input-types-decl fn|globals arg-types i|overload)
+                            :reify (overload>reify overload opts fn|globals i|overload)})))
+                form (->> direct-dispatch-data-seq
+                          (c/mapcat
+                            (fn [{:as direct-dispatch-data :keys [input-types-decl]}]
+                              (list (:form input-types-decl)
+                                    (-> direct-dispatch-data :reify :form))])))
+            (kw-map form direct-dispatch-data-seq))
     :cljs (TODO)))
 
 ;; ===== Dynamic dispatch ===== ;;
 
-(defns >dynamic-dispatch|reify-call [reify- ::reify, arglist (s/vec-of simple-symbol?)]
-  (let [dotted-reify-method-sym
-          (symbol (str "." (-> reify- :non-primitivized-overload :method-sym)))
-        hinted-reify-sym
-          (ufth/with-type-hint (:name reify-)
-            (-> reify- :non-primitivized-overload :interface >name))]
-    `(~dotted-reify-method-sym ~hinted-reify-sym ~@arglist)))
+(defns- >dynamic-dispatch|reify-call [reify- ::reify, arglist (s/vec-of simple-symbol?)]
+  (let [hinted-reify-sym (-> reify- :name (ufth/with-type-hint (-> reify- :interface >name)))]
+    `(. ~hinted-reify-sym ~reify-method-sym ~@arglist)))
 
 ;; TODO spec
 (defns unsupported! [name- _ #_t/qualified-symbol?, args _ #_indexed?, i index?] (TODO))
 
-(defns >dynamic-dispatch|conditional
-  [fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?), i|arg index?, body _]
-  (if (-> body count (= 1))
-      (first body)
-      `(ifs ~@body (unsupported! (quote ~(uid/qualify fn|name)) [~@arglist] ~i|arg))))
+(let [fn|name 'the-name
+      arglist '[x0 x1 x2]
+      >unsupported!-form (fn [i|arg] `(unsupported! '~(uid/qualify fn|name) [~@arglist] ~i|arg))
+      xs [['(.invoke overload0 x0 x1 x2)
+           [{:t t/boolean? :getter '((Array/get overload-types0 0) x0) :i 0}
+            {:t t/long?    :getter '((Array/get overload-types0 1) x1) :i 1}
+            {:t t/boolean? :getter '((Array/get overload-types0 2) x2) :i 2}]]
+          ['(.invoke overload1 x0 x1 x2)
+           [{:t t/boolean? :getter '((Array/get overload-types1 0) x0) :i 0}
+            {:t t/long?    :getter '((Array/get overload-types1 1) x1) :i 1}
+            {:t t/object?  :getter '((Array/get overload-types1 2) x2) :i 2}]]
+          ['(.invoke overload2 x0 x1 x2)
+           [{:t t/byte?    :getter '((Array/get overload-types2 0) x0) :i 0}
+            {:t t/long?    :getter '((Array/get overload-types2 1) x1) :i 1}
+            {:t t/byte?    :getter '((Array/get overload-types2 2) x2) :i 2}]]
+          ['(.invoke overload2 x0 x1 x2)
+           [{:t t/byte?    :getter '((Array/get overload-types2 0) x0) :i 0}
+            {:t t/boolean? :getter '((Array/get overload-types2 1) x1) :i 1}
+            {:t t/byte?    :getter '((Array/get overload-types2 2) x2) :i 2}]]]
+      *i|arg (atom 0)
+      combinef
+        (fn ([] (transient ['ifs]))
+            ([ret] (-> ret (conj! (>unsupported!-form @*i|arg)) persistent! seq))
+            ([ret getter x i]
+              (reset! *i|arg i)
+              (c/conj! ret getter x)))]
+  (c/>combinatoric-tree (count arglist)
+    (fn [a b] (t/= (:t a) (:t b)))
+    (aritoid combinef combinef (fn [ret [{:keys [getter i]} group]] (combinef ret getter group i)))
+    c/conj!|rf
+    (aritoid combinef combinef (fn [ret [k [{:keys [getter i]}]]] (combinef ret getter k i)))
+    xs))
 
-(defns >dynamic-dispatch|body-for-arity
-  ([fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?)
-    direct-dispatch-data-for-arity (s/seq-of ::direct-dispatch-data)]
-    (if (empty? arglist)
-        (>dynamic-dispatch|reify-call
-          (-> direct-dispatch-data-for-arity first :reify-seq first) arglist)
-        (let [i|arg    0
-              branches (->> direct-dispatch-data-for-arity
-                            (c/lmap
-                              (fn [{:keys [reify-seq i-arg->input-types-decl]}]
-                                (>dynamic-dispatch|body-for-arity fn|name arglist reify-seq
-                                  i-arg->input-types-decl (atom 0) i|arg)))
-                            c/lcat)]
-          (>dynamic-dispatch|conditional fn|name arglist i|arg branches))))
-  ([fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?), reify-seq (s/vec-of ::reify)
-    input-types-decl-group' (s/seq-of ::input-types-decl), *i|reify _, i|arg index?]
-    (let [{:as input-types-decl :keys [arg-type|split]} (first input-types-decl-group')
-          input-types-decl-group'' (rest input-types-decl-group')]
-      (->> arg-type|split
-           (c/lmap-indexed
-             (fn [i|arg-type' _]
-               [`((Array/get ~(:name input-types-decl) ~i|arg-type') ~(get arglist i|arg))
-                (if (empty? input-types-decl-group'')
-                    (with-do (>dynamic-dispatch|reify-call (get reify-seq @*i|reify) arglist)
-                      ;; TODO take out this ugly bit
-                      (swap! *i|reify inc))
-                    (let [i|arg' (inc i|arg)
-                          next-branch (>dynamic-dispatch|body-for-arity fn|name arglist reify-seq
-                                        input-types-decl-group'' *i|reify i|arg')]
-                      (>dynamic-dispatch|conditional fn|name arglist i|arg' next-branch)))]))
-           c/lcat))))
+(defns- >combinatoric-seq+
+  [direct-dispatch-data-seq-for-arity (s/seq-of ::direct-dispatch-data)
+   arglist (s/vec-of simple-symbol?)]
+  (->> direct-dispatch-data-seq-for-arity
+       (c/map+ (fn [{reify- :reify :keys [input-types-decl]}]
+                 [(>dynamic-dispatch|reify-call reify- arglist)
+                  (->> reify-
+                       :overload
+                       :arg-types
+                       (c/map-indexed
+                         (fn [i|arg arg-type]
+                           {:i    i|arg
+                            :t    arg-type
+                            :getf `((Array/get ~(:name input-types-decl) ~i|arg)
+                                     ~(get arglist i|arg))})))]))))
+
+(defns- >dynamic-dispatch|body-for-arity
+  "Assumes the elements of `direct-dispatch-data-seq-for-arity` are ordered in increasing
+   generality of the input types of their respective `reify` declarations."
+  [fn|name ::uss/fn|name, arglist (s/vec-of simple-symbol?)
+   direct-dispatch-data-seq-for-arity (s/seq-of ::direct-dispatch-data)]
+  (if (empty? arglist)
+      (>dynamic-dispatch|reify-call (-> direct-dispatch-data-seq-for-arity first :reify) arglist)
+      (let [combinatoric-seq+
+
+            *i|arg (atom 0)
+            combinef
+              (fn ([] (transient [`ifs]))
+                  ([ret]
+                    (-> ret (conj! `(unsupported! '~(uid/qualify fn|name) ~arglist ~(deref *i|arg)))
+                            persistent!
+                            seq))
+                  ([ret getf x i]
+                    (reset! *i|arg i)
+                    (c/conj! ret getf x)))]
+        (c/>combinatoric-tree (count arglist)
+          (fn [a b] (t/= (:t a) (:t b)))
+          (aritoid combinef combinef (fn [x [{:keys [getf i]} group]] (combinef x getf group i)))
+          c/conj!|rf
+          (aritoid combinef combinef (fn [x [k [{:keys [getf i]}]]] (combinef x getf k i)))
+          (>combinatoric-seq+ direct-dispatch-data-seq-for-arity arglist))))))
 
 (defns >dynamic-dispatch-fn|form
   [{:as fn|globals :keys [fn|meta _, fn|name _]} ::fn|globals
    {:as opts       :keys [gen-gensym _, lang _]} ::opts
-   expanded-overload-groups-by-fnt-overload (s/vec-of ::expanded-overload-groups)
-   i-overload->direct-dispatch-data         ::i-overload->direct-dispatch-data]
+   direct-dispatch ::direct-dispatch]
  `(core/defn ~fn|name
     ~(assoc fn|meta :quantum.core.type/type (>form fn|type))
-    ~@(->> i-overload->direct-dispatch-data
-           (group-by (fn-> :i-arg->input-types-decl count))
-           (map (fn [[arg-ct direct-dispatch-data-for-arity]]
+    ~@(->> direct-dispatch
+           :direct-dispatch-data-seq
+           (group-by (fn-> :reify :overload :arg-types count))
+           (sort-by key) ; for purposes of reproducibility and organization
+           (map (fn [[arg-ct direct-dispatch-data-seq-for-arity]]
                   (let [arglist (ufgen/gen-args 0 arg-ct "x" gen-gensym)
                         body    (>dynamic-dispatch|body-for-arity
-                                  fn|name arglist direct-dispatch-data-for-arity)]
+                                  fn|name arglist direct-dispatch-data-seq-for-arity)]
                     (list arglist body)))))))
 
 ;; ===== End dynamic dispatch ===== ;;
@@ -498,14 +520,12 @@
         fn|globals           (kw-map fn|name fn|meta fn|type fn|output-type|form fn|output-type)
         overloads            (->> unanalyzed-overloads
                                   (c/map #(unanalyzed-overload>overload % fn|globals opts)))
-        {:as direct-dispatch :keys [i-overload->direct-dispatch-data]}
-          (>direct-dispatch fn|globals opts overloads)
+        direct-dispatch      (>direct-dispatch fn|globals opts overloads)
         fn-codelist
           (case lang
             :clj  (->> `[(declare ~fn|name) ; for recursion
                          ~@(:form direct-dispatch)
-                         ~(>dynamic-dispatch-fn|form fn|globals opts overloads
-                            i-overload->direct-dispatch-data)]
+                         ~(>dynamic-dispatch-fn|form fn|globals opts direct-dispatch)]
                         (remove nil?))
             :cljs (TODO))
         code (case kind
