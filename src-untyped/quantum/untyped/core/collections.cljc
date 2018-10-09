@@ -399,26 +399,30 @@
                         (recur (next a) (next b))))))))))
 
 (defn >combinatoric-tree
-  "Assumes all are sorted and of the same count."
-  {:todo #{"Generalize to handle uneven input lengths"}}
-  ([n xs] (>combinatoric-tree n = conj conj xs))
-  ([n eq-f rf combinef xs]
+  "See tests for examples.
+
+   Assumes all are sorted and of the same count."
+  {:todo #{"Generalize to handle uneven input lengths and unsorted combination"}}
+  ([n #_pos-int?, xs #_(t/of (t/tuple (t/spec t/any? "identifier") (t/of)))]
+    (>combinatoric-tree
+      n = conj conj (fn ([] []) ([ret] ret) ([ret [k [x*]]] (conj ret [x* k]))) xs))
+  ([n #_pos-int?, eq-f groupsf groupf terminalf xs]
     (if (<= n 1)
-        (->> xs (map+ (fn [[k [x*]]] [x* k])) (educe rf))
-        (let [ct (-> xs first second count)
-              terminate-group
+        (educe terminalf xs)
+        (let [terminate-group
                 (fn [grouped curr-group curr-x*]
-                  (combinef grouped
-                    [curr-x* (>combinatoric-tree (dec n) eq-f rf combinef curr-group)]))]
-          (->> xs
-               (educe (fn ([] [(combinef) (rf) sentinel])
-                          ([[grouped curr-group curr-x*]]
-                            (terminate-group grouped curr-group curr-x*))
-                          ([[grouped curr-group curr-x*] [k [x* & xs*]]]
-                            (ifs (identical? curr-x* sentinel)
-                                   [grouped [[k xs*]]               x*]
-                                 (eq-f curr-x* x*)
-                                   [grouped (rf curr-group [k xs*]) curr-x*]
-                                 [(terminate-group grouped curr-group curr-x*)
-                                  [[k xs*]]
-                                  x*])))))))))
+                  (groupsf grouped
+                    [curr-x*
+                     (>combinatoric-tree
+                       (dec n) eq-f groupsf groupf terminalf (groupf curr-group))]))]
+          (educe
+            (fn ([] [(groupsf) (groupf) sentinel])
+                ([[grouped curr-group curr-x*]]
+                  (groupsf (terminate-group grouped curr-group curr-x*)))
+                ([[grouped curr-group curr-x*] [k [x* & xs*]]]
+                  (ifs (identical? curr-x* sentinel) [grouped (groupf curr-group [k xs*]) x*]
+                       (eq-f       curr-x* x*)       [grouped (groupf curr-group [k xs*]) curr-x*]
+                       [(terminate-group grouped curr-group curr-x*)
+                        (groupf (groupf) [k xs*])
+                        x*])))
+            xs)))))
