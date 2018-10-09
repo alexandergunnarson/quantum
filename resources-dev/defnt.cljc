@@ -71,8 +71,20 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - `(t/input-type reduce :_ :_ :?)`
       - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
   [4] - t/output-type
-  [5] - Direct dispatch needs to actually work correctly in `t/defn`
-  [6] - No trailing `>` means `> ?`
+  [5] - t/extend-defn!
+        - We could just recreate the dispatch every time, in the beginning. It would make for slower
+          compilation but faster execution for dynamic dispatch, and quicker time to use. So whenever
+          something extends a `t/defn`, the type overloads have to be put in the right place in the dispatch
+          order. We could find the first place where the inputs are t/<.
+          - But then you have to trigger a recompilation of everything that depended on that `t/defn`
+            because your input-types and output-types have both gotten bigger. Maybe not on that overload
+            but still.
+            - This will be a more advanced feature. For now we just accept that we might have some odd behavior around extending `t/defn`s.
+        - When you overwrite a `reify` then it's fine as long as the interface class stays the same.
+          Of course, pending auto-recompilation, you'll have to manually recompile its dependents
+          for them to pick up on changes to its type.
+  [6] - Direct dispatch needs to actually work correctly in `t/defn`
+  [7] - No trailing `>` means `> ?`
       - ? : type inference
         - use logic programming and variable unification e.g. `?1` `?2` ?
         - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
@@ -133,7 +145,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - We'll should make a special class or *something* like that to ensure that typed bindings are only
     bound within typed contexts.
   - `t/defn` declaration: `(t/defn >std-fixint > std-fixint?)`
-  - t/extend-defn!
   - t/defrecord
   - t/def-concrete-type (i.e. `t/deftype`)
   - expressions (`quantum.untyped.core.analyze.expr`)
