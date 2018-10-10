@@ -1,6 +1,6 @@
 (ns quantum.test.untyped.core.type.defnt
   (:refer-clojure :exclude
-    [count get name seq some?])
+    [> count get name seq some?])
   (:require
     [clojure.core                           :as core]
     [quantum.test.untyped.core.type         :as tt]
@@ -542,13 +542,11 @@
 (deftest test|>
   (let [actual
           (macroexpand '
-            (self/defn #_:inline >|test
-                       ;; This is admittedly a place where inference might be nice, but luckily
-                       ;; there are no "sparse" combinations
-              #?(:clj  ([a comparable-primitive? b comparable-primitive? > tt/boolean?]
-                         (Numeric/gt a b))
-                 :cljs ([a double?               b double?               > (t/assume tt/boolean?)]
-                         (cljs.core/> a b)))))
+            (self/defn #_:inline >
+         #?(:clj  ([a tt/comparable-primitive? b tt/comparable-primitive? > tt/boolean?]
+                    (Numeric/gt a b))
+            :cljs ([a tt/double?               b tt/double?               > (t/assume tt/boolean?)]
+                    (cljs.core/> a b)))))
         expected
           (case (env-lang)
             :clj

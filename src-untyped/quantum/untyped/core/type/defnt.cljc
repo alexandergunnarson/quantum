@@ -340,7 +340,9 @@
     `(. ~hinted-reify-sym ~reify-method-sym ~@arglist)))
 
 ;; TODO spec
-(defns unsupported! [name- _ #_t/qualified-symbol?, args _ #_indexed?, i index?] (TODO))
+(defns unsupported! [name- _ #_t/qualified-symbol?, args _ #_indexed?, i index?]
+  (throw (ex-info "This function is unsupported for the type combination at the argument index."
+                  {:name name- :args args :arg-index i})))
 
 (defns- >combinatoric-seq+
   [direct-dispatch-data-seq-for-arity (s/seq-of ::direct-dispatch-data)

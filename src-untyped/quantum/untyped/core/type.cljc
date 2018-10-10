@@ -573,10 +573,12 @@
 
 #?(:clj
 (defns type>primitive-subtypes [t type? > (us/vec-of type?)]
-  (->> t type>classes
-       (uc/mapcat+ class>boxed-subclasses+)
-       (join #{})
-       (uc/map isa?))))
+  (if (-> t c/meta :quantum.core.type/ref?)
+      #{}
+      (->> t type>classes
+           (uc/mapcat+ class>boxed-subclasses+)
+           (join #{})
+           (uc/map isa?)))))
 
 #?(:clj
 (defns- -type>?class-value [t utr/type?, type-nilable? c/boolean?]

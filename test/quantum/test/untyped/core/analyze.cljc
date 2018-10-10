@@ -108,4 +108,13 @@
             [{'x tt/float?}   tt/float?]
             [{'x tt/double?}  tt/double?]
             [{'x t/any?}      t/any?]]
-           (transform-ana ana)))))
+           (transform-ana ana))))
+  (testing "Input type dependent on other input type"
+    (testing "Dependent type is not for first input"
+      #_"1. Analyze `a` = `tt/byte?`
+            -> Put `a` in env as `(t/isa? Byte)`
+         2. Analyze `b` = `(t/type a)`
+            -> Put `b` in env as `(t/isa? Byte)`"
+      (let [ana (self/analyze-arg-syms {'a 'tt/byte?, 'b `(t/type ~'a)} `t/any?)]
+        (is= [[{'a tt/byte? 'b tt/byte?} t/any?]]
+             (transform-ana ana))))))
