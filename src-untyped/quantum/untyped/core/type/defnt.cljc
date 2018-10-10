@@ -246,16 +246,16 @@
 #?(:clj
 (defns overload>reify
   [{:as   overload
-    :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, out-class _]} ::overload
+    :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, output-class _]} ::overload
    {:as opts :keys [gen-gensym _]} ::opts
    {:keys [fn|name _]} ::fn|globals
    i|overload index?
    > ::reify]
-  (let [interface-k {:out out-class :in arg-classes}
+  (let [interface-k {:out output-class :in arg-classes}
         interface
           (-> *interfaces
               (swap! update interface-k
-                #(or % (eval (overload-classes>interface arg-classes out-class gen-gensym))))
+                #(or % (eval (overload-classes>interface arg-classes output-class gen-gensym))))
               (c/get interface-k))
         arglist-code
           (>vec (concat [(gen-gensym '_)]
@@ -267,7 +267,8 @@
         reify-name (>symbol (str fn|name "|__" i|overload))
         form `(~'def ~reify-name
                 (reify* [~(-> interface >name >symbol)]
-                  (~(ufth/with-type-hint reify-method-sym (ufth/>arglist-embeddable-tag out-class))
+                  (~(ufth/with-type-hint reify-method-sym
+                      (ufth/>arglist-embeddable-tag output-class))
                     ~arglist-code ~body-form)))]
     {:form      form
      :interface interface
@@ -320,7 +321,7 @@
     :clj  (let [direct-dispatch-data-seq
                   (->> overloads
                        (c/map-indexed
-                         (fn [i|overload {:keys [arg-types]}]
+                         (fn [i|overload {:as overload :keys [arg-types]}]
                            {:input-types-decl
                               (>input-types-decl fn|globals arg-types i|overload)
                             :reify (overload>reify overload opts fn|globals i|overload)})))
@@ -328,7 +329,7 @@
                           (c/mapcat
                             (fn [{:as direct-dispatch-data :keys [input-types-decl]}]
                               (list (:form input-types-decl)
-                                    (-> direct-dispatch-data :reify :form))])))
+                                    (-> direct-dispatch-data :reify :form)))))]
             (kw-map form direct-dispatch-data-seq))
     :cljs (TODO)))
 
@@ -340,39 +341,6 @@
 
 ;; TODO spec
 (defns unsupported! [name- _ #_t/qualified-symbol?, args _ #_indexed?, i index?] (TODO))
-
-(let [fn|name 'the-name
-      arglist '[x0 x1 x2]
-      >unsupported!-form (fn [i|arg] `(unsupported! '~(uid/qualify fn|name) [~@arglist] ~i|arg))
-      xs [['(.invoke overload0 x0 x1 x2)
-           [{:t t/boolean? :getter '((Array/get overload-types0 0) x0) :i 0}
-            {:t t/long?    :getter '((Array/get overload-types0 1) x1) :i 1}
-            {:t t/boolean? :getter '((Array/get overload-types0 2) x2) :i 2}]]
-          ['(.invoke overload1 x0 x1 x2)
-           [{:t t/boolean? :getter '((Array/get overload-types1 0) x0) :i 0}
-            {:t t/long?    :getter '((Array/get overload-types1 1) x1) :i 1}
-            {:t t/object?  :getter '((Array/get overload-types1 2) x2) :i 2}]]
-          ['(.invoke overload2 x0 x1 x2)
-           [{:t t/byte?    :getter '((Array/get overload-types2 0) x0) :i 0}
-            {:t t/long?    :getter '((Array/get overload-types2 1) x1) :i 1}
-            {:t t/byte?    :getter '((Array/get overload-types2 2) x2) :i 2}]]
-          ['(.invoke overload2 x0 x1 x2)
-           [{:t t/byte?    :getter '((Array/get overload-types2 0) x0) :i 0}
-            {:t t/boolean? :getter '((Array/get overload-types2 1) x1) :i 1}
-            {:t t/byte?    :getter '((Array/get overload-types2 2) x2) :i 2}]]]
-      *i|arg (atom 0)
-      combinef
-        (fn ([] (transient ['ifs]))
-            ([ret] (-> ret (conj! (>unsupported!-form @*i|arg)) persistent! seq))
-            ([ret getter x i]
-              (reset! *i|arg i)
-              (c/conj! ret getter x)))]
-  (c/>combinatoric-tree (count arglist)
-    (fn [a b] (t/= (:t a) (:t b)))
-    (aritoid combinef combinef (fn [ret [{:keys [getter i]} group]] (combinef ret getter group i)))
-    c/conj!|rf
-    (aritoid combinef combinef (fn [ret [k [{:keys [getter i]}]]] (combinef ret getter k i)))
-    xs))
 
 (defns- >combinatoric-seq+
   [direct-dispatch-data-seq-for-arity (s/seq-of ::direct-dispatch-data)
@@ -397,9 +365,7 @@
    direct-dispatch-data-seq-for-arity (s/seq-of ::direct-dispatch-data)]
   (if (empty? arglist)
       (>dynamic-dispatch|reify-call (-> direct-dispatch-data-seq-for-arity first :reify) arglist)
-      (let [combinatoric-seq+
-
-            *i|arg (atom 0)
+      (let [*i|arg (atom 0)
             combinef
               (fn ([] (transient [`ifs]))
                   ([ret]
@@ -414,10 +380,10 @@
           (aritoid combinef combinef (fn [x [{:keys [getf i]} group]] (combinef x getf group i)))
           c/conj!|rf
           (aritoid combinef combinef (fn [x [k [{:keys [getf i]}]]] (combinef x getf k i)))
-          (>combinatoric-seq+ direct-dispatch-data-seq-for-arity arglist))))))
+          (>combinatoric-seq+ direct-dispatch-data-seq-for-arity arglist)))))
 
-(defns >dynamic-dispatch-fn|form
-  [{:as fn|globals :keys [fn|meta _, fn|name _]} ::fn|globals
+(defns- >dynamic-dispatch-fn|form
+  [{:as fn|globals :keys [fn|meta _, fn|name _, fn|type _]} ::fn|globals
    {:as opts       :keys [gen-gensym _, lang _]} ::opts
    direct-dispatch ::direct-dispatch]
  `(core/defn ~fn|name
@@ -478,11 +444,11 @@
                                   (kw-map output-type fn|output-type)))
                           (kw-map arg-types output-type)))))]
     (->> arg-types|expanded-seq
-         (fn [{:keys [arg-types output-type]}]
-           (kw-map arg-bindings varargs-binding
-                   arg-types|form arg-types
-                   output-type|form output-type
-                   body-codelist|pre-analyze)))))
+         (c/map (fn [{:keys [arg-types output-type]}]
+                  (kw-map arg-bindings varargs-binding
+                          arg-types|form arg-types
+                          output-type|form output-type
+                          body-codelist|pre-analyze))))))
 
 (defns unanalyzed-overloads>fn|type
   [unanalyzed-overloads (s/seq-of ::unanalyzed-overload), fn|output-type t/type? > utr/fn-type?]

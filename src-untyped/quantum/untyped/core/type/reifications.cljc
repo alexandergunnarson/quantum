@@ -282,8 +282,10 @@
    ?Fn            {invoke    ([this args] (TODO))}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (FnType. meta' name out-type arities-form arities))}
+   uform/PGenForm {>form     ([this] (list* 'quantum.untyped.core.type/ftype
+                                       (>form out-type) (>form arities-form)))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (list 'quantum.untyped.core.type/fn out-type arities-form))}})
+   fedn/IEdn      {-edn      ([this] (>form this))}})
 
 (defns fn-type? [x _ > boolean?] (instance? FnType x))
 

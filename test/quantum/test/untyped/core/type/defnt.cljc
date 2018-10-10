@@ -42,18 +42,22 @@
   (let [actual
           (macroexpand '
             (self/defn pid|test [> (? t/string?)]
-              (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
-                   (.getName))))
+              (->> ^:val (java.lang.management.ManagementFactory/getRuntimeMXBean)
+                         (.getName))))
         expected
-          ($ (do (def ~'pid|test|__0|0
+          ($ (do (declare ~'pid|test)
+                 (def ~(O<> 'pid|test|__0|types) (quantum.untyped.core.data.array/*<>))
+                 (def ~'pid|test|__0
                    (reify* [>Object]
                      (~(O 'invoke) [~'_0__]
-                       ~(STR '(. (. java.lang.management.ManagementFactory getRuntimeMXBean)
-                                 getName)))))
+                       ~(STR (list '.
+                                   (tag "java.lang.management.RuntimeMXBean"
+                                     '(. java.lang.management.ManagementFactory getRuntimeMXBean))
+                                   'getName)))))
                  (defn ~'pid|test
-                   {:quantum.core.type/type (t/fn t/any? ~'[:> (? t/string?)])}
-                   ([] (.invoke ~(tag (str `>Object)
-                                'pid|test|__0|0))))))]
+                   {:quantum.core.type/type
+                     (t/ftype t/any? [:> (t/or (t/value nil) (t/isa? String))])}
+                   ([] (. ~(tag (str `>Object) 'pid|test|__0|0) invoke)))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)

@@ -671,6 +671,7 @@
     (t/value t/isa?) (apply-arg-type-combine t/isa? input-nodes)
     (t/value t/or)   (apply-arg-type-combine t/or   input-nodes)
     (t/value t/and)  (apply-arg-type-combine t/and  input-nodes)
+    (t/value t/?)    (apply-arg-type-combine t/?    input-nodes)
     out-type))
 
 (defns- analyze-seq|call
@@ -804,9 +805,12 @@
                                (uast/var-value env form v
                                  (or (-> resolved meta :quantum.core.type/type) (t/value v))))))
                        (uast/class-value env (uid/>symbol resolved) resolved)))]
-      (if (uast/symbol? node)
-          (assoc node :env env)
-          (uast/symbol env form node (:type node))))))
+      (ifs (uast/symbol? node)
+             (assoc node :env env)
+           (uast/class-value? node)
+             ;; To avoid unnecessary type hint
+             (quantum.untyped.core.analyze.ast.Symbol. env form node (:type node))
+           (uast/symbol env form node (:type node))))))
 
 (defns- analyze* [env ::env, form _ > uast/node?]
   (when (> (swap! *analyze-depth inc) 200) (throw (ex-info "Stack too deep" {:form form})))
@@ -949,7 +953,7 @@
   ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _]
     (analyze-arg-syms {} arg-sym->arg-type-form out-type-form))
   ([env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _
-    > (s/kv {:env ::env :out-type-node uast/node?})]
+    > (s/vec-of (s/kv {:env ::env :out-type-node uast/node?}))]
     (analyze-arg-syms*
       (update env :opts
         #(assoc % :arglist-context?       true
