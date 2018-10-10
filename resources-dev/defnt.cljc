@@ -60,12 +60,11 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
   [1 .] t/type
-        - [x] Make sure that (t/type t/boolean?) is not (t/value t/boolean?) but rather t/boolean?.
-              We need to 'un-`t/value`' it somehow?
-        - [x] We need to ensure that operators are recognized as such. `t/or` should not return
-              `t/any?` but rather the `t/or` of its arguments.
+      - [ ] Get all dependent-type-related tests to pass
   [2] t/value-of
       - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
+  [ ] - (comp/t== x)
+         - dependent type such that the passed input must be identical to x
   [3] - t/input-type
       - `(t/input-type >namespace :?)` meaning the possible input types to the first input to `>namespace`
       - `(t/input-type reduce :_ :_ :?)`
@@ -74,8 +73,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   [5] - t/extend-defn!
         - We could just recreate the dispatch every time, in the beginning. It would make for slower
           compilation but faster execution for dynamic dispatch, and quicker time to use. So whenever
-          something extends a `t/defn`, the type overloads have to be put in the right place in the dispatch
-          order. We could find the first place where the inputs are t/<.
+          something extends a `t/defn`, the type overloads have to be put in the right place in the dispatch order. We could find the first place where the inputs are t/<.
           - But then you have to trigger a recompilation of everything that depended on that `t/defn`
             because your input-types and output-types have both gotten bigger. Maybe not on that overload
             but still.
@@ -90,8 +88,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
           ([n dn/std-integer?, xs dc/counted?] (count xs))
           ([n dn/std-integer?, xs ?] ...)
-  - (comp/t== x)
-     - dependent type such that the passed input must be identical to x
   - `(t/validate x (t/* t/string?))` for `(t/* t/string?)` needs to be more performant
     - Don't re-create type on each call
   - Type Logic and Predicates
@@ -159,6 +155,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - t/declare
   - declare-fnt (a way to do protocols/interfaces)
     - extend-fnt!
+  - ^:dyn
+    - `(name (read ...))` fails at compile-time; we want it to at least try at runtime. So instead
+      we annotate like `(name ^:dyn (read ...))`, meaning figure out at runtime what the out-type of
+      the call to `(read ...)` is, not, call `name` dynamically.
   - `t/defn`
     - Arity elision: if any type in an arity is `t/none?` then elide it and emit a warning
       - `([x bigint?] x)`
@@ -169,6 +169,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - t/extend-defn!
       - `(t/extend-defn! id/>name (^:inline [x namespace?] (-> x .getName id/>name)))`
     - ^:inline
+      - Applicable only if in a typed context and not used as a function
       - if you do (Numeric/bitAnd a b) inline then bitAnd needs to know the primitive type so maybe
         we do the `let*`-binding approach to typing vars?
       - should be able to be per-arity like so:

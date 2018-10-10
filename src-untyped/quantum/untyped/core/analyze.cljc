@@ -793,7 +793,16 @@
   "Analyzes vars as if their value is constant, unless they're marked as dynamic."
   [env ::env, form symbol? > uast/symbol?]
   (if-not-let [{:keys [resolved resolved-via]} (?resolve env form)]
-    (err! "Could not resolve symbol" {:sym form})
+    ;; Handles forward dependent-type dependencies e.g. `[a (type b) b t/any?]`
+    (l/if-let [_             (-> env :opts :arglist-context?)
+               arg-type-form (-> env :opts :arg-sym->arg-type-form (get form))]
+      (TODO)
+      #_(let [_ (pr! (:opts env))
+            env' (update-in env [:opts :arglist-syms|queue] conj form)
+            analyzed (analyze* env' arg-type-form)]
+        (pr! analyzed)
+        (TODO))
+      (err! "Could not resolve symbol" {:sym form}))
     (let [node (case resolved-via
                  (:env :dot) resolved
                  :resolve
@@ -826,12 +835,6 @@
        (seq? form)
          (analyze-seq env form)
        (throw (ex-info "Unrecognized form" {:form form}))))
-
-;; ===== Dependent types functionality ===== ;;
-
-
-
-;; ===== End dependent types functionality ===== ;;
 
 (defns analyze
   "`env` consists of a map from simple symbol to `uast/node?`, with one exception: `env` admits one
@@ -893,6 +896,14 @@
       (utr/or-type>args t)
       [t]))
 
+(defns type>split+primitivized [t t/type? > (s/vec-of t/type?)]
+  (let [primitive-subtypes
+          (->> t
+               t/type>primitive-subtypes
+               (sort-by sort-guide) ; For cleanliness and reproducibility in tests
+               vec)]
+    (uc/distinct (join primitive-subtypes (type>split t)))))
+
 (defn- analyze-arg-syms*
   [env #_::env
    arg-sym->arg-type-form #_::arg-sym->arg-type-form
@@ -906,21 +917,18 @@
            :out-type-node (-> (analyze env out-type-form) (update :type t/unvalue))}]
        (>= n|iter analyze-arg-syms|max-iter)
          (err! "Max number of iterations reached for `analyze-arg-syms" {:n n|iter})
-             ;; TODO if it finds a symbol it doesn't recognize then it should end up in the
-             ;; env via not this loop
        (let [arg-sym (first arglist-syms|unanalyzed)
              arg-type-form (arg-sym->arg-type-form arg-sym)
              env' (update env :opts
                     #(assoc % :arglist-syms|queue      (conj arglist-syms|queue arg-sym)
                               :arglist-syms|unanalyzed arglist-syms|unanalyzed))
              analyzed (-> (analyze env' arg-type-form) (update :type t/unvalue))
-             primitive-subtypes
-               (->> analyzed :type
-                    t/type>primitive-subtypes
-                    (sort-by sort-guide) ; For cleanliness and reproducibility in tests
-                    vec)
-             t-split (uc/distinct (join primitive-subtypes (-> analyzed :type type>split)))]
-         (pr! {:t (:type analyzed) :t-split t-split} #_{:analyzed analyzed})
+             t-split (-> analyzed :type type>split+primitivized)]
+         (pr! {:arg-sym arg-sym
+               :t (:type analyzed)
+               :t-split t-split
+               :arglist-syms|queue (:arglist-syms|queue analyzed)
+               :arglist-syms|unanalyzed (:arglist-syms|unanalyzed analyzed)})
          (if (-> t-split count (= 1))
              (let [env' (assoc (:env analyzed) arg-sym analyzed)]
                (recur env'
@@ -936,8 +944,12 @@
                         (assoc (:env analyzed) arg-sym (assoc analyzed :type t))
                         arg-sym->arg-type-form
                         out-type-form
-                        (:arglist-syms|queue      analyzed)
-                        (:arglist-syms|unanalyzed analyzed)
+                        (conj arglist-syms|queue arg-sym)
+                        ;; TODO re-enable
+                      #_(:arglist-syms|queue      analyzed)
+                        (disj arglist-syms|unanalyzed arg-sym)
+                        ;; TODO re-enable
+                      #_(:arglist-syms|unanalyzed analyzed)
                         (inc n|iter))))
                   r/join)))))
 
