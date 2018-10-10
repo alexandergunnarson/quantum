@@ -632,12 +632,6 @@
                           (get inputs-ct)))})))
     :dispatchable-overloads-seq))
 
-(defn- dependent-type-call-node? [x]
-  (and (uast/call-node? x)
-       (case (-> x :unanalyzed-form first)
-         (quantum.core.type/type quantum.untyped.core.type/type) true
-         false)))
-
 (defns- analyze-seq|dependent-type-call
   [env ::env, [caller|form _, arg-form _ & extra-args-form _ :as form] _ > uast/node?]
   (if (not (empty? extra-args-form))
@@ -755,10 +749,12 @@
     var      (analyze-seq|var   env form)
     (if (-> env :opts :arglist-context?)
         (if-let [caller-form-dependent-type-call?
-                   (case caller|form
-                     (quantum.core.type/type
-                      quantum.untyped.core.type/type) true
-                     false)]
+                   (and (symbol? caller|form)
+                        (when-let [sym (some-> (uvar/resolve *ns* caller|form) uid/>symbol)]
+                          (case sym
+                            (quantum.core.type/type
+                             quantum.untyped.core.type/type) true
+                            false)))]
           (analyze-seq|dependent-type-call env form)
           (analyze-seq|call env form))
         (analyze-seq|call env form))))

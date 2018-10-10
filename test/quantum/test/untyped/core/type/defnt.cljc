@@ -77,7 +77,7 @@
 (deftest test|identity|uninlined
   (let [actual
           (macroexpand '
-            (self/defn identity|uninlined ([x t/any?] x)))
+            (self/defn identity|uninlined ([x t/any? > (t/type x)] x)))
         expected
           (case (env-lang)
             :clj
