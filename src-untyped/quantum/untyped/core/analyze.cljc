@@ -919,7 +919,7 @@
                     t/type>primitive-subtypes
                     (sort-by sort-guide) ; For cleanliness and reproducibility in tests
                     vec)
-             t-split (c/distinct (join primitive-subtypes (-> analyzed :type type>split)))]
+             t-split (uc/distinct (join primitive-subtypes (-> analyzed :type type>split)))]
          (pr! {:t (:type analyzed) :t-split t-split} #_{:analyzed analyzed})
          (if (-> t-split count (= 1))
              (let [env' (assoc (:env analyzed) arg-sym analyzed)]
@@ -930,7 +930,7 @@
                       (:arglist-syms|unanalyzed analyzed)
                       (inc n|iter)))
              (->> t-split
-                  (c/mapcat+
+                  (uc/mapcat+
                     (fn [t]
                       (analyze-arg-syms*
                         (assoc (:env analyzed) arg-sym (assoc analyzed :type t))

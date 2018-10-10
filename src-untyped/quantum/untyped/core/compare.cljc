@@ -15,11 +15,11 @@
 (def not== (comp not identical?))
 
 (def comparison=     zero?)
+(def comparison-not= (comp not comparison=))
 (def comparison<     neg?)
 (def comparison<=    (fn-or comparison< comparison=))
-(def comparison-not= (comp not comparison=))
-(def comparison>=    (fn-or comparison> comparison=))
 (def comparison>     pos?)
+(def comparison>=    (fn-or comparison> comparison=))
 
 (defn comp<     ([      x0 x1] (comp<            compare x0 x1))
                 ([compf x0 x1] (comparison<     (compf   x0 x1))))
