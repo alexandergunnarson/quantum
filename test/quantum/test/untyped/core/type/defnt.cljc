@@ -1,9 +1,8 @@
-;; See https://jsperf.com/js-property-access-comparison — all property accesses (at least of length 1) seem to be equal
-
 (ns quantum.test.untyped.core.type.defnt
   (:refer-clojure :exclude
-    [* count get seq])
+    [count get name seq])
   (:require
+    [clojure.core                           :as core]
     [quantum.test.untyped.core.type         :as tt]
     [quantum.untyped.core.type.defnt        :as self
       :refer [fnt unsupported!]]
@@ -21,7 +20,7 @@
     [quantum.untyped.core.test              :as utest
       :refer [deftest is is= is-code= testing throws]]
     [quantum.untyped.core.type              :as t
-      :refer [? *]]
+      :refer [?]]
     [quantum.untyped.core.type.reifications :as utr])
   (:import
     [clojure.lang ASeq ISeq LazySeq Named Reduced Seqable]
@@ -157,66 +156,60 @@
 (deftest test|name
   (let [actual
           (macroexpand '
-            (self/defn #_:inline name|test > t/string?
+            (self/defn #_:inline name > t/string?
                        ([x t/string?] x)
-              #?(:clj  ([x (t/isa? Named)  > (* t/string?)] (.getName x))
-                 :cljs ([x (t/isa? INamed) > (* t/string?)] (-name x)))))
+              #?(:clj  ([x (t/isa? Named)  > (t/* t/string?)] (.getName x))
+                 :cljs ([x (t/isa? INamed) > (t/* t/string?)] (-name x)))))
         expected
           (case (env-lang)
             :clj
-              ($ (do ;; Only direct dispatch for prims or for Object, not for subclasses of Object
-                     ;; Return value can be primitive; in this case it's not
-                     ;; The macro in a typed context will find the right dispatch at compile time
+              ($ (do (declare ~'name)
 
-                     ;; [t/string?]
+                     ;; [x t/string?]
 
-                     (def ~(O<> 'name|test|__0|input0|types)
+                     (def ~(O<> 'name|__0|types)
                        (*<> (t/isa? java.lang.String)))
-                     (def ~'name|test|__0|0
+                     (def ~'name|__0
                        (reify* [Object>Object]
-                         (~(O 'invoke) [~'_0__ ~(O 'x)]
-                           (let* [~(ST 'x) ~'x] ~(ST 'x)))))
+                         (~(O 'invoke) [~'_0__ ~(O 'x)] ~(ST 'x))))
 
-                     ;; [(t/isa? Named)]
+                     ;; [x (t/isa? Named)] > (t/* t/string?)
 
-                     (def ~(O<> 'name|test|__1|input0|types)
+                     (def ~(O<> 'name|__1|types)
                        (*<> (t/isa? Named)))
-                     (def ~'name|test|__1|0
+                     (def ~'name|__1
                        (reify* [Object>Object]
                          (~(O 'invoke) [~'_1__ ~(O 'x)]
-                           (let* [~(tag "clojure.lang.Named" 'x) ~'x]
-                             (t/validate ~(ST '(. x getName))
-                                         ~'(* t/string?))))))
+                           (t/validate ~(ST (list '. (tag "clojure.lang.Named" 'x) 'getName))
+                                       ~'(t/* t/string?)))))
 
-                     (defn ~'name|test
+                     (defn ~'name
                        {:quantum.core.type/type
-                         (t/fn ~'t/string?
-                               ~'[t/string?]
-                               ~'[(t/isa? Named) :> (* t/string?)])}
+                         (t/ftype (t/isa? String)
+                                  [(t/isa? String) :> (t/isa? String)]
+                                  [(t/isa? Named)  :> (t/* (t/isa? String))])}
                        ([~'x00__]
-                         (ifs ((Array/get ~'name|test|__0|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (str `Object>Object)
-                                               'name|test|__0|0) ~'x00__)
-                              ((Array/get ~'name|test|__1|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (str `Object>Object)
-                                               'name|test|__1|0) ~'x00__)
-                              (unsupported! `name|test [~'x00__] 0))))))
+                         (ifs ((Array/get ~'name|__0|types 0) ~'x00__)
+                                (. ~(tag (str `Object>Object) 'name|__0) ~'invoke ~'x00__)
+                              ((Array/get ~'name|__1|types 0) ~'x00__)
+                                (. ~(tag (str `Object>Object) 'name|__1) ~'invoke ~'x00__)
+                              (unsupported! `name [~'x00__] 0))))))
             :cljs
-              ($ (do (defn ~'name|test [~'x00__]
+              ($ (do (defn ~'name [~'x00__]
                      (ifs (t/string? x)         x
                           (satisfies? INamed x) (-name x)
-                          (unsupported! `name|test [~'x00__] 0))))))]
+                          (unsupported! `name [~'x00__] 0))))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
-      (eval '(do (is= (name|test "")       (name ""))
-                 (is= (name|test "abc")    (name "abc"))
-                 (is= (name|test :abc)     (name :abc))
-                 (is= (name|test 'abc)     (name 'abc))
-                 (is= (name|test :abc/def) (name :abc/def))
-                 (is= (name|test 'abc/def) (name 'abc/def))
-                 (throws (name|test nil))
-                 (throws (name|test 1)))))))
+      (eval '(do (is= (name "")       (core/name ""))
+                 (is= (name "abc")    (core/name "abc"))
+                 (is= (name :abc)     (core/name :abc))
+                 (is= (name 'abc)     (core/name 'abc))
+                 (is= (name :abc/def) (core/name :abc/def))
+                 (is= (name 'abc/def) (core/name 'abc/def))
+                 (throws (name nil))
+                 (throws (name 1)))))))
 
 (deftest test|some?
   (let [actual
@@ -1034,7 +1027,7 @@
     (testing "code equivalence" (is-code= actual expected)))))
 
 (self/defn >big-integer > (t/isa? java.math.BigInteger)
-  ([x tt/ratio? > (* (t/isa? java.math.BigInteger))] (.bigIntegerValue x)))
+  ([x tt/ratio? > (t/* (t/isa? java.math.BigInteger))] (.bigIntegerValue x)))
 
 ;; NOTE would use `>long` but that's already an interface
 (deftest test|>long-checked
@@ -1764,7 +1757,7 @@
            ([] "")
            ([x t/nil?] "")
            ;; could have inferred but there may be other objects who have overridden .toString
-  #?(#_:clj  #_([x (t/isa? Object) > (* t/string?)] (.toString x))
+  #?(#_:clj  #_([x (t/isa? Object) > (t/* t/string?)] (.toString x))
            ;; Can't infer that it returns a string (without a pre-constructed list of built-in fns)
            ;; As such, must explicitly mark
      :cljs ([x t/any? > (t/assume t/string?)] (.join #js [x] "")))

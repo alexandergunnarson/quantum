@@ -666,6 +666,7 @@
     (t/value t/or)   (apply-arg-type-combine t/or   input-nodes)
     (t/value t/and)  (apply-arg-type-combine t/and  input-nodes)
     (t/value t/?)    (apply-arg-type-combine t/?    input-nodes)
+    (t/value t/*)    (apply-arg-type-combine t/*    input-nodes)
     out-type))
 
 (defns- analyze-seq|call

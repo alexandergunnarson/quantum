@@ -92,6 +92,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           ([n dn/std-integer?, xs ?] ...)
   - (comp/t== x)
      - dependent type such that the passed input must be identical to x
+  - `(t/validate x (t/* t/string?))` for `(t/* t/string?)` needs to be more performant
+    - Don't re-create type on each call
   - Type Logic and Predicates
     - We should probably have a 'normal form' so we can correctly hash if we do spec lookup
     - t/- : fix

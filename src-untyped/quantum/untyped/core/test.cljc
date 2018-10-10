@@ -27,6 +27,8 @@
 (defn test-nss-where [pred]
   (->> (all-ns) (filter #(-> % ns-name name pred)) (map test-ns) doall)))
 
+(declare code=)
+
 (defn- code=|similar-class [c0 c1]
   (let [similar-class?
           (cond (seq?        c0) (seq?        c1)
