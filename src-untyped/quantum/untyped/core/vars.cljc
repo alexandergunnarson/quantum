@@ -4,8 +4,6 @@
          (:require
            [clojure.core                       :as core]
            [quantum.untyped.core.core          :as ucore]
-           [quantum.untyped.core.logic
-             :refer [ifs]]
            [quantum.untyped.core.form.evaluate
              :refer [case-env case-env*]]
            [quantum.untyped.core.form.generate :as ufgen])
@@ -124,13 +122,13 @@
             (when-let [sym-ns-val (resolve-ns sym)]
               (.findInternedVar ^clojure.lang.Namespace sym-ns-val (-> sym name symbol)))
             (let [^String sym-name (name sym)]
-              (ifs (or (and (pos? (.indexOf sym-name "."))
-                            (not (.endsWith sym-name ".")))
-                       (= (.charAt sym-name 0) \[))
-                     (try (clojure.lang.RT/classForName sym-name)
-                       (catch ClassNotFoundException _ nil))
-                   (= sym 'ns)
-                     #'core/ns
-                   (= sym 'in-ns)
-                     #'core/in-ns
-                   (.getMapping ^clojure.lang.Namespace ns-val sym)))))))
+              (cond (or (and (pos? (.indexOf sym-name "."))
+                             (not (.endsWith sym-name ".")))
+                        (= (.charAt sym-name 0) \[))
+                      (try (clojure.lang.RT/classForName sym-name)
+                        (catch ClassNotFoundException _ nil))
+                    (= sym 'ns)
+                      #'core/ns
+                    (= sym 'in-ns)
+                      #'core/in-ns
+                    :else (.getMapping ^clojure.lang.Namespace ns-val sym)))))))
