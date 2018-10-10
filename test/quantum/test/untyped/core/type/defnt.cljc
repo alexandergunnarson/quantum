@@ -33,9 +33,17 @@
 (do (require '[orchestra.spec.test :as st])
     (orchestra.spec.test/instrument))
 
+(defn B   [form] (tag "boolean"             form))
+(defn Y   [form] (tag "byte"                form))
+(defn S   [form] (tag "short"               form))
+(defn C   [form] (tag "char"                form))
+(defn I   [form] (tag "int"                 form))
+(defn L   [form] (tag "long"                form))
+(defn F   [form] (tag "float"               form))
+(defn D   [form] (tag "double"              form))
 (defn O   [form] (tag "java.lang.Object"    form))
 (defn O<> [form] (tag "[Ljava.lang.Object;" form))
-(defn STR [form] (tag "java.lang.String"    form))
+(defn ST  [form] (tag "java.lang.String"    form))
 
 #?(:clj
 (deftest test|pid
@@ -50,14 +58,14 @@
                  (def ~'pid|test|__0
                    (reify* [>Object]
                      (~(O 'invoke) [~'_0__]
-                       ~(STR (list '.
-                                   (tag "java.lang.management.RuntimeMXBean"
-                                     '(. java.lang.management.ManagementFactory getRuntimeMXBean))
-                                   'getName)))))
+                       ~(ST (list '.
+                                 (tag "java.lang.management.RuntimeMXBean"
+                                   '(. java.lang.management.ManagementFactory getRuntimeMXBean))
+                                 'getName)))))
                  (defn ~'pid|test
                    {:quantum.core.type/type
                      (t/ftype t/any? [:> (t/or (t/value nil) (t/isa? String))])}
-                   ([] (. ~(tag (str `>Object) 'pid|test|__0|0) invoke)))))]
+                   ([] (. ~(tag (str `>Object) 'pid|test|__0) ~'invoke)))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
@@ -73,42 +81,70 @@
         expected
           (case (env-lang)
             :clj
-              ($ (do ;; [x t/any?]
+              ($ (do (declare ~'identity|uninlined)
 
-                     (def ~(O<> 'identity|uninlined|__0|input0|types)
-                       (*<> t/any?))
-                     ;; One `reify` because `t/any?` in CLJ does not have any `t/or`-separability
-                     (def ~'identity|uninlined|__0|0
-                       (reify* [Object>Object boolean>boolean byte>byte short>short char>char
-                                int>int long>long float>float double>double]
-                         (~(tag "java.lang.Object" 'invoke)
-                           [~'_0__ ~(tag "java.lang.Object" 'x)] ~(O 'x))
-                         (~(tag "boolean"          'invoke)
-                           [~'_1__ ~(tag "boolean"          'x)] ~'x)
-                         (~(tag "byte"             'invoke)
-                           [~'_2__ ~(tag "byte"             'x)] ~'x)
-                         (~(tag "short"            'invoke)
-                           [~'_3__ ~(tag "short"            'x)] ~'x)
-                         (~(tag "char"             'invoke)
-                           [~'_4__ ~(tag "char"             'x)] ~'x)
-                         (~(tag "int"              'invoke)
-                           [~'_5__ ~(tag "int"              'x)] ~'x)
-                         (~(tag "long"             'invoke)
-                           [~'_6__ ~(tag "long"             'x)] ~'x)
-                         (~(tag "float"            'invoke)
-                           [~'_7__ ~(tag "float"            'x)] ~'x)
-                         (~(tag "double"           'invoke)
-                           [~'_8__ ~(tag "double"           'x)] ~'x)))
+                     ;; [x t/any?]
+
+                     (def ~(O<> 'identity|uninlined|__0|types) (*<> (t/isa? Boolean)))
+                     (def ~'identity|uninlined|__0
+                       (reify* [boolean>boolean] (~(B 'invoke) [~'_0__ ~(B 'x)] ~'x)))
+                     (def ~(O<> 'identity|uninlined|__1|types) (*<> (t/isa? Byte)))
+                     (def ~'identity|uninlined|__1
+                       (reify* [byte>byte]       (~(Y 'invoke) [~'_1__ ~(Y 'x)] ~'x)))
+                     (def ~(O<> 'identity|uninlined|__2|types) (*<> (t/isa? Short)))
+                     (def ~'identity|uninlined|__2
+                       (reify* [short>short]     (~(S 'invoke) [~'_2__ ~(S 'x)] ~'x)))
+                     (def ~(O<> 'identity|uninlined|__3|types) (*<> (t/isa? Character)))
+                     (def ~'identity|uninlined|__3
+                       (reify* [char>char]       (~(C 'invoke) [~'_3__ ~(C 'x)] ~'x)))
+                     (def ~(O<> 'identity|uninlined|__4|types) (*<> (t/isa? Integer)))
+                     (def ~'identity|uninlined|__4
+                       (reify* [int>int]         (~(I 'invoke) [~'_4__ ~(I 'x)] ~'x)))
+                     (def ~(O<> 'identity|uninlined|__5|types) (*<> (t/isa? Long)))
+                     (def ~'identity|uninlined|__5
+                       (reify* [long>long]       (~(L 'invoke) [~'_5__ ~(L 'x)] ~'x)))
+                     (def ~(O<> 'identity|uninlined|__6|types) (*<> (t/isa? Float)))
+                     (def ~'identity|uninlined|__6
+                       (reify* [float>float]     (~(F 'invoke) [~'_6__ ~(F 'x)] ~'x)))
+                     (def ~(O<> 'identity|uninlined|__7|types) (*<> (t/isa? Double)))
+                     (def ~'identity|uninlined|__7
+                       (reify* [double>double]   (~(D 'invoke) [~'_7__ ~(D 'x)] ~'x)))
+                     (def ~(O<> 'identity|uninlined|__8|types) (*<> t/any?))
+                     (def ~'identity|uninlined|__8
+                       (reify* [Object>Object]   (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
 
                      (defn ~'identity|uninlined
-                       {:quantum.core.type/type (t/fn t/any? ~'[t/any?])}
-                       ([~'x00__]
-                         ;; TODO elide check because `t/any?` doesn't require a check
-                         ;; and all args are `t/=` `t/any?`
-                         (ifs ((Array/get ~'identity|uninlined|__0|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (str `Object>Object)
-                                               'identity|uninlined|__0|0) ~'x00__)
-                              (unsupported! `identity|uninlined [~'x00__] 0))))))
+                       {:quantum.core.type/type
+                         (t/ftype t/any? [(t/isa? Boolean)   :> (t/isa? Boolean)]
+                                         [(t/isa? Byte)      :> (t/isa? Byte)]
+                                         [(t/isa? Short)     :> (t/isa? Short)]
+                                         [(t/isa? Character) :> (t/isa? Character)]
+                                         [(t/isa? Integer)   :> (t/isa? Integer)]
+                                         [(t/isa? Long)      :> (t/isa? Long)]
+                                         [(t/isa? Float)     :> (t/isa? Float)]
+                                         [(t/isa? Double)    :> (t/isa? Double)]
+                                         [t/any?             :> t/any?])}
+                ([~'x00__]
+                  (ifs ((Array/get ~'identity|uninlined|__0|types 0) ~'x00__)
+                         (. ~(tag (str `boolean>boolean) 'identity|uninlined|__0) ~'invoke ~'x00__)
+                       ((Array/get ~'identity|uninlined|__1|types 0) ~'x00__)
+                         (. ~(tag (str `byte>byte)       'identity|uninlined|__1) ~'invoke ~'x00__)
+                       ((Array/get ~'identity|uninlined|__2|types 0) ~'x00__)
+                         (. ~(tag (str `short>short)     'identity|uninlined|__2) ~'invoke ~'x00__)
+                       ((Array/get ~'identity|uninlined|__3|types 0) ~'x00__)
+                         (. ~(tag (str `char>char)       'identity|uninlined|__3) ~'invoke ~'x00__)
+                       ((Array/get ~'identity|uninlined|__4|types 0) ~'x00__)
+                         (. ~(tag (str `int>int)         'identity|uninlined|__4) ~'invoke ~'x00__)
+                       ((Array/get ~'identity|uninlined|__5|types 0) ~'x00__)
+                         (. ~(tag (str `long>long)       'identity|uninlined|__5) ~'invoke ~'x00__)
+                       ((Array/get ~'identity|uninlined|__6|types 0) ~'x00__)
+                         (. ~(tag (str `float>float)     'identity|uninlined|__6) ~'invoke ~'x00__)
+                       ((Array/get ~'identity|uninlined|__7|types 0) ~'x00__)
+                         (. ~(tag (str `double>double)   'identity|uninlined|__7) ~'invoke ~'x00__)
+                       ((Array/get ~'identity|uninlined|__8|types 0) ~'x00__)
+                         (. ~(tag (str `Object>Object)   'identity|uninlined|__8) ~'invoke ~'x00__)
+                       ;; TODO no need for `unsupported!` because it will always get a valid branch
+                       (unsupported! `identity|uninlined [~'x00__] 0))))))
             :cljs
               ;; Direct dispatch will be simple functions, not `reify`s
               ($ (do (defn ~'identity|uninlined [~'x] ~'x))))]
@@ -139,7 +175,7 @@
                      (def ~'name|test|__0|0
                        (reify* [Object>Object]
                          (~(O 'invoke) [~'_0__ ~(O 'x)]
-                           (let* [~(STR 'x) ~'x] ~(STR 'x)))))
+                           (let* [~(ST 'x) ~'x] ~(ST 'x)))))
 
                      ;; [(t/isa? Named)]
 
@@ -149,7 +185,7 @@
                        (reify* [Object>Object]
                          (~(O 'invoke) [~'_1__ ~(O 'x)]
                            (let* [~(tag "clojure.lang.Named" 'x) ~'x]
-                             (t/validate ~(STR '(. x getName))
+                             (t/validate ~(ST '(. x getName))
                                          ~'(* t/string?))))))
 
                      (defn ~'name|test
@@ -1239,9 +1275,9 @@
                         (def ~'!str|__1|0
                           (reify* [Object>Object]
                             (~(O 'invoke) [~'_1__ ~(O 'x)]
-                              (let* [~(Str 'x) ~'x]
+                              (let* [~(ST 'x) ~'x]
                                 ~(tag "java.lang.StringBuilder"
-                                      (list 'new 'StringBuilder (STR 'x)))))))
+                                      (list 'new 'StringBuilder (ST 'x)))))))
 
                         (def ~(O<> '!str|__2|input0|types)
                           (*<> (t/isa? java.lang.CharSequence)
