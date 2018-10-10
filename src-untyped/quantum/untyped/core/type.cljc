@@ -24,11 +24,12 @@
            [quantum.untyped.core.collections.logic
              :refer [seq-and seq-or]]
            [quantum.untyped.core.compare               :as ucomp
-             :refer [== <ident =ident >ident ><ident <>ident]]
+             :refer [==]]
            [quantum.untyped.core.core                  :as ucore]
            [quantum.untyped.core.data.bits             :as ubit]
            [quantum.untyped.core.data.hash             :as uhash]
-           [quantum.untyped.core.data.set              :as uset]
+           [quantum.untyped.core.data.set              :as uset
+             :refer [<ident =ident >ident ><ident <>ident]]
            [quantum.untyped.core.data.tuple]
            [quantum.untyped.core.defnt
              :refer [defns defns-]]
@@ -308,7 +309,7 @@
 (defns complementary? [t0 utr/type? t1 utr/type?] (= t0 (not t1)))
 
 (defns- create-logical-type|inner|or
-  [{:as accum :keys [t' utr/type?]} _, t* utr/type?, c* ucomp/comparison?]
+  [{:as accum :keys [t' utr/type?]} _, t* utr/type?, c* uset/comparison?]
   (if #?(:clj  (c/or (c/and (c/= t' object?) (c/= t* nil?))
                      (c/and (c/= t* object?) (c/= t' nil?)))
          :cljs false)
@@ -324,7 +325,7 @@
 
 (defns- create-logical-type|inner|and
   [{:as accum :keys [conj-t? c/boolean?, prefer-orig-args? c/boolean?, t' utr/type?, types _]} _
-   t* utr/type?, c* ucomp/comparison?]
+   t* utr/type?, c* uset/comparison?]
   (if       ;; Contradiction/empty-set: (& A (! A))
       (c/or (c/= c* <>ident) ; optimization before `complementary?`
             (complementary? t' t*))
@@ -430,7 +431,7 @@
                      (uc/group-by #(-> % :input-types count)))]
     (FnType. nil name- out-type arities-form arities)))
 
-(defns compare|in [x0 utr/fn-type?, x1 utr/fn-type? > ucomp/comparison?]
+(defns compare|in [x0 utr/fn-type?, x1 utr/fn-type? > uset/comparison?]
   (let [ct->overloads|x0 (utr/fn-type>arities x0)
         ct->overloads|x1 (utr/fn-type>arities x1)
         cts-only-in-x0 (uset/- (-> ct->overloads|x0 keys set) (-> ct->overloads|x1 keys set))
@@ -459,7 +460,7 @@
          (uc/lmap :output-type)
          (apply or)))
 
-(defns compare|out [x0 utr/fn-type?, x1 utr/fn-type? > ucomp/comparison?]
+(defns compare|out [x0 utr/fn-type?, x1 utr/fn-type? > uset/comparison?]
   (utcomp/compare (fn-type>output-type x0) (fn-type>output-type x1)))
 
 ;; ===== Dependent types ===== ;;
