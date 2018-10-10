@@ -435,7 +435,7 @@
           (->> (uana/analyze-arg-syms {} (zipmap arg-bindings arg-types|form) output-type|form)
                (c/map (fn [{:keys [env out-type-node]}]
                         (let [output-type (:type out-type-node)
-                              arg-types   (->> arg-bindings (mapv #(get env %)))]
+                              arg-types   (->> arg-bindings (mapv #(:type (get env %))))]
                           (when (and ;; TODO excise clause when we default `output-type|form` to `?`
                                      (not (identical? output-type|form fn|output-type|form))
                                      (not (t/<= output-type fn|output-type)))
