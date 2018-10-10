@@ -1,5 +1,5 @@
-(ns "Map functions. |map-entry|, a better merge, sorted-maps, etc."
-  quantum.untyped.core.data.map
+(ns quantum.untyped.core.data.map
+  "Map functions. |map-entry|, a better merge, sorted-maps, etc."
   (:refer-clojure :exclude
     [split-at, merge, sorted-map sorted-map-by, array-map, hash-map])
   (:require
@@ -25,6 +25,8 @@
            [it.unimi.dsi.fastutil.doubles Double2ReferenceOpenHashMap]
            [it.unimi.dsi.fastutil.objects Reference2LongOpenHashMap]]
     :cljs [[goog.structs AvlTree LinkedMap]])))
+
+(defn +map-entry? [x] (instance? #?(:clj clojure.lang.MapEntry :cljs cljs.core.MapEntry) x))
 
 ;; ----- Hash maps ----- ;;
 
