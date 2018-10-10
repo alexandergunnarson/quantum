@@ -62,6 +62,8 @@
       :cljs cljs.core/PersistentList)
      (>form [x] (->> x (map >form) list*))
 
+  #?@(:clj [clojure.lang.ASeq (>form [x] (->> x (map >form)))])
+
    #?(:clj  clojure.lang.Var
       :cljs cljs.core/Var)
      (>form [x] #?(:clj  (list 'var (symbol (-> x .-ns ns-name name) (-> x .-sym name)))
