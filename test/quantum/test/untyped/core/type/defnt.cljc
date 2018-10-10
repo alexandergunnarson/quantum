@@ -1,6 +1,6 @@
 (ns quantum.test.untyped.core.type.defnt
   (:refer-clojure :exclude
-    [count get name seq])
+    [count get name seq some?])
   (:require
     [clojure.core                           :as core]
     [quantum.test.untyped.core.type         :as tt]
@@ -167,16 +167,14 @@
 
                      ;; [x t/string?]
 
-                     (def ~(O<> 'name|__0|types)
-                       (*<> (t/isa? java.lang.String)))
+                     (def ~(O<> 'name|__0|types) (*<> (t/isa? java.lang.String)))
                      (def ~'name|__0
                        (reify* [Object>Object]
                          (~(O 'invoke) [~'_0__ ~(O 'x)] ~(ST 'x))))
 
                      ;; [x (t/isa? Named)] > (t/* t/string?)
 
-                     (def ~(O<> 'name|__1|types)
-                       (*<> (t/isa? Named)))
+                     (def ~(O<> 'name|__1|types) (*<> (t/isa? Named)))
                      (def ~'name|__1
                        (reify* [Object>Object]
                          (~(O 'invoke) [~'_1__ ~(O 'x)]
@@ -215,62 +213,90 @@
   (let [actual
           ;; Perhaps silly in ClojureScript, but avoids boxing in Clojure
           (macroexpand '
-            (self/defn #_:inline some?|test
+            (self/defn #_:inline some? > t/boolean?
               ([x t/nil?] false)
               ;; Implicitly, `(- t/any? t/nil?)`, so `t/val?`
               ([x t/any?] true)))
         expected
-          (case (env-lang)
-            :clj
-              ($ (do ;; [x t/nil?]
+        (case (env-lang)
+          :clj
+          ($ (do (declare ~'some?)
 
-                     (def ~(O<> 'some?|test|__0|input0|types)
-                       (*<> (t/value nil)))
-                     (def ~'some?|test|__0|0
-                       (reify* [Object>boolean]
-                         (~(tag "boolean" 'invoke) [~'_0__ ~(tag "java.lang.Object" 'x)] false)))
+                 ;; [x t/nil?]
 
-                     ;; [x t/any?]
+                 (def ~(O<> 'some?|__0|types) (*<> (t/value nil)))
+                 (def ~'some?|__0
+                   (reify* [Object>boolean]  (~(B 'invoke) [~'_0__ ~(O 'x)] false)))
 
-                     (def ~(O<> 'some?|test|__1|input0|types)
-                       (*<> t/any?))
-                     (def ~'some?|test|__1|0
-                       (reify* [Object>boolean boolean>boolean byte>boolean short>boolean
-                                char>boolean int>boolean long>boolean float>boolean double>boolean]
-                         (~(tag "boolean" 'invoke) [~'_1__ ~(tag "java.lang.Object" 'x)] true)
-                         (~(tag "boolean" 'invoke) [~'_2__ ~(tag "boolean"          'x)] true)
-                         (~(tag "boolean" 'invoke) [~'_3__ ~(tag "byte"             'x)] true)
-                         (~(tag "boolean" 'invoke) [~'_4__ ~(tag "short"            'x)] true)
-                         (~(tag "boolean" 'invoke) [~'_5__ ~(tag "char"             'x)] true)
-                         (~(tag "boolean" 'invoke) [~'_6__ ~(tag "int"              'x)] true)
-                         (~(tag "boolean" 'invoke) [~'_7__ ~(tag "long"             'x)] true)
-                         (~(tag "boolean" 'invoke) [~'_8__ ~(tag "float"            'x)] true)
-                         (~(tag "boolean" 'invoke) [~'_9__ ~(tag "double"           'x)] true)))
+                 ;; [x t/any?]
 
-                     (defn ~'some?|test
-                       {:quantum.core.type/type
-                         (t/fn t/any?
-                               ~'[t/nil?]
-                               ~'[t/any?])}
-                       ([~'x00__]
-                         (ifs ((Array/get ~'some?|test|__0|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (str `Object>boolean) 'some?|test|__0|0) ~'x00__)
-                              ;; TODO eliminate this check because it's not needed (`t/any?`)
-                              ((Array/get ~'some?|test|__1|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (str `Object>boolean) 'some?|test|__1|0) ~'x00__)
-                              (unsupported! `some?|test [~'x00__] 0))))))
-            :cljs
-              ($ (do (defn ~'some?|test [~'x]
-                       (ifs (nil? x) false
-                            true)))))]
+                 (def ~(O<> 'some?|__1|types) (*<> (t/isa? Boolean)))
+                 (def ~'some?|__1 (reify* [boolean>boolean] (~(B 'invoke) [~'_1__ ~(B 'x)] true)))
+                 (def ~(O<> 'some?|__2|types) (*<> (t/isa? Byte)))
+                 (def ~'some?|__2 (reify* [byte>boolean]    (~(B 'invoke) [~'_2__ ~(Y 'x)] true)))
+                 (def ~(O<> 'some?|__3|types) (*<> (t/isa? Short)))
+                 (def ~'some?|__3 (reify* [short>boolean]   (~(B 'invoke) [~'_3__ ~(S 'x)] true)))
+                 (def ~(O<> 'some?|__4|types) (*<> (t/isa? Character)))
+                 (def ~'some?|__4 (reify* [char>boolean]    (~(B 'invoke) [~'_4__ ~(C 'x)] true)))
+                 (def ~(O<> 'some?|__5|types) (*<> (t/isa? Integer)))
+                 (def ~'some?|__5 (reify* [int>boolean]     (~(B 'invoke) [~'_5__ ~(I 'x)] true)))
+                 (def ~(O<> 'some?|__6|types) (*<> (t/isa? Long)))
+                 (def ~'some?|__6 (reify* [long>boolean]    (~(B 'invoke) [~'_6__ ~(L 'x)] true)))
+                 (def ~(O<> 'some?|__7|types) (*<> (t/isa? Float)))
+                 (def ~'some?|__7 (reify* [float>boolean]   (~(B 'invoke) [~'_7__ ~(F 'x)] true)))
+                 (def ~(O<> 'some?|__8|types) (*<> (t/isa? Double)))
+                 (def ~'some?|__8 (reify* [double>boolean]  (~(B 'invoke) [~'_8__ ~(D 'x)] true)))
+                 (def ~(O<> 'some?|__9|types) (*<> t/any?))
+                 (def ~'some?|__9 (reify* [Object>boolean]  (~(B 'invoke) [~'_9__ ~(O 'x)] true)))
+
+                 (defn ~'some?
+                   {:quantum.core.type/type
+                     (t/ftype (t/isa? Boolean)
+                              [(t/value nil)      :> (t/isa? Boolean)]
+                              [(t/isa? Boolean)   :> (t/isa? Boolean)]
+                              [(t/isa? Byte)      :> (t/isa? Boolean)]
+                              [(t/isa? Short)     :> (t/isa? Boolean)]
+                              [(t/isa? Character) :> (t/isa? Boolean)]
+                              [(t/isa? Integer)   :> (t/isa? Boolean)]
+                              [(t/isa? Long)      :> (t/isa? Boolean)]
+                              [(t/isa? Float)     :> (t/isa? Boolean)]
+                              [(t/isa? Double)    :> (t/isa? Boolean)]
+                              [t/any?             :> (t/isa? Boolean)])}
+                   ([~'x00__]
+                     (ifs ((Array/get ~'some?|__0|types 0) ~'x00__)
+                            (. ~(tag (str `Object>boolean)  'some?|__0) ~'invoke ~'x00__)
+                          ;; TODO eliminate these checks below because they're not needed
+                          ((Array/get ~'some?|__1|types 0) ~'x00__)
+                            (. ~(tag (str `boolean>boolean) 'some?|__1) ~'invoke ~'x00__)
+                          ((Array/get ~'some?|__2|types 0) ~'x00__)
+                            (. ~(tag (str `byte>boolean)    'some?|__2) ~'invoke ~'x00__)
+                          ((Array/get ~'some?|__3|types 0) ~'x00__)
+                            (. ~(tag (str `short>boolean)   'some?|__3) ~'invoke ~'x00__)
+                          ((Array/get ~'some?|__4|types 0) ~'x00__)
+                            (. ~(tag (str `char>boolean)    'some?|__4) ~'invoke ~'x00__)
+                          ((Array/get ~'some?|__5|types 0) ~'x00__)
+                            (. ~(tag (str `int>boolean)     'some?|__5) ~'invoke ~'x00__)
+                          ((Array/get ~'some?|__6|types 0) ~'x00__)
+                            (. ~(tag (str `long>boolean)    'some?|__6) ~'invoke ~'x00__)
+                          ((Array/get ~'some?|__7|types 0) ~'x00__)
+                            (. ~(tag (str `float>boolean)   'some?|__7) ~'invoke ~'x00__)
+                          ((Array/get ~'some?|__8|types 0) ~'x00__)
+                            (. ~(tag (str `double>boolean)  'some?|__8) ~'invoke ~'x00__)
+                          ((Array/get ~'some?|__9|types 0) ~'x00__)
+                            (. ~(tag (str `Object>boolean)  'some?|__9) ~'invoke ~'x00__)
+                          (unsupported! `some? [~'x00__] 0))))))
+          :cljs
+          ($ (do (defn ~'some?| [~'x]
+                   (ifs (nil? x) false
+                        true)))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
-      (eval '(do (throws (some?|test))
-                 (is= (some?|test 123)   (some? 123))
-                 (is= (some?|test true)  (some? true))
-                 (is= (some?|test false) (some? false))
-                 (is= (some?|test nil)   (some? nil)))))))
+      (eval '(do (throws (some?))
+                 (is= (some? 123)   (core/some? 123))
+                 (is= (some? true)  (core/some? true))
+                 (is= (some? false) (core/some? false))
+                 (is= (some? nil)   (core/some? nil)))))))
 
 (deftest test|reduced?
   (let [actual
