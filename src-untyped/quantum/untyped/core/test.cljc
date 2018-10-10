@@ -1,13 +1,14 @@
 (ns quantum.untyped.core.test
   (:require
-    [clojure.spec.alpha         :as s]
-    [clojure.spec.test.alpha    :as stest]
-    [clojure.string             :as str]
-    [clojure.test               :as test]
-    [quantum.untyped.core.collections
-      :refer [seq=]]
-    [quantum.untyped.core.core  :as ucore]
-    [quantum.untyped.core.error :as uerr]
+    [clojure.spec.alpha               :as s]
+    [clojure.spec.test.alpha          :as stest]
+    [clojure.string                   :as str]
+    [clojure.test                     :as test]
+    [quantum.untyped.core.collections :as uc]
+    [quantum.untyped.core.core        :as ucore]
+    [quantum.untyped.core.data.map
+      :refer [+map-entry?]]
+    [quantum.untyped.core.error       :as uerr]
     [quantum.untyped.core.log
       :refer [pr!]]
     [quantum.untyped.core.print
@@ -26,37 +27,45 @@
 (defn test-nss-where [pred]
   (->> (all-ns) (filter #(-> % ns-name name pred)) (map test-ns) doall)))
 
+(defn- code=|similar-class [c0 c1]
+  (let [similar-class?
+          (cond (seq?        c0) (seq?        c1)
+                (seq?        c1) (seq?        c0)
+                (vector?     c0) (vector?     c1)
+                (vector?     c1) (vector?     c0)
+                (map?        c0) (map?        c1)
+                (map?        c1) (map?        c0)
+                (+map-entry? c0) (+map-entry? c1)
+                (+map-entry? c1) (+map-entry? c0)
+                :else        ::not-applicable)]
+    (if (= similar-class? ::not-applicable)
+        (or (= c0 c1)
+            (do (pr! "FAIL: should be `(= code0 code1)`" (pr-str c0) (pr-str c1)) false))
+        (and (or similar-class?
+                 (do (pr! "FAIL: should be similar class" (pr-str c0) (pr-str c1))
+                     false))
+             (or (uc/seq= (seq c0) (seq c1) code=)
+                 (do (pr! "FAIL: `(seq= code0 code1 code=)`" (pr-str c0) (pr-str c1))
+                     false))))))
+
 (defn code=
   "`code=` but with helpful test-related logging"
   ([c0 c1]
     (if (metable? c0)
-        (and (metable? c1)
+        (and (or (metable? c1)
+                 (do (pr! "FAIL: should be `(metable? c1)`" c1)
+                     false))
              (let [meta0 (-> c0 meta (or {}) (dissoc :line :column))
                    meta1 (-> c1 meta (or {}) (dissoc :line :column))]
                (or (= meta0 meta1)
                    (do (pr! "FAIL: meta should be match for" (pr-str meta0) (pr-str meta1)
                                                    "on code" (pr-str c0)    (pr-str c1))
                        false)))
-             (let [similar-class?
-                     (cond (seq?    c0) (seq?    c1)
-                           (seq?    c1) (seq?    c0)
-                           (vector? c0) (vector? c1)
-                           (vector? c1) (vector? c0)
-                           (map?    c0) (map?    c1)
-                           (map?    c1) (map?    c0)
-                           :else           ::not-applicable)]
-               (if (= similar-class? ::not-applicable)
-                   (or (= c0 c1)
-                       (do (pr! "FAIL: should be `(= code0 code1)`" (pr-str c0) (pr-str c1)) false))
-                   (and (or similar-class?
-                            (do (pr! "FAIL: should be similar class" (pr-str c0) (pr-str c1))
-                                false))
-                        (or (seq= (seq c0) (seq c1) code=)
-                            (do (pr! "FAIL: `(seq= code0 code1 code=)`" (pr-str c0) (pr-str c1))
-                                false))))))
-        (and (not (metable? c1))
-             (or (= c0 c1)
-                 (println "FAIL: should be `(= code0 code1)`" (pr-str c0) (pr-str c1))))))
+             (code=|similar-class c0 c1))
+        (and (or (not (metable? c1))
+                 (do (pr! "FAIL: should be `(not (metable? c1))`" c1)
+                     false))
+             (code=|similar-class c0 c1))))
   ([c0 c1 & codes] (and (code= c0 c1) (every? #(code= c0 %) codes))))
 
 (defn is-code= [& args] (is (apply code= args)))
