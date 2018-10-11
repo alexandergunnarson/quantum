@@ -37,10 +37,10 @@
     [quantum.untyped.core.logic                 :as ul
       :refer [fn-or fn= ifs]]
     [quantum.untyped.core.loops
-      :refer [reduce-2]]
+      :refer [reduce-2 reducei-2]]
     [quantum.untyped.core.numeric.combinatorics :as ucombo]
-    [quantum.untyped.core.reducers              :as r
-      :refer [reducei educe]]
+    [quantum.untyped.core.reducers              :as ur
+      :refer [educe educei reducei]]
     [quantum.untyped.core.spec                  :as s]
     [quantum.untyped.core.specs                 :as uss]
     [quantum.untyped.core.type                  :as t
@@ -275,31 +275,6 @@
      :name      reify-name
      :overload  overload})))
 
-;; TODO spec
-;; TODO use!!
-(core/defn assert-monotonically-increasing-types!
-  "Asserts that each type in an overload of the same arity and arg-position
-   are in monotonically increasing order in terms of `t/compare`."
-  [overloads|grouped-by-arity]
-  (doseq [[arity-ct overloads] overloads|grouped-by-arity]
-    (educe
-      (fn [prev-overload [i|overload overload]]
-        (when prev-overload
-          (reduce-2
-            (fn [_ arg|type|prev [i|arg arg|type]]
-              (when (= (t/compare arg|type arg|type|prev) -1)
-                ;; TODO provide code context, line number, etc.
-                (err! (istr "At overload ~{i|overload}, arg ~{i|arg}: type is not in monotonically increasing order in terms of `t/compare`")
-                      {:overload      overload
-                       :prev-overload prev-overload
-                       :prev-type     arg|type|prev
-                       :type          arg|type})))
-            (:arg-types prev-overload)
-            (c/lindexed (:arg-types overload))))
-        overload)
-      nil
-      overloads)))
-
 ;; ----- Direct dispatch: putting it all together ----- ;;
 
 (defns >input-types-decl
@@ -402,7 +377,60 @@
 
 ;; ===== End dynamic dispatch ===== ;;
 
-(defns- overloads-basis>unanalyzed-overload
+;; ===== Arg type comparison ===== ;;
+
+(core/defn compare-arg-types [t0 #_t/type?, t1 #_t/type? #_> #_ucomp/comparison?]
+  (if-let [c0 (uana/sort-guide t0)]
+    (if-let [c1 (uana/sort-guide t1)]
+      (ifs (< c0 c1) -1 (> c0 c1) 1 0)
+      -1)
+    (if-let [c1 (uana/sort-guide t1)]
+      1
+      (uset/normalize-comparison (t/compare t0 t1)))))
+
+(core/defn compare-args-types [arg-types0 #_(s/vec-of t/type?) arg-types1 #_(s/vec-of t/type?)]
+  (let [ct-comparison (compare (count arg-types0) (count arg-types1))]
+    (if (zero? ct-comparison)
+        (reduce-2
+          (core/fn [^long c t0 t1]
+            (let [c' (long (compare-arg-types t0 t1))]
+              (case c'
+                -1 (case c  1 (reduced 0) c')
+                 0 c
+                 1 (case c -1 (reduced 0) c'))))
+          0
+          arg-types0 arg-types1)
+        ct-comparison)))
+
+;; TODO spec
+;; TODO use!!
+(core/defn assert-monotonically-increasing-types!
+  "Asserts that each type in an overload of the same arity and arg-position are in monotonically
+   increasing order in terms of `t/compare`.
+
+   Since its inputs are sorted via `compare-args-types`, this only need check the last overload of
+   `unanalyzed-overload-seq-accum` and the first overload of `unanalyzed-overload-seq`."
+  [unanalyzed-overload-seq-accum #_(s/seq-of ::unanalyzed-overload)
+   unanalyzed-overload-seq       #_(s/seq-of ::unanalyzed-overload)
+   i|overload-basis              #_index?]
+  (when-not (or (empty? unanalyzed-overload-seq-accum) (empty? unanalyzed-overload-seq))
+    (let [prev-overload (c/last  unanalyzed-overload-seq-accum)
+          overload      (c/first unanalyzed-overload-seq)]
+      (reducei-2
+        (fn [_ arg|type|prev arg|type i|arg]
+          (when (t/> arg|type|prev arg|type)
+            ;; TODO provide code context, line number, etc.
+            (err! (istr "At overload ~{i|overload-basis}, arg ~{i|arg}: type is not in monotonically increasing order in terms of `t/compare`")
+                  {:prev-overload prev-overload
+                   :overload      overload
+                   :prev-type     arg|type|prev
+                   :type          arg|type})))
+        (:arg-types prev-overload)
+        (:arg-types overload)))))
+
+;; ===== End arg type comparison ===== ;;
+
+(defns- overloads-basis>unanalyzed-overload-seq
   [{:as in {args                      [:args    _]
             varargs                   [:varargs _]
             pre-type|form             [:pre     _]
@@ -433,7 +461,7 @@
                           ;; TODO this assertion is purely temporary until destructuring is
                           ;; supported
                           (assert (-> varargs :binding-form first (= :sym))))
-        arg-types|expanded-seq ; split and primitivized
+        arg-types|expanded-seq ; split, primitivized, and sorted
           (->> (uana/analyze-arg-syms {} (zipmap arg-bindings arg-types|form) output-type|form)
                (c/map (fn [{:keys [env out-type-node]}]
                         (let [output-type (:type out-type-node)
@@ -444,13 +472,29 @@
                             (err! (str "Overload's declared output type does not satisfy function's"
                                        "overall declared output type")
                                   (kw-map output-type fn|output-type)))
-                          (kw-map arg-types output-type)))))]
+                          (kw-map arg-types output-type))))
+               (sort-by (fn [m0 m1] (compare-args-types (:arg-types m0) (:arg-types m1))))
+               vec)]
     (->> arg-types|expanded-seq
          (c/map (fn [{:keys [arg-types output-type]}]
                   (kw-map arg-bindings varargs-binding
                           arg-types|form arg-types
                           output-type|form output-type
                           body-codelist|pre-analyze))))))
+
+(defns- overloads-bases>unanalyzed-overloads
+  [overloads-bases :quantum.core.defnt/overloads
+   fn|output-type|form _ ; TODO excise this var when we default `output-type|form` to `?`
+   fn|output-type t/type?
+   > (s/seq-of ::unanalyzed-overload)]
+  (->> overloads-bases
+       (c/map+  #(overloads-basis>unanalyzed-overload-seq % fn|output-type|form fn|output-type))
+       (educei
+         (fn ([] [])
+             ([ret] ret)
+             ([ret unanalyzed-overload-seq i|overload-basis]
+               (assert-monotonically-increasing-types! ret unanalyzed-overload-seq i|overload-basis)
+               (ur/join ret unanalyzed-overload-seq))))))
 
 (defns unanalyzed-overloads>fn|type
   [unanalyzed-overloads (s/seq-of ::unanalyzed-overload), fn|output-type t/type? > utr/fn-type?]
@@ -481,9 +525,8 @@
         fn|output-type|form  (or (second output-spec) `t/any?)
         ;; TODO this needs to be analyzed for dependent types referring tp local vars
         fn|output-type       (eval fn|output-type|form)
-        unanalyzed-overloads (->> overloads-bases
-                                  (c/mapcat #(overloads-basis>unanalyzed-overload
-                                               % fn|output-type|form fn|output-type)))
+        unanalyzed-overloads (overloads-bases>unanalyzed-overloads
+                               overloads-bases fn|output-type|form fn|output-type)
         fn|type              (unanalyzed-overloads>fn|type unanalyzed-overloads fn|output-type)
         fn|globals           (kw-map fn|name fn|meta fn|type fn|output-type|form fn|output-type)
         overloads            (->> unanalyzed-overloads

@@ -56,11 +56,14 @@
 (def comparisons #{<ident =ident >ident ><ident <>ident})
 (def comparison? comparisons)
 
-(defn invert-comparison [c #_comparison? #_> #_comparison?]
+(defn invert-comparison [^long c #_comparison? #_> #_comparison?]
   (case c
     -1      >ident
      1      <ident
     (0 2 3) c))
+
+(defn normalize-comparison [^long c #_comparison?]
+  (case c (2 3) 0 c))
 
 (defn compare [s0 #_set?, s1 #_set?]
   (if (empty? s0)

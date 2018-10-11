@@ -98,6 +98,17 @@
         (-educe-init xs f init)
         (f (reduce f init xs)))))
 
+(defn educei
+  "Like `educe`, but indexed."
+  ([f xs] (educei f (f) xs))
+  ([f init xs]
+    (let [f' (let [*i (volatile! -1)]
+                (fn ([]        (f))
+                    ([ret]     (f ret))
+                    ([ret x]   (f ret x (vreset! *i (unchecked-inc (long @*i)))))
+                    ([ret k v] (f ret k v (vreset! *i (unchecked-inc (long @*i)))))))]
+      (educe f' init xs))))
+
 (defn join
   "Like `into`, but internally uses `educe`, and creates as little data
    as possible."
@@ -162,7 +173,7 @@
               (recur (zip/right xs) ret))))))
 
 (defn reducei
-  "`reduce`, indexed."
+  "Like `reduce`, but indexed."
   [f init xs]
   (let [f' (let [*i (volatile! -1)]
               (fn ([ret x]

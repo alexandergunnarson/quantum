@@ -8,7 +8,6 @@
 
 (defn reduce-2
   "Reduces over two seqables at a time."
-  {:todo #{"`defnt` this and have it dispatch to e.g. reduce-2:indexed"}}
   ([f xs0 xs1] (reduce-2 f nil xs0 xs1))
   ([f init xs0 xs1] (reduce-2 f init xs0 xs1 false))
   ([f init xs0 xs1 assert-same-count?]
@@ -24,6 +23,15 @@
             :else (recur (f ret (first xs0') (first xs1'))
                          (next xs0')
                          (next xs1'))))))
+
+(defn reducei-2
+  "Reduces over two seqables at a time, maintaining an index."
+  ([f xs0 xs1] (reducei-2 f nil xs0 xs1))
+  ([f init xs0 xs1] (reducei-2 f init xs0 xs1 false))
+  ([f init xs0 xs1 assert-same-count?]
+    (let [f' (let [*i (volatile! -1)]
+                (fn [ret x0 x1] (f ret x0 x1 (vreset! *i (unchecked-inc (long @*i))))))]
+      (reduce-2 f' init xs0 xs1 assert-same-count?))))
 
 ;; TODO incorporate into `quantum.core.loops`
 #?(:clj

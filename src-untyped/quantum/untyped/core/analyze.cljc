@@ -926,6 +926,12 @@
                vec)]
     (uc/distinct (join primitive-subtypes (type>split t)))))
 
+(defn- enqueue-first-unanalyzed-if-queue-empty [env #_::env #_> #_::env]
+  (cond-> env
+    (-> env :opts :arglist-syms|queue empty?)
+    (update-in [:opts :arglist-syms|queue] conj
+        (-> env :opts :arglist-syms|unanalyzed first))))
+
 (defn- analyze-arg-syms* [env #_::env]
   (uref/update! !!analyze-arg-syms|iter inc)
   (let [{:keys [arg-sym->arg-type-form arglist-syms|queue arglist-syms|unanalyzed out-type-form]}
@@ -945,13 +951,15 @@
                                 (update-in [:opts :arglist-syms|unanalyzed] disj arg-sym))
                t-split (-> analyzed :type type>split+primitivized)]
            (if (-> t-split count (= 1))
-               (recur (update-in env-analyzed [:opts :arg-env]
-                        #(doto % (swap! assoc arg-sym analyzed))))
+               (recur (-> env-analyzed
+                          (update-in [:opts :arg-env] #(doto % (swap! assoc arg-sym analyzed)))
+                          enqueue-first-unanalyzed-if-queue-empty))
                (->> t-split
                     (uc/mapcat+
                       (fn [t]
                         (analyze-arg-syms*
                           (-> env-analyzed
+                              enqueue-first-unanalyzed-if-queue-empty
                               (update-in [:opts :arg-env]
                                 ;; `(atom (deref %))` in order to create a new env for a new split
                                 #(-> % deref atom

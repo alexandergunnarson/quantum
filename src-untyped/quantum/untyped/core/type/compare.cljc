@@ -181,6 +181,7 @@
 ;; ----- OrType ----- ;;
 
 ;; TODO performance can be improved here by doing fewer comparisons
+;; Possibly look at `quantum.untyped.core.type.defnt/compare-args-types` for reference?
 (defns- compare|or+or [^OrType t0 or-type?, ^OrType t1 or-type? > comparison?]
   (let [l (->> t0 .-args (seq-and (fn1 < t1)))
         r (->> t1 .-args (seq-and (fn1 < t0)))]

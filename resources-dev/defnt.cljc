@@ -59,18 +59,16 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  [1 .] t/type
-      - [ ] Get all dependent-type-related tests to pass
-  [2] t/value-of
+  [1] t/value-of
       - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
   [ ] - (comp/t== x)
          - dependent type such that the passed input must be identical to x
-  [3] - t/input-type
+  [2] - t/input-type
       - `(t/input-type >namespace :?)` meaning the possible input types to the first input to `>namespace`
       - `(t/input-type reduce :_ :_ :?)`
       - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
-  [4] - t/output-type
-  [5] - t/extend-defn!
+  [3] - t/output-type
+  [4] - t/extend-defn!
         - We could just recreate the dispatch every time, in the beginning. It would make for slower
           compilation but faster execution for dynamic dispatch, and quicker time to use. So whenever
           something extends a `t/defn`, the type overloads have to be put in the right place in the dispatch order. We could find the first place where the inputs are t/<.
