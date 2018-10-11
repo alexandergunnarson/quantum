@@ -27,6 +27,8 @@
     [java.util.concurrent.atomic AtomicReference AtomicBoolean AtomicInteger AtomicLong]
     [com.google.common.util.concurrent AtomicDouble])))
 
+(defalias uref/>!thread-local)
+
 ;; TODO technically this belongs in like `quantum.core.data.effects` or something
 (defprotocol Transactional
   (transact [target f] [target f opts]
@@ -114,31 +116,12 @@
       #_java.util.concurrent.atomic.AtomicDouble
         com.google.common.util.concurrent.AtomicDouble)))
 
-;; TODO TYPED
-(defprotocol IValue
-  (get [this])
-  (set [this newv]))
+;; ===== Unsynchronized mutability ===== ;;
 
-; ===== UNSYNCHRONIZED MUTABILITY ===== ;
-
-;; TODO TYPED (was interface in CLJ, not protocol)
-(defprotocol IMutableReference
-  (get       [this])
-  (set       [this v])
-  (getAndSet [this v]))
-
-;; TODO create for every primitive datatype as well
-(deftype MutableReference [#?(:clj ^:unsynchronized-mutable val :cljs ^:mutable val)]
-  IMutableReference
-  (get       [this] val)
-  (set       [this v] (set! val v) val)
-  (getAndSet [this v] (let [v-prev val] (set! val v) v-prev))
-  #?(:clj  clojure.lang.IDeref
-     :cljs cljs.core/IDeref)
-  (#?(:clj deref :cljs -deref) [this] val))
-
-        (defnt    !ref* "Creates a mutable reference to an Object." [x] (MutableReference. x))
-#?(:clj (defmacro !ref  ([] `(MutableReference. nil)) ([x] `(!ref* ~x))))
+(defnt !ref
+  "Creates an unsynchronized mutable reference to an Object."
+  ([] (!ref nil))
+  ([x (t/ref t/any?)] (MutableReference. x)))
 
 (defn gen-primitive-mutable-interface-and-deftype [kind]
   (let [interface-sym   (symbol (str "IMutable" (str/capitalize (name kind))))
