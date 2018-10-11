@@ -193,12 +193,18 @@
   [xs]
   (dec (count xs)))
 
-(defn last [xs]
-  (if (or (and (counted? xs) (indexed? xs))
-          (string? xs)
-          (array? xs))
-      (get xs (lasti xs))
-      (core/last xs)))
+(defn last
+  "Gets the last element of ->`xs` in as short a time as possible.
+   In the case of collections that are both counted and indexed, this is sublinear (often `O(1)`).
+   Otherwise, resorts to a linear traversal."
+  [xs]
+  (ifs (or (and (counted? xs) (indexed? xs))
+           (string? xs)
+           (array? xs))
+         (get xs (lasti xs))
+       (reversible? xs)
+         (-> xs rseq first)
+       (core/last xs)))
 
 ;; ===== Keyed ==== ;;
 
