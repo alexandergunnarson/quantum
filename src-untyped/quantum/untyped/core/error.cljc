@@ -74,15 +74,6 @@
   "Like `pr-str`, but pretty-prints."
   [x] (with-out-str (ppr x)))
 
-(defonce *pr-data-to-str?
-  (atom #?(:clj false :cljs (boolean js/goog.DEBUG))))
-
-(defn- msg+data>msg [msg data]
-  (if @*pr-data-to-str?
-      (str "Message: " msg "\n"
-           "Data:\n"   (ppr-str data))
-      msg))
-
 ;; ===== Error type: generic ===== ;;
 
 (def generic-error-type #?(:clj Throwable :cljs js/Error))
@@ -101,7 +92,7 @@
 
 (defn >ex-info
   ([data] (>ex-info "Exception" data))
-  ([msg data] (ex-info (msg+data>msg msg data) (or data {}))))
+  ([msg data] (ex-info msg (or data {}))))
 
 (def ex-info! (rcomp >ex-info (fn1 throw)))
 
@@ -133,24 +124,24 @@
             x
           (map? x)
             #?(:clj  (err-constructor
-                       (:ident x) (msg+data>msg (:message x) (:data x)) (:data x) (:trace x) (:cause x)
+                       (:ident x) (:message x) (:data x) (:trace x) (:cause x)
                        (meta x) (dissoc x :ident :message :data :trace :cause))
-               :cljs (-> x map->Error (assoc :message (msg+data>msg (:message x) (:data x)))))
+               :cljs (-> x map->Error (assoc :message (:message x))))
           (error? x)
             #?(:clj  (let [^Throwable t x]
                        (err-constructor
-                         nil (msg+data>msg (.getLocalizedMessage t) (?ex-data t)) (?ex-data t) (.getStackTrace t) (some-> (.getCause t) >err)
+                         nil (.getLocalizedMessage t) (?ex-data t) (.getStackTrace t) (some-> (.getCause t) >err)
                          (meta t)
                          {:type (class t)}))
-               :cljs (with-meta
-                       (-> (err-constructor (.-name x) (msg+data>msg (.-message x) (?ex-data x)) (?ex-data x) (.-stack x) (.-cause x))
-                           ;; other non-standard fields
-                           (cond-> (.-description  x) (assoc :description   (.-description  x))
-                                   (.-number       x) (assoc :number        (.-number       x))
-                                   (.-fileName     x) (assoc :file-name     (.-fileName     x))
-                                   (.-lineNumber   x) (assoc :line-number   (.-lineNumber   x))
-                                   (.-columnNumber x) (assoc :column-number (.-columnNumber x))))
-                       (meta x)))
+               :cljs (-> (err-constructor (.-name x) (.-message x) (?ex-data x) (.-stack x)
+                           (.-cause x))
+                         ;; other non-standard fields
+                         (cond-> (.-description  x) (assoc :description   (.-description  x))
+                                 (.-number       x) (assoc :number        (.-number       x))
+                                 (.-fileName     x) (assoc :file-name     (.-fileName     x))
+                                 (.-lineNumber   x) (assoc :line-number   (.-lineNumber   x))
+                                 (.-columnNumber x) (assoc :column-number (.-columnNumber x)))
+                         (with-meta (meta x))))
           (string? x)
             (>err nil x nil nil nil)
           :else
@@ -161,12 +152,9 @@
           (>err nil message data nil nil))
         (let [ident a0 data a1]
           (>err ident nil data nil nil))))
-  ([ident message data]
-    (>err ident message data nil nil))
-  ([ident message data trace]
-    (>err ident message data trace nil))
-  ([ident message data trace cause]
-    (err-constructor ident (msg+data>msg message data) data trace cause)))
+  ([ident message data]             (>err            ident message data nil   nil))
+  ([ident message data trace]       (>err            ident message data trace nil))
+  ([ident message data trace cause] (err-constructor ident message data trace cause)))
 
 (def err! (rcomp >err (fn1 throw)))
 

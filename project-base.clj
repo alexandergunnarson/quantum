@@ -409,7 +409,6 @@
               'quantum.untyped.core.print.prettier
               '[quantum.untyped.core.log :refer [prl!]])
             (quantum.untyped.core.print.prettier/extend-pretty-printing!)
-            (reset! quantum.untyped.core.error/*pr-data-to-str? true)
             ;; For use with Atom's Proto-REPL
             ;; Interned in `clojure.core` in order to not be clobbered by `refresh`
             (intern 'clojure.core 'atom|proto-repl|print-fn
