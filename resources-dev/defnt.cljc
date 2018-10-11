@@ -285,7 +285,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] binding
           - [   ] binding-conveyor-fn
           - [. .] bit-and
-          - [. .] bit-and-not
+          - [! !] bit-and-not
           - [x .] bit-clear
           - [|  ] bit-count
           - [x .] bit-flip
