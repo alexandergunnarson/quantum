@@ -36,13 +36,13 @@
   ;; TODO `f` should more specifically be able to handle the args arity and specs
   {:incorporated '{clojure.core/vary-meta "9/2018"
                    cljs.core/vary-meta    "9/2018"}}
-  [x (t/and with-metable? metable?) f (t/fn meta? [& (t/type-of %args)]) & args _]
+  [x (t/and with-metable? metable?) f (t/fn meta? [& (t/type args)]) & args _]
   (with-meta x (apply f (meta x) args)))
 
 ;; TODO TYPED
 #_(t/defn merge-meta
-  {:alternate-implementations #{'cljs.tools.reader/merge-meta}}
-  [x (t/and with-metable? metable?) meta- meta? > (t/spec-of x)]
+  {:incorporated #{'cljs.tools.reader/merge-meta}}
+  [x (t/and with-metable? metable?) meta- meta? > (t/value-of x)]
   (update-meta x merge meta-))
 
 ;; TODO TYPED
