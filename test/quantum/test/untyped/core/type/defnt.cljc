@@ -1052,35 +1052,31 @@
               ([x tt/boolean? > (t/ref tt/boolean?)] (Boolean. x))
               ([x tt/byte?    > (t/ref tt/byte?)]    (Byte.    x))))
         expected
-          ($ (do ;; [x tt/boolean? > (t/ref tt/boolean?)]
+          ($ (do (declare ~'ref-output-type)
 
-                 (def ~(O<> 'ref-output-type|__0|input0|types)
-                   (*<> (t/isa? java.lang.Boolean)))
-                 (def ~'ref-output-type|__0|0
-                   (reify* [boolean>Object]
-                     (~(O 'invoke) [~'_0__ ~(B 'x)] (new ~'Boolean ~'x))))
+                 ;; [x tt/boolean? > (t/ref tt/boolean?)]
+
+                 (def ~(O<> 'ref-output-type|__0|types) (*<> (t/isa? java.lang.Boolean)))
+                 (def ~'ref-output-type|__0
+                   (reify* [boolean>Object] (~(O 'invoke) [~'_0__ ~(B 'x)] (new ~'Boolean ~'x))))
 
                  ;; [x tt/byte? > (t/ref tt/byte?)]
 
-                 (def ~(O<> 'ref-output-type|__1|input0|types)
-                   (*<> (t/isa? java.lang.Byte)))
-                 (def ~'ref-output-type|__1|0
-                   (reify* [byte>Object]
-                     (~(O 'invoke) [~'_1__ ~(Y 'x)] (new ~'Byte ~'x))))
+                 (def ~(O<> 'ref-output-type|__1|types) (*<> (t/isa? java.lang.Byte)))
+                 (def ~'ref-output-type|__1
+                   (reify* [byte>Object] (~(O 'invoke) [~'_1__ ~(Y 'x)] (new ~'Byte ~'x))))
 
                  (defn ~'ref-output-type
                    {:quantum.core.type/type
-                     (t/fn t/any?
-                           ~'[tt/boolean? :> (t/ref tt/boolean?)]
-                           ~'[tt/byte?    :> (t/ref tt/byte?)])}
+                     (t/ftype t/any?
+                              [(t/isa? Boolean) :> (t/ref (t/isa? Boolean))]
+                              [(t/isa? Byte)    :> (t/ref (t/isa? Byte))])}
                    ([~'x00__]
                      (ifs
-                       ((Array/get ~'ref-output-type|__0|input0|types 0) ~'x00__)
-                         (.invoke ~(tag (cstr `boolean>Object) 'ref-output-type|__0|0)
-                                  ~'x00__)
-                       ((Array/get ~'ref-output-type|__1|input0|types 0) ~'x00__)
-                         (.invoke ~(tag (cstr `byte>Object) 'ref-output-type|__1|0)
-                                  ~'x00__)
+                       ((Array/get ~'ref-output-type|__0|types 0) ~'x00__)
+                         (. ~(tag (cstr `boolean>Object) 'ref-output-type|__0) ~'invoke ~'x00__)
+                       ((Array/get ~'ref-output-type|__1|types 0) ~'x00__)
+                         (. ~(tag (cstr `byte>Object)    'ref-output-type|__1) ~'invoke ~'x00__)
                        (unsupported! `ref-output-type [~'x00__] 0))))))]
     (testing "code equivalence" (is-code= actual expected)))))
 
