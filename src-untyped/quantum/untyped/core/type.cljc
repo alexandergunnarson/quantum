@@ -572,13 +572,14 @@
       (->> cs (uc/map+ class>most-primitive-class) (ur/join #{}))))))
 
 #?(:clj
-(defns type>primitive-subtypes [t type? > (us/vec-of type?)]
+(defns type>primitive-subtypes [t type? > (us/set-of type?)]
   (if (-> t c/meta :quantum.core.type/ref?)
       #{}
       (->> t type>classes
            (uc/mapcat+ class>boxed-subclasses+)
-           (join #{})
-           (uc/map isa?)))))
+           uc/distinct+
+           (uc/map+ isa?)
+           (ur/join #{})))))
 
 #?(:clj
 (defns- -type>?class-value [t utr/type?, type-nilable? c/boolean?]

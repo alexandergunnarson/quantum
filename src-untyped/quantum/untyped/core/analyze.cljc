@@ -890,7 +890,7 @@
 
 (s/def ::arg-sym->arg-type-form (s/map-of simple-symbol? t/any?))
 
-(def analyze-arg-syms|max-iter 1000)
+(def analyze-arg-syms|max-iter 10000)
 
 ;; TODO excise
 (defn pr! [x]
@@ -900,15 +900,16 @@
 
 #?(:clj
 (uvar/def sort-guide "for use in arglist sorting, in increasing conceptual (and bit) size"
-  {t/boolean? 0
-   t/byte?    1
-   t/short?   2
-   t/char?    3
-   t/int?     4
-   t/long?    5
-   t/float?   6
-   t/double?  7
-   t/object?  8}))
+  {t/nil?     0
+   t/boolean? 1
+   t/byte?    2
+   t/short?   3
+   t/char?    4
+   t/int?     5
+   t/long?    6
+   t/float?   7
+   t/double?  8
+   t/object?  9}))
 
 ;; TODO move?
 (defns type>split
@@ -940,7 +941,7 @@
            [{:env           env
              :out-type-node (-> (analyze env out-type-form) (update :type t/unvalue))}]
          (>= (uref/get !!analyze-arg-syms|iter) analyze-arg-syms|max-iter)
-           (err! "Max number of iterations reached for `analyze-arg-syms"
+           (err! "Max number of iterations reached for `analyze-arg-syms`"
                  {:n (uref/get !!analyze-arg-syms|iter)})
          (let [_ (assert (not (empty? arglist-syms|queue)))
                arg-sym (uc/last arglist-syms|queue)
