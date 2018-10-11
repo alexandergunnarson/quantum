@@ -85,15 +85,12 @@
           :output-type               t/type?
           :body-codelist|pre-analyze t/any?}))
 
-(s/def ::overload|arg-classes (s/vec-of class?))
-(s/def ::overload|arg-types   (s/seq-of t/type?))
-
 ;; This is the overload after the input specs are split by their respective `t/or` constituents,
 ;; and after primitivization, but before readiness for incorporation into a `reify`.
 ;; One of these corresponds to one reify overload.
 (s/def ::overload
-  (s/kv {:arg-classes                 ::overload|arg-classes
-         :arg-types                   ::overload|arg-types
+  (s/kv {:arg-classes                 (s/vec-of class?)
+         :arg-types                   (s/seq-of t/type?)
          :arglist-code|fn|hinted      t/any?
          :arglist-code|reify|unhinted t/any?
          :body-form                   t/any?
@@ -146,14 +143,14 @@
 (defns type>class
   "Converts type to class after type has gone through the split+primitivization process."
   [t t/type? > class?]
-  (if (-> t meta :quantum.core.type/ref?)
-      java.lang.Object
-      (let [cs  (t/type>classes t)
-            cs' (disj cs nil)]
-        (if (-> cs' count (not= 1))
-            java.lang.Object
-            (-> (first cs')
-                (cond-> (not (contains? cs nil)) t/class>most-primitive-class) class>simplest-class))))))
+  (let [cs  (t/type>classes t)
+        cs' (disj cs nil)]
+    (if (-> cs' count (not= 1))
+        java.lang.Object
+        (-> (first cs')
+            (cond-> (and (not (contains? cs nil))
+                         (not (-> t meta :quantum.core.type/ref?)))
+              t/class>most-primitive-class))))))
 
 (defns- >actual-output-type [declared-output-type t/type?, body-node uast/node? > t/type?]
   (let [err-info {:form                 (:form body-node)
@@ -187,8 +184,17 @@
                                     [arg-binding (uast/unbound nil arg-binding arg-type)]))
                          ;; To support recursion
                          (<- (assoc fn|name recursive-ast-node-reference)))
-        body-node   (uana/analyze env (ufgen/?wrap-do body-codelist|pre-analyze))
         arg-classes (->> arg-types (uc/map type>class))
+        body|pre-analyze|with-casts
+          (->> arg-classes
+               (reducei (fn [body ^Class c i|arg]
+                          (if (.isPrimitive c)
+                              body
+                              (let [arg-sym (get arg-bindings i|arg)]
+                                `(let* [~(ufth/with-type-hint arg-sym (.getName c)) ~arg-sym]
+                                   ~body))))
+                 (ufgen/?wrap-do body-codelist|pre-analyze)))
+        body-node   (uana/analyze env body|pre-analyze|with-casts)
         hint-arg|fn (fn [i arg-binding]
                       (ufth/with-type-hint arg-binding
                         (ufth/>fn-arglist-tag
@@ -251,24 +257,27 @@
    {:keys [fn|name _]} ::fn|globals
    i|overload index?
    > ::reify]
-  (let [interface-k {:out output-class :in arg-classes}
+  (let [arg-classes|reify (->> arg-classes (uc/map class>simplest-class))
+        output-class|reify (class>simplest-class output-class)
+        interface-k {:out output-class|reify :in arg-classes|reify}
         interface
           (-> *interfaces
               (swap! update interface-k
-                #(or % (eval (overload-classes>interface arg-classes output-class gen-gensym))))
+                #(or % (eval (overload-classes>interface arg-classes|reify output-class|reify
+                               gen-gensym))))
               (uc/get interface-k))
         arglist-code
-          (>vec (concat [(gen-gensym '_)]
-                  (->> arglist-code|reify|unhinted
-                       (map-indexed
-                         (fn [i|arg arg|form]
-                           (ufth/with-type-hint arg|form
-                             (-> arg-classes (uc/get i|arg) ufth/>arglist-embeddable-tag)))))))
+          (ur/join [(gen-gensym '_)]
+            (->> arglist-code|reify|unhinted
+                 (uc/map-indexed
+                   (fn [i|arg arg|form]
+                     (ufth/with-type-hint arg|form
+                       (-> arg-classes|reify (uc/get i|arg) ufth/>arglist-embeddable-tag))))))
         reify-name (>symbol (str fn|name "|__" i|overload))
         form `(~'def ~reify-name
                 (reify* [~(-> interface >name >symbol)]
                   (~(ufth/with-type-hint reify-method-sym
-                      (ufth/>arglist-embeddable-tag output-class))
+                      (ufth/>arglist-embeddable-tag output-class|reify))
                     ~arglist-code ~body-form)))]
     {:form      form
      :interface interface

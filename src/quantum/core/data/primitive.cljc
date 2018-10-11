@@ -87,26 +87,26 @@
 
 #?(:clj
 (t/defn ^:inline box
-  (^:intrinsic [x boolean? > (t/assume (t/ref boolean?))] (Boolean/valueOf   x))
-  (^:intrinsic [x byte?    > (t/assume (t/ref byte?))]    (Byte/valueOf      x))
-  (^:intrinsic [x char?    > (t/assume (t/ref char?))]    (Character/valueOf x))
-  (^:intrinsic [x short?   > (t/assume (t/ref short?))]   (Short/valueOf     x))
-  (^:intrinsic [x int?     > (t/assume (t/ref int?))]     (Integer/valueOf   x))
-  (^:intrinsic [x long?    > (t/assume (t/ref long?))]    (Long/valueOf      x))
-  (^:intrinsic [x float?   > (t/assume (t/ref float?))]   (Float/valueOf     x))
-  (^:intrinsic [x double?  > (t/assume (t/ref double?))]  (Double/valueOf    x))
+  (^:intrinsic [x boolean? > (t/assume (t/ref (t/type x)))] (Boolean/valueOf   x))
+  (^:intrinsic [x byte?    > (t/assume (t/ref (t/type x)))] (Byte/valueOf      x))
+  (^:intrinsic [x char?    > (t/assume (t/ref (t/type x)))] (Character/valueOf x))
+  (^:intrinsic [x short?   > (t/assume (t/ref (t/type x)))] (Short/valueOf     x))
+  (^:intrinsic [x int?     > (t/assume (t/ref (t/type x)))] (Integer/valueOf   x))
+  (^:intrinsic [x long?    > (t/assume (t/ref (t/type x)))] (Long/valueOf      x))
+  (^:intrinsic [x float?   > (t/assume (t/ref (t/type x)))] (Float/valueOf     x))
+  (^:intrinsic [x double?  > (t/assume (t/ref (t/type x)))] (Double/valueOf    x))
   (            [x t/ref?] x)))
 
 #?(:clj
 (t/defn ^:inline unbox
-  (^:intrinsic [x (t/ref boolean?) > boolean?] (.booleanValue x))
-  (^:intrinsic [x (t/ref byte?)    > byte?]    (.byteValue    x))
-  (^:intrinsic [x (t/ref char?)    > char?]    (.charValue    x))
-  (^:intrinsic [x (t/ref short?)   > short?]   (.shortValue   x))
-  (^:intrinsic [x (t/ref int?)     > int?]     (.intValue     x))
-  (^:intrinsic [x (t/ref long?)    > long?]    (.longValue    x))
-  (^:intrinsic [x (t/ref float?)   > float?]   (.floatValue   x))
-  (^:intrinsic [x (t/ref double?)  > double?]  (.doubleValue  x))))
+  (^:intrinsic [x (t/ref boolean?) > (t/unref (t/type x))] (.booleanValue x))
+  (^:intrinsic [x (t/ref byte?)    > (t/unref (t/type x))] (.byteValue    x))
+  (^:intrinsic [x (t/ref char?)    > (t/unref (t/type x))] (.charValue    x))
+  (^:intrinsic [x (t/ref short?)   > (t/unref (t/type x))] (.shortValue   x))
+  (^:intrinsic [x (t/ref int?)     > (t/unref (t/type x))] (.intValue     x))
+  (^:intrinsic [x (t/ref long?)    > (t/unref (t/type x))] (.longValue    x))
+  (^:intrinsic [x (t/ref float?)   > (t/unref (t/type x))] (.floatValue   x))
+  (^:intrinsic [x (t/ref double?)  > (t/unref (t/type x))] (.doubleValue  x))))
 
 ;; ===== Bit lengths ===== ;;
 

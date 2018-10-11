@@ -955,7 +955,9 @@
               ([x (t/ref (t/isa? Number))] (.longValue x))))
         expected
           (case (env-lang)
-            :clj ($ (do ;; [x (t/- tt/primitive? tt/boolean?)]
+            :clj ($ (do (declare ~'>long*)
+
+                        ;; [x (t/- tt/primitive? tt/boolean?)]
 
                         (def ~(O<> '>long*|__0|input0|types)
                           (*<> (t/isa? java.lang.Byte)

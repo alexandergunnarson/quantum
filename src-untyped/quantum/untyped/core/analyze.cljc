@@ -667,14 +667,17 @@
 (defns- handle-type-combinators
   [caller|node uast/node?, input-nodes _, out-type t/type? > t/type?]
   (condp = (:type caller|node)
-    (t/value t/isa?)   (apply-arg-type-combine t/isa?   input-nodes)
-    (t/value t/or)     (apply-arg-type-combine t/or     input-nodes)
-    (t/value t/and)    (apply-arg-type-combine t/and    input-nodes)
-    (t/value t/-)      (apply-arg-type-combine t/-      input-nodes)
-    (t/value t/?)      (apply-arg-type-combine t/?      input-nodes)
-    (t/value t/*)      (apply-arg-type-combine t/*      input-nodes)
-    (t/value t/ref)    (apply-arg-type-combine t/ref    input-nodes)
-    (t/value t/assume) (apply-arg-type-combine t/assume input-nodes)
+    (t/value t/isa?)     (apply-arg-type-combine t/isa?     input-nodes)
+    (t/value t/value)    (apply-arg-type-combine t/value    input-nodes)
+    (t/value t/or)       (apply-arg-type-combine t/or       input-nodes)
+    (t/value t/and)      (apply-arg-type-combine t/and      input-nodes)
+    (t/value t/-)        (apply-arg-type-combine t/-        input-nodes)
+    (t/value t/?)        (apply-arg-type-combine t/?        input-nodes)
+    (t/value t/*)        (apply-arg-type-combine t/*        input-nodes)
+    (t/value t/ref)      (apply-arg-type-combine t/ref      input-nodes)
+    (t/value t/unref)    (apply-arg-type-combine t/unref    input-nodes)
+    (t/value t/assume)   (apply-arg-type-combine t/assume   input-nodes)
+    (t/value t/unassume) (apply-arg-type-combine t/unassume input-nodes)
     out-type))
 
 (defns- analyze-seq|call
@@ -739,7 +742,6 @@
                   :args            input-nodes
                   :type            out-type'})))))
 
-;; TODO break this fn up. It's "clean" but just not broken up
 (defns- analyze-seq*
   "Analyze a seq after it has been macro-expanded.
    The ->`form` is post- incremental macroexpansion."

@@ -224,7 +224,7 @@
                                       1 (first args)
                                       (OrType. uhash/default uhash/default nil args
                                         (atom nil))))))))))
-  ([t0 utr/type?, t1 utr/type? & ts (us/seq-of utr/type?) > utr/type?] (reduce - (- t0 t1) ts)))
+  ([t0 utr/type?, t1 utr/type? & ts _ > utr/type?] (reduce - (- t0 t1) ts)))
 
 ;; TODO clean up
 (defns >type
@@ -282,6 +282,8 @@
    be, it is assumed that the output satisfies that type."
   [t utr/type? > utr/type?] (update-meta t assoc :quantum.core.type/assume? true))
 
+(defns unassume [t utr/type? > utr/type?] (update-meta t dissoc :quantum.core.type/assume?))
+
 (defns *
   "Denote on a type that it must be enforced at runtime.
    For use with `defnt`."
@@ -291,6 +293,8 @@
   "Denote on a type that it must not be expanded to use primitive values.
    For use with `defnt`."
   [t utr/type? > utr/type?] (update-meta t assoc :quantum.core.type/ref? true))
+
+(defns unref [t utr/type? > utr/type?] (update-meta t dissoc :quantum.core.type/ref?))
 
 ;; ===== Logical ===== ;;
 
