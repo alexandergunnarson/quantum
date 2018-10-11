@@ -110,7 +110,6 @@
             -> Put `a` in env as `(t/isa? Byte)`
          2. Analyze `b` = `(t/type a)`
             -> Put `b` in env as `(t/isa? Byte)`"
-      ;; TODO
       (let [ana (self/analyze-arg-syms '{a tt/byte?, b (t/type a)} 't/any?)]
         (is= (transform-ana ana)
              [[{'a tt/byte? 'b tt/byte?} t/any?]])))
@@ -130,9 +129,9 @@
             -> Put `b` in env as `(t/isa? Byte)`
          3. Analyze out-type = `(t/type b)`
             -> `(t/isa? Byte)`"
-      ;; TODO
-      (let [ana (self/analyze-arg-syms '{a tt/byte? b (t/type a)} '(t/type b))]
-        (transform-ana ana)))
+      (is= (-> (self/analyze-arg-syms '{a tt/byte? b (t/type a)} '(t/type b))
+               transform-ana)
+           [[{'a (t/isa? Byte) 'b (t/isa? Byte)} (t/isa? Byte)]]))
     (testing "First input splittable; second input not splittable"
       #_"1. Analyze `a` = `(t/or tt/boolean? tt/byte?)`. Splittable.
          2. Split:
@@ -146,9 +145,10 @@
             3. Analyze out-type = `(t/type b)`
                -> `(t/isa? Boolean)`
          4. Analyze split 1 in the same way."
-      ;; TODO
-      (let [ana (self/analyze-arg-syms
-                  '{a (t/or tt/boolean? tt/byte?) b (t/type a)} '(t/type b))]))
+      (is= (-> (self/analyze-arg-syms '{a (t/or tt/boolean? tt/byte?) b (t/type a)} '(t/type b))
+               transform-ana)
+           [[{'a (t/isa? Boolean) 'b (t/isa? Boolean)} (t/isa? Boolean)]
+            [{'a (t/isa? Byte)    'b (t/isa? Byte)}    (t/isa? Byte)]]))
     (testing "Two input types directly depend on each other"
       (testing "Symbolically"
         #_"1. Analyze `a` = `(t/type b)`
@@ -299,111 +299,111 @@
             -> (Cutting obvious corners) `(t/or (t/isa? Byte) (t/isa? Character))`
             - No splitting necessary because out-type
          - All input types are in env and output-type was analyzed. DONE"
-      (let [ana (self/analyze-arg-syms
-                  '{a (t/or tt/boolean? (t/type b))
-                    b (t/or tt/byte? (t/type d))
-                    c (t/or tt/short? tt/char?)
-                    d (let [b (t/- tt/char? tt/long?)]
-                        (t/or tt/char? (t/type b) (t/type c)))}
-                  '(t/or (t/type b) (t/type d)))]
-         (is= (transform-ana ana)
-              [[{'a (t/isa? Boolean)
-                 'b (t/isa? Byte)
-                 'c (t/isa? Short)
-                 'd (t/isa? Short)}
-                (t/or (t/isa? Byte) (t/isa? Short))]
-               [{'a (t/isa? Byte)
-                 'b (t/isa? Byte)
-                 'c (t/isa? Short)
-                 'd (t/isa? Short)}
-                (t/or (t/isa? Byte) (t/isa? Short))]
-               [{'a (t/isa? Boolean)
-                 'b (t/isa? Short)
-                 'c (t/isa? Short)
-                 'd (t/isa? Short)}
-                (t/isa? Short)]
-               [{'a (t/isa? Short)
-                 'b (t/isa? Short)
-                 'c (t/isa? Short)
-                 'd (t/isa? Short)}
-                (t/isa? Short)]
-               [{'a (t/isa? Boolean)
-                 'b (t/isa? Byte)
-                 'c (t/isa? Short)
-                 'd (t/isa? Character)}
-                (t/or (t/isa? Byte) (t/isa? Character))]
-               [{'a (t/isa? Byte)
-                 'b (t/isa? Byte)
-                 'c (t/isa? Short)
-                 'd (t/isa? Character)}
-                (t/or (t/isa? Byte) (t/isa? Character))]
-               [{'a (t/isa? Boolean)
-                 'b (t/isa? Character)
-                 'c (t/isa? Short)
-                 'd (t/isa? Character)}
-                (t/isa? Character)]
-               [{'a (t/isa? Character)
-                 'b (t/isa? Character)
-                 'c (t/isa? Short)
-                 'd (t/isa? Character)}
-                (t/isa? Character)]
-               [{'a (t/isa? Boolean)
-                 'b (t/isa? Byte)
-                 'c (t/isa? Short)
-                 'd (t/value (t/isa? Character))}
-                (t/or (t/isa? Byte) (t/value (t/isa? Character)))]
-               [{'a (t/isa? Byte)
-                 'b (t/isa? Byte)
-                 'c (t/isa? Short)
-                 'd (t/value (t/isa? Character))}
-                (t/or (t/isa? Byte) (t/value (t/isa? Character)))]
-               [{'a (t/isa? Boolean)
-                 'b (t/value (t/isa? Character))
-                 'c (t/isa? Short)
-                 'd (t/value (t/isa? Character))}
-                (t/value (t/isa? Character))]
-               [{'a (t/value (t/isa? Character))
-                 'b (t/value (t/isa? Character))
-                 'c (t/isa? Short)
-                 'd (t/value (t/isa? Character))}
-                (t/value (t/isa? Character))]
-               [{'a (t/isa? Boolean)
-                 'b (t/isa? Byte)
-                 'c (t/isa? Character)
-                 'd (t/isa? Character)}
-                (t/or (t/isa? Byte) (t/isa? Character))]
-               [{'a (t/isa? Byte)
-                 'b (t/isa? Byte)
-                 'c (t/isa? Character)
-                 'd (t/isa? Character)}
-                (t/or (t/isa? Byte) (t/isa? Character))]
-               [{'a (t/isa? Boolean)
-                 'b (t/isa? Character)
-                 'c (t/isa? Character)
-                 'd (t/isa? Character)}
-                (t/isa? Character)]
-               [{'a (t/isa? Character)
-                 'b (t/isa? Character)
-                 'c (t/isa? Character)
-                 'd (t/isa? Character)}
-                (t/isa? Character)]
-               [{'a (t/isa? Boolean)
-                 'b (t/isa? Byte)
-                 'c (t/isa? Character)
-                 'd (t/value (t/isa? Character))}
-                (t/or (t/isa? Byte) (t/value (t/isa? Character)))]
-               [{'a (t/isa? Byte)
-                 'b (t/isa? Byte)
-                 'c (t/isa? Character)
-                 'd (t/value (t/isa? Character))}
-                (t/or (t/isa? Byte) (t/value (t/isa? Character)))]
-               [{'a (t/isa? Boolean)
-                 'b (t/value (t/isa? Character))
-                 'c (t/isa? Character)
-                 'd (t/value (t/isa? Character))}
-                (t/value (t/isa? Character))]
-               [{'a (t/value (t/isa? Character))
-                 'b (t/value (t/isa? Character))
-                 'c (t/isa? Character)
-                 'd (t/value (t/isa? Character))}
-                (t/value (t/isa? Character))]])))))
+       (is= (-> (self/analyze-arg-syms
+                   '{a (t/or tt/boolean? (t/type b))
+                     b (t/or tt/byte? (t/type d))
+                     c (t/or tt/short? tt/char?)
+                     d (let [b (t/- tt/char? tt/long?)]
+                         (t/or tt/char? (t/type b) (t/type c)))}
+                   '(t/or (t/type b) (t/type d)))
+                transform-ana)
+            [[{'a (t/isa? Boolean)
+               'b (t/isa? Byte)
+               'c (t/isa? Short)
+               'd (t/isa? Short)}
+              (t/or (t/isa? Byte) (t/isa? Short))]
+             [{'a (t/isa? Byte)
+               'b (t/isa? Byte)
+               'c (t/isa? Short)
+               'd (t/isa? Short)}
+              (t/or (t/isa? Byte) (t/isa? Short))]
+             [{'a (t/isa? Boolean)
+               'b (t/isa? Short)
+               'c (t/isa? Short)
+               'd (t/isa? Short)}
+              (t/isa? Short)]
+             [{'a (t/isa? Short)
+               'b (t/isa? Short)
+               'c (t/isa? Short)
+               'd (t/isa? Short)}
+              (t/isa? Short)]
+             [{'a (t/isa? Boolean)
+               'b (t/isa? Byte)
+               'c (t/isa? Short)
+               'd (t/isa? Character)}
+              (t/or (t/isa? Byte) (t/isa? Character))]
+             [{'a (t/isa? Byte)
+               'b (t/isa? Byte)
+               'c (t/isa? Short)
+               'd (t/isa? Character)}
+              (t/or (t/isa? Byte) (t/isa? Character))]
+             [{'a (t/isa? Boolean)
+               'b (t/isa? Character)
+               'c (t/isa? Short)
+               'd (t/isa? Character)}
+              (t/isa? Character)]
+             [{'a (t/isa? Character)
+               'b (t/isa? Character)
+               'c (t/isa? Short)
+               'd (t/isa? Character)}
+              (t/isa? Character)]
+             [{'a (t/isa? Boolean)
+               'b (t/isa? Byte)
+               'c (t/isa? Short)
+               'd (t/value (t/isa? Character))}
+              (t/or (t/isa? Byte) (t/value (t/isa? Character)))]
+             [{'a (t/isa? Byte)
+               'b (t/isa? Byte)
+               'c (t/isa? Short)
+               'd (t/value (t/isa? Character))}
+              (t/or (t/isa? Byte) (t/value (t/isa? Character)))]
+             [{'a (t/isa? Boolean)
+               'b (t/value (t/isa? Character))
+               'c (t/isa? Short)
+               'd (t/value (t/isa? Character))}
+              (t/value (t/isa? Character))]
+             [{'a (t/value (t/isa? Character))
+               'b (t/value (t/isa? Character))
+               'c (t/isa? Short)
+               'd (t/value (t/isa? Character))}
+              (t/value (t/isa? Character))]
+             [{'a (t/isa? Boolean)
+               'b (t/isa? Byte)
+               'c (t/isa? Character)
+               'd (t/isa? Character)}
+              (t/or (t/isa? Byte) (t/isa? Character))]
+             [{'a (t/isa? Byte)
+               'b (t/isa? Byte)
+               'c (t/isa? Character)
+               'd (t/isa? Character)}
+              (t/or (t/isa? Byte) (t/isa? Character))]
+             [{'a (t/isa? Boolean)
+               'b (t/isa? Character)
+               'c (t/isa? Character)
+               'd (t/isa? Character)}
+              (t/isa? Character)]
+             [{'a (t/isa? Character)
+               'b (t/isa? Character)
+               'c (t/isa? Character)
+               'd (t/isa? Character)}
+              (t/isa? Character)]
+             [{'a (t/isa? Boolean)
+               'b (t/isa? Byte)
+               'c (t/isa? Character)
+               'd (t/value (t/isa? Character))}
+              (t/or (t/isa? Byte) (t/value (t/isa? Character)))]
+             [{'a (t/isa? Byte)
+               'b (t/isa? Byte)
+               'c (t/isa? Character)
+               'd (t/value (t/isa? Character))}
+              (t/or (t/isa? Byte) (t/value (t/isa? Character)))]
+             [{'a (t/isa? Boolean)
+               'b (t/value (t/isa? Character))
+               'c (t/isa? Character)
+               'd (t/value (t/isa? Character))}
+              (t/value (t/isa? Character))]
+             [{'a (t/value (t/isa? Character))
+               'b (t/value (t/isa? Character))
+               'c (t/isa? Character)
+               'd (t/value (t/isa? Character))}
+              (t/value (t/isa? Character))]]))))
