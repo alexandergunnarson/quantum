@@ -12,6 +12,7 @@
       :refer [istr]]
     [quantum.untyped.core.data
       :refer [kw-map]]
+    [quantum.untyped.core.data.set          :as uset]
     [quantum.untyped.core.defnt
       :refer [defns defns- fns]]
     [quantum.untyped.core.error             :as uerr
@@ -30,6 +31,8 @@
       :refer [ppr]]
     [quantum.untyped.core.reducers          :as r
       :refer [educe join reducei]]
+    [quantum.untyped.core.refs              :as uref
+      :refer [>!thread-local]]
     [quantum.untyped.core.spec              :as s]
     [quantum.untyped.core.type              :as t
       :refer [?]]
@@ -156,7 +159,9 @@
 
 ;; ----- End reflection support ----- ;;
 
-(defonce *analyze-depth (atom 0))
+(defonce !!analyze-arg-syms|iter (>!thread-local 0)) ; `nneg-fixint?`
+
+(defonce !!analyze-depth (>!thread-local 0))
 
 (defn add-file-context-from [to from]
   (let [{:keys [line column]} (meta from)]
@@ -193,7 +198,7 @@
 
 (s/def ::env (s/map-of (s/or* symbol? #(= % :opts)) t/any?))
 
-(declare analyze*)
+(declare analyze* analyze-arg-syms*)
 
 (defns- analyze-non-map-seqable
   "Analyzes a non-map seqable."
@@ -745,6 +750,7 @@
     deftype* (TODO "deftype*")
     fn*      (TODO "fn*")
     def      (TODO "def")
+    set!     (TODO "set!")
     .        (analyze-seq|dot   env form)
     if       (analyze-seq|if    env form)
     quote    (analyze-seq|quote env form)
@@ -778,7 +784,9 @@
            :type            (:type expanded)})))))
 
 (defns- ?resolve [env ::env, sym symbol?]
-  (if-let [[_ local] (find env sym)]
+  (if-let [[_ local] (or (find env sym)
+                         (and (-> env :opts :arglist-context?)
+                              (-> env :opts :arg-env deref (find sym))))]
     {:resolved local :resolved-via :env}
     (let [resolved (uvar/resolve *ns* sym)]
       (ifs resolved
@@ -789,20 +797,32 @@
               :resolved-via :dot}
            nil))))
 
+(defns- analyze-symbol|arglist-context
+  "Handles forward dependent-type dependencies e.g. `[a (type b) b t/any?]`"
+  [env ::env form symbol?]
+  (l/if-let [_             (-> env :opts :arglist-context?)
+             arg-type-form (-> env :opts :arg-sym->arg-type-form (get form))]
+    (let [env' {:opts (update (:opts env) :arglist-syms|queue
+                        (fn [q]
+                          (if (contains? q form)
+                              (err! "Cyclic dependency between two input types"
+                                    {:dependent-sym       (uc/last q)
+                                     :dependent-type-form
+                                       (-> env :opts :arg-sym->arg-type-form (get (uc/last q)))
+                                     :dependee-sym        form
+                                     :dependee-type-form  arg-type-form})
+                              (conj q form))))}
+          result (analyze-arg-syms* env')]
+      ;; We need to propagate the result upward and this is arguably the cleanest control flow
+      ;; mechanism to do it, sadly
+      (err! ::arg-splits-performed "All arg-splits performed" {:result result}))
+    (err! "Could not resolve symbol" {:sym form})))
+
 (defns- analyze-symbol
   "Analyzes vars as if their value is constant, unless they're marked as dynamic."
   [env ::env, form symbol? > uast/symbol?]
   (if-not-let [{:keys [resolved resolved-via]} (?resolve env form)]
-    ;; Handles forward dependent-type dependencies e.g. `[a (type b) b t/any?]`
-    (l/if-let [_             (-> env :opts :arglist-context?)
-               arg-type-form (-> env :opts :arg-sym->arg-type-form (get form))]
-      (TODO)
-      #_(let [_ (pr! (:opts env))
-            env' (update-in env [:opts :arglist-syms|queue] conj form)
-            analyzed (analyze* env' arg-type-form)]
-        (pr! analyzed)
-        (TODO))
-      (err! "Could not resolve symbol" {:sym form}))
+    (analyze-symbol|arglist-context env form)
     (let [node (case resolved-via
                  (:env :dot) resolved
                  :resolve
@@ -822,7 +842,7 @@
            (uast/symbol env form node (:type node))))))
 
 (defns- analyze* [env ::env, form _ > uast/node?]
-  (when (> (swap! *analyze-depth inc) 200) (throw (ex-info "Stack too deep" {:form form})))
+  (when (> (uref/update! !!analyze-depth inc) 200) (throw (ex-info "Stack too deep" {:form form})))
   (ifs (symbol? form)
          (analyze-symbol env form)
        (t/literal? form)
@@ -863,12 +883,14 @@
   > uast/node?
   ([form _] (analyze {} form))
   ([env ::env, form _]
-    (reset! *analyze-depth 0)
+    (uref/set! !!analyze-depth 0)
     (analyze* env form)))
+
+;; ===== Arglist analysis ===== ;;
 
 (s/def ::arg-sym->arg-type-form (s/map-of simple-symbol? t/any?))
 
-(def analyze-arg-syms|max-iter 100)
+(def analyze-arg-syms|max-iter 1000)
 
 ;; TODO excise
 (defn pr! [x]
@@ -904,54 +926,37 @@
                vec)]
     (uc/distinct (join primitive-subtypes (type>split t)))))
 
-(defn- analyze-arg-syms*
-  [env #_::env
-   arg-sym->arg-type-form #_::arg-sym->arg-type-form
-   out-type-form
-   arglist-syms|queue #_(dc/set-of id/symbol?)
-   arglist-syms|unanalyzed #_(dc/set-of id/symbol?)
-   n|iter #_nneg-fixint?]
-  (pr! (kw-map #_env arglist-syms|queue arglist-syms|unanalyzed n|iter))
-  (ifs (empty? arglist-syms|unanalyzed)
-         [{:env           env
-           :out-type-node (-> (analyze env out-type-form) (update :type t/unvalue))}]
-       (>= n|iter analyze-arg-syms|max-iter)
-         (err! "Max number of iterations reached for `analyze-arg-syms" {:n n|iter})
-       (let [arg-sym (first arglist-syms|unanalyzed)
-             arg-type-form (arg-sym->arg-type-form arg-sym)
-             env' (update env :opts
-                    #(assoc % :arglist-syms|queue      (conj arglist-syms|queue arg-sym)
-                              :arglist-syms|unanalyzed arglist-syms|unanalyzed))
-             analyzed (-> (analyze env' arg-type-form) (update :type t/unvalue))
-             t-split (-> analyzed :type type>split+primitivized)]
-         (pr! {:arg-sym arg-sym
-               :t (:type analyzed)
-               :t-split t-split
-               :arglist-syms|queue (:arglist-syms|queue analyzed)
-               :arglist-syms|unanalyzed (:arglist-syms|unanalyzed analyzed)})
-         (if (-> t-split count (= 1))
-             (let [env' (assoc (:env analyzed) arg-sym analyzed)]
-               (recur env'
-                      arg-sym->arg-type-form
-                      out-type-form
-                      (:arglist-syms|queue      analyzed)
-                      (:arglist-syms|unanalyzed analyzed)
-                      (inc n|iter)))
-             (->> t-split
-                  (uc/mapcat+
-                    (fn [t]
-                      (analyze-arg-syms*
-                        (assoc (:env analyzed) arg-sym (assoc analyzed :type t))
-                        arg-sym->arg-type-form
-                        out-type-form
-                        (conj arglist-syms|queue arg-sym)
-                        ;; TODO re-enable
-                      #_(:arglist-syms|queue      analyzed)
-                        (disj arglist-syms|unanalyzed arg-sym)
-                        ;; TODO re-enable
-                      #_(:arglist-syms|unanalyzed analyzed)
-                        (inc n|iter))))
-                  r/join)))))
+(defn- analyze-arg-syms* [env #_::env]
+  (uref/update! !!analyze-arg-syms|iter inc)
+  (let [{:keys [arg-sym->arg-type-form arglist-syms|queue arglist-syms|unanalyzed out-type-form]}
+          (:opts env)]
+    (ifs (empty? arglist-syms|unanalyzed)
+           [{:env           env
+             :out-type-node (-> (analyze env out-type-form) (update :type t/unvalue))}]
+         (>= (uref/get !!analyze-arg-syms|iter) analyze-arg-syms|max-iter)
+           (err! "Max number of iterations reached for `analyze-arg-syms"
+                 {:n (uref/get !!analyze-arg-syms|iter)})
+         (let [_ (assert (not (empty? arglist-syms|queue)))
+               arg-sym (uc/last arglist-syms|queue)
+               arg-type-form (arg-sym->arg-type-form arg-sym)
+               analyzed (-> (analyze env arg-type-form) (update :type t/unvalue))
+               env-analyzed (-> analyzed :env
+                                (update-in [:opts :arglist-syms|queue]      disj arg-sym)
+                                (update-in [:opts :arglist-syms|unanalyzed] disj arg-sym))
+               t-split (-> analyzed :type type>split+primitivized)]
+           (if (-> t-split count (= 1))
+               (recur (update-in env-analyzed [:opts :arg-env]
+                        #(doto % (swap! assoc arg-sym analyzed))))
+               (->> t-split
+                    (uc/mapcat+
+                      (fn [t]
+                        (analyze-arg-syms*
+                          (-> env-analyzed
+                              (update-in [:opts :arg-env]
+                                ;; `(atom (deref %))` in order to create a new env for a new split
+                                #(-> % deref atom
+                                     (doto (swap! assoc arg-sym (assoc analyzed :type t)))))))))
+                    r/join))))))
 
 (defns analyze-arg-syms
   "Performance characteristics:
@@ -966,9 +971,17 @@
     (analyze-arg-syms {} arg-sym->arg-type-form out-type-form))
   ([env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _
     > (s/vec-of (s/kv {:env ::env :out-type-node uast/node?}))]
-    (analyze-arg-syms*
-      (update env :opts
-        #(assoc % :arglist-context?       true
-                  :arg-sym->arg-type-form arg-sym->arg-type-form
-                  :out-type-form          out-type-form))
-      arg-sym->arg-type-form out-type-form #{} (-> arg-sym->arg-type-form keys set) 0)))
+    (uref/set! !!analyze-arg-syms|iter 0)
+    (try (analyze-arg-syms*
+           {:opts (assoc (:opts env)
+                    :arglist-context?        true
+                    :arglist-syms|queue      (uset/ordered-set
+                                               (-> arg-sym->arg-type-form keys first))
+                    :arglist-syms|unanalyzed (-> arg-sym->arg-type-form keys set)
+                    :arg-env                 (atom env) ; Mutable so it can cache
+                    :arg-sym->arg-type-form  arg-sym->arg-type-form
+                    :out-type-form           out-type-form)})
+      (catch Throwable t
+        (if (and (uerr/error-map? t) (-> t :ident (= ::arg-splits-performed)))
+            (-> t :data :result)
+            (throw t))))))

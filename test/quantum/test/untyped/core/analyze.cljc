@@ -8,13 +8,8 @@
     [quantum.untyped.core.fn
       :refer [<-]]
     [quantum.untyped.core.test
-      :refer [deftest is is= testing]]
+      :refer [deftest is is= testing throws]]
     [quantum.untyped.core.type        :as t]))
-
-(self/analyze-arg-syms {'x `tt/boolean?} `(t/type ~'x))
-(self/analyze-arg-syms {'x `tt/boolean?} `tt/byte)
-(self/analyze-arg-syms {'x `tt/boolean?} `(tt/value tt/byte))
-(self/analyze-arg-syms {'x `tt/boolean?} `(t/isa? Byte))
 
 ;; Simulates a typed fn
 (defn- >long-checked
@@ -23,7 +18,7 @@
 
 (defn- transform-ana [ana]
   (->> ana
-       (mapv #(do [(->> % :env (<- (dissoc :opts)) (uc/map-vals' :type))
+       (mapv #(do [(->> % :env :opts :arg-env deref (uc/map-vals' :type))
                    (-> % :out-type-node :type)]))))
 
 ;; More dependent type tests in `quantum.test.untyped.core.type.defnt` but those are more like
@@ -36,8 +31,8 @@
        2. Analyze out-type = `(t/type x)`
           -> `(t/isa? Boolean)`"
       (let [ana (self/analyze-arg-syms '{x tt/boolean?} '(t/type x))]
-        (is= [[{'x tt/boolean?} tt/boolean?]]
-             (transform-ana ana))))
+        (is= (transform-ana ana)
+             [[{'x tt/boolean?} tt/boolean?]])))
     (testing "Nested within another type"
       (testing "Without arg shadowing"
       #_"1. Analyze `x` = `tt/boolean?`
@@ -47,8 +42,8 @@
                -> `(t/isa? Boolean)`
             -> `(t/or (t/isa? Byte) (t/isa? Boolean))`"
         (let [ana (self/analyze-arg-syms '{x tt/boolean?} '(t/or tt/byte? (t/type x)))]
-          (is= [[{'x tt/boolean?} (t/or tt/byte? tt/boolean?)]]
-               (transform-ana ana))))
+          (is= (transform-ana ana)
+               [[{'x tt/boolean?} (t/or tt/byte? tt/boolean?)]])))
       (testing "With arg shadowing"
       #_"1. Analyze `x` = `tt/boolean?`
             -> Put `x` in env as `(t/isa? Boolean)`
@@ -64,8 +59,8 @@
                     '{x tt/boolean?}
                     '(let [x (>long-checked "123")]
                        (t/or (t/isa? Byte) (t/type x))))]
-          (is= [[{'x tt/boolean?} (t/or (t/isa? Byte) tt/long?)]]
-               (transform-ana ana))))))
+          (is= (transform-ana ana)
+               [[{'x tt/boolean?} (t/or (t/isa? Byte) tt/long?)]])))))
   (testing "Output type dependent on splittable but non-primitive-splittable input"
     #_"1. Analyze `x` = `(t/or tt/boolean? tt/string?)`. Splittable.
        2. Split `(t/or tt/boolean? tt/string?)`:
@@ -84,9 +79,9 @@
     (let [ana (self/analyze-arg-syms
                 {'x '(t/or tt/boolean? tt/string?)}
                 '(t/type x))]
-      (is= [[{'x tt/boolean?} tt/boolean?]
-            [{'x tt/string?}  tt/string?]]
-           (transform-ana ana))))
+      (is= (transform-ana ana)
+           [[{'x tt/boolean?} tt/boolean?]
+            [{'x tt/string?}  tt/string?]])))
   (testing "Output type dependent on primitive-splittable input"
     #_"1. Analyze `x` = `t/any?`. Primitive-splittable.
        2. Split `t/any?`:
@@ -99,7 +94,8 @@
              -> `(t/isa? Boolean)`
        4. Analyze rest of splits in the same way."
     (let [ana (self/analyze-arg-syms {'x 't/any?} '(t/type x))]
-      (is= [[{'x tt/boolean?} tt/boolean?]
+      (is= (transform-ana ana)
+           [[{'x tt/boolean?} tt/boolean?]
             [{'x tt/byte?}    tt/byte?]
             [{'x tt/short?}   tt/short?]
             [{'x tt/char?}    tt/char?]
@@ -107,23 +103,25 @@
             [{'x tt/long?}    tt/long?]
             [{'x tt/float?}   tt/float?]
             [{'x tt/double?}  tt/double?]
-            [{'x t/any?}      t/any?]]
-           (transform-ana ana))))
+            [{'x t/any?}      t/any?]])))
   (testing "Input type dependent on other input type"
     (testing "Dependent type is not for first input"
       #_"1. Analyze `a` = `tt/byte?`
             -> Put `a` in env as `(t/isa? Byte)`
          2. Analyze `b` = `(t/type a)`
             -> Put `b` in env as `(t/isa? Byte)`"
+      ;; TODO
       (let [ana (self/analyze-arg-syms '{a tt/byte?, b (t/type a)} 't/any?)]
-        (is= [[{'a tt/byte? 'b tt/byte?} t/any?]]
-             (transform-ana ana))))
+        (is= (transform-ana ana)
+             [[{'a tt/byte? 'b tt/byte?} t/any?]])))
     (testing "Dependent type is for first input"
       #_"1. Analyze `a` = `(t/type b)`.
          2. Analyze `b` = `tt/byte?`
             -> Put `b` in env as `(t/isa? Byte)`
          -> Put `a` in env as `(t/isa? Byte)`"
-      (let [ana (self/analyze-arg-syms '{a (t/type b) b tt/byte?} 't/any?)])))
+      (let [ana (self/analyze-arg-syms '{a (t/type b) b tt/byte?} 't/any?)]
+        (is= (transform-ana ana)
+             [[{'a (t/isa? Byte) 'b (t/isa? Byte)} t/any?]]))))
   (testing "Output type dependent on input type which is dependent on other input type"
     (testing "First input not splittable; second input not splittable"
       #_"1. Analyze `a` = `tt/byte?`
@@ -132,7 +130,9 @@
             -> Put `b` in env as `(t/isa? Byte)`
          3. Analyze out-type = `(t/type b)`
             -> `(t/isa? Byte)`"
-      (let [ana (self/analyze-arg-syms '{a tt/byte? b (t/type a)} '(t/type b))]))
+      ;; TODO
+      (let [ana (self/analyze-arg-syms '{a tt/byte? b (t/type a)} '(t/type b))]
+        (transform-ana ana)))
     (testing "First input splittable; second input not splittable"
       #_"1. Analyze `a` = `(t/or tt/boolean? tt/byte?)`. Splittable.
          2. Split:
@@ -146,6 +146,7 @@
             3. Analyze out-type = `(t/type b)`
                -> `(t/isa? Boolean)`
          4. Analyze split 1 in the same way."
+      ;; TODO
       (let [ana (self/analyze-arg-syms
                   '{a (t/or tt/boolean? tt/byte?) b (t/type a)} '(t/type b))]))
     (testing "Two input types directly depend on each other"
@@ -156,7 +157,7 @@
                  - Put `b` on queue
                  -> ERROR: `a` not in environment and `a` already on queue; circular
                            dependency detected"
-        (let [ana (self/analyze-arg-syms '{a (t/type b) b (t/type a)} 't/any?)]))
+        (throws (self/analyze-arg-syms '{a (t/type b) b (t/type a)} 't/any?)))
       (testing "Non-symbolically"
         #_"1. Analyze `a` = `(t/type b)`
               - Put `a` on queue
@@ -166,15 +167,14 @@
                     1. Analyze `a`
                        -> ERROR: `a` not in environment and `a` already on queue;
                                  circular dependency detected"
-        (let [ana (self/analyze-arg-syms '{a (t/type b) b (t/type [a])} 't/any?)])))
+        (throws (self/analyze-arg-syms '{a (t/type b) b (t/type [a])} 't/any?))))
     (testing "Two input types indirectly depend on each other"
       #_"1. Analyze `a` = `(t/type b)`
             1. Analyze `b` = `(t/type c)`
                1. Analyze `c` = `(t/type a)`
                   -> ERROR `a` not in environment and `a` already in queue; circular
                            dependency detected"
-      (let [ana (self/analyze-arg-syms
-                  '{a (t/type b) b (t/type c) c (t/type a)} 't/any?)]))
+      (throws (self/analyze-arg-syms '{a (t/type b) b (t/type c) c (t/type a)} 't/any?)))
     (testing "Combination/integration test"
       ;; This test overview was put up in ~30 minutes on 9/30/2018 during a seemingly random walk of
       ;; thoughts without any testing or research whatsoever that happened to actually coalesce
@@ -306,4 +306,104 @@
                     d (let [b (t/- tt/char? tt/long?)]
                         (t/or tt/char? (t/type b) (t/type c)))}
                   '(t/or (t/type b) (t/type d)))]
-         (transform-ana ana)))))
+         (is= (transform-ana ana)
+              [[{'a (t/isa? Boolean)
+                 'b (t/isa? Byte)
+                 'c (t/isa? Short)
+                 'd (t/isa? Short)}
+                (t/or (t/isa? Byte) (t/isa? Short))]
+               [{'a (t/isa? Byte)
+                 'b (t/isa? Byte)
+                 'c (t/isa? Short)
+                 'd (t/isa? Short)}
+                (t/or (t/isa? Byte) (t/isa? Short))]
+               [{'a (t/isa? Boolean)
+                 'b (t/isa? Short)
+                 'c (t/isa? Short)
+                 'd (t/isa? Short)}
+                (t/isa? Short)]
+               [{'a (t/isa? Short)
+                 'b (t/isa? Short)
+                 'c (t/isa? Short)
+                 'd (t/isa? Short)}
+                (t/isa? Short)]
+               [{'a (t/isa? Boolean)
+                 'b (t/isa? Byte)
+                 'c (t/isa? Short)
+                 'd (t/isa? Character)}
+                (t/or (t/isa? Byte) (t/isa? Character))]
+               [{'a (t/isa? Byte)
+                 'b (t/isa? Byte)
+                 'c (t/isa? Short)
+                 'd (t/isa? Character)}
+                (t/or (t/isa? Byte) (t/isa? Character))]
+               [{'a (t/isa? Boolean)
+                 'b (t/isa? Character)
+                 'c (t/isa? Short)
+                 'd (t/isa? Character)}
+                (t/isa? Character)]
+               [{'a (t/isa? Character)
+                 'b (t/isa? Character)
+                 'c (t/isa? Short)
+                 'd (t/isa? Character)}
+                (t/isa? Character)]
+               [{'a (t/isa? Boolean)
+                 'b (t/isa? Byte)
+                 'c (t/isa? Short)
+                 'd (t/value (t/isa? Character))}
+                (t/or (t/isa? Byte) (t/value (t/isa? Character)))]
+               [{'a (t/isa? Byte)
+                 'b (t/isa? Byte)
+                 'c (t/isa? Short)
+                 'd (t/value (t/isa? Character))}
+                (t/or (t/isa? Byte) (t/value (t/isa? Character)))]
+               [{'a (t/isa? Boolean)
+                 'b (t/value (t/isa? Character))
+                 'c (t/isa? Short)
+                 'd (t/value (t/isa? Character))}
+                (t/value (t/isa? Character))]
+               [{'a (t/value (t/isa? Character))
+                 'b (t/value (t/isa? Character))
+                 'c (t/isa? Short)
+                 'd (t/value (t/isa? Character))}
+                (t/value (t/isa? Character))]
+               [{'a (t/isa? Boolean)
+                 'b (t/isa? Byte)
+                 'c (t/isa? Character)
+                 'd (t/isa? Character)}
+                (t/or (t/isa? Byte) (t/isa? Character))]
+               [{'a (t/isa? Byte)
+                 'b (t/isa? Byte)
+                 'c (t/isa? Character)
+                 'd (t/isa? Character)}
+                (t/or (t/isa? Byte) (t/isa? Character))]
+               [{'a (t/isa? Boolean)
+                 'b (t/isa? Character)
+                 'c (t/isa? Character)
+                 'd (t/isa? Character)}
+                (t/isa? Character)]
+               [{'a (t/isa? Character)
+                 'b (t/isa? Character)
+                 'c (t/isa? Character)
+                 'd (t/isa? Character)}
+                (t/isa? Character)]
+               [{'a (t/isa? Boolean)
+                 'b (t/isa? Byte)
+                 'c (t/isa? Character)
+                 'd (t/value (t/isa? Character))}
+                (t/or (t/isa? Byte) (t/value (t/isa? Character)))]
+               [{'a (t/isa? Byte)
+                 'b (t/isa? Byte)
+                 'c (t/isa? Character)
+                 'd (t/value (t/isa? Character))}
+                (t/or (t/isa? Byte) (t/value (t/isa? Character)))]
+               [{'a (t/isa? Boolean)
+                 'b (t/value (t/isa? Character))
+                 'c (t/isa? Character)
+                 'd (t/value (t/isa? Character))}
+                (t/value (t/isa? Character))]
+               [{'a (t/value (t/isa? Character))
+                 'b (t/value (t/isa? Character))
+                 'c (t/isa? Character)
+                 'd (t/value (t/isa? Character))}
+                (t/value (t/isa? Character))]])))))
