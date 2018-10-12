@@ -125,7 +125,9 @@
          ;; When present, varargs are considered to be of class Object
          :variadic?                   t/boolean?}))
 
-(s/def ::input-types-decl
+(s/def ::overload|id index?)
+
+(s/def ::overload-types-decl
   (s/kv {:form t/any?
          :name simple-symbol?}))
 
@@ -136,8 +138,8 @@
          :overload  ::overload}))
 
 (s/def ::direct-dispatch-data
-  (s/kv {:input-types-decl ::input-types-decl
-         :reify            ::reify}))
+  (s/kv {:overload-types-decl ::overload-types-decl
+         :reify               ::reify}))
 
 (s/def ::direct-dispatch
   (s/kv {:form                     t/any?
@@ -310,17 +312,59 @@
      :name      reify-name
      :overload  overload})))
 
-;; ----- Direct dispatch: putting it all together ----- ;;
+;; ----- Type declarations ----- ;;
 
-(defns >input-types-decl
-  "The evaluated `form` of each input-types-decl is an array of non-primitivized types that the
+(defns >types-decl|name [fn|globals ::fn|globals > simple-symbol?]
+  (symbol (str (:fn|name fn|globals) "|__types-decl")))
+
+(c/defn types-decl>arg-types
+  [types-decl #_(atom-of (vec-of ...)), overload-id #_::overload|id #_> #_(objects-of type?)]
+  (apply uarr/*<> (:arg-types (get @types-decl overload-id))))
+
+(c/defn types-decl>ftype
+  [types-decl #_(atom-of (vec-of ...)), fn|output-type #_t/type? #_> #_(vec-of ...)]
+  (->> types-decl
+       deref
+       (uc/lmap (c/fn [{:keys [arg-types pre-type output-type]}]
+                  (cond-> arg-types
+                    pre-type    (conj :| pre-type)
+                    output-type (conj :> output-type))))
+       (apply t/ftype fn|output-type)))
+
+(defns >types-decl
+  [{:as opts :keys [kind _]} ::opts, fn|globals ::fn|globals, overloads (s/seq-of ::overload)
+   > ::types-decl]
+  (let [types-sym (>types-decl|name fn|globals)
+        types-decl-data
+          (if (= kind :extend-defn!)
+              (TODO)
+              (->> overloads
+                   (uc/map-indexed
+                     (c/fn [i {:keys [arg-types output-type]}]
+                       (kw-map i arg-types output-type)))))]
+    (if (-> opts :compilation-mode (= :test))
+        {:name types-sym
+         :form (if (= kind :extend-defn!)
+                   `(reset! ~(symbol (>name *ns*) (>name types-sym)) ~(>form types-decl-data))
+                   `(def ~types-sym (atom ~(>form types-decl-data))))}
+        ;; In non-test cases, it's far cheaper to not have to convert the types to a
+        ;; compiler-readable form and then re-evaluate them again
+        (do (if (= kind :extend-defn!)
+                (reset! (var-get (ns-resolve *ns* types-sym)) types-decl-data)
+                (intern (>symbol *ns*) types-sym (atom types-decl-data)))
+            {:name types-sym :form nil}))))
+
+(defns >overload-types-decl
+  "The evaluated `form` of each overload-types-decl is an array of non-primitivized types that the
    dynamic dispatch uses to dispatch off input types."
-  [{:keys [fn|name _]} ::fn|globals, arg-types (s/vec-of t/type?), i|overload index?
-   > ::input-types-decl]
+  [{:as fn|globals :keys [fn|name _]} ::fn|globals arg-types (s/vec-of t/type?)
+   i|overload ::overload|id > ::overload-types-decl]
   (let [decl-name (>symbol (str fn|name "|__" i|overload "|types"))
-        form      (list 'def (ufth/with-type-hint decl-name "[Ljava.lang.Object;")
-                             (list* `uarr/*<> (uc/lmap >form arg-types)))]
+        form      `(def ~(ufth/with-type-hint decl-name "[Ljava.lang.Object;")
+                        (types-decl>arg-types ~(>types-decl|name fn|globals) ~i|overload))]
     {:form form :name decl-name}))
+
+;; ----- Direct dispatch: putting it all together ----- ;;
 
 (defns >direct-dispatch
   [{:as opts       :keys [gen-gensym _, lang _]} ::opts
@@ -332,13 +376,13 @@
                   (->> overloads
                        (uc/map-indexed
                          (c/fn [i|overload {:as overload :keys [arg-types]}]
-                           {:input-types-decl
-                              (>input-types-decl fn|globals arg-types i|overload)
+                           {:overload-types-decl
+                              (>overload-types-decl fn|globals arg-types i|overload)
                             :reify (overload>reify overload opts fn|globals i|overload)})))
                 form (->> direct-dispatch-data-seq
                           (uc/mapcat
-                            (c/fn [{:as direct-dispatch-data :keys [input-types-decl]}]
-                              (list (:form input-types-decl)
+                            (c/fn [{:as direct-dispatch-data :keys [overload-types-decl]}]
+                              (list (:form overload-types-decl)
                                     (-> direct-dispatch-data :reify :form)))))]
             (kw-map form direct-dispatch-data-seq))
     :cljs (TODO)))
@@ -358,7 +402,7 @@
   [direct-dispatch-data-seq-for-arity (s/seq-of ::direct-dispatch-data)
    arglist (s/vec-of simple-symbol?)]
   (->> direct-dispatch-data-seq-for-arity
-       (uc/map+ (c/fn [{reify- :reify :keys [input-types-decl]}]
+       (uc/map+ (c/fn [{reify- :reify :keys [overload-types-decl]}]
                   [(>dynamic-dispatch|reify-call reify- arglist)
                    (->> reify-
                         :overload
@@ -367,7 +411,7 @@
                           (c/fn [i|arg arg-type]
                             {:i    i|arg
                              :t    arg-type
-                             :getf `((Array/get ~(:name input-types-decl) ~i|arg)
+                             :getf `((Array/get ~(:name overload-types-decl) ~i|arg)
                                       ~(get arglist i|arg))})))]))))
 
 (defns- >dynamic-dispatch|body-for-arity
@@ -539,37 +583,6 @@
            ([ret unanalyzed-overload-seq i|overload-basis]
              (assert-monotonically-increasing-types! ret unanalyzed-overload-seq i|overload-basis)
              (ur/join ret unanalyzed-overload-seq))))))
-
-(c/defn types-decl>ftype
-  [types-decl #_(atom-of (vec-of ...)), fn|output-type #_t/type? #_> #_(vec-of ...)]
-  (->> types-decl
-       deref
-       (uc/lmap (c/fn [{:keys [arg-types pre-type output-type]}]
-                  (cond-> arg-types
-                    pre-type    (conj :| pre-type)
-                    output-type (conj :> output-type))))
-       (apply t/ftype fn|output-type)))
-
-(defns >types-decl
-  [opts ::opts, fn|globals ::fn|globals, overloads (s/seq-of ::overload)
-   > ::types-decl]
-  (let [types-sym (symbol (str (:fn|name fn|globals) "|__types-decl"))
-        types-decl-data
-          (if (= kind :extend-defn!)
-              ...
-              (->> overloads
-                   (uc/map-indexed
-                     (c/fn [i {:keys [arg-types output-type]}]
-                       (kw-map i arg-types output-type)))))]
-    (if (-> opts :compilation-mode (= :test))
-        {:name types-sym
-         :form (if (= kind :extend-defn!)
-                   `(reset! ~(symbol (>name *ns*) (>name types-sym)) ~(>form types-decl-data))
-                   `(def ~types-sym (atom ~(>form types-decl-data))))}
-        (do (if (= kind :extend-defn!)
-                (reset! (var-get (ns-resolve *ns* types-sym)) types-decl-data)
-                (intern (>symbol *ns*) types-sym (atom types-decl-data)))
-            {:name types-sym :form nil}))))
 
 (defns fn|code [kind ::kind, lang ::lang, compilation-mode ::compilation-mode, args _]
   (let [{:as args'

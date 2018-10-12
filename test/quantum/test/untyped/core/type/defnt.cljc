@@ -1802,12 +1802,11 @@
 
     ;; We could keep a global map of defn-symbol to mapping, but if someone deletes the namespace
     ;; the `t/defn` is interned in, that mapping should go away too.
-    ;; We only show this mapping because testing/debug is on. Otherwise the macro would just
+    ;; We only show this types decl because testing/debug is on. Otherwise the macro would just
     ;; `intern` the var and define it there rather than re-evaluating the types.
     (def ~'extensible|__types-decl
       (atom [{:id 0 :arg-types [(t/isa? Double)] :output-type t/any?}]))
 
-    ;; TODO `types-decl>arg-types` is `(apply *<> (:arg-types (get @extensible|__types 0)))`
     (def ~'extensible|__0|types (self/types-decl>arg-types ~'extensible|__types-decl 0))
     (def ~'extensible|__0 (reify* [double>Object] (invoke [_0__ a] nil)))
 
@@ -1824,8 +1823,8 @@
   (self/extend-defn! extensible
     ([a t/boolean?]))
 
-  (do ;; We only show this mapping because testing/debug is on. Otherwise the macro would just
-      ;; `swap!` the mapping outside the code rather than re-evaluating the types.
+  (do ;; We only show this types decl because testing/debug is on. Otherwise the macro would just
+      ;; `swap!` the types decl outside the code rather than re-evaluating the types.
       ;; To find where to put the overload, we find the first place where the inputs are `t/<`.
       ;; TODO test that when testing/debug mode is off, it doesn't emit this code
       (reset! quantum.test.untyped.core.type.defnt/extensible|__types-decl
@@ -1833,7 +1832,7 @@
          {:id 0 :arg-types [(t/isa? Double)]  :output-type t/any?}])
 
       ;; It's labeled as `extensible|__1` but internally that's not how it's ordered; it's just
-      ;; incrementing based on the size of the overload<->index mapping
+      ;; incrementing based on the size of the types-decl
       ;; Currently we can't undefine overloads which I think is fine
       (def ~'extensible|__1|types
         (self/types-decl>arg-types quantum.test.untyped.core.type.defnt/extensible|__types-decl 0))
