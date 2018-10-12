@@ -22,12 +22,14 @@ public class Numeric {
 
     // ================================= Boolean Operations ===================================== //
 
-    public static boolean isTrue  (final boolean a                 ) { return a; }
-    public static boolean isFalse (final boolean a                 ) { return !a; }
-    public static boolean isNil   (final Object  a                 ) { return a == null; }
-    public static boolean not     (final boolean a                 ) { return !a; }
-    public static boolean and     (final boolean a, final boolean b) { return a && b; }
-    public static boolean or      (final boolean a, final boolean b) { return a || b; }
+    public static boolean identical   (final Object  a, final Object  b) { return a == b; }
+    public static boolean nonIdentical(final Object  a, final Object  b) { return a != b; }
+    public static boolean isTrue      (final boolean a                 ) { return a; }
+    public static boolean isFalse     (final boolean a                 ) { return !a; }
+    public static boolean isNil       (final Object  a                 ) { return a == null; }
+    public static boolean not         (final boolean a                 ) { return !a; }
+    public static boolean and         (final boolean a, final boolean b) { return a && b; }
+    public static boolean or          (final boolean a, final boolean b) { return a || b; }
 
     // =================================== Bit Operations ======================================= //
 

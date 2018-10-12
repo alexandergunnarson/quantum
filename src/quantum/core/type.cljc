@@ -15,7 +15,7 @@
 (defaliases ut
   type
   ;; Generators
-  ? * isa?
+  ? *, isa? isa?|direct
   ; fn ; TODO TYPED rename
   ftype
   value, unvalue

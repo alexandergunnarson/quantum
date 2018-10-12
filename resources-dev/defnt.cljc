@@ -59,15 +59,32 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  [1] t/value-of
-      - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
+  [1] - t/numerically : e.g. a double representing exactly what a float is able to represent
+        - and variants thereof: `numerically-long?` etc.
+        - t/numerically-integer?
+        - In order to have this, you have to have comparisons in place
+          - In order for comparisons to be in place you need primitives to compare by
+            - For primitive conversions you need comparisons and `numerically` to determine ranges
+              - This is why we can have core.data.primitive and core.primitive
+          - core.data.primitive
+            - just type definitions and characteristics
+          - core.data.numeric (requires data.primitive)
+            - numeric definitions
+            - numeric ranges
+            - numeric characteristics
+  [ ] - t/value-of
+        - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
   [ ] - (comp/t== x)
          - dependent type such that the passed input must be identical to x
   [2] - t/input-type
-      - `(t/input-type >namespace :?)` meaning the possible input types to the first input to `>namespace`
-      - `(t/input-type reduce :_ :_ :?)`
-      - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
+        - `(t/input-type >namespace :?)` meaning the possible input types to the first input to
+          `>namespace`
+        - `(t/input-type reduce :_ :_ :?)`
+        - This is pretty simple with the current dependent type system
+        - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
   [3] - t/output-type
+        - This is pretty simple with the current dependent type system
+  [ ] - Non-boxed `def`s: `(var/def- min-float  (Numeric/negate Float/MAX_VALUE))`
   [4] - t/extend-defn!
         - We could just recreate the dispatch every time, in the beginning. It would make for slower
           compilation but faster execution for dynamic dispatch, and quicker time to use. So whenever
@@ -92,9 +109,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - We should probably have a 'normal form' so we can correctly hash if we do spec lookup
     - t/- : fix
       - (t/- (t/isa? java.util.Queue) (t/or ?!+queue? !!queue?))
-    - t/numerically : e.g. a double representing exactly what a float is able to represent
-      - and variants thereof: `numerically-long?` etc.
-      - t/numerically-integer?
     - dc/of
       - (dc/of number?) ; implicitly the container is a `reducible?`
       - (dc/of map/+map? symbol? dstr/string?)
@@ -184,8 +198,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           ([x p/nil?] true)
           ([xs dc/counted?] (-> xs count num/zero?))
           ([xs (t/input-type educe :_ :_ :?)] (educe empty?|rf x)))
-    - handle varargs
+    - handle varargs / variadic arity
       - [& args _] shouldn't result in `t/any?` but rather like `t/reducible?` or whatever
+      - should configurably auto-generate arities and/or perform variadic proxying
     - do the defnt-equivalences / `t/defn` test namespace
     - a linting warning that you can narrow the type to whatever the deduced type is from whatever
       wider declared type there is
@@ -212,12 +227,12 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - List of semi-approximately topologically ordered namespaces to make typed:
     - [.] clojure.core / cljs.core (note that many things unexpectedly have associated macros)
           - [! !] ..
-          - [. .] <
-          - [. .] <=
+          - [x x] <
+          - [x x] <=
           - [. .] = — look at coercive-=
-          - [. .] ==
-          - [. .] >
-          - [. .] >=
+          - [x x] ==
+          - [x x] >
+          - [x x] >=
           - [. .] +
           - [. .] +'
           - [. .] -
@@ -282,19 +297,19 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] biginteger
           - [   ] binding
           - [   ] binding-conveyor-fn
-          - [. .] bit-and
+          - [x .] bit-and
           - [! !] bit-and-not
           - [x .] bit-clear
           - [|  ] bit-count
           - [x .] bit-flip
           - [x .] bit-not
-          - [. .] bit-or
+          - [x .] bit-or
           - [x .] bit-set
           - [x .] bit-shift-left
           - [x .] bit-shift-right
-          - [|  ] bit-shift-right-zero-fill
+          - [| !] bit-shift-right-zero-fill
           - [x .] bit-test
-          - [. .] bit-xor
+          - [x .] bit-xor
           - [x .] boolean
           - [x x] boolean?
           - [   ] boolean-array
@@ -494,7 +509,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [|  ] hash-string*
           - [|  ] hash-string
           - [x x] ident?
-          - [x .] identical? — NOTE CLJS has macro
+          - [x x] identical?
           - [x x] identity
           - [   ] if-let
           - [   ] if-not (not as performant as we thought)
@@ -920,40 +935,41 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] zipmap
     - [.] Intrinsics
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Intrinsics.java
+          (Clojure 1.10)
           - [ ] Numbers.add(double,double)
-          - [ ] Numbers.and(long,long)
+          - [x] Numbers.and(long,long)
           - [ ] Numbers.divide(double,double)
-          - [ ] Numbers.equiv(double,double)
-          - [ ] Numbers.equiv(long,long)
-          - [ ] Numbers.gt(long,long)
-          - [ ] Numbers.gt(double,double)
-          - [ ] Numbers.gte(long,long)
-          - [ ] Numbers.gte(double,double)
+          - [x] Numbers.equiv(double,double)
+          - [x] Numbers.equiv(long,long)
+          - [x] Numbers.gt(long,long)
+          - [x] Numbers.gt(double,double)
+          - [x] Numbers.gte(long,long)
+          - [x] Numbers.gte(double,double)
           - [ ] Numbers.isPos(long)
           - [ ] Numbers.isPos(double)
           - [ ] Numbers.isNeg(long)
           - [ ] Numbers.isNeg(double)
           - [ ] Numbers.isZero(double)
           - [ ] Numbers.isZero(long)
-          - [ ] Numbers.lt(long,long)
-          - [ ] Numbers.lt(double,double)
-          - [ ] Numbers.lte(long,long)
-          - [ ] Numbers.lte(double,double)
-          - [ ] Numbers.multiply(double,double)
-          - [ ] Numbers.or(long,long)
-          - [ ] Numbers.xor(long,long)
-          - [ ] Numbers.remainder(long,long)
-          - [ ] Numbers.shiftLeft(long,long)
-          - [ ] Numbers.shiftRight(long,long)
-          - [ ] Numbers.unsignedShiftRight(long,long)
+          - [x] Numbers.lt(long,long)
+          - [x] Numbers.lt(double,double)
+          - [x] Numbers.lte(long,long)
+          - [x] Numbers.lte(double,double)
           - [ ] Numbers.minus(double)
           - [ ] Numbers.minus(double,double)
+          - [ ] Numbers.multiply(double,double)
+          - [x] Numbers.or(long,long)
+          - [x] Numbers.xor(long,long)
+          - [ ] Numbers.remainder(long,long)
           - [ ] Numbers.inc(double)
           - [ ] Numbers.dec(double)
           - [ ] Numbers.quotient(long,long)
-          - [ ] Numbers.shiftLeftInt(int,int)
-          - [ ] Numbers.shiftRightInt(int,int)
-          - [ ] Numbers.unsignedShiftRightInt(int,int)
+          - [x] Numbers.shiftLeftInt(int,int)
+          - [x] Numbers.shiftLeft(long,long)
+          - [x] Numbers.shiftRightInt(int,int)
+          - [x] Numbers.shiftRight(long,long)
+          - [x] Numbers.unsignedShiftRightInt(int,int)
+          - [x] Numbers.unsignedShiftRight(long,long)
           - [ ] Numbers.unchecked_int_add(int,int)
           - [ ] Numbers.unchecked_int_subtract(int,int)
           - [ ] Numbers.unchecked_int_negate(int)
@@ -1021,9 +1037,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] RT.uncheckedLongCast(byte)
           - [ ] RT.uncheckedLongCast(long)
           - [ ] RT.uncheckedLongCast(int)
-          - [ ] Util.equiv(long,long)
-          - [ ] Util.equiv(boolean,boolean)
-          - [ ] Util.equiv(double,double)
+          - [!] Util.equiv(long,long)
+          - [x] Util.equiv(boolean,boolean)
+          - [!] Util.equiv(double,double)
     - [ ] JS built-in functions (the most common/relevant ones)
           - ...
     - [ ] Java intrinsics
@@ -1503,7 +1519,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] add
           - [ ] addP
           - [ ] and
-          - [ ] andNot
+          - [!] andNot
           - [ ] boolean_array
           - [ ] booleans
           - [ ] byte_array
@@ -1625,7 +1641,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] `>str`
     - [.] quantum.core.data.map
     - [.] quantum.core.data.meta
-    - [.] quantum.core.compare
+    - [.] quantum.core.compare - should provide comparisons for all data in quantum.core.data
           - [ ] `compare`
     - [x] quantum.core.ns ; TODO split up into data.ns?
     - [.] quantum.core.vars
@@ -1747,6 +1763,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
                    (fn ([]      (vector))
                        ([x0]    (identity x0))
                        ([x0 x1] (conj x0 x1)))}}
+    - :in — a Clojure or Java intrinsic
   - Instead of e.g. `ns-` or `var-` we can do `ns-val` and `var-val`
 
 [ ] Compile-Time (Direct) Dispatch

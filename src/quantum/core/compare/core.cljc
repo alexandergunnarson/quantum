@@ -30,8 +30,6 @@
 #?(:clj (:import
           [quantum.core Numeric])))
 
-;; TODO `==` from Numeric/equals
-
 ;; Some of the ideas here adapted from gfredericks/compare
 ;; TODO include diffing
 ;; TODO use -compare in CLJS
@@ -43,108 +41,73 @@
 ;; `='` <- `=`: strict like `core/=` with numbers
 ;; `==` <- `identical?`
 ;; TODO `hash=`
+;; TODO .equals vs. .equiv vs. all the others?
 
 ; ===== `==`, `=`, `not=` ===== ;
 
-;; TODO TYPED
+;; TODO add variadic arity
 (t/defn ^:inline ==
   "Tests identity-equality."
-  > p/boolean?
   {:incorporated '{clojure.lang.Util/identical "9/27/2018"
                    clojure.core/identical?     "9/27/2018"
                    cljs.core/identical?        "9/27/2018"}}
-  ([x t/any?] true)
-  ([a ..., b ...] (clojure.lang.Util/identical a b)))
+  > p/boolean?
+         ([x t/any?] true) ; everything is self-identical
+#?(:clj  ([a t/ref?, b t/ref?] (clojure.lang.Util/identical a b))
+   :cljs ([a t/any?, b t/any?] (cljs.core/identical? a b))))
 
+;; TODO add variadic arity
 (t/defn ^:inline not==
   "Tests identity-inequality."
-  ...)
+  > p/boolean?
+         ([x t/any?] false) ; everything is self-identical
+#?(:clj  ([a t/ref?, b t/ref?] (Numeric/nonIdentical a b))
+   :cljs ([a t/any?, b t/any?] (js* "(~{} !== ~{})" a b))))
 
-(defn ^boolean =
-  ([x y]
-    (if (nil? x)
-      (nil? y)
-      (or (identical? x y)
-        ^boolean (-equiv x y)))))
-
-;; TODO .equals vs. .equiv vs. all the others?
-
-(defn =
-  ([x y] (clojure.lang.Util/equiv x y))
-  ([x y & more]
-   (if (clojure.lang.Util/equiv x y)
-     (if (next more)
-       (recur y (first more) (next more))
-       (clojure.lang.Util/equiv y (first more)))
-     false)))
-
-
+;; TODO add variadic arity
 (t/defn ^:inline =
   "Tests value-equality."
   {:incorporated '{clojure.lang.Util/equiv "9/27/2018"
                    clojure.core/=          "9/27/2018"
                    cljs.core/=             "9/27/2018"}}
   > p/boolean?
-        ([x t/any?] true)
-#?(:clj ([a p/boolean?                   , b p/boolean?]                    (Numeric/eq a b)))
-#?(:clj ([a (t/- p/primitive? t/boolean?), b (t/- p/primitive? t/boolean?)] (Numeric/eq a b)))
-        ([a p/boolean?                   , b (t/- p/primitive? t/boolean?)] false)
-        ([a (t/- p/primitive? t/boolean?), b p/boolean?]                    false))
+  ([x t/any?] true)) ; everything is self-equal
 
+;; TODO add variadic arity
 (t/defn ^:inline not=
   "Tests value-inequality."
-  > p/boolean?
   {:incorporated '{clojure.core/not= "9/27/2018"
                    cljs.core/not=    "9/27/2018"}}
-        ([x t/any?] false)
-#?(:clj ([a p/boolean?                   , b p/boolean?]                    (Numeric/neq a b)))
-#?(:clj ([a (t/- p/primitive? t/boolean?), b (t/- p/primitive? t/boolean?)] (Numeric/neq a b)))
-        ([a p/boolean?                   , b (t/- p/primitive? t/boolean?)] true)
-        ([a (t/- p/primitive? t/boolean?), b p/boolean?]                    true))
+  > p/boolean?
+  ([x t/any?] false)) ; everything is self-equal
 
 ; ===== `<` ===== ;
 
+;; TODO add variadic arity
 (t/defn ^:inline <
   "Numeric less-than comparison."
-  > p/boolean?
-  ([x p/numeric?] true)
-  ([a p/numeric?, b p/numeric?] (Numeric/lt a b))
-  ;; TODO numbers, but not nil
-  ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
-   )
+  > p/boolean?)
 
 ; ===== `<=` ===== ;
 
+;; TODO add variadic arity
 (t/defn ^:inline <=
   "Numeric less-than-or-value-equal comparison."
-  > p/boolean?
-  ([x p/numeric?] true)
-  ([a p/numeric?, b p/numeric?] (Numeric/lte a b))
-  ;; TODO numbers, but not nil
-  ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
-   )
+  > p/boolean?)
 
 ; ===== `>` ===== ;
 
+;; TODO add variadic arity
 (t/defn ^:inline >
   "Numeric greater-than comparison."
-  > p/boolean?
-  ([x p/numeric?] true)
-  ([a p/numeric?, b p/numeric?] (Numeric/gt a b))
-  ;; TODO numbers, but not nil
-  ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
-   )
+  > p/boolean?)
 
 ; ===== `>=` ===== ;
 
+;; TODO add variadic arity
 (t/defn ^:inline >=
   "Numeric greater-than-or-value-equal comparison."
-  > p/boolean?
-  ([x p/numeric?] true)
-  ([a p/numeric?, b p/numeric?] (Numeric/gte a b))
-  ; TODO numbers, but not nil
-  ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
-   )
+  > p/boolean?)
 
 ; ===== `compare` ===== ;
 

@@ -354,7 +354,7 @@
   "Creates a persistent array map. If any keys are equal, they are handled as if by repeated
    applications of `assoc`."
   > +array-map?
-  ([] (. clojure.lang.PersistentArrayMap EMPTY))
+  ([] ^:val (. clojure.lang.PersistentArrayMap EMPTY))
   ;; TODO TYPED handle varargs
 #_([& kvs]
      (clojure.lang.PersistentArrayMap/createAsIfByAssoc (to-array kvs))))
@@ -488,7 +488,7 @@
 
    `(->> pairs (apply concat) (apply >hash-map))` <~> `lodash/fromPairs`"
   > +hash-map?
-  ([] clojure.lang.PersistentHashMap/EMPTY)
+  ([] ^:val (. clojure.lang.PersistentHashMap EMPTY))
   ;; TODO TYPED handle varargs
 #_([& kvs]
      (clojure.lang.PersistentHashMap/create kvs)))

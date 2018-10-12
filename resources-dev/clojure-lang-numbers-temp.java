@@ -312,10 +312,6 @@ static public Number divide(BigInteger n, BigInteger d){
 	                 (d.signum() < 0 ? d.negate() : d));
 }
 
-static public int shiftLeftInt(int x, int n){
-	return x << n;
-}
-
 static public long shiftLeft(Object x, Object y){
     return shiftLeft(bitOpsCast(x),bitOpsCast(y));
 }
@@ -324,13 +320,6 @@ static public long shiftLeft(Object x, long y){
 }
 static public long shiftLeft(long x, Object y){
     return shiftLeft(x,bitOpsCast(y));
-}
-static public long shiftLeft(long x, long n){
-	return x << n;
-}
-
-static public int shiftRightInt(int x, int n){
-	return x >> n;
 }
 
 static public long shiftRight(Object x, Object y){
@@ -342,13 +331,7 @@ static public long shiftRight(Object x, long y){
 static public long shiftRight(long x, Object y){
     return shiftRight(x,bitOpsCast(y));
 }
-static public long shiftRight(long x, long n){
-	return x >> n;
-}
 
-static public int unsignedShiftRightInt(int x, int n){
-	return x >>> n;
-}
 
 static public long unsignedShiftRight(Object x, Object y){
     return unsignedShiftRight(bitOpsCast(x),bitOpsCast(y));
@@ -358,9 +341,6 @@ static public long unsignedShiftRight(Object x, long y){
 }
 static public long unsignedShiftRight(long x, Object y){
     return unsignedShiftRight(x,bitOpsCast(y));
-}
-static public long unsignedShiftRight(long x, long n){
-	return x >>> n;
 }
 
 final static class LongOps implements Ops{
@@ -1459,26 +1439,6 @@ static public double divide(double x, double y){
 	return x / y;
 }
 
-static public boolean equiv(double x, double y){
-	return x == y;
-}
-
-static public boolean lt(double x, double y){
-	return x < y;
-}
-
-static public boolean lte(double x, double y){
-	return x <= y;
-}
-
-static public boolean gt(double x, double y){
-	return x > y;
-}
-
-static public boolean gte(double x, double y){
-	return x >= y;
-}
-
 static public boolean isPos(double x){
 	return x > 0;
 }
@@ -1537,13 +1497,6 @@ static public int unchecked_int_multiply(int x, int y){
 static public long not(Object x){
     return not(bitOpsCast(x));
 }
-static public long not(long x){
-	return ~x;
-}
-//static public int and(int x, int y){
-//	return x & y;
-//}
-
 static public long and(Object x, Object y){
     return and(bitOpsCast(x),bitOpsCast(y));
 }
@@ -1553,13 +1506,6 @@ static public long and(Object x, long y){
 static public long and(long x, Object y){
     return and(x,bitOpsCast(y));
 }
-static public long and(long x, long y){
-	return x & y;
-}
-
-//static public int or(int x, int y){
-//	return x | y;
-//}
 
 static public long or(Object x, Object y){
     return or(bitOpsCast(x),bitOpsCast(y));
@@ -1570,13 +1516,6 @@ static public long or(Object x, long y){
 static public long or(long x, Object y){
     return or(x,bitOpsCast(y));
 }
-static public long or(long x, long y){
-    return x | y;
-}
-
-//static public int xor(int x, int y){
-//	return x ^ y;
-//}
 
 static public long xor(Object x, Object y){
     return xor(bitOpsCast(x),bitOpsCast(y));
@@ -1586,22 +1525,6 @@ static public long xor(Object x, long y){
 }
 static public long xor(long x, Object y){
     return xor(x,bitOpsCast(y));
-}
-static public long xor(long x, long y){
-    return x ^ y;
-}
-
-static public long andNot(Object x, Object y){
-    return andNot(bitOpsCast(x),bitOpsCast(y));
-}
-static public long andNot(Object x, long y){
-    return andNot(bitOpsCast(x),y);
-}
-static public long andNot(long x, Object y){
-    return andNot(x,bitOpsCast(y));
-}
-static public long andNot(long x, long y){
-    return x & ~y;
 }
 
 static public long clearBit(Object x, Object y){
@@ -1897,26 +1820,6 @@ static public long remainder(long x, long y){
 	return x % y;
 }
 
-static public boolean equiv(long x, long y){
-	return x == y;
-}
-
-static public boolean lt(long x, long y){
-	return x < y;
-}
-
-static public boolean lte(long x, long y){
-	return x <= y;
-}
-
-static public boolean gt(long x, long y){
-	return x > y;
-}
-
-static public boolean gte(long x, long y){
-	return x >= y;
-}
-
 static public boolean isPos(long x){
 	return x > 0;
 }
@@ -2120,14 +2023,6 @@ static public boolean lt(Object x, double y){
 	return ((Number)x).doubleValue() < y;
 }
 
-static public boolean lt(double x, long y){
-	return x < y;
-}
-
-static public boolean lt(long x, double y){
-	return x < y;
-}
-
 static public boolean lte(long x, Object y){
 	return lte((Object)x,y);
 }
@@ -2142,14 +2037,6 @@ static public boolean lte(double x, Object y){
 
 static public boolean lte(Object x, double y){
 	return ((Number)x).doubleValue() <= y;
-}
-
-static public boolean lte(double x, long y){
-	return x <= y;
-}
-
-static public boolean lte(long x, double y){
-	return x <= y;
 }
 
 static public boolean gt(long x, Object y){
@@ -2168,14 +2055,6 @@ static public boolean gt(Object x, double y){
 	return ((Number)x).doubleValue() > y;
 }
 
-static public boolean gt(double x, long y){
-	return x > y;
-}
-
-static public boolean gt(long x, double y){
-	return x > y;
-}
-
 static public boolean gte(long x, Object y){
 	return gte((Object)x,y);
 }
@@ -2190,14 +2069,6 @@ static public boolean gte(double x, Object y){
 
 static public boolean gte(Object x, double y){
 	return ((Number)x).doubleValue() >= y;
-}
-
-static public boolean gte(double x, long y){
-	return x >= y;
-}
-
-static public boolean gte(long x, double y){
-	return x >= y;
 }
 
 static public boolean equiv(long x, Object y){
@@ -2215,15 +2086,6 @@ static public boolean equiv(double x, Object y){
 static public boolean equiv(Object x, double y){
 	return ((Number)x).doubleValue() == y;
 }
-
-static public boolean equiv(double x, long y){
-	return x == y;
-}
-
-static public boolean equiv(long x, double y){
-	return x == y;
-}
-
 
 static boolean isNaN(Object x){
 	return (x instanceof Double) && ((Double)x).isNaN()

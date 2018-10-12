@@ -159,7 +159,6 @@
 
 ;; ===== Likenesses ===== ;;
 
-
 ;; TODO incorporate
 (defn ^boolean numerically-integer?
   "Returns true if n is a JavaScript number with no decimal part."
@@ -180,7 +179,7 @@
     (and numerically-integer? (>expr (c/fn [x] (c/<= -32768               x 32767)))))
 
 #_(def numerically-char?
-    (and numerically-integer?  (>expr (c/fn [x] (c/<=  0                   x 65535)))))
+    (and numerically-integer? (>expr (c/fn [x] (c/<=  0                   x 65535)))))
 
 #_(def numerically-unsigned-short? numerically-char?)
 
@@ -272,11 +271,51 @@
         _ (doseq [s split]
             (when-not (every? #{\0 \1 \2 \3 \4 \5 \6 \7 \8 \9} s)
               (throw (ex-info "Number must have only numeric characters" {:num s}))))
-        integral (read-string integral-str)
-        decimal  (read-string decimal-str)
+        integral (read-string integral-str) ; TODO we should just pass the raw string to the ratio
+        decimal  (read-string decimal-str) ; TODO we should just pass the raw string to the ratio
         scale    (if decimal
                      (#?(:clj Math/pow :cljs js/Math.pow) 10 (count decimal-str))
                      1)]
     (* (if (= minus-ct 1) -1 1)
-       (->ratio (+ (* scale integral) (or decimal 0))
-                scale))))
+       (>ratio (+ (* scale integral) (or decimal 0))
+               scale))))
+
+;; ===== Conversion ===== ;;
+
+;; TODO TYPED `numerically`
+;; TODO figure out how to use with goog.math.Integer/Long
+#_(defnt ^:inline >byte > #?(:clj byte? :cljs numerically-byte?)
+  "Does not involve truncation or rounding."
+         ([x #?(:clj byte? :cljs numerically-byte?)] x)
+#?(:clj  ([x (t/and (t/- primitive? byte? boolean?) numerically-byte?)] (>byte* x))
+   :cljs ([x (t/and double? numerically-byte?)] x))
+         ([x boolean?] (if x #?(:clj (byte 1) :cljs 1) #?(:clj (byte 0) :cljs 0)))
+#?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-byte?)] (>byte* (.lpart x))))
+#?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-byte?)] (.byteValue x)))
+#?(:clj  ([x (t/and dn/ratio? numerically-byte?)] (-> x .bigIntegerValue .byteValue))))
+
+
+;; TODO TYPED `numerically`
+;; TODO figure out how to use with goog.math.Integer/Long
+#_(t/defn ^:inline >short > #?(:clj short? :cljs numerically-short?)
+  "Does not involve truncation or rounding."
+         ([x #?(:clj short? :cljs numerically-short?)] x)
+#?(:clj  ([x (t/and (t/- primitive? short? boolean?) numerically-short?)] (>short* x))
+   :cljs ([x (t/and double? numerically-short?)] x))
+         ([x boolean?] (if x #?(:clj (short 1) :cljs 1) #?(:clj (short 0) :cljs 0)))
+#?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-short?)] (>short* (.lpart x))))
+#?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-short?)] (.shortValue x)))
+#?(:clj  ([x (t/and dn/ratio? numerically-short?)] (-> x .bigIntegerValue .shortValue))))
+
+;; TODO TYPED `numerically`
+;; TODO figure out how to use with goog.math.Integer/Long
+#_(t/defn ^:inline >char > #?(:clj char? :cljs numerically-char?)
+  "Does not involve truncation or rounding.
+   For CLJS, returns not a String of length 1 but a numerically-char Number."
+         ([x #?(:clj char? :cljs numerically-char?)] x)
+#?(:clj  ([x (t/and (t/- primitive? char? boolean?) numerically-char?)] (>char* x))
+   :cljs ([x (t/and double? numerically-char?)] x))
+         ([x boolean?] (if x #?(:clj (char 1) :cljs 1) #?(:clj (char 0) :cljs 0)))
+#?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt) numerically-char?)] (>char* (.lpart x))))
+#?(:clj  ([x (t/and (t/isa? java.math.BigInteger) numerically-char?)] (.charValue x)))
+#?(:clj  ([x (t/and dn/ratio? numerically-char?)] (-> x .bigIntegerValue .charValue))))
