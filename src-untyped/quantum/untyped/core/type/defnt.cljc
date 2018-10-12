@@ -595,4 +595,7 @@
    even if that means alienating the mainstream CLJS-in-CLJ workflow."
   [& args] (fn|code :fn (ufeval/env-lang) args)))
 
-#?(:clj (defmacro defn [& args] (fn|code :defn (ufeval/env-lang) args)))
+#?(:clj
+(defmacro defn
+  "A `defn` with an empty body is like using `declare`."
+  [& args] (fn|code :defn (ufeval/env-lang) args)))

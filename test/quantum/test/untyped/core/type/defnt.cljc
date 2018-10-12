@@ -1788,3 +1788,62 @@
                  (s/fnt [x ?] (< x 0.1)))
            (t/or str? !str?))
    y ?] (str x (name y))) ; uses the above-defined `name`
+
+
+;; ===== `extend-defn!` tests ===== ;;
+
+(macroexpand
+  '(self/defn extensible
+     ([a t/double?])))
+
+;; Code
+(do ;; We could keep a global map of defn-symbol to mapping, but if someone deletes the namespace
+    ;; the `t/defn` is interned in, that mapping should go away too.
+    ;; We only show this mapping because testing/debug is on. Otherwise the macro would just
+    ;; `intern` the var and define it there rather than re-evaluating the types.
+    (def ~'extensible|__mapping
+      (atom [{:id 0 :arg-types [(t/isa? Double)] :out-type t/any?}]))
+
+    (declare ~'extensible)
+    ;; TODO `mapping>arg-types` is `(apply *<> (:arg-types (get @extensible|__mapping 0)))`
+    (def ~'extensible|__0|types (mapping>arg-types ~'extensible|__mapping 0))
+    (def ~'extensible|__0 (reify* [double>Object] (invoke [_0__ a] nil)))
+
+    (intern 'quantum.test.untyped.core.type.defnt
+      (with-meta 'extensible
+        {:quantum.core.type/type
+          (apply t/ftype t/any? (self/mapping>ftype-signatures @extensible|__mapping))})
+      (fn* ([~'x00__]
+             (ifs ((Array/get ~'extensible|__0|types 0) ~'x00__)
+                    (. extensible|__0 invoke x00__)
+                  (unsupported! `extensible [~'x00__] 0))))))
+
+(testing "Insertion"
+  (self/extend-defn! extensible
+    ([a t/boolean?]))
+
+  (do ;; We only show this mapping because testing/debug is on. Otherwise the macro would just
+      ;; `swap!` the mapping outside the code rather than re-evaluating the types.
+      ;; To find where to put the overload, we find the first place where the inputs are `t/<`.
+      ;; TODO test that when testing/debug mode is off, it doesn't emit this code
+      (reset! extensible|__mapping
+        [{:id 1 :arg-types [(t/isa? Boolean)] :out-type t/any?}
+         {:id 0 :arg-types [(t/isa? Double)]  :out-type t/any?}])
+
+      ;; It's labeled as `extensible|__1` but internally that's not how it's ordered; it's just
+      ;; incrementing based on the size of the overload<->index mapping
+      ;; Currently we can't undefine overloads which I think is fine
+      (def ~'extensible|__1|types (mapping>arg-types extensible|__mapping 0))
+      (def ~'extensible|__1 (reify* [boolean>Object] (invoke [_0__ a] nil)))
+      ;; The dynamic dispatch is currently redefined with every `extend-defn!`
+      ;; We expect that `t/defn` extension will take place in only one thread
+      (intern 'quantum.test.untyped.core.type.defnt
+        (with-meta 'extensible
+          {:quantum.core.type/type
+            (apply t/ftype t/any? (self/mapping>ftype-signatures @extensible|__mapping))})
+        (fn* ([~'x00__]
+               (ifs ((Array/get ~'extensible|__1|types 0) ~'x00__)
+                      (. extensible|__1 invoke x00__)
+                    ((Array/get ~'extensible|__0|types 0) ~'x00__)
+                      (. extensible|__0 invoke x00__)
+                    (unsupported! `extensible [~'x00__] 0)))))))

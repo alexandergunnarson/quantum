@@ -59,7 +59,18 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  [1] - t/numerically : e.g. a double representing exactly what a float is able to represent
+  [1] - t/extend-defn!
+        - We could just recreate the dispatch every time, in the beginning. It would make for slower
+          compilation but faster execution for dynamic dispatch, and quicker time to use. So whenever
+          something extends a `t/defn`, the type overloads have to be put in the right place in the dispatch order. We could find the first place where the inputs are t/<.
+          - But then you have to trigger a recompilation of everything that depended on that `t/defn`
+            because your input-types and output-types have both gotten bigger. Maybe not on that overload
+            but still.
+            - This will be a more advanced feature. For now we just accept that we might have some odd behavior around extending `t/defn`s.
+        - When you overwrite a `reify` then it's fine as long as the interface class stays the same.
+          Of course, pending auto-recompilation, you'll have to manually recompile its dependents
+          for them to pick up on changes to its type.
+  [2] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.
         - t/numerically-integer?
         - In order to have this, you have to have comparisons in place
@@ -76,28 +87,17 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
   [ ] - (comp/t== x)
          - dependent type such that the passed input must be identical to x
-  [2] - t/input-type
+  [3] - t/input-type
         - `(t/input-type >namespace :?)` meaning the possible input types to the first input to
           `>namespace`
         - `(t/input-type reduce :_ :_ :?)`
         - This is pretty simple with the current dependent type system
         - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
-  [3] - t/output-type
+  [4] - t/output-type
         - This is pretty simple with the current dependent type system
   [ ] - Non-boxed `def`s: `(var/def- min-float  (Numeric/negate Float/MAX_VALUE))`
-  [4] - t/extend-defn!
-        - We could just recreate the dispatch every time, in the beginning. It would make for slower
-          compilation but faster execution for dynamic dispatch, and quicker time to use. So whenever
-          something extends a `t/defn`, the type overloads have to be put in the right place in the dispatch order. We could find the first place where the inputs are t/<.
-          - But then you have to trigger a recompilation of everything that depended on that `t/defn`
-            because your input-types and output-types have both gotten bigger. Maybe not on that overload
-            but still.
-            - This will be a more advanced feature. For now we just accept that we might have some odd behavior around extending `t/defn`s.
-        - When you overwrite a `reify` then it's fine as long as the interface class stays the same.
-          Of course, pending auto-recompilation, you'll have to manually recompile its dependents
-          for them to pick up on changes to its type.
-  [6] - Direct dispatch needs to actually work correctly in `t/defn`
-  [7] - No trailing `>` means `> ?`
+  [5] - Direct dispatch needs to actually work correctly in `t/defn`
+  [6] - No trailing `>` means `> ?`
       - ? : type inference
         - use logic programming and variable unification e.g. `?1` `?2` ?
         - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
@@ -165,8 +165,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - t/ftype
     - conditionally optional arities etc.
   - t/declare
-  - declare-fnt (a way to do protocols/interfaces)
-    - extend-fnt!
   - ^:dyn
     - `(name (read ...))` fails at compile-time; we want it to at least try at runtime. So instead
       we annotate like `(name ^:dyn (read ...))`, meaning figure out at runtime what the out-type of
@@ -186,7 +184,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         we do the `let*`-binding approach to typing vars?
       - should be able to be per-arity like so:
         (^:inline [] ...)
-      - ^:inline set on a function should propagate to all overloads, including ones added after the fact
+      - ^:inline set on a function should propagate to all overloads, including ones added via
+        `t/extend-defn!`
       - A good example of inlining:
         (t/def empty?|rf
           (fn/aritoid
@@ -297,19 +296,19 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] biginteger
           - [   ] binding
           - [   ] binding-conveyor-fn
-          - [x .] bit-and
+          - [x x] bit-and
           - [! !] bit-and-not
-          - [x .] bit-clear
+          - [x x] bit-clear
           - [|  ] bit-count
-          - [x .] bit-flip
-          - [x .] bit-not
-          - [x .] bit-or
-          - [x .] bit-set
-          - [x .] bit-shift-left
-          - [x .] bit-shift-right
+          - [x x] bit-flip
+          - [x x] bit-not
+          - [x x] bit-or
+          - [x x] bit-set
+          - [x x] bit-shift-left
+          - [x x] bit-shift-right
           - [| !] bit-shift-right-zero-fill
-          - [x .] bit-test
-          - [x .] bit-xor
+          - [x x] bit-test
+          - [x x] bit-xor
           - [x .] boolean
           - [x x] boolean?
           - [   ] boolean-array
@@ -819,7 +818,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] special-symbol?
           - [|  ] specify
           - [|  ] specify!
-          - [   ] spread
           - [   ] spit
           - [   ] split-at
           - [   ] split-with
