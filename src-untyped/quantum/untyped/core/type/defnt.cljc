@@ -1,8 +1,8 @@
 (ns quantum.untyped.core.type.defnt
   (:refer-clojure :exclude
-    [defn])
+    [defn fn])
   (:require
-    [clojure.core                               :as core]
+    [clojure.core                               :as c]
     [clojure.string                             :as str]
     ;; TODO excise this reference
     [quantum.core.type.core                     :as tcore]
@@ -52,15 +52,44 @@
     [quantum.core Numeric]
     [quantum.core.data Array]))
 
+;; TODO move
+(def index? #(and (integer? %) (>= % 0)))
+(def count? index?)
+
+;; ===== `t/extend-defn!` specs ===== ;;
+
+(s/def :quantum.core.defnt/fn|extended-name qualified-symbol?)
+
+(s/def :quantum.core.defnt/extend-defn!
+  (s/and (s/spec
+           (s/cat :quantum.core.defnt/fn|extended-name :quantum.core.defnt/fn|extended-name
+                  :quantum.core.defnt/overloads        :quantum.core.defnt/overloads))
+         (uss/fn-like|postchecks|gen :quantum.core.defnt/overloads)
+         :quantum.core.defnt/postchecks))
+
+;; ===== End `t/extend-defn!` specs ===== ;;
+
 (defonce *fn->type (atom {}))
 
 (defonce defnt-cache (atom {})) ; TODO For now — but maybe lock-free concurrent hash map to come
 
 (defonce *interfaces (atom {}))
 
-;; Internal specs
+;; ==== Internal specs ===== ;;
 
 (s/def ::lang #{:clj :cljs})
+
+(def ^:dynamic *compilation-mode* :normal)
+
+(s/def ::compilation-mode #{:normal :test})
+
+(s/def ::kind #{:fn :defn :extend-defn!})
+
+(s/def ::opts
+  (s/kv {:compilation-mode ::compilation-mode
+         :gen-gensym       t/fn?
+         :lang             ::lang
+         :kind             ::kind}))
 
 ;; "global" because they apply to the whole fnt
 (s/def ::fn|globals
@@ -69,10 +98,6 @@
          :fn|type             utr/fn-type?
          :fn|output-type|form t/any?
          :fn|output-type      t/type?}))
-
-(s/def ::opts
-  (s/kv {:gen-gensym t/fn?
-         :lang       ::lang}))
 
  ;; Technically it's partially analyzed — its type definitions are analyzed (with the exception of
  ;; requests for type inference) while its body is not.
@@ -90,13 +115,13 @@
 ;; One of these corresponds to one reify overload.
 (s/def ::overload
   (s/kv {:arg-classes                 (s/vec-of class?)
-         :arg-types                   (s/seq-of t/type?)
+         :arg-types                   (s/vec-of t/type?)
          :arglist-code|fn|hinted      t/any?
          :arglist-code|reify|unhinted t/any?
          :body-form                   t/any?
          :output-class                (s/nilable class?)
          :output-type                 t/type?
-         :positional-args-ct          (s/and integer? #(>= % 0))
+         :positional-args-ct          count?
          ;; When present, varargs are considered to be of class Object
          :variadic?                   t/boolean?}))
 
@@ -118,17 +143,18 @@
   (s/kv {:form                     t/any?
          :direct-dispatch-data-seq (s/vec-of ::direct-dispatch-data)}))
 
+(s/def ::types-decl-datum (s/kv {:id index? :arg-types (s/vec-of t/type?) :output-type t/type?}))
+
+(s/def ::types-decl (s/kv {:form t/any? :name simple-symbol?}))
+
 #_(:clj
-(core/defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
+(c/defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
   (cond (not= k :spec) java.lang.Object; default class
         (symbol? spec) (pred->class lang spec))))
 
 ;; TODO optimize such that `post-type|form` doesn't create a new type-validator wholesale every
 ;; time the function gets run; e.g. extern it
-(core/defn >with-runtime-output-type [body output-type|form] `(t/validate ~body ~output-type|form))
-
-;; TODO move
-(def index? #(and (integer? %) (>= % 0)))
+(c/defn >with-runtime-output-type [body output-type|form] `(t/validate ~body ~output-type|form))
 
 ;; TODO simplify this class computation
 
@@ -174,20 +200,20 @@
            body-codelist|pre-analyze _]
     declared-output-type [:output-type _]}
    ::unanalyzed-overload
-   {:as fn|globals :keys [fn|name _, fn|type _, fn|output-type _]} ::fn|globals
    {:as opts       :keys [lang _]} ::opts
+   {:as fn|globals :keys [fn|name _, fn|type _, fn|output-type _]} ::fn|globals
    > ::overload]
   (let [;; Not sure if `nil` is the right approach for the value
         recursive-ast-node-reference (uast/symbol {} fn|name nil fn|type)
         env         (->> (zipmap arg-bindings arg-types)
-                         (uc/map' (fn [[arg-binding arg-type]]
+                         (uc/map' (c/fn [[arg-binding arg-type]]
                                     [arg-binding (uast/unbound nil arg-binding arg-type)]))
                          ;; To support recursion
                          (<- (assoc fn|name recursive-ast-node-reference)))
         arg-classes (->> arg-types (uc/map type>class))
         body|pre-analyze|with-casts
           (->> arg-classes
-               (reducei (fn [body ^Class c i|arg]
+               (reducei (c/fn [body ^Class c i|arg]
                           (if (.isPrimitive c)
                               body
                               (let [arg-sym (get arg-bindings i|arg)]
@@ -195,7 +221,7 @@
                                    ~body))))
                  (ufgen/?wrap-do body-codelist|pre-analyze)))
         body-node   (uana/analyze env body|pre-analyze|with-casts)
-        hint-arg|fn (fn [i arg-binding]
+        hint-arg|fn (c/fn [i arg-binding]
                       (ufth/with-type-hint arg-binding
                         (ufth/>fn-arglist-tag
                           (uc/get arg-classes i)
@@ -270,7 +296,7 @@
           (ur/join [(gen-gensym '_)]
             (->> arglist-code|reify|unhinted
                  (uc/map-indexed
-                   (fn [i|arg arg|form]
+                   (c/fn [i|arg arg|form]
                      (ufth/with-type-hint arg|form
                        (-> arg-classes|reify (uc/get i|arg) ufth/>arglist-embeddable-tag))))))
         reify-name (>symbol (str fn|name "|__" i|overload))
@@ -297,21 +323,21 @@
     {:form form :name decl-name}))
 
 (defns >direct-dispatch
-  [{:as fn|globals :keys [fn|name _]} ::fn|globals
-   {:as opts       :keys [gen-gensym _, lang _]} ::opts
+  [{:as opts       :keys [gen-gensym _, lang _]} ::opts
+   {:as fn|globals :keys [fn|name _]} ::fn|globals
    overloads (s/vec-of ::overload)
    > ::direct-dispatch]
   (case lang
     :clj  (let [direct-dispatch-data-seq
                   (->> overloads
                        (uc/map-indexed
-                         (fn [i|overload {:as overload :keys [arg-types]}]
+                         (c/fn [i|overload {:as overload :keys [arg-types]}]
                            {:input-types-decl
                               (>input-types-decl fn|globals arg-types i|overload)
                             :reify (overload>reify overload opts fn|globals i|overload)})))
                 form (->> direct-dispatch-data-seq
                           (uc/mapcat
-                            (fn [{:as direct-dispatch-data :keys [input-types-decl]}]
+                            (c/fn [{:as direct-dispatch-data :keys [input-types-decl]}]
                               (list (:form input-types-decl)
                                     (-> direct-dispatch-data :reify :form)))))]
             (kw-map form direct-dispatch-data-seq))
@@ -332,13 +358,13 @@
   [direct-dispatch-data-seq-for-arity (s/seq-of ::direct-dispatch-data)
    arglist (s/vec-of simple-symbol?)]
   (->> direct-dispatch-data-seq-for-arity
-       (uc/map+ (fn [{reify- :reify :keys [input-types-decl]}]
+       (uc/map+ (c/fn [{reify- :reify :keys [input-types-decl]}]
                   [(>dynamic-dispatch|reify-call reify- arglist)
                    (->> reify-
                         :overload
                         :arg-types
                         (uc/map-indexed
-                          (fn [i|arg arg-type]
+                          (c/fn [i|arg arg-type]
                             {:i    i|arg
                              :t    arg-type
                              :getf `((Array/get ~(:name input-types-decl) ~i|arg)
@@ -353,32 +379,35 @@
       (>dynamic-dispatch|reify-call (-> direct-dispatch-data-seq-for-arity first :reify) arglist)
       (let [*i|arg (atom 0)
             combinef
-              (fn ([] (transient [`ifs]))
-                  ([ret]
-                    (-> ret (conj! `(unsupported! '~(uid/qualify fn|name) ~arglist ~(deref *i|arg)))
-                            persistent!
-                            seq))
-                  ([ret getf x i]
-                    (reset! *i|arg i)
-                    (uc/conj! ret getf x)))]
+              (c/fn
+                ([] (transient [`ifs]))
+                ([ret]
+                  (-> ret (conj! `(unsupported! '~(uid/qualify fn|name) ~arglist ~(deref *i|arg)))
+                          persistent!
+                          seq))
+                ([ret getf x i]
+                  (reset! *i|arg i)
+                  (uc/conj! ret getf x)))]
         (uc/>combinatoric-tree (count arglist)
-          (fn [a b] (t/= (:t a) (:t b)))
-          (aritoid combinef combinef (fn [x [{:keys [getf i]} group]] (combinef x getf group i)))
+          (c/fn [a b] (t/= (:t a) (:t b)))
+          (aritoid combinef combinef (c/fn [x [{:keys [getf i]} group]] (combinef x getf group i)))
           uc/conj!|rf
-          (aritoid combinef combinef (fn [x [k [{:keys [getf i]}]]] (combinef x getf k i)))
+          (aritoid combinef combinef (c/fn [x [k [{:keys [getf i]}]]] (combinef x getf k i)))
           (>combinatoric-seq+ direct-dispatch-data-seq-for-arity arglist)))))
 
 (defns- >dynamic-dispatch-fn|form
-  [{:as fn|globals :keys [fn|meta _, fn|name _, fn|type _]} ::fn|globals
-   {:as opts       :keys [gen-gensym _, lang _]} ::opts
+  [{:as opts       :keys [gen-gensym _, lang _]} ::opts
+   {:as fn|globals :keys [fn|meta _, fn|name _, fn|output-type _]} ::fn|globals
+   types-decl ::types-decl
    direct-dispatch ::direct-dispatch]
- `(core/defn ~fn|name
-    ~(assoc fn|meta :quantum.core.type/type (>form fn|type))
+ `(c/defn ~fn|name
+    ~(assoc fn|meta :quantum.core.type/type
+       `(self/types-decl>ftype ~(:name types-decl) ~fn|output-type))
     ~@(->> direct-dispatch
            :direct-dispatch-data-seq
            (group-by (fn-> :reify :overload :arg-types count))
            (sort-by key) ; for purposes of reproducibility and organization
-           (map (fn [[arg-ct direct-dispatch-data-seq-for-arity]]
+           (map (c/fn [[arg-ct direct-dispatch-data-seq-for-arity]]
                   (let [arglist (ufgen/gen-args 0 arg-ct "x" gen-gensym)
                         body    (>dynamic-dispatch|body-for-arity
                                   fn|name arglist direct-dispatch-data-seq-for-arity)]
@@ -388,7 +417,7 @@
 
 ;; ===== Arg type comparison ===== ;;
 
-(core/defn compare-arg-types [t0 #_t/type?, t1 #_t/type? #_> #_ucomp/comparison?]
+(c/defn compare-arg-types [t0 #_t/type?, t1 #_t/type? #_> #_ucomp/comparison?]
   (if-let [c0 (uana/sort-guide t0)]
     (if-let [c1 (uana/sort-guide t1)]
       (ifs (< c0 c1) -1 (> c0 c1) 1 0)
@@ -397,11 +426,11 @@
       1
       (uset/normalize-comparison (t/compare t0 t1)))))
 
-(core/defn compare-args-types [arg-types0 #_(s/vec-of t/type?) arg-types1 #_(s/vec-of t/type?)]
+(c/defn compare-args-types [arg-types0 #_(s/vec-of t/type?) arg-types1 #_(s/vec-of t/type?)]
   (let [ct-comparison (compare (count arg-types0) (count arg-types1))]
     (if (zero? ct-comparison)
         (reduce-2
-          (core/fn [^long c t0 t1]
+          (c/fn [^long c t0 t1]
             (let [c' (long (compare-arg-types t0 t1))]
               (case c'
                 -1 (case c  1 (reduced 0) c')
@@ -413,7 +442,7 @@
 
 ;; TODO spec
 ;; TODO use!!
-(core/defn assert-monotonically-increasing-types!
+(c/defn assert-monotonically-increasing-types!
   "Asserts that each type in an overload of the same arity and arg-position are in monotonically
    increasing order in terms of `t/compare`.
 
@@ -426,7 +455,7 @@
     (let [prev-overload (uc/last  unanalyzed-overload-seq-accum)
           overload      (uc/first unanalyzed-overload-seq)]
       (reducei-2
-        (fn [_ arg|type|prev arg|type i|arg]
+        (c/fn [_ arg|type|prev arg|type i|arg]
           (when ;; NOTE could use `compare-arg-types` here instead of `t/compare` if we want a more
                 ;; efficient combinatoric tree dispatch
                 (= 1 (t/compare arg|type|prev arg|type))
@@ -452,7 +481,7 @@
    > (s/seq-of ::unanalyzed-overload)]
   (when pre-type|form (TODO "Need to handle pre"))
   (when varargs       (TODO "Need to handle varargs"))
-  (let [arg-types|form   (->> args (mapv (fn [{[kind #_#{:any :spec}, t #_t/form?] :spec}]
+  (let [arg-types|form   (->> args (mapv (c/fn [{[kind #_#{:any :spec}, t #_t/form?] :spec}]
                                            (case kind :any `t/any? :spec t))))
         output-type|form (case output-type|form
                            _   `t/any?
@@ -462,7 +491,7 @@
                            output-type|form)
         arg-bindings
           (->> args
-               (mapv (fn [{[kind binding-] :binding-form}]
+               (mapv (c/fn [{[kind binding-] :binding-form}]
                        ;; TODO this assertion is purely temporary until destructuring is
                        ;; supported
                        (assert kind :sym)
@@ -474,7 +503,7 @@
                           (assert (-> varargs :binding-form first (= :sym))))
         arg-types|expanded-seq ; split, primitivized, and sorted
           (->> (uana/analyze-arg-syms {} (zipmap arg-bindings arg-types|form) output-type|form)
-               (uc/map (fn [{:keys [env out-type-node]}]
+               (uc/map (c/fn [{:keys [env out-type-node]}]
                          (let [output-type (:type out-type-node)
                                arg-env     (->> env :opts :arg-env deref)
                                arg-types   (->> arg-bindings (uc/map #(:type (get arg-env %))))]
@@ -490,7 +519,7 @@
                vec)]
     (uana/pr! arg-types|expanded-seq) ; TODO excise
     (->> arg-types|expanded-seq
-         (uc/map (fn [{:keys [arg-types output-type]}]
+         (uc/map (c/fn [{:keys [arg-types output-type]}]
                    (kw-map arg-bindings varargs-binding
                            arg-types|form arg-types
                            output-type|form output-type
@@ -504,32 +533,57 @@
   (->> overloads-bases
        (uc/map+ #(overloads-basis>unanalyzed-overload-seq % fn|output-type|form fn|output-type))
        (educei
-         (fn ([] [])
-             ([ret] ret)
-             ([ret unanalyzed-overload-seq i|overload-basis]
-               (assert-monotonically-increasing-types! ret unanalyzed-overload-seq i|overload-basis)
-               (ur/join ret unanalyzed-overload-seq))))))
+         (c/fn
+           ([] [])
+           ([ret] ret)
+           ([ret unanalyzed-overload-seq i|overload-basis]
+             (assert-monotonically-increasing-types! ret unanalyzed-overload-seq i|overload-basis)
+             (ur/join ret unanalyzed-overload-seq))))))
 
-(defns unanalyzed-overloads>fn|type
-  [unanalyzed-overloads (s/seq-of ::unanalyzed-overload), fn|output-type t/type? > utr/fn-type?]
-  (->> unanalyzed-overloads
-       (uc/lmap (fn [{:keys [arg-types pre-type output-type]}]
+(c/defn types-decl>ftype
+  [types-decl #_(atom-of (vec-of ...)), fn|output-type #_t/type? #_> #_(vec-of ...)]
+  (->> types-decl
+       deref
+       (uc/lmap (c/fn [{:keys [arg-types pre-type output-type]}]
                   (cond-> arg-types
                     pre-type    (conj :| pre-type)
                     output-type (conj :> output-type))))
        (apply t/ftype fn|output-type)))
 
-(defns fn|code [kind #{:fn :defn}, lang ::lang, args _]
+(defns >types-decl
+  [opts ::opts, fn|globals ::fn|globals, overloads (s/seq-of ::overload)
+   > ::types-decl]
+  (let [types-sym (symbol (str (:fn|name fn|globals) "|__types-decl"))
+        types-decl-data
+          (if (= kind :extend-defn!)
+              ...
+              (->> overloads
+                   (uc/map-indexed
+                     (c/fn [i {:keys [arg-types output-type]}]
+                       (kw-map i arg-types output-type)))))]
+    (if (-> opts :compilation-mode (= :test))
+        {:name types-sym
+         :form (if (= kind :extend-defn!)
+                   `(reset! ~(symbol (>name *ns*) (>name types-sym)) ~(>form types-decl-data))
+                   `(def ~types-sym (atom ~(>form types-decl-data))))}
+        (do (if (= kind :extend-defn!)
+                (reset! (var-get (ns-resolve *ns* types-sym)) types-decl-data)
+                (intern (>symbol *ns*) types-sym (atom types-decl-data)))
+            {:name types-sym :form nil}))))
+
+(defns fn|code [kind ::kind, lang ::lang, compilation-mode ::compilation-mode, args _]
   (let [{:as args'
          :keys [:quantum.core.specs/fn|name
+                :quantum.core.defnt/fn|extended-name
                 :quantum.core.defnt/output-spec]
          overloads-bases :quantum.core.defnt/overloads
          fn|meta :quantum.core.specs/meta}
-          (s/validate args (case kind :defn :quantum.core.defnt/defnt
-                                      :fn   :quantum.core.defnt/fnt))
+          (s/validate args (case kind :defn         :quantum.core.defnt/defnt
+                                      :fn           :quantum.core.defnt/fnt
+                                      :extend-defn! :quantum.core.defnt/extend-defn!))
         gen-gensym-base      (ufgen/>reproducible-gensym|generator)
-        gen-gensym           (fn [x] (symbol (str (gen-gensym-base x) "__")))
-        opts                 (kw-map gen-gensym lang)
+        gen-gensym           (c/fn [x] (symbol (str (gen-gensym-base x) "__")))
+        opts                 (kw-map compilation-mode gen-gensym kind lang)
         inline?              (s/validate (:inline fn|meta) (t/? t/boolean?))
         fn|meta              (if inline?
                                  (do (ulog/pr :warn "requested `:inline`; ignoring until feature is"
@@ -543,14 +597,17 @@
                                overloads-bases fn|output-type|form fn|output-type)
         fn|type              (unanalyzed-overloads>fn|type unanalyzed-overloads fn|output-type)
         fn|globals           (kw-map fn|name fn|meta fn|type fn|output-type|form fn|output-type)
+        ;; Specifically overloads that were generated during this execution of this function
         overloads            (->> unanalyzed-overloads
-                                  (uc/map #(unanalyzed-overload>overload % fn|globals opts)))
-        direct-dispatch      (>direct-dispatch fn|globals opts overloads)
+                                  (uc/map #(unanalyzed-overload>overload % opts fn|globals)))
+        direct-dispatch      (>direct-dispatch opts fn|globals overloads)
+        types-decl           (>types-decl opts fn|globals overloads)
         fn-codelist
           (case lang
             :clj  (->> `[(declare ~fn|name) ; for recursion
+                         ~@(some-> (:form types-decl) vector)
                          ~@(:form direct-dispatch)
-                         ~(>dynamic-dispatch-fn|form fn|globals opts direct-dispatch)]
+                         ~(>dynamic-dispatch-fn|form opts fn|globals types-decl direct-dispatch)]
                         (remove nil?))
             :cljs (TODO))
         code (case kind
@@ -559,7 +616,7 @@
     code))
 
 #?(:clj
-(defmacro fnt
+(defmacro fn
   "With `t/fn`, protocols, interfaces, and multimethods become unnecessary. The preferred method of
    dispatch becomes the function alone.
 
@@ -593,9 +650,13 @@
    `fnt` only works in languages in which the metalanguage (compiler language) is the same as the
    object language. As such, for CLJS, we choose to use only a CLJS-in-CLJS / bootstrapped compiler
    even if that means alienating the mainstream CLJS-in-CLJ workflow."
-  [& args] (fn|code :fn (ufeval/env-lang) args)))
+  [& args] (fn|code :fn (ufeval/env-lang) *compilation-mode* args)))
 
 #?(:clj
 (defmacro defn
   "A `defn` with an empty body is like using `declare`."
-  [& args] (fn|code :defn (ufeval/env-lang) args)))
+  [& args] (fn|code :defn (ufeval/env-lang) *compilation-mode* args)))
+
+#?(:clj
+(defmacro extend-defn!
+  [& args] (fn|code :extend-defn! (ufeval/env-lang) *compilation-mode* args)))

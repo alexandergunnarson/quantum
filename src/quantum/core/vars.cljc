@@ -174,7 +174,7 @@
   "Like `reset!` but for vars. Atomically sets the root binding of ->`var-` to ->`v`."
   {:attribution "alexandergunnarson"}
   [var-val var?, v t/ref? > var?]
-  (.alterRoot var-val (fnt [_] v))))
+  (.alterRoot var-val (t/fn [_] v))))
 
 ;; TODO TYPED — need to do `fnt`, `apply`
 #_(:clj
@@ -185,7 +185,7 @@
         var-))
   ;; TODO we need to be able to conditionalize `f`'s arity based on the count of `args`
   ([var- f t/fn? & args (? t/seq?) > var?]
-    (do (.alterRoot var- (fnt [v' _] (apply f v' args)))
+    (do (.alterRoot var- (t/fn [v' _] (apply f v' args)))
         var-))))
 
 ;; TODO TYPED — `doseq`

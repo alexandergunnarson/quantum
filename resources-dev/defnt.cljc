@@ -61,15 +61,11 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
 - TODO implement the following:
   [1] - t/extend-defn!
         - We could just recreate the dispatch every time, in the beginning. It would make for slower
-          compilation but faster execution for dynamic dispatch, and quicker time to use. So whenever
-          something extends a `t/defn`, the type overloads have to be put in the right place in the dispatch order. We could find the first place where the inputs are t/<.
+          compilation but faster execution for dynamic dispatch, and quicker time to use.
           - But then you have to trigger a recompilation of everything that depended on that `t/defn`
             because your input-types and output-types have both gotten bigger. Maybe not on that overload
             but still.
             - This will be a more advanced feature. For now we just accept that we might have some odd behavior around extending `t/defn`s.
-        - When you overwrite a `reify` then it's fine as long as the interface class stays the same.
-          Of course, pending auto-recompilation, you'll have to manually recompile its dependents
-          for them to pick up on changes to its type.
   [2] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.
         - t/numerically-integer?
@@ -155,13 +151,14 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - We'll should make a special class or *something* like that to ensure that typed bindings are only
     bound within typed contexts.
   - `t/defn` declaration: `(t/defn >std-fixint > std-fixint?)`
+  - `t/defn` `|` (pre-types)
   - t/defrecord
   - t/def-concrete-type (i.e. `t/deftype`)
   - expressions (`quantum.untyped.core.analyze.expr`)
   - comparison of `t/fn`s is probably possible?
   - t/def
     - TODO what would this even look like?
-  - t/fnt (t/fn; current t/fn might transition to t/fn-spec or whatever?)
+  - t/fn
   - t/ftype
     - conditionally optional arities etc.
   - t/declare

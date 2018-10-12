@@ -338,9 +338,9 @@
   {:adapted-from 'gloss.data.primitives}
   [x , n length?]
   (->> (range n)
-       (mapv (fnt [] (if (pos? (and (<< 1 %) x))
-                         bit-true
-                         bit-false)))))
+       (mapv (t/fn [] (if (pos? (and (<< 1 %) x))
+                          bit-true
+                          bit-false)))))
 
 ;; TODO TYPED
 #_(defnt test*-coll

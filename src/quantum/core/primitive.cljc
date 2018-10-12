@@ -129,11 +129,11 @@
 #?(:clj  ([x (t/and (t/isa? clojure.lang.BigInt)
                     numerically-long?
                     ;; TODO This might be faster than `numerically-long?`
-                  #_(fnt [x ?] (nil? (.bipart x))))] (.lpart x)))
+                  #_(t/fn [x ?] (nil? (.bipart x))))] (.lpart x)))
 #?(:clj  ([x (t/and (t/isa? java.math.BigInteger)
                     numerically-long?
                     ;; TODO This might be faster than `numerically-long?`
-                  #_(fnt [x ?] (< (.bitLength x) 64)))] (.longValue x)))
+                  #_(t/fn [x ?] (< (.bitLength x) 64)))] (.longValue x)))
 #?(:clj  ([x (t/and dn/ratio? numerically-long?)] (-> x .bigIntegerValue .longValue))))
 
 ;; ----- Float ----- ;;

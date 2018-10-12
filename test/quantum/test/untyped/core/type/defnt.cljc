@@ -1096,15 +1096,15 @@
               ([x (t/- tt/primitive? tt/boolean? tt/float? tt/double?)] (>long* x))
               ([x (t/and (t/or tt/double? tt/float?)
                          ;; TODO add this back in
-                         #_(fnt [x (t/or t/double? t/float?)] (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
+                         #_(t/fn [x (t/or t/double? t/float?)] (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
                 (>long* x))
               ([x (t/and (t/isa? clojure.lang.BigInt)
                          ;; TODO add this back in
-                         #_(fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
+                         #_(t/fn [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
                 (.lpart x))
               ([x (t/and (t/isa? java.math.BigInteger)
                          ;; TODO add this back in
-                         #_(fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
+                         #_(t/fn [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
                 (.longValue x))
               ([x tt/ratio?] (-> x >big-integer >long-checked))
               ([x (t/value true)]  1)
@@ -1151,12 +1151,12 @@
                               (.invoke >long*|__4 ~'x))))
 
                         #_[x (t/and (t/or double? float?)
-                                    (fnt [x (t/or double? float?)]
+                                    (t/fn [x (t/or double? float?)]
                                       (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
 
                         #_(def ~'>long|__5|input-types
                           (*<> (t/and double?
-                                      (fnt [x (t/or double? float?)]
+                                      (t/fn [x (t/or double? float?)]
                                         (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))))
                         (def ~'>long|__5
                           (reify double>long
@@ -1166,7 +1166,7 @@
 
                         #_(def ~'>long|__6|input-types
                           (*<> (t/and t/float?
-                                      (fnt [x (t/or double? float?)]
+                                      (t/fn [x (t/or double? float?)]
                                         (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))))
                         (def ~'>long|__6
                           (reify float>long
@@ -1175,22 +1175,22 @@
                               (.invoke >long*|__5 ~'x))))
 
                         #_[(t/and (t/isa? clojure.lang.BigInt)
-                                  (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
+                                  (t/fn [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
 
                         #_(def ~'>long|__7|input-types
                           (*<> (t/and (t/isa? clojure.lang.BigInt)
-                                      (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))))
+                                      (t/fn [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))))
                         (def ~'>long|__7
                           (reify Object>long
                             (~(L 'invoke) [_## ~(O 'x)]
                               (let* [~(tag "clojure.lang.BigInt" 'x) ~'x] ~'(.lpart x)))))
 
                         #_[x (t/and (t/isa? java.math.BigInteger)
-                                    (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
+                                    (t/fn [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
 
                         #_(def ~'>long|__8|input-types
                           (*<> (t/and (t/isa? java.math.BigInteger)
-                                      (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))))
+                                      (t/fn [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))))
                         (def ~'>long|__8
                           (reify Object>long
                             (~(L 'invoke) [_## ~(O 'x)]
@@ -1266,12 +1266,12 @@
                             (t/fn
                               [(t/- tt/boolean? tt/boolean? float? double?)]
                               [(t/and (t/or t/double? t/float?)
-                                      (fnt [x (t/or double? float?)]
+                                      (t/fn [x (t/or double? float?)]
                                         (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
                               [(t/and (t/isa? clojure.lang.BigInt)
-                                      (fnt [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
+                                      (t/fn [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
                               [(t/and (t/isa? java.math.BigInteger)
-                                      (fnt [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
+                                      (t/fn [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
                               [ratio?]
                               [(t/value true)]
                               [(t/value false)]
@@ -1792,31 +1792,33 @@
 
 ;; ===== `extend-defn!` tests ===== ;;
 
-(macroexpand
-  '(self/defn extensible
-     ([a t/double?])))
+(binding [self/*compilation-mode* :test]
+  (macroexpand
+    '(self/defn extensible
+       ([a t/double?]))))
 
 ;; Code
-(do ;; We could keep a global map of defn-symbol to mapping, but if someone deletes the namespace
+(do (declare ~'extensible)
+
+    ;; We could keep a global map of defn-symbol to mapping, but if someone deletes the namespace
     ;; the `t/defn` is interned in, that mapping should go away too.
     ;; We only show this mapping because testing/debug is on. Otherwise the macro would just
     ;; `intern` the var and define it there rather than re-evaluating the types.
-    (def ~'extensible|__mapping
-      (atom [{:id 0 :arg-types [(t/isa? Double)] :out-type t/any?}]))
+    (def ~'extensible|__types-decl
+      (atom [{:id 0 :arg-types [(t/isa? Double)] :output-type t/any?}]))
 
-    (declare ~'extensible)
-    ;; TODO `mapping>arg-types` is `(apply *<> (:arg-types (get @extensible|__mapping 0)))`
-    (def ~'extensible|__0|types (mapping>arg-types ~'extensible|__mapping 0))
+    ;; TODO `types-decl>arg-types` is `(apply *<> (:arg-types (get @extensible|__types 0)))`
+    (def ~'extensible|__0|types (self/types-decl>arg-types ~'extensible|__types-decl 0))
     (def ~'extensible|__0 (reify* [double>Object] (invoke [_0__ a] nil)))
 
-    (intern 'quantum.test.untyped.core.type.defnt
-      (with-meta 'extensible
-        {:quantum.core.type/type
-          (apply t/ftype t/any? (self/mapping>ftype-signatures @extensible|__mapping))})
-      (fn* ([~'x00__]
-             (ifs ((Array/get ~'extensible|__0|types 0) ~'x00__)
-                    (. extensible|__0 invoke x00__)
-                  (unsupported! `extensible [~'x00__] 0))))))
+    ;; Could have done `intern`+`fn*` but JS needs some special things for it to work that may
+    ;; change over time
+    (defn extensible
+      {:quantum.core.type/type (self/types-decl>ftype extensible|__types-decl t/any?)}
+      ([~'x00__]
+        (ifs ((Array/get ~'extensible|__0|types 0) ~'x00__)
+               (. extensible|__0 invoke x00__)
+             (unsupported! `extensible [~'x00__] 0)))))
 
 (testing "Insertion"
   (self/extend-defn! extensible
@@ -1826,21 +1828,21 @@
       ;; `swap!` the mapping outside the code rather than re-evaluating the types.
       ;; To find where to put the overload, we find the first place where the inputs are `t/<`.
       ;; TODO test that when testing/debug mode is off, it doesn't emit this code
-      (reset! extensible|__mapping
-        [{:id 1 :arg-types [(t/isa? Boolean)] :out-type t/any?}
-         {:id 0 :arg-types [(t/isa? Double)]  :out-type t/any?}])
+      (reset! quantum.test.untyped.core.type.defnt/extensible|__types-decl
+        [{:id 1 :arg-types [(t/isa? Boolean)] :output-type t/any?}
+         {:id 0 :arg-types [(t/isa? Double)]  :output-type t/any?}])
 
       ;; It's labeled as `extensible|__1` but internally that's not how it's ordered; it's just
       ;; incrementing based on the size of the overload<->index mapping
       ;; Currently we can't undefine overloads which I think is fine
-      (def ~'extensible|__1|types (mapping>arg-types extensible|__mapping 0))
+      (def ~'extensible|__1|types
+        (self/types-decl>arg-types quantum.test.untyped.core.type.defnt/extensible|__types-decl 0))
       (def ~'extensible|__1 (reify* [boolean>Object] (invoke [_0__ a] nil)))
       ;; The dynamic dispatch is currently redefined with every `extend-defn!`
       ;; We expect that `t/defn` extension will take place in only one thread
       (intern 'quantum.test.untyped.core.type.defnt
         (with-meta 'extensible
-          {:quantum.core.type/type
-            (apply t/ftype t/any? (self/mapping>ftype-signatures @extensible|__mapping))})
+          {:quantum.core.type/type (self/types-decl>ftype extensible|__types-decl t/any?)})
         (fn* ([~'x00__]
                (ifs ((Array/get ~'extensible|__1|types 0) ~'x00__)
                       (. extensible|__1 invoke x00__)

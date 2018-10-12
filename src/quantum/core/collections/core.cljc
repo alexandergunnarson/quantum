@@ -114,15 +114,15 @@
   [n (t/numerically p/int?), xs t/reducible? > t/reducible?]
   (let [n' (>int n)]
     (r/transformer xs
-      (fnt [rf r/rf?]
+      (t/fn [rf r/rf?]
         (let [buffer (java.util.ArrayDeque. n')]
-          (fnt ([] (rf))
-               ([ret _, x _]
-                 (let [ret' (if (identical? (.size buffer) n')
-                                (rf ret (.pop buffer))
-                                ret)]
-                   (.add buffer x)
-                   ret')))))))))
+          (t/fn ([] (rf))
+                ([ret _, x _]
+                  (let [ret' (if (identical? (.size buffer) n')
+                                 (rf ret (.pop buffer))
+                                 ret)]
+                    (.add buffer x)
+                    ret')))))))))
 
 #?(:clj
 (defn taker+
