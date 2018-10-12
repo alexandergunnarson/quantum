@@ -269,16 +269,21 @@
   "Makes the bit at the provided index ->`i` `bit-false`.
    Unchecked w.r.t. the bit index.
    Equivalent to `clojure.core/bit-clear`."
-  {:todo #{"Extend index to non-longs"}}
+  {:incorporated {'clojure.core/bit-clear #inst "2018-10-11"
+                  'cljs.core/bit-clear    #inst "2018-10-11"}
+   :todo #{"Extend index to non-longs"
+           "Extend usage to non-primitives"}}
 #?(:clj  ([x (t/- p/primitive? p/boolean?), i p/long? > (t/type x)] (Numeric/bitClear x i))
    :cljs ([x p/double?, i std-fixint? > (t/assume numerically-int?)] (core/bit-clear x i))))
-
 
 (t/defn ^:inline bit-set-true*
   "Makes the bit at the provided index ->`i` `bit-true`.
    Unchecked w.r.t. the bit index.
    Equivalent to `clojure.core/bit-set`."
-  {:todo #{"Extend index to non-longs"}}
+  {:incorporated {'clojure.core/bit-set #inst "2018-10-11"
+                  'cljs.core/bit-set    #inst "2018-10-11"}
+   :todo #{"Extend index to non-longs"
+           "Extend usage to non-primitives"}}
 #?(:clj  ([x (t/- p/primitive? p/boolean?), i p/long? > (t/type x)] (Numeric/bitSet x i))
    :cljs ([x p/double?, i std/fixint? > (t/assume numerically-int?)] (core/bit-set x i))))
 
@@ -286,7 +291,10 @@
   "Applies `not` to the bit at the provided index ->`i`.
    Unchecked w.r.t. the bit index.
    Equivalent to `clojure.core/bit-flip`."
-  {:todo #{"Extend index to non-longs"}}
+  {:incorporated {'clojure.core/bit-flip #inst "2018-10-11"
+                  'cljs.core/bit-flip    #inst "2018-10-11"}
+   :todo #{"Extend index to non-longs"
+           "Extend usage to non-primitives"}}
 #?(:clj  ([x (t/- p/primitive? p/boolean?), i p/long? > (t/type x)] (Numeric/bitFlip x i))
    :cljs ([x p/double?, i std-fixint? > (t/assume numerically-int?)] (core/bit-flip x i))))
 
@@ -294,7 +302,10 @@
   "Outputs whether the bit at the provided index ->`i` is `bit-true`.
    Unchecked w.r.t. the bit index.
    Equivalent to `clojure.core/bit-test`."
-  {:todo #{"Extend index to non-longs"}}
+  {:incorporated {'clojure.core/bit-test #inst "2018-10-11"
+                  'cljs.core/bit-test    #inst "2018-10-11"}
+   :todo #{"Extend index to non-longs"
+           "Extend usage to non-primitives"}}
 #?(:clj  ([x (t/- p/primitive? p/boolean?), i p/long?     > p/boolean?] (Numeric/bitTest x i))
    :cljs ([x p/double?                    , i std-fixint? > p/boolean?] (core/bit-test x i))))
 
