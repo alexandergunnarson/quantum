@@ -1793,9 +1793,9 @@
 ;; ===== `extend-defn!` tests ===== ;;
 
 (binding [self/*compilation-mode* :test]
-  (macroexpand
-    '(self/defn extensible
-       ([a t/double?]))))
+  (macroexpand '
+    (self/defn extensible
+      ([a t/double?]))))
 
 ;; Code
 (do (declare ~'extensible)
@@ -1820,16 +1820,18 @@
              (unsupported! `extensible [~'x00__] 0)))))
 
 (testing "Insertion"
-  (self/extend-defn! extensible
-    ([a t/boolean?]))
+  (binding [self/*compilation-mode* :test]
+    (macroexpand '
+      (self/extend-defn! extensible
+        ([a t/boolean?]))))
 
   (do ;; We only show this types decl because testing/debug is on. Otherwise the macro would just
-      ;; `swap!` the types decl outside the code rather than re-evaluating the types.
+      ;; `reset!` the types decl outside the code rather than re-evaluating the types.
       ;; To find where to put the overload, we find the first place where the inputs are `t/<`.
       ;; TODO test that when testing/debug mode is off, it doesn't emit this code
       (reset! quantum.test.untyped.core.type.defnt/extensible|__types-decl
-        [{:id 1 :arg-types [(t/isa? Boolean)] :output-type t/any?}
-         {:id 0 :arg-types [(t/isa? Double)]  :output-type t/any?}])
+        [{:name ~(tag ... 'extensible|__1) :arg-types [(t/isa? Boolean)] :output-type t/any?}
+         {:name ~(tag ... 'extensible|__0) :arg-types [(t/isa? Double)]  :output-type t/any?}])
 
       ;; It's labeled as `extensible|__1` but internally that's not how it's ordered; it's just
       ;; incrementing based on the size of the types-decl
@@ -1841,7 +1843,8 @@
       ;; We expect that `t/defn` extension will take place in only one thread
       (intern 'quantum.test.untyped.core.type.defnt
         (with-meta 'extensible
-          {:quantum.core.type/type (self/types-decl>ftype extensible|__types-decl t/any?)})
+          (assoc (meta (var quantum.test.untyped.core.type.defnt/extensible))
+                 :quantum.core.type/type (self/types-decl>ftype extensible|__types-decl t/any?)))
         (fn* ([~'x00__]
                (ifs ((Array/get ~'extensible|__1|types 0) ~'x00__)
                       (. extensible|__1 invoke x00__)

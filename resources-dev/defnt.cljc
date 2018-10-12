@@ -60,12 +60,14 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
   [1] - t/extend-defn!
-        - We could just recreate the dispatch every time, in the beginning. It would make for slower
-          compilation but faster execution for dynamic dispatch, and quicker time to use.
+        - We just recreate the dispatch every time, in the beginning. It makes for slower
+          compilation (?) but faster execution for dynamic dispatch, and quicker time to first use.
           - But then you have to trigger a recompilation of everything that depended on that `t/defn`
             because your input-types and output-types have both gotten bigger. Maybe not on that overload
             but still.
             - This will be a more advanced feature. For now we just accept that we might have some odd behavior around extending `t/defn`s.
+        - It should disallow creating another definition with the same input type combination.
+        - `assert-monotonically-increasing-types!` needs to be enforced
   [2] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.
         - t/numerically-integer?
@@ -173,16 +175,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - Not just a private var for the dynamic dispatch, but needs to be private for purposes of the
         analyzer when doing direct dispatch. Should emit a warning, not just fail.
     - (t/and (t/or a b) c) should -> (t/or (t/and a c) (t/and b c)) for purposes of separating dispatches
-    - t/extend-defn!
-      - `(t/extend-defn! id/>name (^:inline [x namespace?] (-> x .getName id/>name)))`
     - ^:inline
-      - Applicable only if in a typed context and not used as a function
       - if you do (Numeric/bitAnd a b) inline then bitAnd needs to know the primitive type so maybe
         we do the `let*`-binding approach to typing vars?
-      - should be able to be per-arity like so:
-        (^:inline [] ...)
-      - ^:inline set on a function should propagate to all overloads, including ones added via
-        `t/extend-defn!`
       - A good example of inlining:
         (t/def empty?|rf
           (fn/aritoid

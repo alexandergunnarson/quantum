@@ -20,6 +20,7 @@
     [quantum.core.vars             :as var]))
 
 #_"
+- TODO be informed by https://www.researchgate.net/publication/313820944_Empirical_Study_of_Usage_and_Performance_of_Java_Collections
 - TODO incorporate FastUtil
   - FastUtil is the fastest collections library according to http://java-performance.info/hashmap-overview-jdk-fastutil-goldman-sachs-hppc-koloboke-trove-january-2015/
 - TODO notify of changes to:
