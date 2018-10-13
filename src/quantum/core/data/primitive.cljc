@@ -247,7 +247,7 @@
   ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
   )
 
-(t/extend-defn! ccomp/>=
+(macroexpand '(t/extend-defn! ccomp/>=
          (     [x numeric?] true)
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/gte  a b)))
 #?(:clj  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/gte  a b)))
@@ -259,4 +259,4 @@
 #?(:cljs (     [a numeric?                    , b numeric?]                     (cljs.core/>= a b)))
   ;; TODO rest of numbers, but not nil
   ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
-  )
+  ))

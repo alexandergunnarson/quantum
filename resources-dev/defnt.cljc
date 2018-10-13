@@ -59,6 +59,7 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
+  [0] - Reflection warning, /Users/alexander/Code/quantum/src/quantum/core/data/primitive.cljc:250:1 - call to method invoke on quantum.core.compare.core.byte>boolean can't be resolved (no such method).
   [1] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.
         - t/numerically-integer?
