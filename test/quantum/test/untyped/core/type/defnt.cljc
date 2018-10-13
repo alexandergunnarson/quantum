@@ -5,7 +5,7 @@
     [clojure.core                           :as core]
     [quantum.test.untyped.core.type         :as tt]
     [quantum.untyped.core.type.defnt        :as self
-      :refer [fnt unsupported!]]
+      :refer [types-decl>arg-types types-decl>ftype unsupported!]]
     [quantum.untyped.core.data.array
       :refer [*<>]]
     [quantum.untyped.core.form
@@ -52,24 +52,26 @@
 #?(:clj
 (deftest test|pid
   (let [actual
-          (macroexpand '
-            (self/defn pid|test [> (? t/string?)]
-              (->> ^:val (java.lang.management.ManagementFactory/getRuntimeMXBean)
-                         (.getName))))
+          (binding [self/*compilation-mode* :test]
+            (macroexpand '
+              (self/defn pid|test [> (? t/string?)]
+                (->> ^:val (java.lang.management.ManagementFactory/getRuntimeMXBean)
+                           (.getName)))))
         expected
-          ($ (do (declare ~'pid|test)
-                 (def ~(O<> 'pid|test|__0|types) (quantum.untyped.core.data.array/*<>))
-                 (def ~'pid|test|__0
-                   (reify* [>Object]
-                     (~(O 'invoke) [~'_0__]
-                       ~(ST (list '.
-                                 (tag "java.lang.management.RuntimeMXBean"
-                                   '(. java.lang.management.ManagementFactory getRuntimeMXBean))
-                                 'getName)))))
-                 (defn ~'pid|test
-                   {:quantum.core.type/type
-                     (t/ftype t/any? [:> (t/or (t/value nil) (t/isa? String))])}
-                   ([] (. ~(tag (cstr `>Object) 'pid|test|__0) ~'invoke)))))]
+        ($ (do (declare ~'pid|test)
+               (def ~'pid|test|__types
+                 (atom [{:id 0 :arg-types [] :output-type (t/or (t/value nil) (t/isa? String))}]))
+               (def ~(O<> 'pid|test|__0|types) (types-decl>arg-types pid|test|__types 0))
+               (def ~(tag (cstr `>Object) 'pid|test|__0)
+                 (reify* [>Object]
+                   (~(O 'invoke) [~'_0__]
+                     ~(ST (list '.
+                               (tag "java.lang.management.RuntimeMXBean"
+                                 '(. java.lang.management.ManagementFactory getRuntimeMXBean))
+                               'getName)))))
+               (defn ~'pid|test
+                 {:quantum.core.type/type (types-decl>ftype pid|test|__types t/any?)}
+                 ([] (. pid|test|__0 ~'invoke)))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
@@ -80,79 +82,91 @@
 
 (deftest test|identity|uninlined
   (let [actual
-          (macroexpand '
-            (self/defn identity|uninlined ([x t/any? > (t/type x)] x)))
+          (binding [self/*compilation-mode* :test]
+            (macroexpand '
+              (self/defn identity|uninlined ([x t/any? > (t/type x)] x))))
         expected
           (case (env-lang)
             :clj
-              ($ (do (declare ~'identity|uninlined)
+            ($ (do (declare ~'identity|uninlined)
+                   (def ~'identity|uninlined|__types
+                     (atom [{:id 0 :arg-types [(t/isa? Boolean)]   :output-type (t/isa? Boolean)}
+                            {:id 1 :arg-types [(t/isa? Byte)]      :output-type (t/isa? Byte)}
+                            {:id 2 :arg-types [(t/isa? Short)]     :output-type (t/isa? Short)}
+                            {:id 3 :arg-types [(t/isa? Character)] :output-type (t/isa? Character)}
+                            {:id 4 :arg-types [(t/isa? Integer)]   :output-type (t/isa? Integer)}
+                            {:id 5 :arg-types [(t/isa? Long)]      :output-type (t/isa? Long)}
+                            {:id 6 :arg-types [(t/isa? Float)]     :output-type (t/isa? Float)}
+                            {:id 7 :arg-types [(t/isa? Double)]    :output-type (t/isa? Double)}
+                            {:id 8 :arg-types [t/any?]             :output-type t/any?}]))
 
-                     ;; [x t/any?]
+                   ;; [x t/any?]
 
-                     (def ~(O<> 'identity|uninlined|__0|types) (*<> (t/isa? Boolean)))
-                     (def ~'identity|uninlined|__0
-                       (reify* [boolean>boolean] (~(B 'invoke) [~'_0__ ~(B 'x)] ~'x)))
-                     (def ~(O<> 'identity|uninlined|__1|types) (*<> (t/isa? Byte)))
-                     (def ~'identity|uninlined|__1
-                       (reify* [byte>byte]       (~(Y 'invoke) [~'_1__ ~(Y 'x)] ~'x)))
-                     (def ~(O<> 'identity|uninlined|__2|types) (*<> (t/isa? Short)))
-                     (def ~'identity|uninlined|__2
-                       (reify* [short>short]     (~(S 'invoke) [~'_2__ ~(S 'x)] ~'x)))
-                     (def ~(O<> 'identity|uninlined|__3|types) (*<> (t/isa? Character)))
-                     (def ~'identity|uninlined|__3
-                       (reify* [char>char]       (~(C 'invoke) [~'_3__ ~(C 'x)] ~'x)))
-                     (def ~(O<> 'identity|uninlined|__4|types) (*<> (t/isa? Integer)))
-                     (def ~'identity|uninlined|__4
-                       (reify* [int>int]         (~(I 'invoke) [~'_4__ ~(I 'x)] ~'x)))
-                     (def ~(O<> 'identity|uninlined|__5|types) (*<> (t/isa? Long)))
-                     (def ~'identity|uninlined|__5
-                       (reify* [long>long]       (~(L 'invoke) [~'_5__ ~(L 'x)] ~'x)))
-                     (def ~(O<> 'identity|uninlined|__6|types) (*<> (t/isa? Float)))
-                     (def ~'identity|uninlined|__6
-                       (reify* [float>float]     (~(F 'invoke) [~'_6__ ~(F 'x)] ~'x)))
-                     (def ~(O<> 'identity|uninlined|__7|types) (*<> (t/isa? Double)))
-                     (def ~'identity|uninlined|__7
-                       (reify* [double>double]   (~(D 'invoke) [~'_7__ ~(D 'x)] ~'x)))
-                     (def ~(O<> 'identity|uninlined|__8|types) (*<> t/any?))
-                     (def ~'identity|uninlined|__8
-                       (reify* [Object>Object]   (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
+                   (def ~(O<> 'identity|uninlined|__0|types)
+                     (types-decl>arg-types identity|uninlined|__types 0))
+                   (def ~(tag (cstr `boolean>boolean) 'identity|uninlined|__0)
+                     (reify* [boolean>boolean] (~(B 'invoke) [~'_0__ ~(B 'x)] ~'x)))
+                   (def ~(O<> 'identity|uninlined|__1|types)
+                     (types-decl>arg-types identity|uninlined|__types 1))
+                   (def ~(tag (cstr `byte>byte) 'identity|uninlined|__1)
+                     (reify* [byte>byte]       (~(Y 'invoke) [~'_1__ ~(Y 'x)] ~'x)))
+                   (def ~(O<> 'identity|uninlined|__2|types)
+                     (types-decl>arg-types identity|uninlined|__types 2))
+                   (def ~(tag (cstr `short>short) 'identity|uninlined|__2)
+                     (reify* [short>short]     (~(S 'invoke) [~'_2__ ~(S 'x)] ~'x)))
+                   (def ~(O<> 'identity|uninlined|__3|types)
+                     (types-decl>arg-types identity|uninlined|__types 3))
+                   (def ~(tag (cstr `char>char) 'identity|uninlined|__3)
+                     (reify* [char>char]       (~(C 'invoke) [~'_3__ ~(C 'x)] ~'x)))
+                   (def ~(O<> 'identity|uninlined|__4|types)
+                     (types-decl>arg-types identity|uninlined|__types 4))
+                   (def ~(tag (cstr `int>int) 'identity|uninlined|__4)
+                     (reify* [int>int]         (~(I 'invoke) [~'_4__ ~(I 'x)] ~'x)))
+                   (def ~(O<> 'identity|uninlined|__5|types)
+                     (types-decl>arg-types identity|uninlined|__types 5))
+                   (def ~(tag (cstr `long>long) 'identity|uninlined|__5)
+                     (reify* [long>long]       (~(L 'invoke) [~'_5__ ~(L 'x)] ~'x)))
+                   (def ~(O<> 'identity|uninlined|__6|types)
+                     (types-decl>arg-types identity|uninlined|__types 6))
+                   (def ~(tag (cstr `float>float) 'identity|uninlined|__6)
+                     (reify* [float>float]     (~(F 'invoke) [~'_6__ ~(F 'x)] ~'x)))
+                   (def ~(O<> 'identity|uninlined|__7|types)
+                     (types-decl>arg-types identity|uninlined|__types 7))
+                   (def ~(tag (cstr `double>double) 'identity|uninlined|__7)
+                     (reify* [double>double]   (~(D 'invoke) [~'_7__ ~(D 'x)] ~'x)))
+                   (def ~(O<> 'identity|uninlined|__8|types)
+                     (types-decl>arg-types identity|uninlined|__types 8))
+                   (def ~(tag (cstr `Object>Object) 'identity|uninlined|__8)
+                     (reify* [Object>Object]   (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
 
-                     (defn ~'identity|uninlined
-                       {:quantum.core.type/type
-                         (t/ftype t/any? [(t/isa? Boolean)   :> (t/isa? Boolean)]
-                                         [(t/isa? Byte)      :> (t/isa? Byte)]
-                                         [(t/isa? Short)     :> (t/isa? Short)]
-                                         [(t/isa? Character) :> (t/isa? Character)]
-                                         [(t/isa? Integer)   :> (t/isa? Integer)]
-                                         [(t/isa? Long)      :> (t/isa? Long)]
-                                         [(t/isa? Float)     :> (t/isa? Float)]
-                                         [(t/isa? Double)    :> (t/isa? Double)]
-                                         [t/any?             :> t/any?])}
-                ([~'x00__]
-                  (ifs
-                     ((Array/get ~'identity|uninlined|__0|types 0) ~'x00__)
-                       (. ~(tag (cstr `boolean>boolean) 'identity|uninlined|__0) ~'invoke ~'x00__)
-                     ((Array/get ~'identity|uninlined|__1|types 0) ~'x00__)
-                       (. ~(tag (cstr `byte>byte)       'identity|uninlined|__1) ~'invoke ~'x00__)
-                     ((Array/get ~'identity|uninlined|__2|types 0) ~'x00__)
-                       (. ~(tag (cstr `short>short)     'identity|uninlined|__2) ~'invoke ~'x00__)
-                     ((Array/get ~'identity|uninlined|__3|types 0) ~'x00__)
-                       (. ~(tag (cstr `char>char)       'identity|uninlined|__3) ~'invoke ~'x00__)
-                     ((Array/get ~'identity|uninlined|__4|types 0) ~'x00__)
-                       (. ~(tag (cstr `int>int)         'identity|uninlined|__4) ~'invoke ~'x00__)
-                     ((Array/get ~'identity|uninlined|__5|types 0) ~'x00__)
-                       (. ~(tag (cstr `long>long)       'identity|uninlined|__5) ~'invoke ~'x00__)
-                     ((Array/get ~'identity|uninlined|__6|types 0) ~'x00__)
-                       (. ~(tag (cstr `float>float)     'identity|uninlined|__6) ~'invoke ~'x00__)
-                     ((Array/get ~'identity|uninlined|__7|types 0) ~'x00__)
-                       (. ~(tag (cstr `double>double)   'identity|uninlined|__7) ~'invoke ~'x00__)
-                     ((Array/get ~'identity|uninlined|__8|types 0) ~'x00__)
-                       (. ~(tag (cstr `Object>Object)   'identity|uninlined|__8) ~'invoke ~'x00__)
-                       ;; TODO no need for `unsupported!` because it will always get a valid branch
-                       (unsupported! `identity|uninlined [~'x00__] 0))))))
+                   (defn ~'identity|uninlined
+                     {:quantum.core.type/type
+                       (self/types-decl>ftype identity|uninlined|__types t/any?)}
+              ([~'x00__]
+                (ifs
+                   ((Array/get identity|uninlined|__0|types 0) ~'x00__)
+                     (. identity|uninlined|__0 ~'invoke ~'x00__)
+                   ((Array/get identity|uninlined|__1|types 0) ~'x00__)
+                     (. identity|uninlined|__1 ~'invoke ~'x00__)
+                   ((Array/get identity|uninlined|__2|types 0) ~'x00__)
+                     (. identity|uninlined|__2 ~'invoke ~'x00__)
+                   ((Array/get identity|uninlined|__3|types 0) ~'x00__)
+                     (. identity|uninlined|__3 ~'invoke ~'x00__)
+                   ((Array/get identity|uninlined|__4|types 0) ~'x00__)
+                     (. identity|uninlined|__4 ~'invoke ~'x00__)
+                   ((Array/get identity|uninlined|__5|types 0) ~'x00__)
+                     (. identity|uninlined|__5 ~'invoke ~'x00__)
+                   ((Array/get identity|uninlined|__6|types 0) ~'x00__)
+                     (. identity|uninlined|__6 ~'invoke ~'x00__)
+                   ((Array/get identity|uninlined|__7|types 0) ~'x00__)
+                     (. identity|uninlined|__7 ~'invoke ~'x00__)
+                   ((Array/get identity|uninlined|__8|types 0) ~'x00__)
+                     (. identity|uninlined|__8 ~'invoke ~'x00__)
+                     ;; TODO no need for `unsupported!` because it will always get a valid branch
+                     (unsupported! `identity|uninlined [~'x00__] 0))))))
             :cljs
-              ;; Direct dispatch will be simple functions, not `reify`s
-              ($ (do (defn ~'identity|uninlined [~'x] ~'x))))]
+            ;; Direct dispatch will be simple functions, not `reify`s
+            ($ (do (defn ~'identity|uninlined [~'x] ~'x))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
@@ -1804,16 +1818,16 @@
     ;; the `t/defn` is interned in, that mapping should go away too.
     ;; We only show this types decl because testing/debug is on. Otherwise the macro would just
     ;; `intern` the var and define it there rather than re-evaluating the types.
-    (def ~'extensible|__types-decl
+    (def ~'extensible|__types
       (atom [{:id 0 :arg-types [(t/isa? Double)] :output-type t/any?}]))
 
-    (def ~'extensible|__0|types (self/types-decl>arg-types ~'extensible|__types-decl 0))
+    (def ~'extensible|__0|types (self/types-decl>arg-types ~'extensible|__types 0))
     (def ~'extensible|__0 (reify* [double>Object] (invoke [_0__ a] nil)))
 
     ;; Could have done `intern`+`fn*` but JS needs some special things for it to work that may
     ;; change over time
     (defn extensible
-      {:quantum.core.type/type (self/types-decl>ftype extensible|__types-decl t/any?)}
+      {:quantum.core.type/type (self/types-decl>ftype extensible|__types t/any?)}
       ([~'x00__]
         (ifs ((Array/get ~'extensible|__0|types 0) ~'x00__)
                (. extensible|__0 invoke x00__)
@@ -1829,7 +1843,7 @@
       ;; `reset!` the types decl outside the code rather than re-evaluating the types.
       ;; To find where to put the overload, we find the first place where the inputs are `t/<`.
       ;; TODO test that when testing/debug mode is off, it doesn't emit this code
-      (reset! quantum.test.untyped.core.type.defnt/extensible|__types-decl
+      (reset! quantum.test.untyped.core.type.defnt/extensible|__types
         [{:name ~(tag ... 'extensible|__1) :arg-types [(t/isa? Boolean)] :output-type t/any?}
          {:name ~(tag ... 'extensible|__0) :arg-types [(t/isa? Double)]  :output-type t/any?}])
 
@@ -1837,14 +1851,14 @@
       ;; incrementing based on the size of the types-decl
       ;; Currently we can't undefine overloads which I think is fine
       (def ~'extensible|__1|types
-        (self/types-decl>arg-types quantum.test.untyped.core.type.defnt/extensible|__types-decl 0))
+        (self/types-decl>arg-types quantum.test.untyped.core.type.defnt/extensible|__types 0))
       (def ~'extensible|__1 (reify* [boolean>Object] (invoke [_0__ a] nil)))
       ;; The dynamic dispatch is currently redefined with every `extend-defn!`
       ;; We expect that `t/defn` extension will take place in only one thread
       (intern 'quantum.test.untyped.core.type.defnt
         (with-meta 'extensible
           (assoc (meta (var quantum.test.untyped.core.type.defnt/extensible))
-                 :quantum.core.type/type (self/types-decl>ftype extensible|__types-decl t/any?)))
+                 :quantum.core.type/type (self/types-decl>ftype extensible|__types t/any?)))
         (fn* ([~'x00__]
                (ifs ((Array/get ~'extensible|__1|types 0) ~'x00__)
                       (. extensible|__1 invoke x00__)

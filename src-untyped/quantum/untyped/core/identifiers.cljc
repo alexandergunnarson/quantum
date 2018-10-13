@@ -68,7 +68,11 @@
 
 (defn qualify
   #?(:clj ([sym] (qualify *ns* sym)))
-          ([?ns sym] (symbol (?ns->name ?ns) (name sym))))
+          ([ns-or-sym sym]
+            (let [qualifier (cond (symbol? ns-or-sym)    (-> ns-or-sym         name)
+                                  (namespace? ns-or-sym) (-> ns-or-sym ns-name name)
+                                  :else                  (uerr/not-supported! `qualify ns-or-sym))]
+              (symbol qualifier (name sym)))))
 
 (defn qualify|dot [sym ns-]
   (symbol (str (?ns->name ns-) "." (name sym))))

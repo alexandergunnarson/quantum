@@ -9,8 +9,7 @@
     [quantum.untyped.core.vars
       :refer [defalias defaliases]]))
 
-(defalias udefnt/fnt) ; TODO TYPED rename
-(defalias udefnt/defn)
+(defaliases udefnt fn defn extend-defn!)
 
 (defaliases ut
   type

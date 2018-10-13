@@ -59,15 +59,14 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  [1] - t/extend-defn!
-        - We just recreate the dispatch every time, in the beginning. It makes for slower
-          compilation (?) but faster execution for dynamic dispatch, and quicker time to first use.
-          - But then you have to trigger a recompilation of everything that depended on that `t/defn`
-            because your input-types and output-types have both gotten bigger. Maybe not on that overload
-            but still.
-            - This will be a more advanced feature. For now we just accept that we might have some odd behavior around extending `t/defn`s.
-        - It should disallow creating another definition with the same input type combination.
-        - `assert-monotonically-increasing-types!` needs to be enforced
+  - t/extend-defn!
+    [ ] Should we trigger a recompilation of everything that depended on that `t/defn` because the
+        input-types and output-types will have both gotten bigger? (Maybe not on that overload but
+        still.)
+        - This will be a more advanced feature. For now we just accept that we might have some odd
+          behavior around extending `t/defn`s.
+    [1a] It should disallow creating another definition with the same input type combination.
+    [1b] `assert-monotonically-increasing-types!` needs to be enforced
   [2] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.
         - t/numerically-integer?

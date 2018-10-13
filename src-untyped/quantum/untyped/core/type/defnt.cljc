@@ -240,7 +240,7 @@
         body|pre-analyze|with-casts
           (->> arg-classes
                (reducei (c/fn [body ^Class c i|arg]
-                          (if (.isPrimitive c)
+                          (if (or (.isPrimitive c) (= c java.lang.Object))
                               body
                               (let [arg-sym (get arg-bindings i|arg)]
                                 `(let* [~(ufth/with-type-hint arg-sym (.getName c)) ~arg-sym]
@@ -347,7 +347,7 @@
 ;; ----- Type declarations ----- ;;
 
 (defns >types-decl-ref [{:keys [fn|ns-name _, fn|types-decl-name _]} ::fn|globals]
-  (var-get (resolve (symbol (name fn|ns-name) (name fn|types-decl-name)))))
+  (var-get (resolve (uid/qualify fn|ns-name fn|types-decl-name))))
 
 (c/defn types-decl>arg-types
   [*types-decl #_(atom-of (vec-of ::types-decl-datum)), overload-index #_index?
@@ -365,7 +365,7 @@
 
 (defns- >types-decl
   [{:as opts       :keys [kind _]} ::opts
-   {:as fn|globals :keys [fn|name _ fn|types-decl-name _]} ::fn|globals
+   {:as fn|globals :keys [fn|ns-name _, fn|name _ fn|types-decl-name _]} ::fn|globals
    overloads (s/vec-of ::overload)
    > ::types-decl]
   (let [types-decl-existing-data (when (= kind :extend-defn!) (deref (>types-decl-ref fn|globals)))
@@ -409,8 +409,7 @@
     (if (-> opts :compilation-mode (= :test))
         {:name fn|types-decl-name
          :form (if (= kind :extend-defn!)
-                   `(reset! ~(symbol (>name *ns*) (>name fn|types-decl-name))
-                            ~(>form types-decl-data))
+                   `(reset! ~(uid/qualify fn|ns-name fn|types-decl-name) ~(>form types-decl-data))
                    `(def ~fn|types-decl-name (atom ~(>form types-decl-data))))
          :data types-decl-data
          :indexed-current-data types-decl-indexed-current-data}
@@ -434,12 +433,13 @@
 (defns- >overload-types-decl
   "The evaluated `form` of each overload-types-decl is an array of non-primitivized types that the
    dynamic dispatch uses to dispatch off input types."
-  [{:as fn|globals :keys [fn|name _, fn|types-decl-name _]} ::fn|globals
+  [{:as fn|globals :keys [fn|ns-name _, fn|name _, fn|types-decl-name _]} ::fn|globals
    arg-types (s/vec-of t/type?), overload|id ::overload|id, overload-index index?
    > ::overload-types-decl]
   (let [decl-name (>overload-types-decl|name fn|name overload|id)
         form      `(def ~(ufth/with-type-hint decl-name "[Ljava.lang.Object;")
-                        (types-decl>arg-types ~fn|types-decl-name ~overload-index))]
+                        (types-decl>arg-types
+                          ~(uid/qualify fn|ns-name fn|types-decl-name) ~overload-index))]
     {:form form :name decl-name}))
 
 ;; ----- Direct dispatch: putting it all together ----- ;;
@@ -508,7 +508,7 @@
               (c/fn
                 ([] (transient [`ifs]))
                 ([ret]
-                  (-> ret (conj! `(unsupported! '~(symbol (name fn|ns-name) (name fn|name))
+                  (-> ret (conj! `(unsupported! '~(uid/qualify fn|ns-name fn|name)
                                                 ~arglist ~(deref *i|arg)))
                           persistent!
                           seq))
@@ -537,12 +537,13 @@
                            body    (>dynamic-dispatch|body-for-arity
                                      fn|globals arglist types-decl-data-for-arity)]
                        (list arglist body)))))
-       ftype-form `(self/types-decl>ftype ~fn|types-decl-name ~fn|output-type)]
+       ftype-form `(types-decl>ftype ~(uid/qualify fn|ns-name fn|types-decl-name)
+                                     ~(>form fn|output-type))]
   (if (= kind :extend-defn!)
      `(intern (quote ~fn|ns-name)
         (with-meta (quote ~fn|name)
           ;; TODO determine whether CLJS needs (update-in m [:jsdoc] conj "@param {...*} var_args")
-          (assoc (meta (var ~(symbol (>name fn|ns-name) (>name fn|name))))
+          (assoc (meta (var ~(uid/qualify fn|ns-name fn|name)))
                  :quantum.core.type/type ~ftype-form))
         (fn* ~@overload-forms))
      `(c/defn ~fn|name ~(assoc fn|meta :quantum.core.type/type ftype-form) ~@overload-forms))))
@@ -713,7 +714,7 @@
         unanalyzed-overloads (overloads-bases>unanalyzed-overloads
                                overloads-bases kind fn|output-type|form fn|output-type)
         fn|type              (unanalyzed-overloads>fn|type unanalyzed-overloads fn|output-type)
-        fn|types-decl-name   (symbol (str fn|name "|__types-decl"))
+        fn|types-decl-name   (symbol (str fn|name "|__types"))
         fn|globals           (kw-map fn|ns-name fn|name fn|meta fn|type fn|output-type|form
                                      fn|output-type fn|types-decl-name)
         ;; Specifically overloads that were generated during this execution of this function

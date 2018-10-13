@@ -60,8 +60,9 @@
 ;; ===== Qualification ===== ;;
 
 (t/defn qualify > symbol?
-  #?(:clj ([sym symbol?] (qualify *ns* sym)))
-          ([?ns (t/? ??/namespace?) sym symbol?] (>symbol (?ns>name ?ns) (>name sym))))
+#?(:clj ([sym    symbol?] (qualify *ns* sym)))
+        ([ns-sym symbol?       sym symbol?] (>symbol (>name ns-sym) (>name sym)))
+#?(:clj ([ns-val ??/namespace? sym symbol?] (>symbol (>name ns-val) (>name sym)))))
 
 (t/defn qualify|dot > symbol? [sym symbol? ns-val ??/namespace?]
   (>symbol (>str (?ns>name ns-val) "." (>name sym))))
