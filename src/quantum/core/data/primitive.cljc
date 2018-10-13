@@ -177,6 +177,24 @@
           ([x (t/or float?   (t/value Float))]                             float-bits)])
           ([x (t/or double?  #?(:clj Double :cljs js/Number))]             double-bits))
 
+;; ===== Conversion ===== ;;
+;; Note that numeric-primitive conversions do not go here (but may be found in
+;; `quantum.core.data.numeric`) because they take as inputs and produce outputs things that are
+;; within a numeric range.
+
+;; ----- Boolean ----- ;;
+
+;; TODO CLJS
+;; TODO rethink — is everything that's a 0 false and everything that's a 1 a true? Or is it just
+;; 0's that are false? Etc.
+(t/defn ^:inline >boolean
+  "Converts input to a boolean.
+   Differs from asking whether something is truthy/falsey."
+  > boolean?
+         ([x boolean?] x)          ;; For purposes of Clojure intrinsics
+#?(:clj  ([x (t/or long? double?)] (-> x clojure.lang.Numbers/isZero Numeric/not)))
+#?(:clj  ([x (t/- primitive? boolean? long? double?)] (-> x Numeric/isZero Numeric/not))))
+
 ;; ===== Extensions ===== ;;
 
 #?(:clj

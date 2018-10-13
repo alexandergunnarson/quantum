@@ -122,7 +122,7 @@
 (def comparison? #?(:clj ut/int? :cljs ut/double?))
 
 (t/defn ^:inline compare
-  "Logical (not numeric) comparison.
+  "Logical (not exclusively numeric) comparison.
 
    When ->`a` is logically 'less than'    ->`b`, outputs a negative number.
    When ->`a` is logically 'equal to'     ->`b`, outputs zero.

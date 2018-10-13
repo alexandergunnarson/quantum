@@ -63,12 +63,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   [1] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.
         - t/numerically-integer?
-        - In order to have this, you have to have comparisons in place
-          - In order for comparisons to be in place you need primitives to compare by
-            - For primitive conversions you need comparisons and `numerically` to determine ranges
-              - This is why we can have core.data.primitive and core.primitive
-          - core.data.primitive
-            - just type definitions and characteristics
+        - Primitive conversions not requiring checks can go in data.primitive
           - core.data.numeric (requires data.primitive)
             - numeric definitions
             - numeric ranges
@@ -192,6 +187,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - t/deftype
   - t/dotyped
   - t/extend-defn!
+    [ ] Ability to add output type restriction after the fact?
     [ ] Should we trigger a recompilation of everything that depended on that `t/defn` because the
         input-types and output-types will have both gotten bigger? (Maybe not on that overload but
         still.)
