@@ -26,7 +26,9 @@
           ;; TODO TYPED excise
           [quantum.untyped.core.logic
             :refer [ifs]]
-          [quantum.untyped.core.type       :as ut])
+          [quantum.untyped.core.type       :as ut]
+          ;; TODO TYPED excise
+          [quantum.untyped.core.vars       :as var])
 #?(:clj (:import
           [quantum.core Numeric])))
 
@@ -115,9 +117,9 @@
   "That which is comparable to its own 'concrete type' (i.e. class)."
   #?(:clj  (t/isa? java.lang.Comparable)
            ;; TODO other things are comparable; really it depends on the two objects in question
-     :cljs (t/or p/nil? (t/isa? cljs.core/IComparable))))
+     :cljs (t/or ut/nil? (t/isa? cljs.core/IComparable))))
 
-(def comparison? #?(:clj p/int? :cljs p/double?))
+(def comparison? #?(:clj ut/int? :cljs ut/double?))
 
 (t/defn ^:inline compare
   "Logical (not numeric) comparison.
@@ -168,6 +170,8 @@ static public int compare(Object k1, Object k2){
 ; ----- `comp<` ----- ;
 
 #?(:clj  (defnt' ^boolean comp<-bin
+           "Returns true if args are in monotonically increasing order according to `compare`,
+            otherwise false."
            ([^comparable? x] true)
            ([#{byte char short int long float double} x
              #{byte char short int long float double} y] (< x y))
@@ -178,12 +182,6 @@ static public int compare(Object k1, Object k2){
            ; TODO numbers and nil
            )
    :cljs (defn comp<-bin ([x] true) ([x y] (< (compare x y) 0))))
-
-#?(:clj (variadic-predicate-proxy
-          ^{:doc "Returns true if args are in monotonically increasing order
-                  according to `compare`, otherwise false."}
-          comp< comp<-bin))
-#?(:clj (variadic-predicate-proxy comp<& comp<-bin&))
 
 ; ----- `comp<=` ----- ;
 
@@ -206,17 +204,6 @@ static public int compare(Object k1, Object k2){
 #?(:clj (variadic-predicate-proxy comp<=& comp<=-bin&))
 
 ; ===== `>` ===== ;
-
-#?(:clj  (defnt' ^boolean >-bin
-           ([#{byte char short int long float double} x] true)
-           ([#{byte char short int long float double} x
-             #{byte char short int long float double} y] (Numeric/gt x y))
-           ; TODO numbers, but not nil
-           )
-   :cljs (defn >-bin ([x] true) ([x y] (core/> x y))))
-
-#?(:clj (variadic-predicate-proxy > >-bin))
-#?(:clj (variadic-predicate-proxy >& >-bin&))
 
 ; ----- `comp>` ----- ;
 
@@ -333,26 +320,6 @@ static public int compare(Object k1, Object k2){
           ^{:doc "Returns the greatest of the arguments according to
                   `compare`, preferring later values."}
           comp-max comp-max-bin))
-#?(:clj (variadic-proxy comp-max& comp-max-bin&))
-
-; ----- `comp-max` ----- ;
-
-; ===== PRIMITIVE `max`|`min` ===== ;
-
-#?(:clj (defnt' ^byte   min-byte   ([] Byte/MIN_VALUE          ) ([^byte   a] a) ([^byte   a ^byte   b] (min a b))))
-#?(:clj (defnt' ^byte   max-byte   ([] Byte/MAX_VALUE          ) ([^byte   a] a) ([^byte   a ^byte   b] (max a b))))
-#?(:clj (defnt' ^char   min-char   ([] Character/MIN_VALUE     ) ([^char   a] a) ([^char   a ^char   b] (min a b))))
-#?(:clj (defnt' ^char   max-char   ([] Character/MAX_VALUE     ) ([^char   a] a) ([^char   a ^char   b] (max a b))))
-#?(:clj (defnt' ^short  min-short  ([] Short/MIN_VALUE         ) ([^short  a] a) ([^short  a ^short  b] (min a b))))
-#?(:clj (defnt' ^short  max-short  ([] Short/MAX_VALUE         ) ([^short  a] a) ([^short  a ^short  b] (max a b))))
-#?(:clj (defnt' ^int    min-int    ([] Integer/MIN_VALUE       ) ([^int    a] a) ([^int    a ^int    b] (min a b))))
-#?(:clj (defnt' ^int    max-int    ([] Integer/MAX_VALUE       ) ([^int    a] a) ([^int    a ^int    b] (max a b))))
-#?(:clj (defnt' ^long   min-long   ([] Long/MIN_VALUE          ) ([^long   a] a) ([^long   a ^long   b] (min a b))))
-#?(:clj (defnt' ^long   max-long   ([] Long/MAX_VALUE          ) ([^long   a] a) ([^long   a ^long   b] (max a b))))
-#?(:clj (defnt' ^float  min-float  ([] Float/NEGATIVE_INFINITY ) ([^float  a] a) ([^float  a ^float  b] (min a b))))
-#?(:clj (defnt' ^float  max-float  ([] Float/POSITIVE_INFINITY ) ([^float  a] a) ([^float  a ^float  b] (max a b))))
-#?(:clj (defnt' ^double min-double ([] Double/NEGATIVE_INFINITY) ([^double a] a) ([^double a ^double b] (min a b))))
-#?(:clj (defnt' ^double max-double ([] Double/POSITIVE_INFINITY) ([^double a] a) ([^double a ^double b] (max a b))))
 
 ; ===== extreme-`key` ===== ;
 

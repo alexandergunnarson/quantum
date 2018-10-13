@@ -146,7 +146,7 @@
              :quantum.core.specs/docstring   (s/? :quantum.core.specs/docstring)
              :quantum.core.specs/pre-meta    :quantum.core.specs/pre-meta
              :quantum.core.defnt/output-spec :quantum.core.defnt/output-spec
-             :quantum.core.defnt/overloads   :quantum.core.defnt/overloads))
+             :quantum.core.defnt/overloads   (s/? :quantum.core.defnt/overloads)))
          (uss/fn-like|postchecks|gen :quantum.core.defnt/overloads)
          :quantum.core.defnt/postchecks))
 

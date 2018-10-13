@@ -145,20 +145,21 @@
 (defn fn-like|postchecks|gen [overloads-ident]
   (s/and (s/conformer
            (fn [v]
-             (let [[overloads-k overloads-v] (get v overloads-ident)
-                   overloads
-                    (-> (case overloads-k
-                          :overload-1 {:overloads [overloads-v]}
-                          :overload-n overloads-v)
-                        (update :overloads
-                          (fnl mapv
-                            (fn1 update :body
-                              (fn [[k v]]
-                                (case k
-                                  :body         {:body v}
-                                  :prepost+body v))))))]
-               (assoc v :quantum.core.specs/post-meta (:quantum.core.specs/post-meta overloads)
-                        overloads-ident               (get overloads :overloads)))))
+             (let [[overloads-k overloads-v :as overloads] (get v overloads-ident)
+                   overloads'
+                    (when overloads
+                      (-> (case overloads-k
+                            :overload-1 {:overloads [overloads-v]}
+                            :overload-n overloads-v)
+                          (update :overloads
+                            (fnl mapv
+                              (fn1 update :body
+                                (fn [[k v]]
+                                  (case k
+                                    :body         {:body v}
+                                    :prepost+body v)))))))]
+               (assoc v :quantum.core.specs/post-meta (:quantum.core.specs/post-meta overloads')
+                        overloads-ident               (get overloads' :overloads)))))
          :quantum.core.specs/fn|unique-doc
          :quantum.core.specs/fn|unique-meta
          ;; TODO validate metadata like return value etc.

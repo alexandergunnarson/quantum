@@ -718,9 +718,6 @@
                                  v
                                  (err! "Cannot extend a `t/defn` that has not been defined"
                                        {:sym fn|extended-name})))
-        gen-gensym-base      (ufgen/>reproducible-gensym|generator)
-        gen-gensym           (c/fn [x] (symbol (str (gen-gensym-base x) "__")))
-        opts                 (kw-map compilation-mode gen-gensym kind lang)
         inline?              (-> (if (= kind :extend-defn!)
                                      (-> fn|var meta :inline)
                                      (:inline fn|meta))
@@ -732,31 +729,35 @@
                                  fn|meta)
         fn|output-type|form  (or (second output-spec) `t/any?)
         ;; TODO this needs to be analyzed for dependent types referring to local vars
-        fn|output-type       (eval fn|output-type|form)
-        unanalyzed-overloads (overloads-bases>unanalyzed-overloads
-                               overloads-bases kind fn|output-type|form fn|output-type)
-        fn|type              (type-data>ftype unanalyzed-overloads fn|output-type)
-        fn|types-decl-name   (symbol (str fn|name "|__types"))
-        fn|globals           (kw-map fn|ns-name fn|name fn|meta fn|type fn|output-type|form
-                                     fn|output-type fn|types-decl-name)
-        ;; Specifically overloads that were generated during this execution of this function
-        overloads            (->> unanalyzed-overloads
-                                  (uc/map #(unanalyzed-overload>overload % opts fn|globals)))
-        types-decl           (>types-decl opts fn|globals overloads)
-        direct-dispatch      (>direct-dispatch opts fn|globals overloads types-decl)
-        dynamic-dispatch     (>dynamic-dispatch-fn|form opts fn|globals types-decl)
-        fn-codelist
-          (case lang
-            :clj  (->> `[~@(when (not= kind :extend-defn!) [`(declare ~fn|name)]) ; for recursion
-                         ~@(some-> (:form types-decl) vector)
-                         ~@(:form direct-dispatch)
-                         ~dynamic-dispatch]
-                        (remove nil?))
-            :cljs (TODO))
-        code (case kind
-               :fn                   (TODO)
-               (:defn :extend-defn!) `(~'do ~@fn-codelist))]
-    code))
+        fn|output-type       (eval fn|output-type|form)]
+        (println "overloads-bases" overloads-bases)
+    (if (empty? overloads-bases)
+        `(declare ~(with-meta fn|name
+                     (assoc fn|meta :quantum.core.type/type `(t/ftype ~(>form fn|output-type)))))
+        (let [gen-gensym-base      (ufgen/>reproducible-gensym|generator)
+              gen-gensym           (c/fn [x] (symbol (str (gen-gensym-base x) "__")))
+              opts                 (kw-map compilation-mode gen-gensym kind lang)
+              unanalyzed-overloads (overloads-bases>unanalyzed-overloads
+                                     overloads-bases kind fn|output-type|form fn|output-type)
+              fn|type              (type-data>ftype unanalyzed-overloads fn|output-type)
+              fn|types-decl-name   (symbol (str fn|name "|__types"))
+              fn|globals           (kw-map fn|ns-name fn|name fn|meta fn|type fn|output-type|form
+                                           fn|output-type fn|types-decl-name)
+              ;; Specifically overloads that were generated during this execution of this function
+              overloads            (->> unanalyzed-overloads
+                                        (uc/map #(unanalyzed-overload>overload % opts fn|globals)))
+              types-decl           (>types-decl opts fn|globals overloads)
+              direct-dispatch      (>direct-dispatch opts fn|globals overloads types-decl)
+              dynamic-dispatch     (>dynamic-dispatch-fn|form opts fn|globals types-decl)
+              fn-codelist
+                (->> `[~@(when (not= kind :extend-defn!) [`(declare ~fn|name)]) ; For recursion
+                       ~@(some-> (:form types-decl) vector)
+                       ~@(:form direct-dispatch)
+                       ~dynamic-dispatch]
+                       (remove nil?))]
+          (case kind
+            :fn                   (TODO)
+            (:defn :extend-defn!) `(do ~@fn-codelist))))))
 
 #?(:clj
 (defmacro fn

@@ -425,9 +425,8 @@
 
 ;; ===== `t/ftype` ===== ;;
 
-(defn ftype [out-type arity & arities]
+(defn ftype [out-type & arities-form]
   (let [name- nil
-        arities-form (cons arity arities)
         arities (->> arities-form
                      (uc/map+ (c/fn [arity-form]
                                 (-> (us/conform ::fn-type|arity arity-form)

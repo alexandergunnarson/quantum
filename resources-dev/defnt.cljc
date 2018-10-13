@@ -59,15 +59,7 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  - t/extend-defn!
-    [ ] Should we trigger a recompilation of everything that depended on that `t/defn` because the
-        input-types and output-types will have both gotten bigger? (Maybe not on that overload but
-        still.)
-        - This will be a more advanced feature. For now we just accept that we might have some odd
-          behavior around extending `t/defn`s.
-    [1a] It should warn when creating another definition with the same input type combination.
-    [1b] `assert-monotonically-increasing-types!` needs to be enforced
-  [2] - t/numerically : e.g. a double representing exactly what a float is able to represent
+  [1] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.
         - t/numerically-integer?
         - In order to have this, you have to have comparisons in place
@@ -80,26 +72,26 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
             - numeric definitions
             - numeric ranges
             - numeric characteristics
-  [ ] - t/value-of
-        - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
-  [ ] - (comp/t== x)
-         - dependent type such that the passed input must be identical to x
-  [3] - t/input-type
+  [2] - t/input-type
         - `(t/input-type >namespace :?)` meaning the possible input types to the first input to
           `>namespace`
         - `(t/input-type reduce :_ :_ :?)`
         - This is pretty simple with the current dependent type system
         - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
-  [4] - t/output-type
+  [3] - t/output-type
         - This is pretty simple with the current dependent type system
-  [ ] - Non-boxed `def`s: `(var/def- min-float  (Numeric/negate Float/MAX_VALUE))`
-  [5] - Direct dispatch needs to actually work correctly in `t/defn`
-  [6] - No trailing `>` means `> ?`
+  [4] - Direct dispatch needs to actually work correctly in `t/defn`
+  [5] - No trailing `>` means `> ?`
       - ? : type inference
         - use logic programming and variable unification e.g. `?1` `?2` ?
         - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
           ([n dn/std-integer?, xs dc/counted?] (count xs))
           ([n dn/std-integer?, xs ?] ...)
+  [ ] - t/value-of
+        - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
+  [ ] - (comp/t== x)
+         - dependent type such that the passed input must be identical to x
+  [ ] - Non-boxed `def`s: `(var/def- min-float  (Numeric/negate Float/MAX_VALUE))`
   - `(t/validate x (t/* t/string?))` for `(t/* t/string?)` needs to be more performant
     - Don't re-create type on each call
   - Type Logic and Predicates
@@ -198,11 +190,16 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - t/defmacro
   - t/deftype
   - t/dotyped
+  - t/extend-defn!
+    [ ] Should we trigger a recompilation of everything that depended on that `t/defn` because the
+        input-types and output-types will have both gotten bigger? (Maybe not on that overload but
+        still.)
+        - This will be a more advanced feature. For now we just accept that we might have some odd
+          behavior around extending `t/defn`s.
   - lazy compilation especially around `t/input-type`
   - equivalence of typed predicates (i.e. that which is `t/<=` `(t/fn [x t/any? :> p/boolean?])`)
     to types:
     - [xs (t/fn [x (t/isa? clojure.lang.Range)] ...)]
-  - No return value means that it should infer
 - NOTE on namespace organization:
   - The initial definition of conversion functions belongs in the namespace that their destination
     type belongs in, and it may be extended in every namespace in which there is a source type.
