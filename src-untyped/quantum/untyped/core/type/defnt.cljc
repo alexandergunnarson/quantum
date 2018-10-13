@@ -237,16 +237,7 @@
                          (<- (cond-> (not= kind :extend-defn!)
                                      (assoc fn|name recursive-ast-node-reference))))
         arg-classes (->> arg-types (uc/map type>class))
-        body|pre-analyze|with-casts
-          (->> arg-classes
-               (reducei (c/fn [body ^Class c i|arg]
-                          (if (or (.isPrimitive c) (= c java.lang.Object))
-                              body
-                              (let [arg-sym (get arg-bindings i|arg)]
-                                `(let* [~(ufth/with-type-hint arg-sym (.getName c)) ~arg-sym]
-                                   ~body))))
-                 (ufgen/?wrap-do body-codelist|pre-analyze)))
-        body-node   (uana/analyze env body|pre-analyze|with-casts)
+        body-node   (uana/analyze env (ufgen/?wrap-do body-codelist|pre-analyze))
         hint-arg|fn (c/fn [i arg-binding]
                       (ufth/with-type-hint arg-binding
                         (ufth/>fn-arglist-tag

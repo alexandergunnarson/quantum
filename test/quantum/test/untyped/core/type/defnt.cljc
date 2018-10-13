@@ -140,8 +140,7 @@
                      (reify* [Object>Object]   (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
 
                    (defn ~'identity|uninlined
-                     {:quantum.core.type/type
-                       (self/types-decl>ftype identity|uninlined|__types t/any?)}
+                     {:quantum.core.type/type (types-decl>ftype identity|uninlined|__types t/any?)}
               ([~'x00__]
                 (ifs
                    ((Array/get identity|uninlined|__0|types 0) ~'x00__)
@@ -175,48 +174,46 @@
 
 (deftest test|name
   (let [actual
-          (macroexpand '
-            (self/defn #_:inline name > t/string?
-                       ([x t/string?] x)
-              #?(:clj  ([x (t/isa? Named)  > (t/* t/string?)] (.getName x))
-                 :cljs ([x (t/isa? INamed) > (t/* t/string?)] (-name x)))))
+          (binding [self/*compilation-mode* :test]
+            (macroexpand '
+              (self/defn #_:inline name > t/string?
+                         ([x t/string?] x)
+                #?(:clj  ([x (t/isa? Named)  > (t/* t/string?)] (.getName x))
+                   :cljs ([x (t/isa? INamed) > (t/* t/string?)] (-name x))))))
         expected
-          (case (env-lang)
-            :clj
-              ($ (do (declare ~'name)
+        (case (env-lang)
+          :clj
+          ($ (do (declare ~'name)
+                 (def ~'name|__types
+                  (atom [{:id 0 :arg-types [(t/isa? String)] :output-type (t/isa? String)}
+                         {:id 1 :arg-types [(t/isa? Named)]  :output-type (t/* (t/isa? String))}]))
 
-                     ;; [x t/string?]
+                 ;; [x t/string?]
 
-                     (def ~(O<> 'name|__0|types) (*<> (t/isa? java.lang.String)))
-                     (def ~'name|__0
-                       (reify* [Object>Object]
-                         (~(O 'invoke) [~'_0__ ~(O 'x)] ~(ST 'x))))
+                 (def ~(O<> 'name|__0|types) (types-decl>arg-types name|__types 0))
+                 (def ~(tag (cstr `Object>Object) 'name|__0)
+                   (reify* [Object>Object] (~(O 'invoke) [~'_0__ ~(O 'x)] ~(ST 'x))))
 
-                     ;; [x (t/isa? Named)] > (t/* t/string?)
+                 ;; [x (t/isa? Named)] > (t/* t/string?)
 
-                     (def ~(O<> 'name|__1|types) (*<> (t/isa? Named)))
-                     (def ~'name|__1
-                       (reify* [Object>Object]
-                         (~(O 'invoke) [~'_1__ ~(O 'x)]
-                           (t/validate ~(ST (list '. (tag "clojure.lang.Named" 'x) 'getName))
-                                       ~'(t/* t/string?)))))
+                 (def ~(O<> 'name|__1|types) (types-decl>arg-types name|__types 1))
+                 (def ~(tag (cstr `Object>Object) 'name|__1)
+                   (reify* [Object>Object]
+                     (~(O 'invoke) [~'_1__ ~(O 'x)]
+                       (t/validate ~(ST (list '. (tag "clojure.lang.Named" 'x) 'getName))
+                                   ~'(t/* t/string?)))))
 
-                     (defn ~'name
-                       {:quantum.core.type/type
-                         (t/ftype (t/isa? String)
-                                  [(t/isa? String) :> (t/isa? String)]
-                                  [(t/isa? Named)  :> (t/* (t/isa? String))])}
-                       ([~'x00__]
-                         (ifs ((Array/get ~'name|__0|types 0) ~'x00__)
-                                (. ~(tag (cstr `Object>Object) 'name|__0) ~'invoke ~'x00__)
-                              ((Array/get ~'name|__1|types 0) ~'x00__)
-                                (. ~(tag (cstr `Object>Object) 'name|__1) ~'invoke ~'x00__)
-                              (unsupported! `name [~'x00__] 0))))))
-            :cljs
-              ($ (do (defn ~'name [~'x00__]
-                     (ifs (t/string? x)         x
-                          (satisfies? INamed x) (-name x)
-                          (unsupported! `name [~'x00__] 0))))))]
+                 (defn ~'name
+                   {:quantum.core.type/type (types-decl>ftype name|__types (t/isa? String))}
+                   ([~'x00__]
+                     (ifs ((Array/get name|__0|types 0) ~'x00__) (. name|__0 ~'invoke ~'x00__)
+                          ((Array/get name|__1|types 0) ~'x00__) (. name|__1 ~'invoke ~'x00__)
+                          (unsupported! `name [~'x00__] 0))))))
+          :cljs
+          ($ (do (defn ~'name [~'x00__]
+                 (ifs (t/string? x)         x
+                      (satisfies? INamed x) (-name x)
+                      (unsupported! `name [~'x00__] 0))))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
@@ -231,79 +228,78 @@
 
 (deftest test|some?
   (let [actual
-          ;; Perhaps silly in ClojureScript, but avoids boxing in Clojure
-          (macroexpand '
-            (self/defn #_:inline some? > t/boolean?
-              ([x t/nil?] false)
-              ;; Implicitly, `(- t/any? t/nil?)`, so `t/val?`
-              ([x t/any?] true)))
+          (binding [self/*compilation-mode* :test]
+            (macroexpand '
+              (self/defn #_:inline some? > t/boolean?
+                ([x t/nil?] false)
+                ;; Implicitly, `(- t/any? t/nil?)`, so `t/val?`
+                ([x t/any?] true))))
         expected
         (case (env-lang)
           :clj
           ($ (do (declare ~'some?)
+                 (def ~'some?|__types
+                   (atom [{:id 0 :arg-types [(t/value nil)]      :output-type (t/value false)}
+                          {:id 1 :arg-types [(t/isa? Boolean)]   :output-type (t/value true)}
+                          {:id 2 :arg-types [(t/isa? Byte)]      :output-type (t/value true)}
+                          {:id 3 :arg-types [(t/isa? Short)]     :output-type (t/value true)}
+                          {:id 4 :arg-types [(t/isa? Character)] :output-type (t/value true)}
+                          {:id 5 :arg-types [(t/isa? Integer)]   :output-type (t/value true)}
+                          {:id 6 :arg-types [(t/isa? Long)]      :output-type (t/value true)}
+                          {:id 7 :arg-types [(t/isa? Float)]     :output-type (t/value true)}
+                          {:id 8 :arg-types [(t/isa? Double)]    :output-type (t/value true)}
+                          {:id 9 :arg-types [t/any?]             :output-type (t/value true)}]))
 
                  ;; [x t/nil?]
 
-                 (def ~(O<> 'some?|__0|types) (*<> (t/value nil)))
-                 (def ~'some?|__0
-                   (reify* [Object>boolean]  (~(B 'invoke) [~'_0__ ~(O 'x)] false)))
+                 (def ~(O<> 'some?|__0|types) (types-decl>arg-types some?|__types 0))
+                 (def ~(tag (cstr `Object>boolean) 'some?|__0)
+                   (reify* [Object>boolean] (~(B 'invoke) [~'_0__ ~(O 'x)] false)))
 
                  ;; [x t/any?]
 
-                 (def ~(O<> 'some?|__1|types) (*<> (t/isa? Boolean)))
-                 (def ~'some?|__1 (reify* [boolean>boolean] (~(B 'invoke) [~'_1__ ~(B 'x)] true)))
-                 (def ~(O<> 'some?|__2|types) (*<> (t/isa? Byte)))
-                 (def ~'some?|__2 (reify* [byte>boolean]    (~(B 'invoke) [~'_2__ ~(Y 'x)] true)))
-                 (def ~(O<> 'some?|__3|types) (*<> (t/isa? Short)))
-                 (def ~'some?|__3 (reify* [short>boolean]   (~(B 'invoke) [~'_3__ ~(S 'x)] true)))
-                 (def ~(O<> 'some?|__4|types) (*<> (t/isa? Character)))
-                 (def ~'some?|__4 (reify* [char>boolean]    (~(B 'invoke) [~'_4__ ~(C 'x)] true)))
-                 (def ~(O<> 'some?|__5|types) (*<> (t/isa? Integer)))
-                 (def ~'some?|__5 (reify* [int>boolean]     (~(B 'invoke) [~'_5__ ~(I 'x)] true)))
-                 (def ~(O<> 'some?|__6|types) (*<> (t/isa? Long)))
-                 (def ~'some?|__6 (reify* [long>boolean]    (~(B 'invoke) [~'_6__ ~(L 'x)] true)))
-                 (def ~(O<> 'some?|__7|types) (*<> (t/isa? Float)))
-                 (def ~'some?|__7 (reify* [float>boolean]   (~(B 'invoke) [~'_7__ ~(F 'x)] true)))
-                 (def ~(O<> 'some?|__8|types) (*<> (t/isa? Double)))
-                 (def ~'some?|__8 (reify* [double>boolean]  (~(B 'invoke) [~'_8__ ~(D 'x)] true)))
-                 (def ~(O<> 'some?|__9|types) (*<> t/any?))
-                 (def ~'some?|__9 (reify* [Object>boolean]  (~(B 'invoke) [~'_9__ ~(O 'x)] true)))
+                 (def ~(O<> 'some?|__1|types) (types-decl>arg-types some?|__types 1))
+                 (def ~(tag (cstr `boolean>boolean) 'some?|__1)
+                   (reify* [boolean>boolean] (~(B 'invoke) [~'_1__ ~(B 'x)] true)))
+                 (def ~(O<> 'some?|__2|types) (types-decl>arg-types some?|__types 2))
+                 (def ~(tag (cstr `byte>boolean) 'some?|__2)
+                   (reify* [byte>boolean]    (~(B 'invoke) [~'_2__ ~(Y 'x)] true)))
+                 (def ~(O<> 'some?|__3|types) (types-decl>arg-types some?|__types 3))
+                 (def ~(tag (cstr `short>boolean) 'some?|__3)
+                   (reify* [short>boolean]   (~(B 'invoke) [~'_3__ ~(S 'x)] true)))
+                 (def ~(O<> 'some?|__4|types) (types-decl>arg-types some?|__types 4))
+                 (def ~(tag (cstr `char>boolean) 'some?|__4)
+                   (reify* [char>boolean]    (~(B 'invoke) [~'_4__ ~(C 'x)] true)))
+                 (def ~(O<> 'some?|__5|types) (types-decl>arg-types some?|__types 5))
+                 (def ~(tag (cstr `int>boolean) 'some?|__5)
+                   (reify* [int>boolean]     (~(B 'invoke) [~'_5__ ~(I 'x)] true)))
+                 (def ~(O<> 'some?|__6|types) (types-decl>arg-types some?|__types 6))
+                 (def ~(tag (cstr `long>boolean) 'some?|__6)
+                   (reify* [long>boolean]    (~(B 'invoke) [~'_6__ ~(L 'x)] true)))
+                 (def ~(O<> 'some?|__7|types) (types-decl>arg-types some?|__types 7))
+                 (def ~(tag (cstr `float>boolean) 'some?|__7)
+                   (reify* [float>boolean]   (~(B 'invoke) [~'_7__ ~(F 'x)] true)))
+                 (def ~(O<> 'some?|__8|types) (types-decl>arg-types some?|__types 8))
+                 (def ~(tag (cstr `double>boolean) 'some?|__8)
+                   (reify* [double>boolean]  (~(B 'invoke) [~'_8__ ~(D 'x)] true)))
+                 (def ~(O<> 'some?|__9|types) (types-decl>arg-types some?|__types 9))
+                 (def ~(tag (cstr `Object>boolean) 'some?|__9)
+                   (reify* [Object>boolean]  (~(B 'invoke) [~'_9__ ~(O 'x)] true)))
 
                  (defn ~'some?
-                   {:quantum.core.type/type
-                     (t/ftype (t/isa? Boolean)
-                              [(t/value nil)      :> (t/isa? Boolean)]
-                              [(t/isa? Boolean)   :> (t/isa? Boolean)]
-                              [(t/isa? Byte)      :> (t/isa? Boolean)]
-                              [(t/isa? Short)     :> (t/isa? Boolean)]
-                              [(t/isa? Character) :> (t/isa? Boolean)]
-                              [(t/isa? Integer)   :> (t/isa? Boolean)]
-                              [(t/isa? Long)      :> (t/isa? Boolean)]
-                              [(t/isa? Float)     :> (t/isa? Boolean)]
-                              [(t/isa? Double)    :> (t/isa? Boolean)]
-                              [t/any?             :> (t/isa? Boolean)])}
+                   {:quantum.core.type/type (types-decl>ftype some?|__types (t/isa? Boolean))}
                    ([~'x00__]
-                     (ifs ((Array/get ~'some?|__0|types 0) ~'x00__)
-                            (. ~(tag (cstr `Object>boolean)  'some?|__0) ~'invoke ~'x00__)
+                     (ifs ((Array/get some?|__0|types 0) ~'x00__) (. some?|__0 ~'invoke ~'x00__)
                           ;; TODO eliminate these checks below because they're not needed
-                          ((Array/get ~'some?|__1|types 0) ~'x00__)
-                            (. ~(tag (cstr `boolean>boolean) 'some?|__1) ~'invoke ~'x00__)
-                          ((Array/get ~'some?|__2|types 0) ~'x00__)
-                            (. ~(tag (cstr `byte>boolean)    'some?|__2) ~'invoke ~'x00__)
-                          ((Array/get ~'some?|__3|types 0) ~'x00__)
-                            (. ~(tag (cstr `short>boolean)   'some?|__3) ~'invoke ~'x00__)
-                          ((Array/get ~'some?|__4|types 0) ~'x00__)
-                            (. ~(tag (cstr `char>boolean)    'some?|__4) ~'invoke ~'x00__)
-                          ((Array/get ~'some?|__5|types 0) ~'x00__)
-                            (. ~(tag (cstr `int>boolean)     'some?|__5) ~'invoke ~'x00__)
-                          ((Array/get ~'some?|__6|types 0) ~'x00__)
-                            (. ~(tag (cstr `long>boolean)    'some?|__6) ~'invoke ~'x00__)
-                          ((Array/get ~'some?|__7|types 0) ~'x00__)
-                            (. ~(tag (cstr `float>boolean)   'some?|__7) ~'invoke ~'x00__)
-                          ((Array/get ~'some?|__8|types 0) ~'x00__)
-                            (. ~(tag (cstr `double>boolean)  'some?|__8) ~'invoke ~'x00__)
-                          ((Array/get ~'some?|__9|types 0) ~'x00__)
-                            (. ~(tag (cstr `Object>boolean)  'some?|__9) ~'invoke ~'x00__)
+                          ((Array/get some?|__1|types 0) ~'x00__) (. some?|__1 ~'invoke ~'x00__)
+                          ((Array/get some?|__2|types 0) ~'x00__) (. some?|__2 ~'invoke ~'x00__)
+                          ((Array/get some?|__3|types 0) ~'x00__) (. some?|__3 ~'invoke ~'x00__)
+                          ((Array/get some?|__4|types 0) ~'x00__) (. some?|__4 ~'invoke ~'x00__)
+                          ((Array/get some?|__5|types 0) ~'x00__) (. some?|__5 ~'invoke ~'x00__)
+                          ((Array/get some?|__6|types 0) ~'x00__) (. some?|__6 ~'invoke ~'x00__)
+                          ((Array/get some?|__7|types 0) ~'x00__) (. some?|__7 ~'invoke ~'x00__)
+                          ((Array/get some?|__8|types 0) ~'x00__) (. some?|__8 ~'invoke ~'x00__)
+                          ((Array/get some?|__9|types 0) ~'x00__) (. some?|__9 ~'invoke ~'x00__)
                           (unsupported! `some? [~'x00__] 0))))))
           :cljs
           ($ (do (defn ~'some?| [~'x]
