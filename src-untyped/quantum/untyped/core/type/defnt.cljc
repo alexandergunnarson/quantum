@@ -272,6 +272,58 @@
             (err! "Class cannot contain pattern" {:class c :pattern illegal-pattern})
             (-> c >name (str/replace "." "|"))))))
 
+;; ===== Arg type comparison ===== ;;
+
+(c/defn compare-arg-types [t0 #_t/type?, t1 #_t/type? #_> #_ucomp/comparison?]
+  (if-let [c0 (uana/sort-guide t0)]
+    (if-let [c1 (uana/sort-guide t1)]
+      (ifs (< c0 c1) -1 (> c0 c1) 1 0)
+      -1)
+    (if-let [c1 (uana/sort-guide t1)]
+      1
+      (uset/normalize-comparison (t/compare t0 t1)))))
+
+(c/defn compare-args-types [arg-types0 #_(s/vec-of t/type?) arg-types1 #_(s/vec-of t/type?)]
+  (let [ct-comparison (compare (count arg-types0) (count arg-types1))]
+    (if (zero? ct-comparison)
+        (reduce-2
+          (c/fn [^long c t0 t1]
+            (let [c' (long (compare-arg-types t0 t1))]
+              (case c'
+                -1 (case c  1 (reduced 0) c')
+                 0 c
+                 1 (case c -1 (reduced 0) c'))))
+          0
+          arg-types0 arg-types1)
+        ct-comparison)))
+
+;; TODO spec
+(c/defn assert-monotonically-increasing-types!
+  "Asserts that each type in an overload of the same arity and arg-position are in monotonically
+   increasing order in terms of `t/compare`.
+
+   Since its inputs are sorted via `compare-args-types`, this only need check the last overload of
+   `unanalyzed-overload-seq-accum` and the first overload of `unanalyzed-overload-seq`."
+  [unanalyzed-overload-seq-accum #_(s/seq-of ::unanalyzed-overload)
+   unanalyzed-overload-seq       #_(s/seq-of ::unanalyzed-overload)
+   i|overload-basis              #_index?]
+  (when-not (or (empty? unanalyzed-overload-seq-accum) (empty? unanalyzed-overload-seq))
+    (let [prev-overload (uc/last  unanalyzed-overload-seq-accum)
+          overload      (uc/first unanalyzed-overload-seq)]
+      (reducei-2
+        (c/fn [_ arg|type|prev arg|type i|arg]
+          (when ;; NOTE could use `compare-arg-types` here instead of `t/compare` if we want a more
+                ;; efficient combinatoric tree dispatch
+                (= 1 (t/compare arg|type|prev arg|type))
+            ;; TODO provide code context, line number, etc.
+            (err! (istr "At overload ~{i|overload-basis}, arg ~{i|arg}: type is not in monotonically increasing order in terms of `t/compare`")
+                  (umap/om :prev-overload prev-overload
+                           :overload      overload
+                           :prev-type     arg|type|prev
+                           :type          arg|type))))
+        (:arg-types prev-overload)
+        (:arg-types overload)))))
+
 ;; ===== Direct dispatch ===== ;;
 
 ;; ----- Direct dispatch: `reify` ---- ;;
@@ -345,14 +397,17 @@
    #_> #_(objects-of type?)]
   (apply uarr/*<> (:arg-types (get @*types-decl overload-index))))
 
+(c/defn type-data>ftype [type-data #_(vec-of ::types-decl-datum), fn|output-type #_t/type?]
+  (->> type-data
+       (uc/lmap (c/fn [{:keys [arg-types pre-type output-type]}]
+             (cond-> arg-types
+               pre-type    (conj :| pre-type)
+               output-type (conj :> output-type))))
+       (apply t/ftype fn|output-type)))
+
 (c/defn types-decl>ftype
   [*types-decl #_(atom-of (vec-of ::types-decl-datum)), fn|output-type #_t/type? #_> #_(vec-of ...)]
-  (->> @*types-decl
-       (uc/lmap (c/fn [{:keys [arg-types pre-type output-type]}]
-                  (cond-> arg-types
-                    pre-type    (conj :| pre-type)
-                    output-type (conj :> output-type))))
-       (apply t/ftype fn|output-type)))
+  (type-data>ftype @*types-decl fn|output-type))
 
 (c/defn- dedupe-types-decl-data [fn|ns-name fn|name types-decl-data]
   (reduce (let [*prev-datum (volatile! nil)]
@@ -566,60 +621,6 @@
 
 ;; ===== End dynamic dispatch ===== ;;
 
-;; ===== Arg type comparison ===== ;;
-
-(c/defn compare-arg-types [t0 #_t/type?, t1 #_t/type? #_> #_ucomp/comparison?]
-  (if-let [c0 (uana/sort-guide t0)]
-    (if-let [c1 (uana/sort-guide t1)]
-      (ifs (< c0 c1) -1 (> c0 c1) 1 0)
-      -1)
-    (if-let [c1 (uana/sort-guide t1)]
-      1
-      (uset/normalize-comparison (t/compare t0 t1)))))
-
-(c/defn compare-args-types [arg-types0 #_(s/vec-of t/type?) arg-types1 #_(s/vec-of t/type?)]
-  (let [ct-comparison (compare (count arg-types0) (count arg-types1))]
-    (if (zero? ct-comparison)
-        (reduce-2
-          (c/fn [^long c t0 t1]
-            (let [c' (long (compare-arg-types t0 t1))]
-              (case c'
-                -1 (case c  1 (reduced 0) c')
-                 0 c
-                 1 (case c -1 (reduced 0) c'))))
-          0
-          arg-types0 arg-types1)
-        ct-comparison)))
-
-;; TODO spec
-(c/defn assert-monotonically-increasing-types!
-  "Asserts that each type in an overload of the same arity and arg-position are in monotonically
-   increasing order in terms of `t/compare`.
-
-   Since its inputs are sorted via `compare-args-types`, this only need check the last overload of
-   `unanalyzed-overload-seq-accum` and the first overload of `unanalyzed-overload-seq`."
-  [unanalyzed-overload-seq-accum #_(s/seq-of ::unanalyzed-overload)
-   unanalyzed-overload-seq       #_(s/seq-of ::unanalyzed-overload)
-   i|overload-basis              #_index?]
-  (when-not (or (empty? unanalyzed-overload-seq-accum) (empty? unanalyzed-overload-seq))
-    (let [prev-overload (uc/last  unanalyzed-overload-seq-accum)
-          overload      (uc/first unanalyzed-overload-seq)]
-      (reducei-2
-        (c/fn [_ arg|type|prev arg|type i|arg]
-          (when ;; NOTE could use `compare-arg-types` here instead of `t/compare` if we want a more
-                ;; efficient combinatoric tree dispatch
-                (= 1 (t/compare arg|type|prev arg|type))
-            ;; TODO provide code context, line number, etc.
-            (err! (istr "At overload ~{i|overload-basis}, arg ~{i|arg}: type is not in monotonically increasing order in terms of `t/compare`")
-                  (umap/om :prev-overload prev-overload
-                           :overload      overload
-                           :prev-type     arg|type|prev
-                           :type          arg|type))))
-        (:arg-types prev-overload)
-        (:arg-types overload)))))
-
-;; ===== End arg type comparison ===== ;;
-
 (defns- overloads-basis>unanalyzed-overload-seq
   [{:as in {args                      [:args    _]
             varargs                   [:varargs _]
@@ -712,11 +713,16 @@
         fn|name              (if (= kind :extend-defn!)
                                  (-> fn|extended-name >name symbol)
                                  fn|name)
+        fn|var               (when (= kind :extend-defn!)
+                               (if-let [v (uvar/resolve *ns* fn|extended-name)]
+                                 v
+                                 (err! "Cannot extend a `t/defn` that has not been defined"
+                                       {:sym fn|extended-name})))
         gen-gensym-base      (ufgen/>reproducible-gensym|generator)
         gen-gensym           (c/fn [x] (symbol (str (gen-gensym-base x) "__")))
         opts                 (kw-map compilation-mode gen-gensym kind lang)
         inline?              (-> (if (= kind :extend-defn!)
-                                     (-> (uvar/resolve *ns* fn|extended-name) meta :inline)
+                                     (-> fn|var meta :inline)
                                      (:inline fn|meta))
                                  (s/validate (t/? t/boolean?)))
         fn|meta              (if inline?
@@ -729,7 +735,7 @@
         fn|output-type       (eval fn|output-type|form)
         unanalyzed-overloads (overloads-bases>unanalyzed-overloads
                                overloads-bases kind fn|output-type|form fn|output-type)
-        fn|type              (unanalyzed-overloads>fn|type unanalyzed-overloads fn|output-type)
+        fn|type              (type-data>ftype unanalyzed-overloads fn|output-type)
         fn|types-decl-name   (symbol (str fn|name "|__types"))
         fn|globals           (kw-map fn|ns-name fn|name fn|meta fn|type fn|output-type|form
                                      fn|output-type fn|types-decl-name)

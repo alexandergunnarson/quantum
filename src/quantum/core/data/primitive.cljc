@@ -137,7 +137,6 @@
 #?(:clj (var/def- min-float  (Numeric/negate Float/MAX_VALUE)))
         (var/def- min-double (- #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
 
-;; TODO TYPED for some reason it's not figuring out the type of `min-float` and `min-double`
 (t/defn ^:inline >min-value
   #?(:clj ([x byte?   > (type x)] Byte/MIN_VALUE))
   #?(:clj ([x short?  > (type x)] Short/MIN_VALUE))

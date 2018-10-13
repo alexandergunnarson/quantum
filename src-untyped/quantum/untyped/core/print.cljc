@@ -39,10 +39,8 @@
 (defn ppr-hints [x] (binding [*print-meta* true] (ppr x))) ; TODO this isn't right
 
 (defn ppr-error [x]
-  #?(:clj (let [pr-data-to-str? @uerr/*pr-data-to-str?]
-            (println (str "EXCEPTION" (when-not pr-data-to-str? " TRACE + MESSAGE") ":"))
-            (print (io.aviso.exception/format-exception x {:properties false}))
-            (when-not pr-data-to-str?
+  #?(:clj (do (println (str "EXCEPTION. TRACE + MESSAGE:"))
+              (print (io.aviso.exception/format-exception x {:properties false}))
               (let [e (>err x)
                     e (or (:cause e) e)]
                 (println "--------------------")
@@ -51,7 +49,7 @@
                                    (into (array-map))
                                    not-empty)]
                   (println "EXCEPTION DATA:")
-                  (ppr e'))))) ; TODO fix so it doesn't print "empty: false"
+                  (ppr e')))) ; TODO fix so it doesn't print "empty: false"
      :cljs (ppr x)))
 
 (defalias uerr/ppr-str)

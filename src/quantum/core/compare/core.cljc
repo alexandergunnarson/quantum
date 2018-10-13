@@ -22,11 +22,11 @@
             :refer [->num ->num&]]
           ;; TODO TYPED excise
         #_[quantum.core.data.numeric       :as dn]
-          [quantum.core.data.primitive     :as p]
           [quantum.core.type               :as t]
           ;; TODO TYPED excise
           [quantum.untyped.core.logic
-            :refer [ifs]])
+            :refer [ifs]]
+          [quantum.untyped.core.type       :as ut])
 #?(:clj (:import
           [quantum.core Numeric])))
 
@@ -51,7 +51,7 @@
   {:incorporated '{clojure.lang.Util/identical "9/27/2018"
                    clojure.core/identical?     "9/27/2018"
                    cljs.core/identical?        "9/27/2018"}}
-  > p/boolean?
+  > ut/boolean?
          ([x t/any?] true) ; everything is self-identical
 #?(:clj  ([a t/ref?, b t/ref?] (clojure.lang.Util/identical a b))
    :cljs ([a t/any?, b t/any?] (cljs.core/identical? a b))))
@@ -59,8 +59,8 @@
 ;; TODO add variadic arity
 (t/defn ^:inline not==
   "Tests identity-inequality."
-  > p/boolean?
-         ([x t/any?] false) ; everything is self-identical
+  > ut/boolean?
+         ([x t/any?] false) ; nothing is self-non-identical
 #?(:clj  ([a t/ref?, b t/ref?] (Numeric/nonIdentical a b))
    :cljs ([a t/any?, b t/any?] (js* "(~{} !== ~{})" a b))))
 
@@ -70,7 +70,7 @@
   {:incorporated '{clojure.lang.Util/equiv "9/27/2018"
                    clojure.core/=          "9/27/2018"
                    cljs.core/=             "9/27/2018"}}
-  > p/boolean?
+  > ut/boolean?
   ([x t/any?] true)) ; everything is self-equal
 
 ;; TODO add variadic arity
@@ -78,36 +78,36 @@
   "Tests value-inequality."
   {:incorporated '{clojure.core/not= "9/27/2018"
                    cljs.core/not=    "9/27/2018"}}
-  > p/boolean?
-  ([x t/any?] false)) ; everything is self-equal
+  > ut/boolean?
+  ([x t/any?] false)) ; nothing is self-unequal
 
 ; ===== `<` ===== ;
 
 ;; TODO add variadic arity
 (t/defn ^:inline <
   "Numeric less-than comparison."
-  > p/boolean?)
+  > ut/boolean?)
 
 ; ===== `<=` ===== ;
 
 ;; TODO add variadic arity
 (t/defn ^:inline <=
   "Numeric less-than-or-value-equal comparison."
-  > p/boolean?)
+  > ut/boolean?)
 
 ; ===== `>` ===== ;
 
 ;; TODO add variadic arity
 (t/defn ^:inline >
   "Numeric greater-than comparison."
-  > p/boolean?)
+  > ut/boolean?)
 
 ; ===== `>=` ===== ;
 
 ;; TODO add variadic arity
 (t/defn ^:inline >=
   "Numeric greater-than-or-value-equal comparison."
-  > p/boolean?)
+  > ut/boolean?)
 
 ; ===== `compare` ===== ;
 
