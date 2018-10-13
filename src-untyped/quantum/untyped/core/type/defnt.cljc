@@ -105,13 +105,14 @@
  ;; Technically it's partially analyzed — its type definitions are analyzed (with the exception of
  ;; requests for type inference) while its body is not.
  (s/def ::unanalyzed-overload
-   (s/kv {:arg-bindings              (s/vec-of t/any?)
-          :varargs-binding           t/any?
-          :arg-types|form            (s/vec-of t/any?)
-          :arg-types                 (s/vec-of t/type?)
-          :output-type|form          t/any?
-          :output-type               t/type?
-          :body-codelist|pre-analyze t/any?}))
+   (s/kv {:arglist-form|unanalyzed  t/any?
+          :arg-bindings             (s/vec-of t/any?)
+          :varargs-binding          t/any?
+          :arg-types|form           (s/vec-of t/any?)
+          :arg-types                (s/vec-of t/type?)
+          :output-type|form         t/any?
+          :output-type              t/type?
+          :body-codelist|unanalyzed t/any?}))
 
 ;; This is the overload after the input specs are split by their respective `t/or` constituents,
 ;; and after primitivization, but before readiness for incorporation into a `reify`.
@@ -119,6 +120,7 @@
 (s/def ::overload
   (s/kv {:arg-classes                 (s/vec-of class?)
          :arg-types                   (s/vec-of t/type?)
+         :arglist-form|unanalyzed     t/any?
          :arglist-code|fn|hinted      t/any?
          :arglist-code|reify|unhinted t/any?
          :body-form                   t/any?
@@ -227,8 +229,8 @@
   "Given an `::unanalyzed-overload`, performs type analysis on the body and computes a resulting
    `t/fn` overload, which is the foundation for one `reify`."
   [{:as unanalyzed-overload
-    :keys [arg-bindings _, varargs-binding _, arg-types _, output-type|form _
-           body-codelist|pre-analyze _]
+    :keys [arglist-form|unanalyzed _, arg-bindings _, varargs-binding _, arg-types _,
+           output-type|form _, body-codelist|unanalyzed _]
     declared-output-type [:output-type _]}
    ::unanalyzed-overload
    {:as opts       :keys [lang _, kind _]} ::opts
@@ -244,7 +246,7 @@
                          (<- (cond-> (not= kind :extend-defn!)
                                      (assoc fn|name recursive-ast-node-reference))))
         arg-classes (->> arg-types (uc/map type>class))
-        body-node   (uana/analyze env (ufgen/?wrap-do body-codelist|pre-analyze))
+        body-node   (uana/analyze env (ufgen/?wrap-do body-codelist|unanalyzed))
         hint-arg|fn (c/fn [i arg-binding]
                       (ufth/with-type-hint arg-binding
                         (ufth/>fn-arglist-tag
@@ -257,7 +259,8 @@
           (-> (:form body-node)
               (cond-> (-> actual-output-type meta :quantum.core.type/runtime?)
                 (>with-runtime-output-type output-type|form)))]
-      {:arg-classes                 arg-classes
+      {:arglist-form|unanalyzed     arglist-form|unanalyzed
+       :arg-classes                 arg-classes
        :arg-types                   arg-types
        :arglist-code|fn|hinted      (cond-> (->> arg-bindings (uc/map-indexed hint-arg|fn))
                                       varargs-binding (conj '& varargs-binding))
@@ -608,14 +611,17 @@
             varargs                   [:varargs _]
             pre-type|form             [:pre     _]
             [_ _, output-type|form _] [:post    _]} [:arglist _]
-            body-codelist|pre-analyze [:body    _]} _
+            body-codelist|unanalyzed [:body    _]} _
    kind ::kind
    fn|output-type|form _ ; TODO excise this var when we default `output-type|form` to `?`
    fn|output-type t/type?
    > (s/seq-of ::unanalyzed-overload)]
   (when pre-type|form (TODO "Need to handle pre"))
   (when varargs       (TODO "Need to handle varargs"))
-  (let [arg-types|form   (->> args (mapv (c/fn [{[kind #_#{:any :spec}, t #_t/form?] :spec}]
+  (let [arglist-form|unanalyzed (cond-> args varargs          (conj '& varargs)
+                                             pre-type|form    (conj '| pre-type|form)
+                                             output-type|form (conj '> output-type|form))
+        arg-types|form   (->> args (mapv (c/fn [{[kind #_#{:any :spec}, t #_t/form?] :spec}]
                                            (case kind :any `t/any? :spec t))))
         output-type|form (case output-type|form
                            _   `t/any?
@@ -652,10 +658,10 @@
                     (kw-map arg-types output-type)))))]
     (->> arg-types|expanded-seq+
          (uc/map (c/fn [{:keys [arg-types output-type]}]
-                   (kw-map arg-bindings varargs-binding
+                   (kw-map arglist-form|unanalyzed arg-bindings varargs-binding
                            arg-types|form arg-types
                            output-type|form output-type
-                           body-codelist|pre-analyze))))))
+                           body-codelist|unanalyzed))))))
 
 (defns- unanalyzed-overloads>overloads
   "This is of `O(n•log(n))` time complexity where n is the total number of generated/analyzed
@@ -673,10 +679,12 @@
        (dedupe-type-data
          (c/fn [overloads prev-overload overload]
            (err! "Duplicate input types for overload"
-                 {:arg-types-0 (:arg-types prev-overload)
-                  :body-0      (:body-form prev-overload)
-                  :arg-types-1 (:arg-types overload)
-                  :body-1      (:body-form overload)})))))
+                 (umap/om :arglist-form-0 (:arglist-form|unanalyzed prev-overload)
+                          :arg-types-0    (:arg-types prev-overload)
+                          :body-0         (:body-form prev-overload)
+                          :arglist-form-1 (:arglist-form|unanalyzed overload)
+                          :arg-types-1    (:arg-types overload)
+                          :body-1         (:body-form overload)))))))
 
 (defns fn|code [kind ::kind, lang ::lang, compilation-mode ::compilation-mode, args _]
   (let [{:as args'
