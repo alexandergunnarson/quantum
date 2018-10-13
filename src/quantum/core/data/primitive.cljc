@@ -124,36 +124,36 @@
 ;; ===== Extreme magnitudes and values ===== ;;
 
 (t/defn ^:inline >min-magnitude
-  #?(:clj ([x byte?   > (type x)]          (byte  0)))
-  #?(:clj ([x short?  > (type x)]          (short 0)))
-  #?(:clj ([x char?   > (type x)]          (char  0)))
-  #?(:clj ([x int?    > (type x)]          (int   0)))
-  #?(:clj ([x long?   > (type x)]          (long  0)))
-  #?(:clj ([x float?  > (type x)]          Float/MIN_VALUE))
-          ([x double? > (type x)] #?(:clj  Double/MIN_VALUE
-                                     :cljs js/Number.MIN_VALUE)))
+  #?(:clj ([x byte?   > (t/type x)]          (byte  0)))
+  #?(:clj ([x short?  > (t/type x)]          (short 0)))
+  #?(:clj ([x char?   > (t/type x)]          (char  0)))
+  #?(:clj ([x int?    > (t/type x)]          (int   0)))
+  #?(:clj ([x long?   > (t/type x)]          (long  0)))
+  #?(:clj ([x float?  > (t/type x)]          Float/MIN_VALUE))
+          ([x double? > (t/type x)] #?(:clj  Double/MIN_VALUE
+                                       :cljs js/Number.MIN_VALUE)))
 
 ;; TODO TYPED these are probably getting boxed
 #?(:clj (var/def- min-float  (Numeric/negate Float/MAX_VALUE)))
         (var/def- min-double (- #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
 
 (t/defn ^:inline >min-value
-  #?(:clj ([x byte?   > (type x)] Byte/MIN_VALUE))
-  #?(:clj ([x short?  > (type x)] Short/MIN_VALUE))
-  #?(:clj ([x char?   > (type x)] Character/MIN_VALUE))
-  #?(:clj ([x int?    > (type x)] Integer/MIN_VALUE))
-  #?(:clj ([x long?   > (type x)] Long/MIN_VALUE))
-  #?(:clj ([x float?  > (type x)] min-float))
-          ([x double? > (type x)] min-double))
+  #?(:clj ([x byte?   > (t/type x)] Byte/MIN_VALUE))
+  #?(:clj ([x short?  > (t/type x)] Short/MIN_VALUE))
+  #?(:clj ([x char?   > (t/type x)] Character/MIN_VALUE))
+  #?(:clj ([x int?    > (t/type x)] Integer/MIN_VALUE))
+  #?(:clj ([x long?   > (t/type x)] Long/MIN_VALUE))
+  #?(:clj ([x float?  > (t/type x)] min-float))
+          ([x double? > (t/type x)] min-double))
 
 (t/defn ^:inline >max-value
-  #?@(:clj [([x byte?   > (type x)]         Byte/MAX_VALUE)
-            ([x short?  > (type x)]         Short/MAX_VALUE)
-            ([x char?   > (type x)]         Character/MAX_VALUE)
-            ([x int?    > (type x)]         Integer/MAX_VALUE)
-            ([x long?   > (type x)]         Long/MAX_VALUE)
-            ([x float?  > (type x)]         Float/MAX_VALUE)])
-            ([x double? > (type x)] #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
+  #?@(:clj [([x byte?   > (t/type x)]         Byte/MAX_VALUE)
+            ([x short?  > (t/type x)]         Short/MAX_VALUE)
+            ([x char?   > (t/type x)]         Character/MAX_VALUE)
+            ([x int?    > (t/type x)]         Integer/MAX_VALUE)
+            ([x long?   > (t/type x)]         Long/MAX_VALUE)
+            ([x float?  > (t/type x)]         Float/MAX_VALUE)])
+            ([x double? > (t/type x)] #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
 
 ;; ===== Primitive type properties ===== ;;
 

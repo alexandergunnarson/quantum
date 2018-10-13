@@ -357,7 +357,7 @@
                :arg-types          (mapv :type args|analyzed)})
         ret)))
 
-(defns- analyze-seq|dot|method-call|incrementally-analyze
+(defns- |method-call|incrementally-analyze
   [env ::env, form _, target uast/node?, target-class class?, method-form _
    args|form _ methods-for-ct-and-kind (s/seq-of t/any?) > uast/method-call?]
   (let [{:keys [args|analyzed call-sites]}
@@ -422,12 +422,16 @@
         (first cs')
         (err! "Found more than one class" cs))))
 
-;; TODO type these arguments; e.g. check that ?method||field, if present, is an unqualified symbol
 (defns- analyze-seq|dot
   [env ::env, [_ _, target-form _, ?method-or-field _ & ?args _ :as form] _]
   (let [target          (analyze* env target-form)
         method-or-field (if (symbol? ?method-or-field) ?method-or-field (first ?method-or-field))
-        args-forms      (if (symbol? ?method-or-field) ?args            (rest  ?method-or-field))]
+        ;; To get around a weird behavior in Clojure, at least in 1.9
+        method-or-field (if (and (= target-form 'clojure.lang.RT)
+                                 (= method-or-field 'clojure.core/longCast))
+                            'longCast
+                            method-or-field)
+        args-forms      (if (symbol? ?method-or-field) ?args (rest ?method-or-field))]
     (if (t/= (:type target) t/nil?)
         (err! "Cannot use the dot operator on a target of nil type." {:form form})
         (let [;; `nilable?` because technically any non-primitive in Java is nilable and we can't
