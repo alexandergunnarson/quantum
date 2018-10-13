@@ -65,7 +65,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         still.)
         - This will be a more advanced feature. For now we just accept that we might have some odd
           behavior around extending `t/defn`s.
-    [1a] It should disallow creating another definition with the same input type combination.
+    [1a] It should warn when creating another definition with the same input type combination.
     [1b] `assert-monotonically-increasing-types!` needs to be enforced
   [2] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.

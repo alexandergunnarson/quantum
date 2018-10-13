@@ -9,6 +9,9 @@
     [quantum.untyped.core.vars
       :refer [defalias defaliases]]))
 
+;; TODO if we ever spec-instrument we need to be careful of these aliases as they'll no longer be
+;; valid
+
 (defaliases udefnt fn defn extend-defn!)
 
 (defaliases ut

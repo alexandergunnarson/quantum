@@ -181,17 +181,17 @@
 ;; ===== Extensions ===== ;;
 
 #?(:clj
-(t/extend-defn! ccomp/==
-  (^:in [a boolean?                    , b boolean?]                     (Util/equiv    a b))
+(macroexpand '(t/extend-defn! ccomp/==
+  #_(^:in [a boolean?                    , b boolean?]                     (Util/equiv    a b))
   (     [a boolean?                    , b (t/- primitive? boolean?)]    false)
-  (     [a (t/- primitive? boolean?)   , b boolean?]                     false)
-  (^:in [a long?                       , b long?]                        (Numbers/equiv a b))
-  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/eq    a b))
-  (     [a (t/- numeric? long?)        , b long?]                        (Numeric/eq    a b))
-  (^:in [a double?                     , b double?]                      (Numbers/equiv a b))
-  (     [a double?                     , b (t/- numeric? double?)]       (Numeric/eq    a b))
-  (     [a (t/- numeric? double?)      , b double?]                      (Numeric/eq    a b))
-  (     [a (t/- numeric? double? long?), b (t/- numeric? double? long?)] (Numeric/eq    a b))))
+  #_(     [a (t/- primitive? boolean?)   , b boolean?]                     false)
+  #_(^:in [a long?                       , b long?]                        (Numbers/equiv a b))
+  #_(     [a long?                       , b (t/- numeric? long?)]         (Numeric/eq    a b))
+  #_(     [a (t/- numeric? long?)        , b long?]                        (Numeric/eq    a b))
+  #_(^:in [a double?                     , b double?]                      (Numbers/equiv a b))
+  #_(     [a double?                     , b (t/- numeric? double?)]       (Numeric/eq    a b))
+  #_(     [a (t/- numeric? double?)      , b double?]                      (Numeric/eq    a b))
+  #_(     [a (t/- numeric? double? long?), b (t/- numeric? double? long?)] (Numeric/eq    a b)))))
 
 #?(:clj
 (t/extend-defn! ccomp/not==

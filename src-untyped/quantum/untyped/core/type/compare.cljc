@@ -456,36 +456,20 @@
   "Used in `t/compare|in` and `t/compare|out`. Might be used for other things too in the future.
    Commutative in the 2-ary arity."
   ([cs _ #_(seq-of uset/comparison?) > uset/comparison?]
+    ;; TODO it's possible to `reduced` early here depending
     (reduce (fn [c' c] (combine-comparisons c' c)) (first cs) (rest cs)))
-  ([^long c0 uset/comparison?, ^long c1 uset/comparison? > uset/comparison?]
-    (case c0
-      -1 (case c1
-           -1  <ident
-            0  <ident
-            1 ><ident
-            2 ><ident
-            3 <>ident)
-       0 (case c1
-           -1  <ident
-            0  =ident
-            1  >ident
-            2 ><ident
-            3 <>ident)
-       1 (case c1
-           -1 ><ident
-            0  >ident
-            1  >ident
-            2 ><ident
-            3 <>ident)
-       2 (case c1
-           -1 ><ident
-            0 ><ident
-            1 ><ident
-            2 ><ident
-            3 <>ident)
-       3 (case c1
-           -1 <>ident
-            0 <>ident
-            1 <>ident
-            2 <>ident
-            3 <>ident))))
+  ([c0 uset/comparison?, c1 uset/comparison? > uset/comparison?]
+    (case (long c0)
+      -1 (case (long c1) -1  <ident, 0  <ident, 1 ><ident, 2 ><ident, 3 <>ident)
+       0 (case (long c1) -1  <ident, 0  =ident, 1  >ident, 2 ><ident, 3 <>ident)
+       1 (case (long c1) -1 ><ident, 0  >ident, 1  >ident, 2 ><ident, 3 <>ident)
+       2 (case (long c1) -1 ><ident, 0 ><ident, 1 ><ident, 2 ><ident, 3 <>ident)
+       3 (case (long c1) -1 <>ident, 0 <>ident, 1 <>ident, 2 <>ident, 3 <>ident))))
+
+(defns compare-inputs
+  [arg-types0 _ #_(s/vec-of t/type?), arg-types1 _ #_(s/vec-of t/type?) > uset/comparison?]
+  (let [ct-comparison (c/compare (count arg-types0) (count arg-types1))]
+    (if (zero? ct-comparison)
+        ;; TODO can use educers here
+        (combine-comparisons (map compare arg-types0 arg-types1))
+        <ident)))

@@ -62,7 +62,9 @@
 
 ;; TODO move?
 (defns- compare-class-specificity [c0 class?, c1 class?]
-  (case (utcomp/compare|class+class* c0 c1)
+  (case (utcomp/compare|class+class*
+          (or (t/unboxed-class->boxed-class c0) c0)
+          (or (t/unboxed-class->boxed-class c1) c1))
     -1     -1
     (0 2 3) 0
      1      1))
@@ -305,10 +307,13 @@
         args-ct (alength sample-arg-classes)]
     (->> (range args-ct)
          (reduce
-           (fn [call-sites' i]
+           (fn [call-sites' ^long i]
              (->> call-sites'
-                  (uc/map+ (fn [{:keys [^"[Ljava.lang.Object;" arg-classes]}] (aget arg-classes i)))
-                  (ucomp/comp-mins-of compare-class-specificity)))
+                  (ucomp/comp-mins-of
+                    (fn [x0 x1]
+                      (let [^"[Ljava.lang.Object;" cs0 (:arg-classes x0)
+                            ^"[Ljava.lang.Object;" cs1 (:arg-classes x1)]
+                        (compare-class-specificity (aget cs0 i) (aget cs1 i)))))))
            call-sites))))
 
 (defns- analyze-seq|method-or-constructor-call|incrementally-analyze
@@ -337,7 +342,7 @@
                                   (vec (concat (mapv :type args|analyzed)
                                                [arg|analyzed|type]
                                                (repeat (- (count args|form)
-                                                          (count args|analyzed))
+                                                          (inc (count args|analyzed)))
                                                        :unanalyzed)))})
                          (-> ret
                              (assoc :call-sites call-sites')
@@ -348,7 +353,7 @@
         (err! (str "Multiple, equally specific " kinds-str " for class match the arg types")
               {:class              target-class
                :form               form
-               (keyword kinds-str) call-sites
+               (keyword kinds-str) (->> call-sites (uc/map #(update % :arg-classes vec)))
                :arg-types          (mapv :type args|analyzed)})
         ret)))
 

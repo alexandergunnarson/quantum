@@ -45,6 +45,7 @@
     [quantum.untyped.core.specs                 :as uss]
     [quantum.untyped.core.type                  :as t
       :refer [?]]
+    [quantum.untyped.core.type.compare          :as utcomp]
     [quantum.untyped.core.type.reifications     :as utr]
     [quantum.untyped.core.vars                  :as uvar
       :refer [update-meta]])
@@ -151,11 +152,13 @@
 
 (s/def ::types-decl-datum
   (s/kv {:id          ::overload|id
+         :ns-sym      simple-symbol?
          :arg-types   (s/vec-of t/type?)
          :output-type t/type?}))
 
 (s/def ::indexed-types-decl-datum
   (s/kv {:id          ::overload|id
+         :ns-sym      simple-symbol?
          :arg-types   (s/vec-of t/type?)
          :output-type t/type?
          :index       index? ; overload-index (position in the overall types-decl)
@@ -167,8 +170,8 @@
          ;; Sorted by overload-index
          :data                 (s/vec-of ::types-decl-datum)
          ;; Sorted by overload-index
-         ;; 'Current' i.e. being created right now, not yet swapped into the types decl atom
-         :indexed-current-data (s/vec-of ::indexed-types-decl-datum)}))
+         :indexed-data (s/vec-of ::indexed-types-decl-datum)
+         :first-current-overload-id ::overload|id}))
 
 #_(:clj
 (c/defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
@@ -249,10 +252,7 @@
         body-form
           (-> (:form body-node)
               (cond-> (-> actual-output-type meta :quantum.core.type/runtime?)
-                (>with-runtime-output-type output-type|form))
-              (ufth/cast-bindings|code
-                (->> (uc/zipmap-into (umap/om) arg-bindings arg-classes)
-                     (uc/remove-vals' (fn-or nil? (fn= java.lang.Object) t/primitive-class?)))))]
+                (>with-runtime-output-type output-type|form)))]
       {:arg-classes                 arg-classes
        :arg-types                   arg-types
        :arglist-code|fn|hinted      (cond-> (->> arg-bindings (uc/map-indexed hint-arg|fn))
@@ -354,6 +354,24 @@
                     output-type (conj :> output-type))))
        (apply t/ftype fn|output-type)))
 
+(c/defn- dedupe-types-decl-data [fn|ns-name fn|name types-decl-data]
+  (reduce (let [*prev-datum (volatile! nil)]
+            (c/fn [data {:as datum :keys [arg-types]}]
+              (with-do
+                (ifs (nil? @*prev-datum)
+                       (conj data datum)
+                     (= uset/=ident (utcomp/compare-inputs
+                                      (:arg-types @*prev-datum) arg-types))
+                       (do (ulog/ppr :warn (str "Overwriting type overload for `"
+                                                 (uid/qualify fn|ns-name fn|name) "`; arg types:")
+                                           arg-types)
+                           (-> data pop (conj (assoc @*prev-datum :ns-sym   (:ns-sym   datum)
+                                                                  :overload (:overload datum)))))
+                     (conj data datum))
+                (vreset! *prev-datum datum))))
+          []
+          types-decl-data))
+
 (defns- >types-decl
   [{:as opts       :keys [kind _]} ::opts
    {:as fn|globals :keys [fn|ns-name _, fn|name _ fn|types-decl-name _]} ::fn|globals
@@ -369,27 +387,23 @@
                (uc/map-indexed
                  (c/fn [i {:keys [arg-types output-type]}]
                    {:id          (+ i first-current-overload-id)
+                    :ns-sym      (ns-name *ns*)
                     :arg-types   arg-types
                     :output-type output-type})))
         ;; We can't just concat the currently-being-created overloads' type-decl data with the
         ;; existing type-decl data because we need to maintain the type-decl data's ordering by
         ;; type-specificity so the dynamic dispatch works correctly.
         types-decl-indexed-data
-          (when (= kind :extend-defn!)
-            (->> (ur/join types-decl-current-data types-decl-existing-data)
-                 ;; So we can keep track of the original index
-                 (uc/map-indexed
-                   (c/fn [i {:as datum :keys [id]}]
-                     (let [overload (get overloads (- id first-current-overload-id))]
-                       (assoc datum :index i :overload overload))))
-                 ;; TODO here `extend-defn!` should:
-                 ;; - Disallow creating another definition with the same input type combination
-                 ;; - Use `assert-monotonically-increasing-types!`
-                 (sort-by :arg-types compare-args-types)))
-        types-decl-indexed-current-data
           (if (= kind :extend-defn!)
-              (->> types-decl-indexed-data
-                   (c/filter (fn-> :id (>= first-current-overload-id))))
+              (->> (ur/join types-decl-current-data types-decl-existing-data)
+                   (uc/map
+                     (c/fn [{:as datum :keys [id]}]
+                       (assoc datum :overload (get overloads (- id first-current-overload-id)))))
+                   ;; TODO here `extend-defn!` should probably:
+                   ;; - Use `assert-monotonically-increasing-types!`
+                   (sort-by :arg-types compare-args-types)
+                   (dedupe-types-decl-data fn|ns-name fn|name)
+                   (uc/map-indexed (c/fn [i datum] (assoc datum :index i))))
               (->> types-decl-current-data
                    (uc/map-indexed
                      (c/fn [i datum] (assoc datum :index i :overload (get overloads i))))))
@@ -403,16 +417,16 @@
                    `(reset! ~(uid/qualify fn|ns-name fn|types-decl-name) ~(>form types-decl-data))
                    `(def ~fn|types-decl-name (atom ~(>form types-decl-data))))
          :data types-decl-data
-         :indexed-current-data types-decl-indexed-current-data}
+         :indexed-data types-decl-indexed-data}
         ;; In non-test cases, it's far cheaper to not have to convert the types to a
         ;; compiler-readable form and then re-evaluate them again
         (do (if (= kind :extend-defn!)
                 (reset! (>types-decl-ref fn|globals) types-decl-data)
                 (intern (>symbol *ns*) fn|types-decl-name (atom types-decl-data)))
-            {:name fn|types-decl-name
-             :form nil
-             :data types-decl-data
-             :indexed-current-data types-decl-indexed-current-data}))))
+            {:name         fn|types-decl-name
+             :form         nil
+             :data         types-decl-data
+             :indexed-data types-decl-indexed-data}))))
 
 (defns- >overload-types-decl|name
   ([fn|name simple-symbol?, overload|id ::overload|id > simple-symbol?]
@@ -443,7 +457,8 @@
   (case lang
     :clj  (let [direct-dispatch-data-seq
                   (->> types-decl
-                       :indexed-current-data
+                       :indexed-data
+                       (uc/filter+ :overload) ; i.e. the "current" ones
                        (uc/map
                          (c/fn [{:as indexed-type-decl-datum :keys [arg-types id index overload]}]
                            {:overload-types-decl
@@ -470,13 +485,15 @@
 
 (defns- >combinatoric-seq+
   [{:as fn|globals :keys [fn|ns-name _ fn|name _]} ::fn|globals
-   types-decl-data-for-arity (s/vec-of ::types-decl-datum), arglist (s/vec-of simple-symbol?)]
-  (->> types-decl-data-for-arity
+   indexed-types-decl-data-for-arity (s/vec-of ::indexed-types-decl-datum)
+   arglist (s/vec-of simple-symbol?)]
+  (->> indexed-types-decl-data-for-arity
        (uc/map+
-         (c/fn [{:as types-decl-datum :keys [arg-types]}]
-          (let [overload|id              (:id types-decl-datum)
-                overload-types-decl|name (>overload-types-decl|name fn|ns-name fn|name overload|id)
-                reify|name|qualified     (>reify-name-unhinted fn|ns-name fn|name overload|id)]
+         (c/fn [{:as types-decl-datum :keys [arg-types ns-sym overload]}]
+          (let [overload|id (:id types-decl-datum)
+                overload-types-decl|name
+                  (>overload-types-decl|name ns-sym fn|name overload|id)
+                reify|name|qualified (>reify-name-unhinted ns-sym fn|name overload|id)]
             [(>dynamic-dispatch|reify-call reify|name|qualified arglist)
              (->> arg-types
                   (uc/map-indexed
@@ -488,10 +505,10 @@
 
 (defns- >dynamic-dispatch|body-for-arity
   [{:as fn|globals :keys [fn|ns-name _, fn|name _]} ::fn|globals
-   arglist (s/vec-of simple-symbol?)
-   types-decl-data-for-arity (s/vec-of ::types-decl-datum)]
+   indexed-types-decl-data-for-arity (s/vec-of ::indexed-types-decl-datum)
+   arglist (s/vec-of simple-symbol?)]
   (if (empty? arglist)
-      (let [overload|id (-> types-decl-data-for-arity first :id)]
+      (let [overload|id (-> indexed-types-decl-data-for-arity first :id)]
         (>dynamic-dispatch|reify-call
           (>reify-name-unhinted fn|ns-name fn|name overload|id) arglist))
       (let [*i|arg (atom 0)
@@ -511,7 +528,7 @@
           (aritoid combinef combinef (c/fn [x [{:keys [getf i]} group]] (combinef x getf group i)))
           uc/conj!|rf
           (aritoid combinef combinef (c/fn [x [k [{:keys [getf i]}]]] (combinef x getf k i)))
-          (>combinatoric-seq+ fn|globals types-decl-data-for-arity arglist)))))
+          (>combinatoric-seq+ fn|globals indexed-types-decl-data-for-arity arglist)))))
 
 (defns- >dynamic-dispatch-fn|form
   [{:as opts       :keys [gen-gensym _, lang _, kind _]} ::opts
@@ -520,13 +537,13 @@
    types-decl ::types-decl]
  (let [overload-forms
          (->> types-decl
-              :data
+              :indexed-data
               (group-by (fn-> :arg-types count))
               (sort-by key) ; for purposes of reproducibility and organization
-              (map (c/fn [[arg-ct types-decl-data-for-arity]]
+              (map (c/fn [[arg-ct indexed-types-decl-data-for-arity]]
                      (let [arglist (ufgen/gen-args 0 arg-ct "x" gen-gensym)
                            body    (>dynamic-dispatch|body-for-arity
-                                     fn|globals arglist types-decl-data-for-arity)]
+                                     fn|globals indexed-types-decl-data-for-arity arglist)]
                        (list arglist body)))))
        ftype-form `(types-decl>ftype ~(uid/qualify fn|ns-name fn|types-decl-name)
                                      ~(>form fn|output-type))]
@@ -716,7 +733,7 @@
         dynamic-dispatch     (>dynamic-dispatch-fn|form opts fn|globals types-decl)
         fn-codelist
           (case lang
-            :clj  (->> `[(declare ~fn|name) ; for recursion
+            :clj  (->> `[~@(when (not= kind :extend-defn!) [`(declare ~fn|name)]) ; for recursion
                          ~@(some-> (:form types-decl) vector)
                          ~@(:form direct-dispatch)
                          ~dynamic-dispatch]
