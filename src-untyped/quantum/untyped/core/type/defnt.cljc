@@ -401,7 +401,15 @@
                        (assoc datum :overload (get overloads (- id first-current-overload-id)))))
                    ;; TODO here `extend-defn!` should probably:
                    ;; - Use `assert-monotonically-increasing-types!`
-                   (sort-by :arg-types compare-args-types)
+                   (sort-by identity
+                     (c/fn [datum0 datum1]
+                       (let [c (compare-args-types (:arg-types datum0) (:arg-types datum1))]
+                          ;; In order to make the earlier ID appear
+                         (if (zero? c)
+                             (if (:overload datum0)
+                                 (if (:overload datum1)  c 1)
+                                 (if (:overload datum1) -1 c))
+                             c))))
                    (dedupe-types-decl-data fn|ns-name fn|name)
                    (uc/map-indexed (c/fn [i datum] (assoc datum :index i))))
               (->> types-decl-current-data
@@ -449,7 +457,7 @@
 
 ;; ----- Direct dispatch: putting it all together ----- ;;
 
-(defns >direct-dispatch
+(defns- >direct-dispatch
   [{:as opts       :keys [gen-gensym _, lang _, kind _]} ::opts
    {:as fn|globals :keys [fn|name _]} ::fn|globals
    overloads (s/vec-of ::overload)
