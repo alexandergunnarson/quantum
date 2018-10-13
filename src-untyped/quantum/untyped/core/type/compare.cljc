@@ -457,7 +457,9 @@
    Commutative in the 2-ary arity."
   ([cs _ #_(seq-of uset/comparison?) > uset/comparison?]
     ;; TODO it's possible to `reduced` early here depending
-    (reduce (fn [c' c] (combine-comparisons c' c)) (first cs) (rest cs)))
+    (if (empty? cs)
+        =ident
+        (reduce (fn [c' c] (combine-comparisons c' c)) (first cs) (rest cs))))
   ([c0 uset/comparison?, c1 uset/comparison? > uset/comparison?]
     (case (long c0)
       -1 (case (long c1) -1  <ident, 0  <ident, 1 ><ident, 2 ><ident, 3 <>ident)

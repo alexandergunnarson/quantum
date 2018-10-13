@@ -47,7 +47,7 @@
 (defn cstr [x]
   (if (-> x resolve class?)
       (str x)
-      (str (namespace x) "." (name x))))
+      (str (core/namespace x) "." (core/name x))))
 
 #?(:clj
 (deftest test|pid

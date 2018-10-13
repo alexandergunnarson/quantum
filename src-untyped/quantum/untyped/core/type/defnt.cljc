@@ -150,6 +150,11 @@
   (s/kv {:form                     t/any?
          :direct-dispatch-data-seq (s/vec-of ::direct-dispatch-data)}))
 
+(s/def ::type-datum
+  (s/kv {:arg-types   (s/vec-of t/type?)
+         :pre-type    t/type?
+         :output-type t/type?}))
+
 (s/def ::types-decl-datum
   (s/kv {:id          ::overload|id
          :ns-sym      simple-symbol?
@@ -170,8 +175,7 @@
          ;; Sorted by overload-index
          :data                 (s/vec-of ::types-decl-datum)
          ;; Sorted by overload-index
-         :indexed-data (s/vec-of ::indexed-types-decl-datum)
-         :first-current-overload-id ::overload|id}))
+         :indexed-data (s/vec-of ::indexed-types-decl-datum)}))
 
 #_(:clj
 (c/defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
@@ -297,32 +301,18 @@
           arg-types0 arg-types1)
         ct-comparison)))
 
-;; TODO spec
-(c/defn assert-monotonically-increasing-types!
-  "Asserts that each type in an overload of the same arity and arg-position are in monotonically
-   increasing order in terms of `t/compare`.
-
-   Since its inputs are sorted via `compare-args-types`, this only need check the last overload of
-   `unanalyzed-overload-seq-accum` and the first overload of `unanalyzed-overload-seq`."
-  [unanalyzed-overload-seq-accum #_(s/seq-of ::unanalyzed-overload)
-   unanalyzed-overload-seq       #_(s/seq-of ::unanalyzed-overload)
-   i|overload-basis              #_index?]
-  (when-not (or (empty? unanalyzed-overload-seq-accum) (empty? unanalyzed-overload-seq))
-    (let [prev-overload (uc/last  unanalyzed-overload-seq-accum)
-          overload      (uc/first unanalyzed-overload-seq)]
-      (reducei-2
-        (c/fn [_ arg|type|prev arg|type i|arg]
-          (when ;; NOTE could use `compare-arg-types` here instead of `t/compare` if we want a more
-                ;; efficient combinatoric tree dispatch
-                (= 1 (t/compare arg|type|prev arg|type))
-            ;; TODO provide code context, line number, etc.
-            (err! (istr "At overload ~{i|overload-basis}, arg ~{i|arg}: type is not in monotonically increasing order in terms of `t/compare`")
-                  (umap/om :prev-overload prev-overload
-                           :overload      overload
-                           :prev-type     arg|type|prev
-                           :type          arg|type))))
-        (:arg-types prev-overload)
-        (:arg-types overload)))))
+(c/defn- dedupe-type-data [on-dupe #_fn?, type-data #_(vec-of ::types-decl-datum)]
+  (reduce (let [*prev-datum (volatile! nil)]
+            (c/fn [data {:as datum :keys [arg-types]}]
+              (with-do
+                (ifs (nil? @*prev-datum)
+                       (conj data datum)
+                     (= uset/=ident (utcomp/compare-inputs (:arg-types @*prev-datum) arg-types))
+                       (on-dupe data @*prev-datum datum)
+                     (conj data datum))
+                (vreset! *prev-datum datum))))
+          []
+          type-data))
 
 ;; ===== Direct dispatch ===== ;;
 
@@ -397,12 +387,12 @@
    #_> #_(objects-of type?)]
   (apply uarr/*<> (:arg-types (get @*types-decl overload-index))))
 
-(c/defn type-data>ftype [type-data #_(vec-of ::types-decl-datum), fn|output-type #_t/type?]
+(c/defn type-data>ftype [type-data #_(vec-of ::type-datum), fn|output-type #_t/type?]
   (->> type-data
        (uc/lmap (c/fn [{:keys [arg-types pre-type output-type]}]
-             (cond-> arg-types
-               pre-type    (conj :| pre-type)
-               output-type (conj :> output-type))))
+                  (cond-> arg-types
+                    pre-type    (conj :| pre-type)
+                    output-type (conj :> output-type))))
        (apply t/ftype fn|output-type)))
 
 (c/defn types-decl>ftype
@@ -410,22 +400,14 @@
   (type-data>ftype @*types-decl fn|output-type))
 
 (c/defn- dedupe-types-decl-data [fn|ns-name fn|name types-decl-data]
-  (reduce (let [*prev-datum (volatile! nil)]
-            (c/fn [data {:as datum :keys [arg-types]}]
-              (with-do
-                (ifs (nil? @*prev-datum)
-                       (conj data datum)
-                     (= uset/=ident (utcomp/compare-inputs
-                                      (:arg-types @*prev-datum) arg-types))
-                       (do (ulog/ppr :warn (str "Overwriting type overload for `"
-                                                 (uid/qualify fn|ns-name fn|name) "`; arg types:")
-                                           arg-types)
-                           (-> data pop (conj (assoc @*prev-datum :ns-sym   (:ns-sym   datum)
-                                                                  :overload (:overload datum)))))
-                     (conj data datum))
-                (vreset! *prev-datum datum))))
-          []
-          types-decl-data))
+  (->> types-decl-data
+       (dedupe-type-data
+         (c/fn [data prev-datum datum]
+           (ulog/ppr :warn
+             (str "Overwriting type overload for `" (uid/qualify fn|ns-name fn|name) "`")
+             {:arg-types-prev (:arg-types prev-datum) :arg-types (:arg-types datum)})
+           (-> data pop
+               (conj (assoc prev-datum :ns-sym (:ns-sym datum) :overload (:overload datum))))))))
 
 (defns- >types-decl
   [{:as opts       :keys [kind _]} ::opts
@@ -454,8 +436,6 @@
                    (uc/map
                      (c/fn [{:as datum :keys [id]}]
                        (assoc datum :overload (get overloads (- id first-current-overload-id)))))
-                   ;; TODO here `extend-defn!` should probably:
-                   ;; - Use `assert-monotonically-increasing-types!`
                    (sort-by identity
                      (c/fn [datum0 datum1]
                        (let [c (compare-args-types (:arg-types datum0) (:arg-types datum1))]
@@ -477,8 +457,10 @@
     (if (-> opts :compilation-mode (= :test))
         {:name fn|types-decl-name
          :form (if (= kind :extend-defn!)
-                   `(reset! ~(uid/qualify fn|ns-name fn|types-decl-name) ~(>form types-decl-data))
-                   `(def ~fn|types-decl-name (atom ~(>form types-decl-data))))
+                   `(reset! ~(uid/qualify fn|ns-name fn|types-decl-name)
+                            ~(->> types-decl-data (uc/map #(dissoc % :ns-sym)) >form))
+                   `(def ~fn|types-decl-name
+                      (atom ~(->> types-decl-data (uc/map #(dissoc % :ns-sym)) >form))))
          :data types-decl-data
          :indexed-data types-decl-indexed-data}
         ;; In non-test cases, it's far cheaper to not have to convert the types to a
@@ -653,49 +635,48 @@
                           ;; TODO this assertion is purely temporary until destructuring is
                           ;; supported
                           (assert (-> varargs :binding-form first (= :sym))))
-        arg-types|expanded-seq ; split, primitivized, and (if not `extend-defn!`) sorted
+        arg-types|expanded-seq+ ; split and primitivized; not yet sorted
           (->> (uana/analyze-arg-syms {} (zipmap arg-bindings arg-types|form) output-type|form)
-               (uc/map (c/fn [{:keys [env out-type-node]}]
-                         (let [output-type (:type out-type-node)
-                               arg-env     (->> env :opts :arg-env deref)
-                               arg-types   (->> arg-bindings (uc/map #(:type (get arg-env %))))]
+               (uc/map+
+                 (c/fn [{:keys [env out-type-node]}]
+                   (let [output-type (:type out-type-node)
+                         arg-env     (->> env :opts :arg-env deref)
+                         arg-types   (->> arg-bindings (uc/map #(:type (get arg-env %))))]
 
-                          (when (and ;; TODO excise clause when we default `output-type|form` to `?`
-                                     (not (identical? output-type|form fn|output-type|form))
-                                     (not (t/<= output-type fn|output-type)))
-                            (err! (str "Overload's declared output type does not satisfy function's"
-                                       "overall declared output type")
-                                  (kw-map output-type fn|output-type)))
-                          (kw-map arg-types output-type))))
-               ;; Not performed with `extend-defn!` because sorting happens later, in `>types-decl`
-               (<- (cond->> (not= kind :extend-defn!) (sort-by :arg-types compare-args-types)))
-               vec)]
-    (->> arg-types|expanded-seq
+                    (when (and ;; TODO excise clause when we default `output-type|form` to `?`
+                               (not (identical? output-type|form fn|output-type|form))
+                               (not (t/<= output-type fn|output-type)))
+                      (err! (str "Overload's declared output type does not satisfy function's"
+                                 "overall declared output type")
+                            (kw-map output-type fn|output-type)))
+                    (kw-map arg-types output-type)))))]
+    (->> arg-types|expanded-seq+
          (uc/map (c/fn [{:keys [arg-types output-type]}]
                    (kw-map arg-bindings varargs-binding
                            arg-types|form arg-types
                            output-type|form output-type
                            body-codelist|pre-analyze))))))
 
-(defns- overloads-bases>unanalyzed-overloads
-  [overloads-bases _ #_:quantum.core.defnt/overloads
-   kind ::kind
-   fn|output-type|form _ ; TODO excise this var when we default `output-type|form` to `?`
-   fn|output-type t/type?
-   > (s/seq-of ::unanalyzed-overload)]
-  (->> overloads-bases
-       (uc/map+
-         #(overloads-basis>unanalyzed-overload-seq % kind fn|output-type|form fn|output-type))
-       (educei
-         (c/fn
-           ([] [])
-           ([ret] ret)
-           ([ret unanalyzed-overload-seq i|overload-basis]
-             (when-not (= kind :extend-defn!)
-               ;; Because this assertion is performed later on in `>types-decl`
-               (assert-monotonically-increasing-types!
-                 ret unanalyzed-overload-seq i|overload-basis))
-             (ur/join ret unanalyzed-overload-seq))))))
+(defns- unanalyzed-overloads>overloads
+  "This is of `O(n•log(n))` time complexity where n is the total number of generated/analyzed
+   overloads.
+   This is because once we must sort (`O(n•log(n))`) the overloads by comparing their arg types and
+   then if we find any duplicates in a linear scan (`O(n)`), we throw an error."
+  [unanalyzed-overloads (s/vec-of ::unanalyzed-overload), opts ::opts, fn|globals ::fn|globals
+   > (s/vec-of ::overload)]
+  (->> unanalyzed-overloads
+       ;; We have to analyze everything in order to figure out all the types (or at least, analyze
+       ;; in order to figure out body-dependent input types) before we can compare them against
+       ;; each other
+       (uc/map #(unanalyzed-overload>overload % opts fn|globals))
+       (sort-by :arg-types compare-args-types)
+       (dedupe-type-data
+         (c/fn [overloads prev-overload overload]
+           (err! "Duplicate input types for overload"
+                 {:arg-types-0 (:arg-types prev-overload)
+                  :body-0      (:body-form prev-overload)
+                  :arg-types-1 (:arg-types overload)
+                  :body-1      (:body-form overload)})))))
 
 (defns fn|code [kind ::kind, lang ::lang, compilation-mode ::compilation-mode, args _]
   (let [{:as args'
@@ -739,14 +720,15 @@
         (let [gen-gensym-base      (ufgen/>reproducible-gensym|generator)
               gen-gensym           (c/fn [x] (symbol (str (gen-gensym-base x) "__")))
               opts                 (kw-map compilation-mode gen-gensym kind lang)
-              unanalyzed-overloads (overloads-bases>unanalyzed-overloads
-                                     overloads-bases kind fn|output-type|form fn|output-type)
+              unanalyzed-overloads (->> overloads-bases
+                                        (uc/mapcat #(overloads-basis>unanalyzed-overload-seq
+                                                      % kind fn|output-type|form fn|output-type)))
               fn|type              (type-data>ftype unanalyzed-overloads fn|output-type)
               fn|globals           (kw-map fn|ns-name fn|name fn|meta fn|type fn|output-type|form
                                            fn|output-type fn|types-decl-name)
               ;; Specifically overloads that were generated during this execution of this function
-              overloads            (->> unanalyzed-overloads
-                                        (uc/map #(unanalyzed-overload>overload % opts fn|globals)))
+              overloads            (unanalyzed-overloads>overloads
+                                     unanalyzed-overloads opts fn|globals)
               types-decl           (>types-decl opts fn|globals overloads)
               direct-dispatch      (>direct-dispatch opts fn|globals overloads types-decl)
               dynamic-dispatch     (>dynamic-dispatch-fn|form opts fn|globals types-decl)
