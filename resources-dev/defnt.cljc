@@ -150,11 +150,11 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - expressions (`quantum.untyped.core.analyze.expr`)
   - comparison of `t/fn`s is probably possible?
   - t/def
-    - TODO what would this even look like?
+    - TODO what would this even look like? I guess it would just declare the sym, meta, and type
+    - Without an argument, it would work like `declare`
   - t/fn
   - t/ftype
     - conditionally optional arities etc.
-  - t/declare
   - ^:dyn
     - `(name (read ...))` fails at compile-time; we want it to at least try at runtime. So instead
       we annotate like `(name ^:dyn (read ...))`, meaning figure out at runtime what the out-type of

@@ -478,14 +478,14 @@
         {:name fn|types-decl-name
          :form (if (= kind :extend-defn!)
                    `(reset! ~(uid/qualify fn|ns-name fn|types-decl-name) ~(>form types-decl-data))
-                   `(def ~fn|types-decl-name (atom ~(>form types-decl-data))))
+                   `(defonce ~fn|types-decl-name (atom ~(>form types-decl-data))))
          :data types-decl-data
          :indexed-data types-decl-indexed-data}
         ;; In non-test cases, it's far cheaper to not have to convert the types to a
         ;; compiler-readable form and then re-evaluate them again
         (do (if (= kind :extend-defn!)
                 (reset! (>types-decl-ref fn|globals) types-decl-data)
-                (intern (>symbol *ns*) fn|types-decl-name (atom types-decl-data)))
+                (uvar/intern-once! fn|ns-name fn|types-decl-name (atom types-decl-data)))
             {:name         fn|types-decl-name
              :form         nil
              :data         types-decl-data
@@ -729,18 +729,19 @@
                                  fn|meta)
         fn|output-type|form  (or (second output-spec) `t/any?)
         ;; TODO this needs to be analyzed for dependent types referring to local vars
-        fn|output-type       (eval fn|output-type|form)]
-        (println "overloads-bases" overloads-bases)
+        fn|output-type       (eval fn|output-type|form)
+        fn|types-decl-name   (symbol (str fn|name "|__types"))]
     (if (empty? overloads-bases)
-        `(declare ~(with-meta fn|name
-                     (assoc fn|meta :quantum.core.type/type `(t/ftype ~(>form fn|output-type)))))
+        `(do (declare
+               ~(with-meta fn|name
+                  (assoc fn|meta :quantum.core.type/type `(t/ftype ~(>form fn|output-type)))))
+             (defonce ~fn|types-decl-name (atom [])))
         (let [gen-gensym-base      (ufgen/>reproducible-gensym|generator)
               gen-gensym           (c/fn [x] (symbol (str (gen-gensym-base x) "__")))
               opts                 (kw-map compilation-mode gen-gensym kind lang)
               unanalyzed-overloads (overloads-bases>unanalyzed-overloads
                                      overloads-bases kind fn|output-type|form fn|output-type)
               fn|type              (type-data>ftype unanalyzed-overloads fn|output-type)
-              fn|types-decl-name   (symbol (str fn|name "|__types"))
               fn|globals           (kw-map fn|ns-name fn|name fn|meta fn|type fn|output-type|form
                                            fn|output-type fn|types-decl-name)
               ;; Specifically overloads that were generated during this execution of this function

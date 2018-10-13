@@ -132,3 +132,11 @@
                     (= sym 'in-ns)
                       #'core/in-ns
                     :else (.getMapping ^clojure.lang.Namespace ns-val sym)))))))
+
+(def intern! intern)
+
+(defn intern-once!
+  "Interns a var corresponding to ->`sym` only if the var does not have a value."
+  ([ns-sym #_symbol?, sym #_symbol?, v #_t/ref?]
+    (or (resolve (find-ns ns-sym) sym)
+        (intern! ns-sym sym v))))

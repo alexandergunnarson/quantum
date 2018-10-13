@@ -194,7 +194,7 @@
 
 #?(:clj
 (t/extend-defn! ccomp/not==
-  ([a boolean?                 , b boolean?]                  (Numbers/neq a b))
+  ([a boolean?                 , b boolean?]                  (Numeric/neq a b))
   ([a boolean?                 , b (t/- primitive? boolean?)] false)
   ([a (t/- primitive? boolean?), b boolean?]                  false)
   ([a numeric?                 , b numeric?]                  (Numeric/neq a b))))
