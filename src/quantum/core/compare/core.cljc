@@ -54,7 +54,7 @@
                    clojure.core/identical?     "9/27/2018"
                    cljs.core/identical?        "9/27/2018"}}
   > ut/boolean?
-         ([x t/any?] true) ; everything is self-identical
+         ([x t/any?] true) ; everything is self-identical (except NaN and Infinity...)
 #?(:clj  ([a t/ref?, b t/ref?] (clojure.lang.Util/identical a b))
    :cljs ([a t/any?, b t/any?] (cljs.core/identical? a b))))
 
@@ -62,7 +62,7 @@
 (t/defn ^:inline not==
   "Tests identity-inequality."
   > ut/boolean?
-         ([x t/any?] false) ; nothing is self-non-identical
+         ([x t/any?] false) ; nothing is self-non-identical (except NaN and Infinity...)
 #?(:clj  ([a t/ref?, b t/ref?] (Numeric/nonIdentical a b))
    :cljs ([a t/any?, b t/any?] (js* "(~{} !== ~{})" a b))))
 
@@ -73,7 +73,7 @@
                    clojure.core/=          "9/27/2018"
                    cljs.core/=             "9/27/2018"}}
   > ut/boolean?
-  ([x t/any?] true)) ; everything is self-equal
+  ([x t/any?] true)) ; everything is self-equal (except NaN and Infinity...)
 
 ;; TODO add variadic arity
 (t/defn ^:inline not=
@@ -81,7 +81,7 @@
   {:incorporated '{clojure.core/not= "9/27/2018"
                    cljs.core/not=    "9/27/2018"}}
   > ut/boolean?
-  ([x t/any?] false)) ; nothing is self-unequal
+  ([x t/any?] false)) ; nothing is self-unequal (except NaN and Infinity...)
 
 ; ===== `<` ===== ;
 

@@ -30,6 +30,7 @@
 ;; Just in case
 (clojure.spec.test.alpha/unstrument)
 (do (require '[orchestra.spec.test :as st])
+    (orchestra.spec.test/unstrument)
     (orchestra.spec.test/instrument))
 
 (defn B   [form] (tag "boolean"             form))

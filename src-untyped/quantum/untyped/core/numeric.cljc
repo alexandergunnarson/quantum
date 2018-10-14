@@ -18,8 +18,9 @@
    :cljs (defalias core/pos-int?))
 
 (defn integer-value?
-  {:adapted-from '#{com.google.common.math.DoubleMath/isMathematicalInteger
-                    "https://stackoverflow.com/questions/1078953/check-if-bigdecimal-is-integer-value"}}
+  {:adapted-from
+    '#{com.google.common.math.DoubleMath/isMathematicalInteger
+        "https://stackoverflow.com/questions/1078953/check-if-bigdecimal-is-integer-value"}}
   [x]
   (cond #?@(:clj  [(or (double? x) (float? x))
                      (let [x (double x)]

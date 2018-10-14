@@ -94,6 +94,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - We should probably have a 'normal form' so we can correctly hash if we do spec lookup
     - t/- : fix
       - (t/- (t/isa? java.util.Queue) (t/or ?!+queue? !!queue?))
+      - (t/- t/any? p/float? p/double?); (t/- number? p/primitive?)
     - dc/of
       - (dc/of number?) ; implicitly the container is a `reducible?`
       - (dc/of map/+map? symbol? dstr/string?)
@@ -506,7 +507,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x  ] inc
           - [x  ] inc'
           - [x x] indexed?
-          - [|  ] infinite?
+          - [| x] infinite?
           - [   ] inst?
           - [   ] inst-ms
           - [   ] instance? — NOTE CLJS has macro
@@ -607,7 +608,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x  ] namespace?
           - [! |] nary-inline
           - [   ] nat-int?
-          - [   ] neg?
+          - [x x] neg?
           - [   ] neg-int?
           - [   ] newline
           - [x  ] next
@@ -655,7 +656,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x  ] pop
           - [   ] pop!
           - [   ] pop-thread-bindings
-          - [   ] pos?
+          - [x x] pos?
           - [   ] pos-int?
           - [   ] pr
           - [   ] pr-on
@@ -914,7 +915,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] with-redefs-fn
           - [| !] write-all
           - [   ] xml-seq
-          - [x  ] zero?
+          - [x x] zero?
           - [   ] zipmap
     - [.] Intrinsics
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/Intrinsics.java
@@ -928,12 +929,12 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x] Numbers.gt(double,double)
           - [x] Numbers.gte(long,long)
           - [x] Numbers.gte(double,double)
-          - [ ] Numbers.isPos(long)
-          - [ ] Numbers.isPos(double)
-          - [ ] Numbers.isNeg(long)
-          - [ ] Numbers.isNeg(double)
-          - [ ] Numbers.isZero(double)
-          - [ ] Numbers.isZero(long)
+          - [x] Numbers.isPos(long)
+          - [x] Numbers.isPos(double)
+          - [x] Numbers.isNeg(long)
+          - [x] Numbers.isNeg(double)
+          - [x] Numbers.isZero(long)
+          - [x] Numbers.isZero(double)
           - [x] Numbers.lt(long,long)
           - [x] Numbers.lt(double,double)
           - [x] Numbers.lte(long,long)
@@ -991,35 +992,35 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] RT.alength(short[])
           - [ ] RT.alength(boolean[])
           - [ ] RT.alength(double[])
-          - [ ] RT.doubleCast(long)
-          - [ ] RT.doubleCast(double)
-          - [ ] RT.doubleCast(float)
-          - [ ] RT.doubleCast(int)
-          - [ ] RT.doubleCast(short)
-          - [ ] RT.doubleCast(byte)
-          - [ ] RT.uncheckedDoubleCast(double)
-          - [ ] RT.uncheckedDoubleCast(float)
-          - [ ] RT.uncheckedDoubleCast(long)
-          - [ ] RT.uncheckedDoubleCast(int)
-          - [ ] RT.uncheckedDoubleCast(short)
-          - [ ] RT.uncheckedDoubleCast(byte)
-          - [ ] RT.longCast(long)
-          - [ ] RT.longCast(short)
           - [ ] RT.longCast(byte)
+          - [ ] RT.longCast(short)
           - [ ] RT.longCast(int)
-          - [ ] RT.uncheckedIntCast(long)
-          - [ ] RT.uncheckedIntCast(double)
-          - [ ] RT.uncheckedIntCast(byte)
-          - [ ] RT.uncheckedIntCast(short)
-          - [ ] RT.uncheckedIntCast(char)
-          - [ ] RT.uncheckedIntCast(int)
-          - [ ] RT.uncheckedIntCast(float)
-          - [ ] RT.uncheckedLongCast(short)
-          - [ ] RT.uncheckedLongCast(float)
-          - [ ] RT.uncheckedLongCast(double)
-          - [ ] RT.uncheckedLongCast(byte)
-          - [ ] RT.uncheckedLongCast(long)
-          - [ ] RT.uncheckedLongCast(int)
+          - [!] RT.longCast(long)
+          - [ ] RT.doubleCast(byte)
+          - [ ] RT.doubleCast(short)
+          - [ ] RT.doubleCast(int)
+          - [ ] RT.doubleCast(long)
+          - [ ] RT.doubleCast(float)
+          - [!] RT.doubleCast(double)
+          - [x] RT.uncheckedIntCast(byte)
+          - [x] RT.uncheckedIntCast(short)
+          - [x] RT.uncheckedIntCast(char)
+          - [!] RT.uncheckedIntCast(int)
+          - [x] RT.uncheckedIntCast(long)
+          - [x] RT.uncheckedIntCast(float)
+          - [x] RT.uncheckedIntCast(double)
+          - [x] RT.uncheckedLongCast(byte)
+          - [x] RT.uncheckedLongCast(short)
+          - [x] RT.uncheckedLongCast(int)
+          - [!] RT.uncheckedLongCast(long)
+          - [x] RT.uncheckedLongCast(float)
+          - [x] RT.uncheckedLongCast(double)
+          - [x] RT.uncheckedDoubleCast(byte)
+          - [x] RT.uncheckedDoubleCast(short)
+          - [x] RT.uncheckedDoubleCast(int)
+          - [x] RT.uncheckedDoubleCast(long)
+          - [x] RT.uncheckedDoubleCast(float)
+          - [!] RT.uncheckedDoubleCast(double)
           - [!] Util.equiv(long,long)
           - [x] Util.equiv(boolean,boolean)
           - [!] Util.equiv(double,double)
@@ -1530,10 +1531,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] incP
           - [ ] int_array
           - [ ] ints
-          - [ ] isNaN
-          - [ ] isNeg
-          - [ ] isPos
-          - [ ] isZero
+          - [x] isNaN
+          - [x] isNeg
+          - [x] isPos
+          - [x] isZero
           - [ ] long_array
           - [ ] longs
           - [ ] lt
@@ -1641,7 +1642,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [x] quantum.core.data.time
     - [.] quantum.core.compare.core
     - [.] quantum.core.data.numeric
-    - [.] quantum.core.numeric.predicates
+    - [x] quantum.core.numeric.predicates
     - [.] quantum.core.numeric.convert
     - [.] quantum.core.numeric.exponents
     - [.] quantum.core.numeric.misc
@@ -1707,13 +1708,13 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] (logical) not
     - [x] lt
     - [x] lte
-    - [ ] gt
-    - [ ] gte
+    - [x] gt
+    - [x] gte
     - [x] eq
     - [x] neq
     - [ ] inc
     - [ ] dec
-    - [ ] isZero
+    - [x] isZero
     - [ ] isNeg
     - [ ] isPos
     - [x] add

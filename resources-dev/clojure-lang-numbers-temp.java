@@ -47,18 +47,6 @@ static abstract class OpsP implements Ops{
 
 }
 
-static public boolean isZero(Object x){
-	return ops(x).isZero((Number)x);
-}
-
-static public boolean isPos(Object x){
-	return ops(x).isPos((Number)x);
-}
-
-static public boolean isNeg(Object x){
-	return ops(x).isNeg((Number)x);
-}
-
 static public Number minus(Object x){
 	return ops(x).negate((Number)x);
 }
@@ -368,18 +356,6 @@ final static class LongOps implements Ops{
 		return BIGDECIMAL_OPS;
 	}
 
-	public boolean isZero(Number x){
-		return x.longValue() == 0;
-	}
-
-	public boolean isPos(Number x){
-		return x.longValue() > 0;
-	}
-
-	public boolean isNeg(Number x){
-		return x.longValue() < 0;
-	}
-
 	final public Number add(Number x, Number y){
 		return num(Numbers.add(x.longValue(),y.longValue()));
 	}
@@ -545,18 +521,6 @@ final static class DoubleOps extends OpsP{
 		return this;
 	}
 
-	public boolean isZero(Number x){
-		return x.doubleValue() == 0;
-	}
-
-	public boolean isPos(Number x){
-		return x.doubleValue() > 0;
-	}
-
-	public boolean isNeg(Number x){
-		return x.doubleValue() < 0;
-	}
-
 	final public Number add(Number x, Number y){
 		return Double.valueOf(x.doubleValue() + y.doubleValue());
 	}
@@ -630,21 +594,6 @@ final static class RatioOps extends OpsP{
 
 	final public Ops opsWith(BigDecimalOps x){
 		return BIGDECIMAL_OPS;
-	}
-
-	public boolean isZero(Number x){
-		Ratio r = (Ratio) x;
-		return r.numerator.signum() == 0;
-	}
-
-	public boolean isPos(Number x){
-		Ratio r = (Ratio) x;
-		return r.numerator.signum() > 0;
-	}
-
-	public boolean isNeg(Number x){
-		Ratio r = (Ratio) x;
-		return r.numerator.signum() < 0;
 	}
 
 	static Number normalizeRet(Number ret, Number x, Number y){
@@ -763,27 +712,6 @@ final static class BigIntOps extends OpsP{
 		return BIGDECIMAL_OPS;
 	}
 
-	public boolean isZero(Number x){
-		BigInt bx = toBigInt(x);
-		if(bx.bipart == null)
-			return bx.lpart == 0;
-		return bx.bipart.signum() == 0;
-	}
-
-	public boolean isPos(Number x){
-		BigInt bx = toBigInt(x);
-		if(bx.bipart == null)
-			return bx.lpart > 0;
-		return bx.bipart.signum() > 0;
-	}
-
-	public boolean isNeg(Number x){
-		BigInt bx = toBigInt(x);
-		if(bx.bipart == null)
-			return bx.lpart < 0;
-		return bx.bipart.signum() < 0;
-	}
-
 	final public Number add(Number x, Number y){
         return toBigInt(x).add(toBigInt(y));
 	}
@@ -862,21 +790,6 @@ final static class BigDecimalOps extends OpsP{
 
 	final public Ops opsWith(BigDecimalOps x){
 		return this;
-	}
-
-	public boolean isZero(Number x){
-		BigDecimal bx = (BigDecimal) x;
-		return bx.signum() == 0;
-	}
-
-	public boolean isPos(Number x){
-		BigDecimal bx = (BigDecimal) x;
-		return bx.signum() > 0;
-	}
-
-	public boolean isNeg(Number x){
-		BigDecimal bx = (BigDecimal) x;
-		return bx.signum() < 0;
 	}
 
 	final public Number add(Number x, Number y){
@@ -1439,18 +1352,6 @@ static public double divide(double x, double y){
 	return x / y;
 }
 
-static public boolean isPos(double x){
-	return x > 0;
-}
-
-static public boolean isNeg(double x){
-	return x < 0;
-}
-
-static public boolean isZero(double x){
-	return x == 0;
-}
-
 static int throwIntOverflow(){
 	throw new ArithmeticException("integer overflow");
 }
@@ -1639,18 +1540,6 @@ static public int unchecked_int_remainder(int x, int y){
 //	return x >= y;
 //}
 
-//static public boolean isPos(int x){
-//	return x > 0;
-//}
-
-//static public boolean isNeg(int x){
-//	return x < 0;
-//}
-
-//static public boolean isZero(int x){
-//	return x == 0;
-//}
-
 static public Number num(long x){
 	return Long.valueOf(x);
 }
@@ -1818,18 +1707,6 @@ static public long quotient(long x, long y){
 
 static public long remainder(long x, long y){
 	return x % y;
-}
-
-static public boolean isPos(long x){
-	return x > 0;
-}
-
-static public boolean isNeg(long x){
-	return x < 0;
-}
-
-static public boolean isZero(long x){
-	return x == 0;
 }
 
 //overload resolution
@@ -2085,11 +1962,6 @@ static public boolean equiv(double x, Object y){
 
 static public boolean equiv(Object x, double y){
 	return ((Number)x).doubleValue() == y;
-}
-
-static boolean isNaN(Object x){
-	return (x instanceof Double) && ((Double)x).isNaN()
-		|| (x instanceof Float) && ((Float)x).isNaN();
 }
 
 static public double max(double x, double y){
