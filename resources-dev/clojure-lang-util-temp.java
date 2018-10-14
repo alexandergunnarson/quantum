@@ -1,17 +1,4 @@
 public class Util{
-static public boolean equiv(Object k1, Object k2){
-	if(k1 == k2)
-		return true;
-	if(k1 != null)
-		{
-		if(k1 instanceof Number && k2 instanceof Number)
-			return Numbers.equal((Number)k1, (Number)k2);
-		else if(k1 instanceof IPersistentCollection || k2 instanceof IPersistentCollection)
-			return pcequiv(k1,k2);
-		return k1.equals(k2);
-		}
-	return false;
-}
 
 public interface EquivPred{
     boolean equiv(Object k1, Object k2);

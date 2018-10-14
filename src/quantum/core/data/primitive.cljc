@@ -5,7 +5,7 @@
  #?(:cljs [com.gfredericks.goog.math.Integer :as int])
  #?(:cljs goog.math.Integer)
  #?(:cljs goog.math.Long)
-          [quantum.core.compare.core         :as ccomp]
+          [quantum.core.compare.core         :as c?]
           [quantum.core.type                 :as t]
           [quantum.untyped.core.type         :as ut]
           ;; TODO TYPED excise reference
@@ -16,6 +16,7 @@
           [java.nio     ByteBuffer]
           [quantum.core Numeric Primitive])))
 
+;; TODO for CLJS nil/val, we need to check via `js/==` not `js/===`
 (def nil? ut/nil?)
 (def val? ut/val?)
 
@@ -198,7 +199,7 @@
 ;; ===== Extensions ===== ;;
 
 #?(:clj
-(t/extend-defn! ccomp/==
+(t/extend-defn! c?/==
   (^:in [a boolean?                    , b boolean?]                     (Util/equiv    a b))
   (     [a boolean?                    , b (t/- primitive? boolean?)]    false)
   (     [a (t/- primitive? boolean?)   , b boolean?]                     false)
@@ -211,19 +212,20 @@
   (     [a (t/- numeric? double? long?), b (t/- numeric? double? long?)] (Numeric/eq    a b))))
 
 #?(:clj
-(t/extend-defn! ccomp/not==
+(t/extend-defn! c?/not==
   ([a boolean?                 , b boolean?]                  (Numeric/neq a b))
   ([a boolean?                 , b (t/- primitive? boolean?)] false)
   ([a (t/- primitive? boolean?), b boolean?]                  false)
   ([a numeric?                 , b numeric?]                  (Numeric/neq a b))))
 
-(t/extend-defn! ccomp/=
-  ([a primitive?, b primitive?] (ccomp/== a b)))
+(t/extend-defn! c?/=
+         ([a primitive?, b primitive?] (c?/== a b))
+#?(:cljs ([a primitive?, b t/any?]     false)))
 
-(t/extend-defn! ccomp/not=
-  ([a primitive?, b primitive?] (ccomp/not== a b)))
+(t/extend-defn! c?/not=
+  ([a primitive?, b primitive?] (c?/not== a b)))
 
-(t/extend-defn! ccomp/<
+(t/extend-defn! c?/<
          (     [x numeric?] true)
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/lt a b)))
 #?(:clj  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/lt a b)))
@@ -237,7 +239,7 @@
   ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
   )
 
-(t/extend-defn! ccomp/<=
+(t/extend-defn! c?/<=
          (     [x numeric?] true)
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/lte  a b)))
 #?(:clj  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/lte  a b)))
@@ -251,7 +253,7 @@
   ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
   )
 
-(t/extend-defn! ccomp/>
+(t/extend-defn! c?/>
          (     [x numeric?] true)
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/gt  a b)))
 #?(:clj  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/gt  a b)))
@@ -265,7 +267,7 @@
   ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
   )
 
-(t/extend-defn! ccomp/>=
+(t/extend-defn! c?/>=
          (     [x numeric?] true)
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/gte  a b)))
 #?(:clj  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/gte  a b)))

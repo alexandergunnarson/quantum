@@ -41,7 +41,6 @@
 ;; TODO comp< vs. <; comp< should include arrays
 ;; `=`  <- `==`, `=`: permissive
 ;; `='` <- `=`: strict like `core/=` with numbers
-;; `==` <- `identical?`
 ;; TODO `hash=`
 ;; TODO .equals vs. .equiv vs. all the others?
 
@@ -68,12 +67,29 @@
 
 ;; TODO add variadic arity
 (t/defn ^:inline =
-  "Tests value-equality."
+  "Tests value-equality. Same as Java's `x.equals(y)` except it also works for nil, and compares
+   numbers and collections in a type-independent manner. For numbers, works like `core/==`"
   {:incorporated '{clojure.lang.Util/equiv "9/27/2018"
                    clojure.core/=          "9/27/2018"
                    cljs.core/=             "9/27/2018"}}
   > ut/boolean?
-  ([x t/any?] true)) ; everything is self-equal (except NaN and Infinity...)
+  ([x t/any?] true) ; everything is self-equal (except NaN and Infinity...)
+  ([a t/nil?        , b t/nil?]         true)
+  ([a t/nil?        , b (t/ref t/val?)] false)
+  ([a (t/ref t/val?), b t/nil?]         false)
+  ;; The fallback overload; collections (in CLJ) and protocol-native objects (in CLJS) will have a
+  ;; more specific equivalence check as defined later on
+  ([a (t/ref t/val?), b (t/ref t/val?)]
+    (or (== a b)
+        #?(:clj  (.equals            a b)
+           :cljs (-equiv ^non-native a b)))))
+
+(defn ^boolean =
+  ([x y]
+    (if (nil? x)
+      (nil? y)
+      (or (identical? x y)
+        ^boolean (-equiv x y)))))
 
 ;; TODO add variadic arity
 (t/defn ^:inline not=

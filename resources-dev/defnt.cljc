@@ -102,6 +102,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - dc/map-of
       - dc/seq-of
   - Analysis
+    - `(p/nil? ...)` should probably be inlined to `(?/== ... nil)` rather than using the overhead of the
+      deftype
+    - This should realize that we're negating a `<` and change the operator to `<=`
+      - `(t/def nneg? (fn/comp ?/not neg?))`
     - Better analysis of compound literals
       - Literal vectors need to be analyzed — (t/finite-of t/built-in-vector? a-type b-type ...)
       - Literal sets need to be analyzed — (t/finite-of t/built-in-set? a-type b-type ...)
@@ -148,6 +152,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - comparison of `t/fn`s is probably possible?
   - t/def
     - TODO what would this even look like? I guess it would just declare the sym, meta, and type
+    - It would also have the benefit of creating a typed context
     - Without an argument, it would work like `declare`
   - t/fn
   - t/ftype
@@ -214,7 +219,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [! !] ..
           - [x x] <
           - [x x] <=
-          - [. .] = — look at coercive-=
+          - [x .] = — look at coercive-=
           - [x x] ==
           - [x x] >
           - [x x] >=

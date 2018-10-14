@@ -39,13 +39,27 @@
   (:import
     clojure.lang.BigInt quantum.core.Numeric)))
 
-;; TODO incorporate (CLJS)
-(defn ^boolean =
-  ([x y]
-    (if (nil? x)
-      (nil? y)
-      (or (identical? x y)
-        ^boolean (-equiv x y)))))
+(def compare ccomp/compare)
+
+;; TODO TYPED define variadic arity
+(t/extend-defn! compare
+#?(:cljs ([a js/Date      , b js/Date]       (compare (dtime/date>value a) (dtime/date>value b))))
+         ([a arr/array-1d?, b arr/array-1d?] (compare-1d-arrays-lexicographically a b)))
+
+;; TODO TYPED define variadic arity
+;; TODO move this to the appropriate place
+(t/extend-defn! =
+#?(:cljs ([a js/Date   , b js/Date] (= (dtime/date>value o) (dtime/date>value other))))
+#?(:cljs ([a js/Date   , b t/any?]  false))
+#?(:cljs ([a ??/array? , b ??/array?] (TODO)))
+#?(:cljs ([a ??/array? , b t/any?] false))
+         ;; We intentionally ignore the case of `new String(...)`.
+#?(:cljs ([a ??/string?, b ??/string?] (== a b)))
+#?(:cljs ([a ??/string?, b t/any?] false))
+#?(:clj  ([a (t/isa? IPersistentCollection) b t/any?] (TODO Util.pcequiv)))
+#?(:clj  ([a t/any?                         b (t/isa? IPersistentCollection)] (TODO Util.pcequiv)))
+)
+
 
 ;; TODO TYPED; also incorporate `core/fn->comparator`
 (defn fn->comparator [f]
@@ -69,17 +83,6 @@
               (if (zero? x)
                   (recur (core/inc i))
                   x))))))))
-
-(def compare ccomp/compare)
-
-;; TODO TYPED define variadic arity
-(t/extend-defn! compare
-#?(:cljs ([a js/Date      , b js/Date]       (compare (dtime/date>value a) (dtime/date>value b))))
-         ([a arr/array-1d?, b arr/array-1d?] (compare-1d-arrays-lexicographically a b)))
-
-;; TODO TYPED define variadic arity
-(t/extend-defn! =
-#?(:cljs ([a js/Date, b js/Date] (== (dtime/date>value o) (dtime/date>value other)))))
 
 (defaliases ccomp
   min-key first-min-key second-min-key

@@ -15,13 +15,14 @@
 
    `ratio?` for CLJS:
    - Fraction.js is the best contender as of 9/27/2018. https://github.com/infusion/Fraction.js"
-         #_(:refer-clojure :exclude ; otherwise `Unable to resolve symbol: eval`
+         (:refer-clojure :exclude ; otherwise `Unable to resolve symbol: eval`
            [decimal? denominator integer? number? numerator ratio? zero?])
          (:require
            [clojure.core                      :as core]
            [clojure.string                    :as str]
   #?(:cljs goog.math.Integer)
   #?(:cljs goog.math.Long)
+           [quantum.core.compare.core         :as c?]
            [quantum.core.data.primitive       :as p]
          #_[quantum.core.logic
              :refer [whenf fn-not fn=]]
@@ -30,6 +31,7 @@
            [quantum.untyped.core.vars         :as var
              :refer [defalias]])
 #?(:clj  (:import
+           [clojure.lang Numbers]
            [quantum.core Numeric Primitive])))
 
 ;; ===== Types ===== ;;
@@ -98,8 +100,16 @@
 
 ;; ----- General ----- ;;
 
+(def exact? (t/or integer? ratio?))
+
 (def number? (t/or #?@(:clj  [(t/isa? java.lang.Number)]
                        :cljs [integer? decimal? ratio?])))
+
+;; ===== Comparison extensions ===== ;;
+
+;; TODO primitive with non-primitive
+(t/extend-defn! c?/=
+  FIXME)
 
 (t/defn ^:inline >zero-of-type #_> #_zero?
 #?(:clj ([x p/byte?      > (t/type x)] Numeric/byte0))
@@ -118,7 +128,7 @@
 (t/defn ^:inline zero? > p/boolean?
 #?(:clj  (^:int [x (t/or p/long? p/double?)] (Numbers/isZero x)))
 #?(:clj  (      [x (t/- p/numeric? p/long? p/double?)] (Numeric/isZero x)))
-#?(:clj  (      [x clj-bigint?] (if (?/nil? (.-bipart x))
+#?(:clj  (      [x clj-bigint?] (if (p/nil? (.-bipart x))
                                     (-> x .-lpart  zero?)
                                     (-> x .-bipart zero?))))
 #?(:clj  (      [x (t/or java-bigint? bigdec?)] (-> x .signum zero?)))
@@ -140,8 +150,8 @@
 #?(:clj ([x bigdec?      > (t/assume (t/type x))] java.math.BigDecimal/ONE)))
 
 (t/defn ^:inline one? > p/boolean?
-#?(:clj ([x p/numeric?] (?/= x (>one-of-type x))))
-        ([x #?(:clj (t/ref number?) :clj number?)] (?/= x 1)))
+#?(:clj ([x p/numeric?] (c?/= x (>one-of-type x))))
+        ([x #?(:clj (t/ref number?) :clj number?)] (c?/= x 1)))
 
 (t/defn ^:inline neg? > p/boolean?
 #?(:clj  (^:int [x (t/or p/long? p/double?)] (Numbers/isNeg x)))
@@ -153,7 +163,8 @@
 #?(:clj  (      [x ratio?] (-> x .-numerator neg?)))
          (      [x #?(:clj (t/ref number?) :clj number?)] (?/< x 0)))
 
-(t/defn nneg? > p/boolean? [x number?] (FIXME))
+;; TODO TYPED this should realize that we're negating a `<` and change the operator to `<=`
+(t/def nneg? (fn/comp ?/not neg?))
 
 (t/defn ^:inline pos? > p/boolean?
 #?(:clj  (^:int [x (t/or p/long? p/double?)] (Numbers/isPos x)))
@@ -165,14 +176,13 @@
 #?(:clj  (      [x ratio?] (-> x .-numerator pos?)))
          (      [x #?(:clj (t/ref number?) :clj number?)] (?/> x 0)))
 
-(t/defn npos? > p/boolean? [x number?] (FIXME)))
+;; TODO TYPED this should realize that we're negating a `<` and change the operator to `<=`
+(t/def npos? (fn/comp ?/not pos?))
 
-(def pos-int?  (fn/and integer? pos?))
-(def neg-int?  (fn/and integer? neg?))
-(def npos-int? (fn/and integer? npos?))
-(def nneg-int? (fn/and integer? nneg?))
-
-(t/defn exact? > p/boolean? [x p/numeric?] (TODO))
+(t/def pos-int?  (fn/and integer? pos?))
+(t/def neg-int?  (fn/and integer? neg?))
+(t/def npos-int? (fn/and integer? npos?))
+(t/def nneg-int? (fn/and integer? nneg?))
 
 (t/defn ^:inline infinite?
   "`Float/NEGATIVE_INFINITY`, `Float/POSITIVE_INFINITY`, `Double/NEGATIVE_INFINITY`, and
