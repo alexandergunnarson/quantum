@@ -54,6 +54,7 @@ TODO:
 - `(or (and pred then) (and (not pred) else))` (which is not correct)
 - needs to equal `(t/and (t/or (t/not a) b) (t/or a c))` (which is correct)
 - `(- (or ?!+vector? !vector? #?(:clj !!vector?)) (isa? clojure.lang.Counted))` is not right
+- t/or should probably order by `t/compare` descending
 
 #_"
 Note that `;; TODO TYPED` is the annotation we're using for this initiative

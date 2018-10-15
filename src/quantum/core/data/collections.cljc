@@ -178,14 +178,13 @@
                                       :cljs cljs.core/ITransientAssociative)))
 
 (var/def associative?
-  "Indicates whether `assoc?!` is supported."
+  "Collections that can associate a (potentially new) key with a new value. Technically, anything
+   that is able to be the first input to `assoc?!`."
   (t/or +associative? !+associative? (t/or map/map? indexed?)))
 
 (def icounted? (t/isa?|direct #?(:clj clojure.lang.Counted :cljs cljs.core/ICounted)))
 
-(var/def counted?
-  "Objects guaranteed to implement a constant-time `count`. `nil` is technically counted but this
-   type ignores that."
+(var/def counted? "Objects guaranteed to implement a constant-time `count`."
   (t/or icounted?
         ;; It's not guaranteed that `char-seq?`s have constant-time `.length`/`count` but it's very
         ;; reasonable to assume.
@@ -214,7 +213,7 @@
         #?@(:clj  [(t/isa? clojure.lang.IPersistentCollection)
                    (t/isa? clojure.lang.ITransientCollection)]
             :cljs (t/isa|direct? cljs.core/ICollection))
-        sequential? associative?))
+        ordered? lookup? associative?))
 
 (def reduced? (t/isa? #?(:clj clojure.lang.Reduced :cljs cljs.core/Reduced)))
 
