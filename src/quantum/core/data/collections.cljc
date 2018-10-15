@@ -87,6 +87,12 @@
 
 ;; ===== End sequences ===== ;;
 
+(def transient? (t/isa?|direct #?(:clj  clojure.lang.ITransientCollection
+                                  :cljs cljs.core/ITransientCollection)))
+
+(def editable? (t/isa?|direct #?(:clj  clojure.lang.IEditableCollection
+                                 :cljs cljs.core/IEditableCollection)))
+
 (def record? (t/isa?|direct #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
 
 (var/def comparator-ordered?
@@ -104,12 +110,6 @@
         ; TODO implement — it means monotonically <= or >=
         monotonic?))
 
-(def transient? (t/isa?|direct #?(:clj  clojure.lang.ITransientCollection
-                                  :cljs cljs.core/ITransientCollection)))
-
-(def editable? (t/isa?|direct #?(:clj  clojure.lang.IEditableCollection
-                                 :cljs cljs.core/IEditableCollection)))
-
 (def iindexed? (t/isa?|direct #?(:clj clojure.lang.Indexed :cljs cljs.core/IIndexed)))
 
 (var/def indexed?
@@ -123,10 +123,12 @@
         #?(:clj dstr/char-seq? :cljs dstr/string?)
         arr/array?))
 
-(var/def insertion-ordered?
-  "Collections whose elements are ordered, whether in forward or reverse direction, by their
-   insertion."
-  ...)
+(def ilookup? (t/isa?|direct #?(:clj clojure.lang.Lookup :cljs cljs.core/ILookup)))
+
+(var/def lookup?
+  "Indicates efficient lookup by key (via `get`).
+   Technically, anything that is able to be the first input to `get`."
+  (t/or ilookup? indexed?))
 
 (var/def sequentially-ordered?
   "Collections defined by the fact that their elements must appear in a particular order,
@@ -136,7 +138,14 @@
         iseq?
         #?(:clj (t/isa? java.util.List))
         +list?
-        indexed?))
+        indexed?
+        ;; These four are insertion-ordered maps but when re-`assoc`ing (map) or re-`conj`ing (set),
+        ;; the original sequence is retained, so really they're sequentially ordered and not purely
+        ;; insertion-ordered.
+        #?(:clj (t/isa? flatland.ordered.map.OrderedMap))
+        #?(:clj (t/isa? flatland.ordered.set.OrderedSet))
+        (t/isa? linked.map.LinkedMap)
+        (t/isa? linked.set.LinkedSet)))
 
 (var/def ordered?
   "Collections defined by the fact that their elements must appear in a particular order. Note:
@@ -147,13 +156,10 @@
    - `comparator-ordered?` implies `ordered?` while `sorted?` does not necessarily, as while a
      collection may happen to be sorted, this does not imply that order is one of its defining
      aspects.
-   - `insertion-ordered?` implies `ordered`, as the ordering criterion can be thought of as the
-     designator / index of each element's insertion.
    - While all good hashing algorithms are deterministic, order is not (generally) guaranteed for
      hash-ordered collections."
   (t/or sequentially-ordered?
-        comparator-ordered?
-        insertion-ordered?))
+        comparator-ordered?))
 
 (def  +associative? (t/isa?|direct #?(:clj  clojure.lang.Associative
                                       :cljs cljs.core/IAssociative)))
