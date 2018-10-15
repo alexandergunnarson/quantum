@@ -396,6 +396,33 @@
   (test-equality #(t/isa? I))
   (test-equality #(t/isa? P)))
 
+(deftest test|finite
+  (is= true  ((t/finite []) nil))
+  (is= true  ((t/finite []) []))
+  (is= true  ((t/finite []) #{}))
+  (is= true  ((t/finite []) {}))
+  (is= true  ((t/finite) nil))
+  (is= true  ((t/finite) []))
+  (is= true  ((t/finite) #{}))
+  (is= true  ((t/finite) {}))
+  (is= false ((t/finite [boolean?]) nil))
+  (is= false ((t/finite [boolean?]) []))
+  (is= false ((t/finite [boolean?]) #{}))
+  (is= false ((t/finite [boolean?]) {}))
+  (is= true  ((t/finite [boolean?]) [true]))
+  (is= true  ((t/finite [boolean?]) #{true}))
+  (is= false ((t/finite [boolean?]) {true true}))
+  (is= false ((t/finite  boolean?) nil))
+  (is= false ((t/finite  boolean?) []))
+  (is= false ((t/finite  boolean?) #{}))
+  (is= false ((t/finite  boolean?) {}))
+  (is= true  ((t/finite  boolean?) [true]))
+  (is= true  ((t/finite  boolean?) #{true}))
+  (is= false ((t/finite  boolean?) {true true}))
+  (is= true  ((t/finite [(t/finite boolean? boolean?)]) {true true}))
+  (is= true  ((t/finite  (t/finite boolean? boolean?))  {true true}))
+  )
+
 (deftest test|value
   (test-equality #(t/value 1))
   (testing "hash equality"

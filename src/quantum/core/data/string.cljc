@@ -3,8 +3,9 @@
        (:refer-clojure :exclude
          [string?])
        (:require
+         [quantum.core.compare.core   :as c?]
          [quantum.core.data.meta      :as meta]
-         [quantum.core.data.numeric   :as num]
+         [quantum.core.data.numeric   :as dn]
          [quantum.core.data.primitive :as p]
          [quantum.core.type           :as t]
          ;; TODO TYPED excise
@@ -148,11 +149,17 @@
   (t/fn [x integer?]
     (comp/<= #?(:clj Character/MIN_RADIX :cljs 2) x #?(:clj Character/MAX_RADIX :cljs 36))))
 
-(t/extend-defn! p/>boolean
+(t/extend-defn! ?c/compare
+#?(:clj (^:in [a string?, b string?] (.compareTo a b))))
+
+(t/extend-defn! ?c/=
+#?(:clj (^:in [a string?, b string?] (.equals a b))))
+
+(t/extend-defn! dn/>boolean
   ([x (t/value "true")] true)
   ([x (t/value "false")] false))
 
-(t/extend-defn! p/>byte
+(t/extend-defn! dn/>byte
   ([x string?]
     #?(:clj  (Byte/parseByte x)
               ;; NOTE could use `js/parseInt` but it's very 'unsafe'
@@ -164,7 +171,7 @@
              ;; TODO implement based on `Byte/parseByte`
        :cljs (throw (ex-info "Parsing not implemented" {:string x})))))
 
-(t/extend-defn! p/>short
+(t/extend-defn! dn/>short
   ([x string?]
     #?(:clj  (Short/parseShort x)
               ;; NOTE could use `js/parseInt` but it's very 'unsafe'
@@ -176,7 +183,7 @@
              ;; TODO implement based on `Short/parseShort`
        :cljs (throw (ex-info "Parsing not implemented" {:string x})))))
 
-(t/extend-defn! p/>int
+(t/extend-defn! dn/>int
   ([x string?]
     #?(:clj  (Integer/parseInteger x)
              ;; NOTE could use `js/parseInt` but it's very 'unsafe'
@@ -188,7 +195,7 @@
              ;; TODO implement based on `Integer/parseInteger`
        :cljs (throw (ex-info "Parsing not implemented" {:string x})))))
 
-(t/extend-defn! p/>long
+(t/extend-defn! dn/>long
   ([x string?]
     #?(:clj  (Long/parseLong x)
               ;; NOTE could use `js/parseInt` but it's very 'unsafe'
@@ -200,14 +207,14 @@
              ;; TODO implement based on `Long/parseLong`
        :cljs (throw (ex-info "Parsing not implemented" {:string x})))))
 
-(t/extend-defn! p/>float
+(t/extend-defn! dn/>float
   ([x string?]
     #?(:clj  (Float/parseFloat x)
               ;; NOTE could use `js/parseFloat` but it's very 'unsafe'
               ;; TODO implement based on `Float/parseFloat`
        :cljs (throw (ex-info "Parsing not implemented" {:string x})))))
 
-(t/extend-defn! p/>double
+(t/extend-defn! dn/>double
   ([x string?]
     #?(:clj  (Double/parseDouble x)
              ;; NOTE could use `js/parseFloat` but it's very 'unsafe'

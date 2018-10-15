@@ -212,26 +212,36 @@
   [env ::env, form _, empty-form _, rf _]
   (-> (reducei
         (fn [accum form' i] (rf accum (analyze* (:env accum) form') i))
-        {:env env :form (transient empty-form) :body (transient [])}
+          {:env env :form (transient empty-form) :body (transient [])}
         form)
       (update :form (fn-> persistent! (add-file-context-from form)))
       (update :body persistent!)))
 
 (defns- analyze-map
-  {:todo #{"If the map is bound to a variable, preserve type info for it such that lookups
-            can start out with a guarantee of a certain type."}}
+  {:todo #{"Should we differentiate between array map and hash map here depen. on ct of inputs?"}}
   [env ::env, form _]
-  (TODO "analyze-map")
-  #_(->> form
-       (reduce-kv (fn [{env' :env forms :form} form'k form'v]
-                    (let [ast-node-k (analyze* env' form'k)
-                          ast-node-v (analyze* env' form'v)]
-                      (->expr-info {:env       env'
-                                    :form      (assoc! forms (:form ast-node-k) (:form ast-node-v))
-                                   ;; TODO fix; we want the types of the keys and vals to be deduced
-                                    :type-info nil})))
-         (->expr-info {:env env :form (transient {})}))
-       (persistent!-and-add-file-context-from form)))
+  (let [{:keys [all-values? m]}
+          (->> form
+               (uc/map+ (fn [[form-k form-v]] [(analyze* env form-k) (analyze* env form-v)]))
+               (educe (fn [{:as ret :keys [all-values? m]} [k v]]
+                        (-> ret
+                            (cond-> (and all-values?
+                                         (-> k :type utr/value-type?)
+                                         (-> v :type utr/value-type?))
+                              (assoc :all-values? true))
+                            (update :m assoc k v)))
+                      {:all-values? true :m {}}))
+        t (if all-values?
+              (->> m (uc/map+ (fn [[k v]] [(-> k :type t/unvalue) (-> v :type t/unvalue)]))
+                     (join {})
+                     t/value)
+              (t/and t/+map|built-in? (t/finite (seq m))))]
+    (uast/map-node {:env             env
+                    :unanalyzed-form form
+                    :form            (->> m (uc/map+ (fn [[k v]] [(:form k) (:form v)]))
+                                            (join {})
+                                            (<- (add-file-context-from form)))
+                    :type            t})))
 
 (defns- analyze-seq|do [env ::env, [_ _ & body|form _ :as form] _ > uast/do?]
   (if (empty? body|form)
@@ -860,6 +870,7 @@
          (uast/literal env form (t/>type form))
        (or (vector? form)
            (set?    form))
+         ;; TODO use `uast/vector-node` and `uast/set-node`
          (analyze-non-map-seqable env form (empty form) (fn stop [& [a b :as args]] (prl! args) (err! "STOP")))
        (map? form)
          (analyze-map env form)

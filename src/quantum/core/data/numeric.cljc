@@ -31,7 +31,8 @@
            [quantum.untyped.core.vars         :as var
              :refer [defalias]])
 #?(:clj  (:import
-           [clojure.lang Numbers]
+           [clojure.lang BigInt Numbers Ratio]
+           [java.math    BigInteger]
            [quantum.core Numeric Primitive])))
 
 ;; ===== Types ===== ;;
@@ -105,11 +106,162 @@
 (def number? (t/or #?@(:clj  [(t/isa? java.lang.Number)]
                        :cljs [integer? decimal? ratio?])))
 
+(var/def numeric?
+  "Something 'numeric' is something that may be treated as a number but may not actually *be* one."
+  (t/or number? #?(:clj p/char?)))
+
+;; ===== Arbitrary-precision conversions (needed for comparisons) ===== ;;
+
+;; Forward declaration so bigint conversions can use it
+;; TODO figure out how to use with CLJS, including goog.math.Integer/Long
+#?(:clj
+(t/defn ^:inline >long*
+  "May involve non-out-of-range truncation."
+  > p/long?
+  (     [x p/long?] x)
+  (     [x p/char?] (Primitive/uncheckedLongCast x))
+  (^:in [x (t/- p/primitive? p/long? p/boolean? p/char?)] (clojure.lang.RT/uncheckedLongCast x))
+  (     [x (t/ref number?)] (.longValue x))))
+
+;; TODO figure out how to use with goog.math.Integer/Long
+(t/defn ^:inline >double*
+  "May involve non-out-of-range truncation."
+  > p/double?
+        (     [x p/double?] x)
+        (     [x p/char?] (Primitive/uncheckedDoubleCast x))
+#?(:clj (^:in [x (t/- p/primitive? p/boolean? p/char? p/double?)]
+          (clojure.lang.RT/uncheckedDoubleCast x))))
+
+#?(:clj
+(t/defn ^:inline >java-bigint > java-bigint?
+  ([x fixnum? > (t/assume java-bigint?)] (-> x >long* BigInteger/valueOf))
+  ([x java-bigint?] x)
+  ([x clj-bigint? > (t/assume java-bigint?)] (.toBigInteger x))
+  ;; Truncates the decimal portion
+  ;; TODO should this overload be part of `>java-bigint*`?
+  ([x bigdec? > (t/assume java-bigint?)] (.toBigInteger x))
+  ;; Truncates the decimal portion
+  ;; TODO should this overload be part of `>java-bigint*`?
+  ([x ratio? > (t/assume java-bigint?)] (.bigIntegerValue x)))
+
+#?(:clj
+(t/defn ^:inline >clj-bigint > clj-bigint?
+  ([x fixnum?      > (t/assume clj-bigint?)] (-> x >long* BigInt/fromLong))
+  ([x java-bigint? > (t/assume clj-bigint?)] (BigInt/fromBigInteger x))
+  ([x clj-bigint?] x)
+  ;; Truncates the decimal portion
+  ;; TODO should this overload be part of `>clj-bigint*`?
+  ([x bigdec?] (-> x >java-bigint >clj-bigint))
+  ;; Truncates the decimal portion
+  ;; TODO should this overload be part of `>clj-bigint*`?
+  ([x ratio?] (-> x >java-bigint >clj-bigint))))
+
+#?(:clj
+(t/defn ^:inline >bigdec > bigdec?
+  ([x fixint? > (t/assume bigdec?)] (-> x >long*   BigDecimal/valueOf))
+  ([x fixdec? > (t/assume bigdec?)] (-> x >double* BigDecimal/valueOf))
+  ([x java-bigint?] (BigDecimal. x))
+  ([x clj-bigint? > (t/assume bigdec?)] (.toBigDecimal x))
+  ([x bigdec?] x)
+  ([x ratio? > (t/assume bigdec?)] (.divide (-> x ^:val (.numerator)   >bigdec)
+                                            (-> x ^:val (.denominator) >bigdec)))))
+
+#?(:clj
+(t/defn ^:inline >ratio > ratio?
+  ([x (t/or fixnum? bigint?)] (Ratio. (>java-bigint x) BigInteger/ONE))
+  ([x bigdec?] (let [v ^:val (.unscaledValue x)
+                     scale (.scale x)]
+                 (if (c?/< scale 0)
+                     (Ratio. (.multiply v (.pow ^:val (. BigInteger TEN)
+                                                (Numbers/unchecked_int_negate scale)))
+                             ^:val (. BigInteger ONE))
+                     (Ratio. v (.pow ^:val (. BigInteger TEN) scale)))))
+  ([x ratio?] x)))
+
 ;; ===== Comparison extensions ===== ;;
 
 ;; TODO primitive with non-primitive
 (t/extend-defn! c?/=
-  FIXME)
+        ;; `.equals` takes into account precision even if they're numerically equivalent
+        ;; `core/=` uses `.equals` for `BigDecimal`s
+#?(:clj ([a bigdec?     , b bigdec?]      (c?/comp= a b)))
+#?(:clj ([a bigdec?     , b numeric?]     (c?/= a (>bigdec b))))
+#?(:clj ([a numeric?    , b bigdec?]      (c?/= (>bigdec a) b)))
+#?(:clj ([a java-bigint?, b java-bigint?] (.equals a b)))
+#?(:clj ([a java-bigint?, b numeric?]     (c?/= a (>java-bigint b))))
+#?(:clj ([a numeric?    , b java-bigint?] (c?/= (>java-bigint a) b)))
+#?(:clj ([a clj-bigint? , b clj-bigint?]  (.equals a b)))
+#?(:clj ([a clj-bigint? , b numeric?]     (c?/= a (>clj-bigint b))))
+#?(:clj ([a numeric?    , b clj-bigint?]  (c?/= (>clj-bigint a) b)))
+#?(:clj ([a ratio?      , b ratio?]       (and (c?/= (.numerator   a) (.numerator   b))
+                                               (c?/= (.denominator a) (.denominator b)))))
+#?(:clj ([a ratio?      , b numeric?]     (c?/= a (>ratio b))))
+#?(:clj ([a numeric?    , b ratio?]       (c?/= (>ratio a) b))))
+
+;; TODO primitive with non-primitive
+(t/extend-defn! c?/<
+        ([x numeric?] true)
+#?(:clj ([a bigdec?     , b bigdec?]      (c?/comp< a b)))
+#?(:clj ([a bigdec?     , b numeric?]     (c?/< a (>bigdec b))))
+#?(:clj ([a numeric?    , b bigdec?]      (c?/< (>bigdec a) b)))
+#?(:clj ([a java-bigint?, b java-bigint?] (c?/comp< a b)))
+#?(:clj ([a java-bigint?, b numeric?]     (c?/< a (>java-bigint b))))
+#?(:clj ([a numeric?    , b java-bigint?] (c?/< (>java-bigint a) b)))
+#?(:clj ([a clj-bigint?, b clj-bigint?]
+          (if (and (p/nil? (.bipart a)) (p/nil? (.bipart b)))
+              (c?/<     (.lpart      a) (.lpart      b))
+              (c?/comp< (>java-bigint a) (>java-bigint b)))))
+#?(:clj ([a clj-bigint? , b numeric?]     (c?/< a (>clj-bigint b))))
+#?(:clj ([a numeric?    , b clj-bigint?]  (c?/< (>clj-bigint a) b)))
+#?(:clj ([a ratio?     , b ratio?]
+          (c?/< (.multiply (.numerator   a) (.numerator   b))
+                (.multiply (.denominator a) (.denominator b)))))
+#?(:clj ([a ratio?      , b numeric?]     (c?/< a (>ratio b))))
+#?(:clj ([a numeric?    , b ratio?]       (c?/< (>ratio a) b))))
+
+;; TODO primitive with non-primitive
+(t/extend-defn! c?/<=
+        ([x numeric?] true)
+#?(:clj ([a bigdec?    , b bigdec?]     (c?/comp<= a b)))
+#?(:clj ([a bigdec?    , b numeric?]    (c?/<= a (>bigdec b))))
+#?(:clj ([a numeric?   , b bigdec?]     (c?/<= (>bigdec a) b)))
+#?(:clj ([a clj-bigint?, b clj-bigint?]
+          (if (and (p/nil? (.bipart a)) (p/nil? (.bipart b)))
+              (c?/<=     (.lpart      a) (.lpart      b))
+              (c?/comp<= (>java-bigint a) (>java-bigint b)))))
+#?(:clj ([a ratio?     , b ratio?]
+          (c?/<= (.multiply (.numerator   a) (.numerator   b))
+                 (.multiply (.denominator a) (.denominator b))))))
+
+;; TODO primitive with non-primitive
+(t/extend-defn! c?/>
+        ([x numeric?] true)
+#?(:clj ([a bigdec?    , b bigdec?]  (c?/comp> a b)))
+#?(:clj ([a bigdec?    , b numeric?] (c?/> a (>bigdec b))))
+#?(:clj ([a numeric?   , b bigdec?]  (c?/> (>bigdec a) b)))
+#?(:clj ([a clj-bigint?, b clj-bigint?]
+          (if (and (p/nil? (.bipart a)) (p/nil? (.bipart b)))
+              (c?/>     (.lpart      a) (.lpart      b))
+              (c?/comp> (>java-bigint a) (>java-bigint b)))))
+#?(:clj ([a ratio?     , b ratio?]
+          (c?/> (.multiply (.numerator   a) (.numerator   b))
+                (.multiply (.denominator a) (.denominator b))))))
+
+;; TODO primitive with non-primitive
+(t/extend-defn! c?/>=
+        ([x numeric?] true)
+#?(:clj ([a bigdec?    , b bigdec?]  (c?/comp>= a b)))
+#?(:clj ([a bigdec?    , b numeric?] (c?/>= a (>bigdec b))))
+#?(:clj ([a numeric?   , b bigdec?]  (c?/>= (>bigdec a) b)))
+#?(:clj ([a clj-bigint?, b clj-bigint?]
+          (if (and (p/nil? (.bipart a)) (p/nil? (.bipart b)))
+              (c?/>=     (.lpart      a) (.lpart      b))
+              (c?/comp>= (>java-bigint a) (>java-bigint b)))))
+#?(:clj ([a ratio?     , b ratio?]
+          (c?/>= (.multiply (.numerator   a) (.numerator   b))
+                 (.multiply (.denominator a) (.denominator b))))))
+
+;; ===== Comparisons to constants (e.g. to 0 or 1) ===== ;;
 
 (t/defn ^:inline >zero-of-type #_> #_zero?
 #?(:clj ([x p/byte?      > (t/type x)] Numeric/byte0))
@@ -126,14 +278,14 @@
 #?(:clj ([x bigdec?      > (t/assume (t/type x))] java.math.BigDecimal/ZERO)))
 
 (t/defn ^:inline zero? > p/boolean?
-#?(:clj  (^:int [x (t/or p/long? p/double?)] (Numbers/isZero x)))
-#?(:clj  (      [x (t/- p/numeric? p/long? p/double?)] (Numeric/isZero x)))
-#?(:clj  (      [x clj-bigint?] (if (p/nil? (.-bipart x))
-                                    (-> x .-lpart  zero?)
-                                    (-> x .-bipart zero?))))
-#?(:clj  (      [x (t/or java-bigint? bigdec?)] (-> x .signum zero?)))
-#?(:clj  (      [x ratio?]  (-> x .-numerator zero?)))
-         (      [x #?(:clj (t/ref number?) :clj number?)] (?/= x 0)))
+#?(:clj  (^:in [x (t/or p/long? p/double?)] (Numbers/isZero x)))
+#?(:clj  (     [x (t/- p/numeric? p/long? p/double?)] (Numeric/isZero x)))
+#?(:clj  (     [x clj-bigint?] (if (p/nil? (.bipart x))
+                                   (-> x .lpart  zero?)
+                                   (-> x .bipart zero?))))
+#?(:clj  (     [x (t/or java-bigint? bigdec?)] (-> x .signum zero?)))
+#?(:clj  (     [x ratio?]  (-> x .numerator zero?)))
+         (     [x #?(:clj (t/ref number?) :cljs numeric?)] (?/= x 0)))
 
 (t/defn ^:inline >one-of-type #_> #_one?
 #?(:clj ([x p/byte?      > (t/type x)] Numeric/byte1))
@@ -151,30 +303,30 @@
 
 (t/defn ^:inline one? > p/boolean?
 #?(:clj ([x p/numeric?] (c?/= x (>one-of-type x))))
-        ([x #?(:clj (t/ref number?) :clj number?)] (c?/= x 1)))
+        ([x #?(:clj (t/ref number?) :cljs numeric?)] (c?/= x 1)))
 
 (t/defn ^:inline neg? > p/boolean?
-#?(:clj  (^:int [x (t/or p/long? p/double?)] (Numbers/isNeg x)))
-#?(:clj  (      [x (t/- p/numeric? p/long? p/double?)] (Numeric/isNeg x)))
-#?(:clj  (      [x clj-bigint?] (if (?/nil? (.-bipart x))
-                                    (-> x .-lpart  neg?)
-                                    (-> x .-bipart neg?))))
-#?(:clj  (      [x (t/or java-bigint? bigdec?)] (-> x .signum neg?)))
-#?(:clj  (      [x ratio?] (-> x .-numerator neg?)))
-         (      [x #?(:clj (t/ref number?) :clj number?)] (?/< x 0)))
+#?(:clj  (^:in [x (t/or p/long? p/double?)] (Numbers/isNeg x)))
+#?(:clj  (     [x (t/- p/numeric? p/long? p/double?)] (Numeric/isNeg x)))
+#?(:clj  (     [x clj-bigint?] (if (?/nil? (.bipart x))
+                                   (-> x .lpart  neg?)
+                                   (-> x .bipart neg?))))
+#?(:clj  (     [x (t/or java-bigint? bigdec?)] (-> x .signum neg?)))
+#?(:clj  (     [x ratio?] (-> x .numerator neg?)))
+         (     [x #?(:clj (t/ref number?) :clj numeric?)] (?/< x 0)))
 
 ;; TODO TYPED this should realize that we're negating a `<` and change the operator to `<=`
 (t/def nneg? (fn/comp ?/not neg?))
 
 (t/defn ^:inline pos? > p/boolean?
-#?(:clj  (^:int [x (t/or p/long? p/double?)] (Numbers/isPos x)))
-#?(:clj  (      [x (t/- p/numeric? p/long? p/double?)] (Numeric/isPos x)))
-#?(:clj  (      [x clj-bigint?] (if (?/nil? (.-bipart x))
-                                    (-> x .-lpart  pos?)
-                                    (-> x .-bipart pos?))))
-#?(:clj  (      [x (t/or java-bigint? bigdec?)] (-> x .signum pos?)))
-#?(:clj  (      [x ratio?] (-> x .-numerator pos?)))
-         (      [x #?(:clj (t/ref number?) :clj number?)] (?/> x 0)))
+#?(:clj  (^:in [x (t/or p/long? p/double?)] (Numbers/isPos x)))
+#?(:clj  (     [x (t/- p/numeric? p/long? p/double?)] (Numeric/isPos x)))
+#?(:clj  (     [x clj-bigint?] (if (?/nil? (.bipart x))
+                                   (-> x .lpart  pos?)
+                                   (-> x .bipart pos?))))
+#?(:clj  (     [x (t/or java-bigint? bigdec?)] (-> x .signum pos?)))
+#?(:clj  (     [x ratio?] (-> x .numerator pos?)))
+         (     [x #?(:clj (t/ref number?) :clj numeric?)] (c?/> x 0)))
 
 ;; TODO TYPED this should realize that we're negating a `<` and change the operator to `<=`
 (t/def npos? (fn/comp ?/not pos?))
@@ -190,12 +342,12 @@
    `js/Number.POSITIVE_INFINITY` are self-identical, but neither of them are `js/Number`s. By
    contrast, the `Float` and `Double` infinities are instances of `Float` and `Double`,
    respectively."
-#?(:cljs ([x t/any? > (t/assume p/boolean?)]        (??/not (js/isFinite x))))
-#?(:clj  ([x p/float?]                              (Float/isInfinite  x)))
-#?(:clj  ([x p/double?]                             (Double/isInfinite x)))
-#?(:clj  ([x (t/- p/primitive? p/float? p/double?)] false))
+#?(:cljs ([x t/any? > (t/assume p/boolean?)]      (??/not (js/isFinite x))))
+#?(:clj  ([x p/float?]                            (Float/isInfinite  x)))
+#?(:clj  ([x p/double?]                           (Double/isInfinite x)))
+#?(:clj  ([x (t/- p/numeric? p/float? p/double?)] false))
          ;; This leaves room for other numbers to be infinite
-#?(:clj  ([x (t/ref number?)]                       false)))
+#?(:clj  ([x (t/ref number?)]                     false)))
 
 ;; ===== Likenesses ===== ;;
 
@@ -204,13 +356,13 @@
     '#{com.google.common.math.DoubleMath/isMathematicalInteger
        "https://stackoverflow.com/questions/1078953/check-if-bigdecimal-is-integer-value"}}
   > p/boolean?
-         (      [x integer?] true)
-#?(:cljs (^:int [x p/double? > (t/assume p/boolean?)] (js/Number.isInteger x)))
-#?(:clj  (      [x (t/or p/float? p/double?)] (c?/= x (>long* x))))
-#?(:clj  (      [x bigdec?] (or (zero? (.signum x))
-                                (-> x .scale npos?)
-                                (-> x .stripTrailingZeros .scale npos?))))
-#?(:clj  (      [x (t/ref number?)] x)))
+         (     [x integer?] true)
+#?(:cljs (^:in [x p/double? > (t/assume p/boolean?)] (js/Number.isInteger x)))
+#?(:clj  (     [x (t/or p/float? p/double?)] (c?/= x (>long* x))))
+#?(:clj  (     [x bigdec?] (or (zero? (.signum x))
+                               (-> x .scale npos?)
+                               (-> x .stripTrailingZeros .scale npos?))))
+#?(:clj  (     [x (t/ref number?)] x)))
 
 (def numerically-integer? (t/or integer? (t/and decimal? (>expr unum/integer-value?))))
 
@@ -261,10 +413,6 @@
 
 (def primitive-number? (t/or #?@(:clj [p/short? p/int? p/long? p/float?]) p/double?))
 
-(var/def numeric?
-  "Something 'numeric' is something that may be treated as a number but may not actually *be* one."
-  (t/or number? #?(:clj p/char?)))
-
 (def numeric-primitive? p/numeric?)
 
 (def numerically-integer-double? (t/and p/double? numerically-integer?))
@@ -282,6 +430,24 @@
 ;; ===== Conversion ===== ;;
 ;; Note that numeric-primitive conversions go here because they take as inputs and produce outputs
 ;; things that are within a numeric range.
+
+;; TODO evaluate
+(defnt ->num
+  (^long [^boolean x] (if x 1 0))
+  ([#{number? byte char} x] x))
+
+;; TODO evaluate
+(defn ->boolean-num [x] (if x 1 0))
+
+;; TODO evaluate
+#?(:clj
+(defnt exactly
+  ([#{decimal?} x]
+    (-> x rationalize exactly))
+  ([#{int? long?} x] (->bigint x))
+  ([#{bigint? ratio?} x] x)))
+
+
 
 ;; ----- Byte ----- ;;
 
@@ -356,8 +522,8 @@
 (t/defn ^:inline >int*
   "May involve non-out-of-range truncation."
   > int?
-  (      [x int?] x)
-  (^:int [x (t/- primitive? int? boolean?)] (clojure.lang.RT/uncheckedIntCast x))))
+  (     [x int?] x)
+  (^:in [x (t/- primitive? int? boolean?)] (clojure.lang.RT/uncheckedIntCast x))))
 
 ;; TODO TYPED `numerically`
 ;; TODO figure out how to use with goog.math.Integer/Long
@@ -373,16 +539,6 @@
 #?(:clj  ([x (t/and ratio? numerically-int?)] (-> x .bigIntegerValue .intValue))))
 
 ;; ----- Long ----- ;;
-
-;; TODO figure out how to use with CLJS, including goog.math.Integer/Long
-#?(:clj
-(t/defn ^:inline >long*
-  "May involve non-out-of-range truncation."
-  > long?
-  (      [x long?] x)
-  (      [x char?] (Primitive/uncheckedLongCast x))
-  (^:int [x (t/- primitive? long? boolean? char?)] (clojure.lang.RT/uncheckedLongCast x))
-  (      [x (t/ref number?)] (.longValue x))))
 
 ;; TODO TYPED `numerically`
 ;; TODO figure out how to use with goog.math.Integer/Long
@@ -427,15 +583,6 @@
 
 ;; ----- Double ----- ;;
 
-;; TODO figure out how to use with goog.math.Integer/Long
-(t/defn ^:inline >double*
-  "May involve non-out-of-range truncation."
-  > p/double?
-        (      [x p/double?] x)
-        (      [x p/char?] (Primitive/uncheckedDoubleCast x))
-#?(:clj (^:int [x (t/- p/primitive? p/boolean? p/char? p/double?)]
-          (clojure.lang.RT/uncheckedDoubleCast x))))
-
 ;; TODO TYPED `numerically`
 ;; TODO figure out how to use with goog.math.Integer/Long
 (t/defn ^:inline >double > double?
@@ -466,23 +613,6 @@
 #_(:clj (t/defn uint>int     [x long?   > long?] (-> x >int    >long)))
 #_(:clj (t/defn ulong>long   [x bigint? > long?] (-> x >bigint >long)))
 
-;; ----- Integers ----- ;;
-
-#?(:cljs
-(t/defn >bigint > bigint?
-  ([x bigint?] x)
-  ([x p/double?] (-> x (.toString) >bigint))))
-
-;; ----- Decimals ----- ;;
-
-;; TODO TYPED `>long`
-#_(:clj
-(t/defn >java-bigint > java-bigint?
-  ([x java-bigint?] x)
-  ([x clj-bigint? > (t/assume java-bigint?)] (.toBigInteger x))
-  ([;; TODO TYPED `(- number? BigInteger BigInt)`
-    x (t/or p/short? p/int? p/long?) > (t/assume java-bigint?)] ; TODO BigDecimal
-    (-> x p/>long BigInteger/valueOf))))
 
 ;; ----- Ratios ----- ;;
 

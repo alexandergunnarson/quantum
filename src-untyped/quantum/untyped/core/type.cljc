@@ -68,7 +68,7 @@
            [quantum.untyped.core.type.reifications
               UniversalSetType EmptySetType
               NotType OrType AndType
-              ProtocolType ClassType
+              ProtocolType ClassType FiniteType
               ValueType
               FnType])))
 
@@ -162,6 +162,21 @@
 
 (defns- isa?|class [c #?(:clj c/class? :cljs c/fn?)]
   (ClassType. uhash/default uhash/default nil c nil))
+
+;; ----- FiniteType ----- ;;
+
+(defns finite
+  ([> utr/finite-type?] (finite []))
+  ([data _ > utr/finite-type?]
+    (let [data' (if (type? data)
+                    [data]
+                    (if-not (sequential? data)
+                      (err! "Finite type info must be sequential" {:type (c/type data)})
+                      (if-not (seq-and type? data)
+                        (err! "Not every element of finite type data is a type" {})
+                        data)))]
+      (FiniteType. uhash/default uhash/default nil data' nil)))
+  ([datum _ & data _ > utr/finite-type?] (finite (cons datum data))))
 
 ;; ----- ValueType ----- ;;
 
@@ -542,6 +557,8 @@
         (utr/or-type? t)
           (reduce (c/fn [classes' t'] (-type>classes t' classes'))
             classes (utr/or-type>args t))
+        (c/= val?)
+          (-type>classes val|by-class? classes)
         :else
           (err! "Not sure how to handle type" t)))
 

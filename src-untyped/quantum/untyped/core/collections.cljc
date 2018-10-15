@@ -182,7 +182,8 @@
 
 (def mergev (partial mergev-with (fn [i v0 v1] v1)))
 
-(defn zipmap-into [x ks vs] (reduce-2 assoc x ks vs true))
+(defn zipmap-into [x ks vs]
+  (reduce-2 assoc x ks vs (fn [_ _] (throw (ex-info "Seqs' count is not the same")))))
 
 (defn zipmap [ks vs] (zipmap-into {} ks vs))
 

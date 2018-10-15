@@ -226,7 +226,6 @@
   ([a primitive?, b primitive?] (c?/not== a b)))
 
 (t/extend-defn! c?/<
-         (     [x numeric?] true)
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/lt a b)))
 #?(:clj  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/lt a b)))
 #?(:clj  (     [a (t/- numeric? long?)        , b long?]                        (Numeric/lt a b)))
@@ -240,7 +239,6 @@
   )
 
 (t/extend-defn! c?/<=
-         (     [x numeric?] true)
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/lte  a b)))
 #?(:clj  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/lte  a b)))
 #?(:clj  (     [a (t/- numeric? long?)        , b long?]                        (Numeric/lte  a b)))
@@ -254,7 +252,6 @@
   )
 
 (t/extend-defn! c?/>
-         (     [x numeric?] true)
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/gt  a b)))
 #?(:clj  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/gt  a b)))
 #?(:clj  (     [a (t/- numeric? long?)        , b long?]                        (Numeric/gt  a b)))
@@ -268,7 +265,6 @@
   )
 
 (t/extend-defn! c?/>=
-         (     [x numeric?] true)
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/gte  a b)))
 #?(:clj  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/gte  a b)))
 #?(:clj  (     [a (t/- numeric? long?)        , b long?]                        (Numeric/gte  a b)))
@@ -280,3 +276,7 @@
   ;; TODO rest of numbers, but not nil
   ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
   )
+
+(t/extend-defn! c?/compare
+#?(:clj ([a c?/icomparable?, b primitive?]      (.compareTo a       b)))
+        ([a primitive?     , b c?/icomparable?] (.compareTo (box a) b)))

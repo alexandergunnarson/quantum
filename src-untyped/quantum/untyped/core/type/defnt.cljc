@@ -37,7 +37,7 @@
     [quantum.untyped.core.logic                 :as ul
       :refer [fn-or fn= ifs]]
     [quantum.untyped.core.loops
-      :refer [reduce-2 reducei-2]]
+      :refer [reduce-2]]
     [quantum.untyped.core.numeric.combinatorics :as ucombo]
     [quantum.untyped.core.reducers              :as ur
       :refer [educe educei reducei]]
@@ -696,17 +696,17 @@
           (s/validate args (case kind :defn         :quantum.core.defnt/defnt
                                       :fn           :quantum.core.defnt/fnt
                                       :extend-defn! :quantum.core.defnt/extend-defn!))
+        fn|var               (when (= kind :extend-defn!)
+                               (or (uvar/resolve *ns* fn|extended-name)
+                                   (err! "Could not resolve fn name to extend"
+                                         {:sym fn|extended-name})))
         fn|ns-name           (if (= kind :extend-defn!)
-                                 (-> (uvar/resolve *ns* fn|extended-name) >?namespace symbol)
+                                 (-> fn|var >?namespace >symbol)
                                  (>symbol *ns*))
         fn|name              (if (= kind :extend-defn!)
                                  (-> fn|extended-name >name symbol)
                                  fn|name)
-        fn|var               (when (= kind :extend-defn!)
-                               (if-let [v (uvar/resolve *ns* fn|extended-name)]
-                                 v
-                                 (err! "Cannot extend a `t/defn` that has not been defined"
-                                       {:sym fn|extended-name})))
+
         inline?              (-> (if (= kind :extend-defn!)
                                      (-> fn|var meta :inline)
                                      (:inline fn|meta))

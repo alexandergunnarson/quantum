@@ -156,108 +156,6 @@ static public double remainder(double n, double d){
 		}
 }
 
-static public boolean equiv(Object x, Object y){
-	return equiv((Number) x, (Number) y);
-}
-
-static public boolean equiv(Number x, Number y){
-	return ops(x).combine(ops(y)).equiv(x, y);
-}
-
-static public boolean equal(Number x, Number y){
-	return category(x) == category(y)
-			&& ops(x).combine(ops(y)).equiv(x, y);
-}
-
-static public boolean lt(Object x, Object y){
-	return ops(x).combine(ops(y)).lt((Number)x, (Number)y);
-}
-
-static public boolean lte(Object x, Object y){
-	return ops(x).combine(ops(y)).lte((Number)x, (Number)y);
-}
-
-static public boolean gt(Object x, Object y){
-	return ops(x).combine(ops(y)).lt((Number)y, (Number)x);
-}
-
-static public boolean gte(Object x, Object y){
-	return ops(x).combine(ops(y)).gte((Number)x, (Number)y);
-}
-
-static public int compare(Number x, Number y){
-	Ops ops = ops(x).combine(ops(y));
-	if(ops.lt(x, y))
-		return -1;
-	else if(ops.lt(y, x))
-		return 1;
-	return 0;
-}
-
-@WarnBoxedMath(false)
-static BigInt toBigInt(Object x){
-	if(x instanceof BigInt)
-		return (BigInt) x;
-	if(x instanceof BigInteger)
-		return BigInt.fromBigInteger((BigInteger) x);
-	else
-		return BigInt.fromLong(((Number) x).longValue());
-}
-
-@WarnBoxedMath(false)
-static BigInteger toBigInteger(Object x){
-	if(x instanceof BigInteger)
-		return (BigInteger) x;
-	else if(x instanceof BigInt)
-		return ((BigInt) x).toBigInteger();
-	else
-		return BigInteger.valueOf(((Number) x).longValue());
-}
-
-@WarnBoxedMath(false)
-static BigDecimal toBigDecimal(Object x){
-	if(x instanceof BigDecimal)
-		return (BigDecimal) x;
-	else if(x instanceof BigInt)
-		{
-		BigInt bi = (BigInt) x;
-		if(bi.bipart == null)
-			return BigDecimal.valueOf(bi.lpart);
-		else
-			return new BigDecimal(bi.bipart);
-		}
-	else if(x instanceof BigInteger)
-		return new BigDecimal((BigInteger) x);
-	else if(x instanceof Double)
-		return new BigDecimal(((Number) x).doubleValue());
-	else if(x instanceof Float)
-		return new BigDecimal(((Number) x).doubleValue());
-	else if(x instanceof Ratio)
-		{
-		Ratio r = (Ratio)x;
-		return (BigDecimal)divide(new BigDecimal(r.numerator), r.denominator);
-		}
-	else
-		return BigDecimal.valueOf(((Number) x).longValue());
-}
-
-@WarnBoxedMath(false)
-static public Ratio toRatio(Object x){
-	if(x instanceof Ratio)
-		return (Ratio) x;
-	else if(x instanceof BigDecimal)
-		{
-		BigDecimal bx = (BigDecimal) x;
-		BigInteger bv = bx.unscaledValue();
-		int scale = bx.scale();
-		if(scale < 0)
-			return new Ratio(bv.multiply(BigInteger.TEN.pow(-scale)), BigInteger.ONE);
-		else
-			return new Ratio(bv, BigInteger.TEN.pow(scale));
-		}
-	return new Ratio(toBigInteger(x), BigInteger.ONE);
-}
-
 @WarnBoxedMath(false)
 static public Number rationalize(Number x){
 	if(x instanceof Float || x instanceof Double)
@@ -427,22 +325,6 @@ final static class LongOps implements Ops{
 		return num(x.longValue() % y.longValue());
 	}
 
-	public boolean equiv(Number x, Number y){
-		return x.longValue() == y.longValue();
-	}
-
-	public boolean lt(Number x, Number y){
-		return x.longValue() < y.longValue();
-	}
-
-	public boolean lte(Number x, Number y){
-		return x.longValue() <= y.longValue();
-	}
-
-	public boolean gte(Number x, Number y){
-		return x.longValue() >= y.longValue();
-	}
-
 	//public Number subtract(Number x, Number y);
 	final public Number negate(Number x){
 		long val = x.longValue();
@@ -541,22 +423,6 @@ final static class DoubleOps extends OpsP{
 		return Numbers.remainder(x.doubleValue(), y.doubleValue());
 	}
 
-	public boolean equiv(Number x, Number y){
-		return x.doubleValue() == y.doubleValue();
-	}
-
-	public boolean lt(Number x, Number y){
-		return x.doubleValue() < y.doubleValue();
-	}
-
-	public boolean lte(Number x, Number y){
-		return x.doubleValue() <= y.doubleValue();
-	}
-
-	public boolean gte(Number x, Number y){
-		return x.doubleValue() >= y.doubleValue();
-	}
-
 	//public Number subtract(Number x, Number y);
 	final public Number negate(Number x){
 		return Double.valueOf(-x.doubleValue());
@@ -646,31 +512,6 @@ final static class RatioOps extends OpsP{
 		return normalizeRet(ret, x, y);
 	}
 
-	public boolean equiv(Number x, Number y){
-		Ratio rx = toRatio(x);
-		Ratio ry = toRatio(y);
-		return rx.numerator.equals(ry.numerator)
-		       && rx.denominator.equals(ry.denominator);
-	}
-
-	public boolean lt(Number x, Number y){
-		Ratio rx = toRatio(x);
-		Ratio ry = toRatio(y);
-		return Numbers.lt(rx.numerator.multiply(ry.denominator), ry.numerator.multiply(rx.denominator));
-	}
-
-	public boolean lte(Number x, Number y){
-		Ratio rx = toRatio(x);
-		Ratio ry = toRatio(y);
-		return Numbers.lte(rx.numerator.multiply(ry.denominator), ry.numerator.multiply(rx.denominator));
-	}
-
-	public boolean gte(Number x, Number y){
-		Ratio rx = toRatio(x);
-		Ratio ry = toRatio(y);
-		return Numbers.gte(rx.numerator.multiply(ry.denominator), ry.numerator.multiply(rx.denominator));
-	}
-
 	//public Number subtract(Number x, Number y);
 	final public Number negate(Number x){
 		Ratio r = (Ratio) x;
@@ -730,22 +571,6 @@ final static class BigIntOps extends OpsP{
 
 	public Number remainder(Number x, Number y){
         return toBigInt(x).remainder(toBigInt(y));
-	}
-
-	public boolean equiv(Number x, Number y){
-		return toBigInt(x).equals(toBigInt(y));
-	}
-
-	public boolean lt(Number x, Number y){
-        return toBigInt(x).lt(toBigInt(y));
-	}
-
-	public boolean lte(Number x, Number y){
-		return toBigInteger(x).compareTo(toBigInteger(y)) <= 0;
-	}
-
-	public boolean gte(Number x, Number y){
-		return toBigInteger(x).compareTo(toBigInteger(y)) >= 0;
 	}
 
 	//public Number subtract(Number x, Number y);
@@ -827,22 +652,6 @@ final static class BigDecimalOps extends OpsP{
 		       : toBigDecimal(x).remainder(toBigDecimal(y), mc);
 	}
 
-	public boolean equiv(Number x, Number y){
-		return toBigDecimal(x).compareTo(toBigDecimal(y)) == 0;
-	}
-
-	public boolean lt(Number x, Number y){
-		return toBigDecimal(x).compareTo(toBigDecimal(y)) < 0;
-	}
-
-	public boolean lte(Number x, Number y){
-		return toBigDecimal(x).compareTo(toBigDecimal(y)) <= 0;
-	}
-
-	public boolean gte(Number x, Number y){
-		return toBigDecimal(x).compareTo(toBigDecimal(y)) >= 0;
-	}
-
 	//public Number subtract(Number x, Number y);
 	final public Number negate(Number x){
 		MathContext mc = (MathContext) MATH_CONTEXT.deref();
@@ -873,8 +682,6 @@ static final DoubleOps DOUBLE_OPS = new DoubleOps();
 static final RatioOps RATIO_OPS = new RatioOps();
 static final BigIntOps BIGINT_OPS = new BigIntOps();
 static final BigDecimalOps BIGDECIMAL_OPS = new BigDecimalOps();
-
-static public enum Category {INTEGER, FLOATING, DECIMAL, RATIO};
 
 static Ops ops(Object x){
 	Class xc = x.getClass();
@@ -949,27 +756,6 @@ static int hasheq(Number x){
 		return x.hashCode();
 	}
 	return hasheqFrom(x, xc);
-}
-
-static Category category(Object x){
-	Class xc = x.getClass();
-
-	if(xc == Integer.class)
-		return Category.INTEGER;
-	else if(xc == Double.class)
-		return Category.FLOATING;
-	else if(xc == Long.class)
-		return Category.INTEGER;
-	else if(xc == Float.class)
-		return Category.FLOATING;
-	else if(xc == BigInt.class)
-		return Category.INTEGER;
-	else if(xc == Ratio.class)
-		return Category.RATIO;
-	else if(xc == BigDecimal.class)
-		return Category.DECIMAL;
-	else
-		return Category.INTEGER;
 }
 
 static long bitOpsCast(Object x){
@@ -1520,26 +1306,6 @@ static public int unchecked_int_remainder(int x, int y){
 	return x % y;
 }
 
-//static public boolean equiv(int x, int y){
-//	return x == y;
-//}
-
-//static public boolean lt(int x, int y){
-//	return x < y;
-//}
-
-//static public boolean lte(int x, int y){
-//	return x <= y;
-//}
-
-//static public boolean gt(int x, int y){
-//	return x > y;
-//}
-
-//static public boolean gte(int x, int y){
-//	return x >= y;
-//}
-
 static public Number num(long x){
 	return Long.valueOf(x);
 }
@@ -1882,86 +1648,6 @@ static public double divide(long x, double y){
 
 static public Number divide(long x, long y){
 	return divide((Number)x, (Number)y);
-}
-
-static public boolean lt(long x, Object y){
-	return lt((Object)x,y);
-}
-
-static public boolean lt(Object x, long y){
-	return lt(x,(Object)y);
-}
-
-static public boolean lt(double x, Object y){
-	return x < ((Number)y).doubleValue();
-}
-
-static public boolean lt(Object x, double y){
-	return ((Number)x).doubleValue() < y;
-}
-
-static public boolean lte(long x, Object y){
-	return lte((Object)x,y);
-}
-
-static public boolean lte(Object x, long y){
-	return lte(x,(Object)y);
-}
-
-static public boolean lte(double x, Object y){
-	return x <= ((Number)y).doubleValue();
-}
-
-static public boolean lte(Object x, double y){
-	return ((Number)x).doubleValue() <= y;
-}
-
-static public boolean gt(long x, Object y){
-	return gt((Object)x,y);
-}
-
-static public boolean gt(Object x, long y){
-	return gt(x,(Object)y);
-}
-
-static public boolean gt(double x, Object y){
-	return x > ((Number)y).doubleValue();
-}
-
-static public boolean gt(Object x, double y){
-	return ((Number)x).doubleValue() > y;
-}
-
-static public boolean gte(long x, Object y){
-	return gte((Object)x,y);
-}
-
-static public boolean gte(Object x, long y){
-	return gte(x,(Object)y);
-}
-
-static public boolean gte(double x, Object y){
-	return x >= ((Number)y).doubleValue();
-}
-
-static public boolean gte(Object x, double y){
-	return ((Number)x).doubleValue() >= y;
-}
-
-static public boolean equiv(long x, Object y){
-	return equiv((Object)x,y);
-}
-
-static public boolean equiv(Object x, long y){
-	return equiv(x,(Object)y);
-}
-
-static public boolean equiv(double x, Object y){
-	return x == ((Number)y).doubleValue();
-}
-
-static public boolean equiv(Object x, double y){
-	return ((Number)x).doubleValue() == y;
 }
 
 static public double max(double x, double y){

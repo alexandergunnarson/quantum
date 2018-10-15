@@ -9,7 +9,6 @@
           ;; TODO TYPED remove
         #_[= not= < > <= >= max min max-key min-key neg? pos? zero? - -' + inc compare])
         (:require
-          ;; TODO TYPED excise
           [clojure.core       :as core]
           ;; TODO TYPED excise
         #_[quantum.core.numeric.operators  :as op
@@ -53,7 +52,8 @@
                    clojure.core/identical?     "9/27/2018"
                    cljs.core/identical?        "9/27/2018"}}
   > ut/boolean?
-         ([x t/any?] true) ; everything is self-identical (except NaN and Infinity...)
+         ;; Everything is self-identical (except, implementationally, NaN and Infinity)
+         ([x t/any?] true)
 #?(:clj  ([a t/ref?, b t/ref?] (clojure.lang.Util/identical a b))
    :cljs ([a t/any?, b t/any?] (cljs.core/identical? a b))))
 
@@ -61,19 +61,23 @@
 (t/defn ^:inline not==
   "Tests identity-inequality."
   > ut/boolean?
-         ([x t/any?] false) ; nothing is self-non-identical (except NaN and Infinity...)
+         ;; Nothing is self-non-identical (except, implementationally, NaN and Infinity)
+         ([x t/any?] false)
 #?(:clj  ([a t/ref?, b t/ref?] (Numeric/nonIdentical a b))
    :cljs ([a t/any?, b t/any?] (js* "(~{} !== ~{})" a b))))
 
 ;; TODO add variadic arity
 (t/defn ^:inline =
-  "Tests value-equality. Same as Java's `x.equals(y)` except it also works for nil, and compares
-   numbers and collections in a type-independent manner. For numbers, works like `core/==`"
-  {:incorporated '{clojure.lang.Util/equiv "9/27/2018"
-                   clojure.core/=          "9/27/2018"
-                   cljs.core/=             "9/27/2018"}}
+  "Tests value-equality. Same as Java's `x.equals(y)`, except it also works for nil, and compares
+   numbers and collections in a type-independent manner. For numbers, it works like `core/==`."
+  {:incorporated '{clojure.lang.Numbers/equals "10/14/2018"
+                   clojure.lang.Numbers/equiv  "10/14/2018"
+                   clojure.lang.Util/equiv     "9/27/2018"
+                   clojure.core/=              "9/27/2018"
+                   cljs.core/=                 "9/27/2018"}}
   > ut/boolean?
-  ([x t/any?] true) ; everything is self-equal (except NaN and Infinity...)
+  ;; Everything is self-equal (except, implementationally, NaN and Infinity)
+  ([x t/any?] true)
   ([a t/nil?        , b t/nil?]         true)
   ([a t/nil?        , b (t/ref t/val?)] false)
   ([a (t/ref t/val?), b t/nil?]         false)
@@ -84,26 +88,23 @@
         #?(:clj  (.equals            a b)
            :cljs (-equiv ^non-native a b)))))
 
-(defn ^boolean =
-  ([x y]
-    (if (nil? x)
-      (nil? y)
-      (or (identical? x y)
-        ^boolean (-equiv x y)))))
-
 ;; TODO add variadic arity
 (t/defn ^:inline not=
   "Tests value-inequality."
   {:incorporated '{clojure.core/not= "9/27/2018"
                    cljs.core/not=    "9/27/2018"}}
   > ut/boolean?
-  ([x t/any?] false)) ; nothing is self-unequal (except NaN and Infinity...)
+  ;; Nothing is self-unequal (except, implementationally, NaN and Infinity)
+  ([x t/any?] false))
 
 ; ===== `<` ===== ;
 
 ;; TODO add variadic arity
 (t/defn ^:inline <
   "Numeric less-than comparison."
+  {:incorporated '{clojure.lang.Numbers/lt "10/14/2018"
+                   clojure.core/<          "10/14/2018"
+                   cljs.core/<             "10/14/2018"}}
   > ut/boolean?)
 
 ; ===== `<=` ===== ;
@@ -111,6 +112,9 @@
 ;; TODO add variadic arity
 (t/defn ^:inline <=
   "Numeric less-than-or-value-equal comparison."
+  {:incorporated '{clojure.lang.Numbers/lte "10/14/2018"
+                   clojure.core/<=          "10/14/2018"
+                   cljs.core/<=             "10/14/2018"}}
   > ut/boolean?)
 
 ; ===== `>` ===== ;
@@ -118,6 +122,9 @@
 ;; TODO add variadic arity
 (t/defn ^:inline >
   "Numeric greater-than comparison."
+  {:incorporated '{clojure.lang.Numbers/gt "10/14/2018"
+                   clojure.core/>          "10/14/2018"
+                   cljs.core/>             "10/14/2018"}}
   > ut/boolean?)
 
 ; ===== `>=` ===== ;
@@ -125,15 +132,18 @@
 ;; TODO add variadic arity
 (t/defn ^:inline >=
   "Numeric greater-than-or-value-equal comparison."
+  {:incorporated '{clojure.lang.Numbers/gte "10/14/2018"
+                   clojure.core/>=          "10/14/2018"
+                   cljs.core/>=             "10/14/2018"}}
   > ut/boolean?)
 
 ; ===== `compare` ===== ;
 
 (var/def icomparable?
-  "That which is comparable to its own 'concrete type' (i.e. class)."
-  #?(:clj  (t/isa? java.lang.Comparable)
-           ;; TODO other things are comparable; really it depends on the two objects in question
-     :cljs (t/or ut/nil? (t/isa? cljs.core/IComparable))))
+  "That which implements the interface marking comparability to its own 'concrete type' (i.e.
+   class)."
+  #?(:clj  (t/isa?        java.lang.Comparable)
+     :cljs (t/isa|direct? cljs.core/IComparable)))
 
 (def comparison? #?(:clj ut/int? :cljs ut/double?))
 
@@ -147,37 +157,28 @@
                    clojure.core/compare      "9/27/2018"
                    cljs.core/compare         "9/27/2018"}}
   > comparison?
-  ;; TODO TYPED should we use `>int` here?
-  ([a p/nil?      , b p/val?] (int -1))
-  ;; TODO TYPED should we use `>int` here?
-  ([a p/val?      , b p/nil?] (int  1))
-  ([a p/primitive?, b p/primitive?]
-    (ifs (> a b) (int  1)
-         (< a b) (int -1)
-         (int 0)))
-  ([^Comparable a ^Comparable b] (.compareTo a b))
-  ([^Comparable a ^prim?      b] (.compareTo a b))
-  ([^prim?      a ^Comparable b] (int (.compareTo (p/box a) b))))
-
-static public int compare(Object k1, Object k2){
-	if(k1 == k2)
-		return 0;
-
-  if(k1 instanceof Number)
-    return Numbers.compare((Number) k1, (Number) k2);
-  return ((Comparable) k1).compareTo(k2);
-}
+  ([a ut/nil?             , b ut/nil?] (int  0))
+  ([a ut/nil?             , b ut/val?] (int -1))
+  ([a ut/val?             , b ut/nil?] (int  1))
+  ;; Fallbacks
+  ([a (t/ref icomparable?), b (t/ref icomparable?)]
+    (if (== a b)
+        (int 0)
+        #?(:clj (.compareTo a b) :cljs (core/-compare ^not-native a b))))
+  ([a t/ref?, b t/ref?]
+    (if (== a b)
+        (int 0)
+        (throw (ex-info "Cannot compare incomparable values" {:type0 (type a) :type1 (type b)})))))
 
 (defn ^number compare
   [x y]
   (cond
-    (identical? x y) 0
-
-   (satisfies? IComparable x)
-   (-compare x y)
+   (number? x) (if (number? y)
+                 (garray/defaultCompare x y)
+                 (throw (js/Error. (str "Cannot compare " x " to " y))))
 
    :else
-   (if (and (or (string? x) (array? x) (boolean? x))
+   (if (and (or (string? x) (array? x) (true? x) (false? x))
             (identical? (type x) (type y)))
      (garray/defaultCompare x y)
      (throw (js/Error. (str "Cannot compare " x " to " y))))))

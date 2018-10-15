@@ -96,11 +96,52 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - (t/- (t/isa? java.util.Queue) (t/or ?!+queue? !!queue?))
       - (t/- t/any? p/float? p/double?); (t/- number? p/primitive?)
     - dc/of
-      - (dc/of number?) ; implicitly the container is a `reducible?`
+      - (dc/of number?) ; implicitly the container is a `reducible?`, because that's now the
+        fundamental traversal operation
+        - Maybe we should replace or supplement with:
+          - `(dc/* number?)` for any collection containing zero or more `number?`s
+          - `(dc/+ number?)` for any collection containing at least one `number?`s
+            - Equivalent to `(t/and (dc/* number?) (fn-> count (>= 1)))`
+          - `(t/and vector? (dc/* number?))` for any collection containing zero or more `number?`s, which satisfies `vector?`
+        - `t/finite` (reminiscent of `s/tuple`+`s/kv` but with different behavior)
+          - This is for when we don't want a 'pattern' but rather want the actual thing
+          - Instead of `(dc/* number?)` we might have `(t/finite number? (t/value 1) map?)`. The order
+            of inputs to `t/finite` only matters if it's `t/and`ed with a collection type for which
+            order matters (`(t/or dc/sequential? dc/sorted?)`):
+            - (t/and vector? (t/finite (t/value :a) (t/value :b)))
+              - must match `[:a :b]`, in that order
+            - (t/and set?    (t/finite (t/value :a) (t/value :b)))
+              - must match `#{:a :b}`, not necessarily in that order
+            - (t/and map?    (t/finite (t/finite (t/value :a) (t/value :b))
+                                       (t/finite (t/value :c) (t/value :d))))
+              - must match `{:a :b :c :d}`, not necessarily in that kv-order
+            - (t/and map?    (t/finite (t/and map-entry? (t/finite (t/value :a) (t/value :b)))
+                                       (t/and vector?    (t/finite (t/value :c) (t/value :d)))))
+              - must match `{:a :b :c :d}`, not necessarily in that kv-order
+            - (t/and map?    (t/finite (t/value :a) (t/value :b)))
+              - impossible since not all inputs satisfy `map-entry-like?`
+            - (t/finite (t/value :a) (t/value :b))
+              - is satisfied by e.g. [:a :b], (list :a :b), (!list :a :b), (<> :a :b), #{:a :b}
+            - (t/finite (t/finite (t/value :a) (t/value :b)))
+              - is satisfied by e.g. [[:a :b]], [(list :a :b)], (list [:a :b]), (!list [:a :b]),
+                (<> [:a :b]), (<> (<> :a :b)), #{[:a :b]}, {:a :b}, (sorted-map :a :b)
       - (dc/of map/+map? symbol? dstr/string?)
       - (dc/of t/seq? namespace?)
       - dc/map-of
       - dc/seq-of
+      - If we assert:
+        - [:a :b :c] is equally representable as:
+          - (t/seq vector? [  (t/value :a)   (t/value :b)   (t/value :c)])
+          - (t/kv  vector? {0 (t/value :a) 1 (t/value :b) 2 (t/value :c)})
+        - and (sorted-map 0 :a 1 :b 2 :c) as:
+          - (t/kv  sorted-map? { 0 (t/value :a)   1 (t/value :b)   2 (t/value :c)})
+          - (t/seq sorted-map? [[0 (t/value :a)] [1 (t/value :b)] [2 (t/value :c)]])
+        - then we would have to assert (absurdly) that the following are equivalent representations:
+          - (t/seq vector? [      (t/value :a)        (t/value :b)         (t/value :c)])
+          - (t/kv  vector? {    0 (t/value :a)      1 (t/value :b)       2 (t/value :c)})
+          - (t/seq vector? [   [0 (t/value :a)]    [1 (t/value :b)]     [2 (t/value :c)]])
+          - (t/kv  vector? { 0 [0 (t/value :a)]  1 [1 (t/value :b)]   2 [2 (t/value :c)]})
+        - and so on ad infinitum. Therefore we reserve `t/kv` for `(t/and t/lookup? (t/not indexed?))`.
   - Analysis
     - `(p/nil? ...)` should probably be inlined to `(?/== ... nil)` rather than using the overhead of the
       deftype
@@ -109,7 +150,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - Better analysis of compound literals
       - Literal vectors need to be analyzed — (t/finite-of t/built-in-vector? a-type b-type ...)
       - Literal sets need to be analyzed — (t/finite-of t/built-in-set? a-type b-type ...)
-      - Literal maps need to be better analyzed — (t/finite-of t/built-in-map?  [ak-type av-type] ...)
       - Literal seqs need to be better analyzed — (t/finite-of t/built-in-list? [ak-type av-type] ...)
     - Peformance analysis (this comes very much later)
       - We should be able to do complexity analysis. Similarly to how we can combine and manipulate
@@ -282,9 +322,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] await1
           - [   ] await-for
           - [   ] bases
-          - [   ] bigdec
-          - [   ] bigint
-          - [   ] biginteger
+          - [x -] bigdec
+          - [x -] bigint
+          - [x -] biginteger
           - [   ] binding
           - [   ] binding-conveyor-fn
           - [x x] bit-and
@@ -1113,8 +1153,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] java.util.Arrays.copyOfRange(objects, int, int, Class) > objects
           - [ ] java.util.Arrays.equals(chars, chars) > boolean
           - [ ] java.util.ArraysSupport.vectorizedMismatch(Object, long, Object, long, int, int) > int
-          - [ ] <String>.compareTo(String) > int
-          - [ ] <String>.equals(Object) > boolean
+          - [x] <String>.compareTo(String) > int
+          - [x] <String>.equals(Object) > boolean
           - [ ] <String>.indexOf(String) > int
           - [ ] sun.reflect.Reflection.getCallerClass() > Class
           - [ ] sun.reflect.Reflection.getClassAccessFlags(Class) > int
@@ -1523,13 +1563,13 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] divide
           - [ ] double_array
           - [ ] doubles
-          - [ ] equal
+          - [x] equal
           - [ ] equiv
           - [ ] flipBit
           - [ ] float_array
           - [ ] floats
-          - [ ] gt
-          - [ ] gte
+          - [x] gt
+          - [x] gte
           - [ ] hasheq
           - [ ] hasheqFrom
           - [ ] inc
@@ -1542,8 +1582,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [x] isZero
           - [ ] long_array
           - [ ] longs
-          - [ ] lt
-          - [ ] lte
+          - [x] lt
+          - [x] lte
           - [ ] max
           - [ ] min
           - [ ] minus
@@ -1566,9 +1606,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] shorts
           - [ ] setBit
           - [ ] testBit
-          - [ ] toBigDecimal
-          - [ ] toBigInt
-          - [ ] toBigInteger
+          - [x] toBigDecimal
+          - [x] toBigInt
+          - [x] toBigInteger
           - [ ] toRatio
           - [ ] unchecked_add
           - [ ] unchecked_dec
@@ -1720,8 +1760,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] inc
     - [ ] dec
     - [x] isZero
-    - [ ] isNeg
-    - [ ] isPos
+    - [x] isNeg
+    - [x] isPos
     - [x] add
     - [ ] subtract
     - [ ] negate

@@ -123,7 +123,7 @@
                                       (-> x class .getName clojure.lang.Compiler/demunge recur))
                             :cljs (when-not (-> x .-name str/blank?)
                                     (-> x .-name demunge-str recur)))
-          :else          (-> x str recur)))
+          :else          (-> x str >symbol)))
 
 #?(:clj  (eval `(defalias ~(if (resolve `fcore/ident?)
                                `fcore/ident?

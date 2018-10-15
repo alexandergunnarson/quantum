@@ -18,6 +18,8 @@
             [quantum.untyped.core.form                  :as uform
               :refer [>form]]
             [quantum.untyped.core.form.generate.deftype :as udt]
+            [quantum.untyped.core.loops
+              :refer [reduce-2]]
             [quantum.untyped.core.spec                  :as us])
  #?(:clj  (:import
             [quantum.untyped.core.analyze.expr Expression])))
@@ -239,7 +241,7 @@
 (udt/deftype ClassType
   [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
    #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
-   meta     #_(t/? ::meta)
+   meta     #_meta/meta?
    ^Class c #_t/class?
    name     #_(t/? symbol?)]
   {PType          nil
@@ -262,6 +264,42 @@
 (defns class-type? [x _] (instance? ClassType x))
 
 (defns class-type>class [t class-type?] (.-c ^ClassType t))
+
+;; ----- FiniteType ----- ;;
+
+(udt/deftype FiniteType
+  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
+   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
+   meta     #_meta/meta?
+   data     #_dc/sequential?
+   name     #_(t/? symbol?)]
+  {PType          nil
+                             ;; TODO this is probably not quite right
+   ?Fn            {invoke    ([_ xs] (if (seqable? xs)
+                                         (reduce-2 ;; Similar to `seq-and`
+                                                   (fn [ret t x] (if (t x) true (reduced false)))
+                                                   true ; vacuously
+                                                   (sequence data) (sequence xs)
+                                                   (fn [_ _] false))
+                                         false))}
+   ?Meta          {meta      ([this] meta)
+                   with-meta ([this meta'] (FiniteType. hash hash-code meta' data name))}
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      FiniteType data))}
+   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code FiniteType data))
+                   equals    ([this that #_any?]
+                               (or (== this that)
+                                   (and (instance? FiniteType that)
+                                        (= data (.-data ^FiniteType that)))))}
+   uform/PGenForm {>form     ([this] (-> (list 'quantum.untyped.core.type/finite (>form data))
+                                         (accounting-for-meta meta)))}
+   fedn/IOverride nil
+   fedn/IEdn      {-edn      ([this] (if name
+                                         (-> name (accounting-for-meta meta))
+                                         (>form this)))}})
+
+(defn finite-type? [x] (instance? FiniteType x))
+
+(defns finite-type>data [t finite-type?] (.-data ^FiniteType t))
 
 ;; ----- ValueType ----- ;;
 

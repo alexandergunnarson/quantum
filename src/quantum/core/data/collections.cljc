@@ -105,7 +105,10 @@
 
 (def iindexed? (t/isa?|direct #?(:clj clojure.lang.Indexed :cljs cljs.core/IIndexed)))
 
-;; Indicates efficient lookup by (integer) index (via `get`)
+;; Indicates efficient lookup by (`dn/integer?`) index (via `get`), and that its indices are dense.
+;; An `indexed?` is distinct from a non-`indexed?` `lookup?` whose keys densely satisfy `integer?`
+;; in that when traversed sequentially, the former will behave as sequence of (unindexed) elements
+;; while the latter will behave as a sequence of key-value pairs.
 (def indexed?
   (t/or iindexed?
         ;; Doesn't guarantee `java.util.List` is implemented, except by convention
