@@ -114,6 +114,9 @@
 
 (var/def indexed?
   "Indicates efficient lookup by (`dn/integer?`) index (via `get`), and that its indices are dense.
+   Thus indicates a collection that maintains a one-to-one mapping from `dn/integer?` keys to
+   values.
+
    An `indexed?` is distinct from a non-`indexed?` `lookup?` whose keys densely satisfy `integer?`
    in that when traversed sequentially, the former will behave as sequence of (unindexed) elements
    while the latter will behave as a sequence of key-value pairs."
@@ -126,8 +129,15 @@
 (def ilookup? (t/isa?|direct #?(:clj clojure.lang.Lookup :cljs cljs.core/ILookup)))
 
 (var/def lookup?
-  "Indicates efficient lookup by key (via `get`).
-   Technically, anything that is able to be the first input to `get`."
+  "Indicates efficient lookup by key (via `get`), and thus a collection that maintains a one-to-one
+   mapping from keys to values. Technically, anything that is able to be the first input to `get`.
+
+   Distinct from `map?` in that a `map?` is effectively
+   `(t/- (t/and associative? lookup?) indexed?)`.
+
+   A `lookup?` whose keys densely satisfy `integer?` is distinct from an `indexed?` in that when
+   traversed sequentially, the former will behave as a sequence of key-value pairs while the latter
+   will behave as a sequence of (unindexed) elements."
   (t/or ilookup? indexed?))
 
 (var/def sequentially-ordered?
@@ -203,7 +213,7 @@
   (t/or #?(:clj java-coll?)
         #?@(:clj  [(t/isa? clojure.lang.IPersistentCollection)
                    (t/isa? clojure.lang.ITransientCollection)]
-            :cljs (t/isa? cljs.core/ICollection))
+            :cljs (t/isa|direct? cljs.core/ICollection))
         sequential? associative?))
 
 (def reduced? (t/isa? #?(:clj clojure.lang.Reduced :cljs cljs.core/Reduced)))

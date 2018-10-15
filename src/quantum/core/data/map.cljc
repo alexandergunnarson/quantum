@@ -15,7 +15,7 @@
               :refer [defns-]]
             [quantum.untyped.core.type     :as ut]
             ;; TODO TYPED
-            [quantum.untyped.core.vars
+            [quantum.untyped.core.vars     :as uvar
               :refer [defalias def- defmacro-]])
   (:import
 #?@(:clj  [[java.util HashMap IdentityHashMap LinkedHashMap TreeMap]
@@ -1623,7 +1623,12 @@
 
 #?(:clj  (def !!map? (t/or !!unsorted-map? !!sorted-map?)))
 
-         (def   map? (t/or ?!+map? !map? #?@(:clj [!!map? (t/isa? java.util.Map)])))
+         (uvar/def map?
+           "A `map?` is in some sense anything that satisfies `dc/lookup?` — i.e., a collection
+            maintaining a one-to-one mapping from keys to values. However, while we define `map?`
+            as being effectively `(t/- (t/and associative? lookup?) indexed?)`, in practice we
+            limit to an enumerated set of concrete types."
+           (t/or ?!+map? !map? #?@(:clj [!!map? (t/isa? java.util.Map)])))
 
 
 
