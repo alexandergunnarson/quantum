@@ -207,8 +207,8 @@
 
 #?(:clj (def java-coll? (t/isa? java.util.Collection)))
 
-;; A group of objects/elements
-(def coll?
+(var/def coll?
+  "An object that represents a grouping/collection of other objects (individually called elements)."
   (t/or #?(:clj java-coll?)
         #?@(:clj  [(t/isa? clojure.lang.IPersistentCollection)
                    (t/isa? clojure.lang.ITransientCollection)]
@@ -223,7 +223,11 @@
   > reduced?
   [x t/ref?] (#?(:clj clojure.lang.Reduced. :cljs cljs.core/Reduced.) x))
 
-(def reducible?
+(var/def reducible?
+  "An object that is able to be reduced by some means. Technically, anything that is able to be the
+   first input to `reduce`.
+
+   All collection are reducible, but not all reducibles are collections (e.g. `nil?`, `numerically-integer?`, `dasync/read-chan?`, etc.)."
   (t/or p/nil? dstr/string? vec/!+vector? arr/array? dn/numerically-integer?
         ;; TODO what about `transformer?`
         dasync/read-chan?
@@ -240,16 +244,8 @@
         iseqable?
         iterable?))
 
-;; Whatever is `seqable?` is reducible, and whatever is `reducible?` is `seqable?`.
-;; Since reduction is preferred to "manual" `first`/`next` seq traversal, we prefer `reducible?` to
-;; `seqable?` as the base type.
-(def seqable? reducible?)
-
-(t/defn unkeyed
-  "Creates an unkeyed collection type, in which the collection may
-   or may not be sequential or even seqable, but must not have key-value
-   pairs like a map.
-   Examples of unkeyed collections include a vector (despite its associativity),
-   a list, and a set (despite its values doubling as keys).
-   A map is not an unkeyed collection."
-  [x ...] (TODO))
+(var/def seqable?
+  "Whatever is `seqable?` is `reducible?`, and whatever is `reducible?` is `seqable?`.
+   Since reduction is preferred to 'manual' `first`/`next` seq traversal for performance and
+   conceptual reasons, we prefer `reducible?` to `seqable?` as the base type."
+  reducible?)
