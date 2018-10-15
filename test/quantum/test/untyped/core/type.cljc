@@ -3,6 +3,7 @@
           [boolean? char? double? float? int? ratio? string?])
         (:require
           [clojure.core                               :as core]
+          [quantum.untyped.core.data.map              :as umap]
           [quantum.untyped.core.test
             :refer [deftest testing is is= throws]]
           [quantum.untyped.core.type                  :as t
@@ -396,32 +397,112 @@
   (test-equality #(t/isa? I))
   (test-equality #(t/isa? P)))
 
-(deftest test|finite
-  (is= true  ((t/finite []) nil))
-  (is= true  ((t/finite []) []))
-  (is= true  ((t/finite []) #{}))
-  (is= true  ((t/finite []) {}))
-  (is= true  ((t/finite) nil))
-  (is= true  ((t/finite) []))
-  (is= true  ((t/finite) #{}))
-  (is= true  ((t/finite) {}))
-  (is= false ((t/finite [boolean?]) nil))
-  (is= false ((t/finite [boolean?]) []))
-  (is= false ((t/finite [boolean?]) #{}))
-  (is= false ((t/finite [boolean?]) {}))
-  (is= true  ((t/finite [boolean?]) [true]))
-  (is= true  ((t/finite [boolean?]) #{true}))
-  (is= false ((t/finite [boolean?]) {true true}))
-  (is= false ((t/finite  boolean?) nil))
-  (is= false ((t/finite  boolean?) []))
-  (is= false ((t/finite  boolean?) #{}))
-  (is= false ((t/finite  boolean?) {}))
-  (is= true  ((t/finite  boolean?) [true]))
-  (is= true  ((t/finite  boolean?) #{true}))
-  (is= false ((t/finite  boolean?) {true true}))
-  (is= true  ((t/finite [(t/finite boolean? boolean?)]) {true true}))
-  (is= true  ((t/finite  (t/finite boolean? boolean?))  {true true}))
-  )
+(defn- test-basic-finite [f]
+  (is= true  ((f []) nil))
+  (is= true  ((f []) []))
+  (is= true  ((f []) #{}))
+  (is= true  ((f []) {}))
+  (is= true  ((f) nil))
+  (is= true  ((f) []))
+  (is= true  ((f) #{}))
+  (is= true  ((f) {}))
+  (is= false ((f [boolean?]) nil))
+  (is= false ((f [boolean?]) []))
+  (is= false ((f [boolean?]) #{}))
+  (is= false ((f [boolean?]) {}))
+  (is= true  ((f [boolean?]) [true]))
+  (is= true  ((f [boolean?]) #{true}))
+  (is= false ((f [boolean?]) {true true}))
+  (is= false ((f  boolean?) nil))
+  (is= false ((f  boolean?) []))
+  (is= false ((f  boolean?) #{}))
+  (is= false ((f  boolean?) {}))
+  (is= true  ((f  boolean?) [true]))
+  (is= true  ((f  boolean?) #{true}))
+  (is= false ((f  boolean?) {true true}))
+  (is= true  ((f [(t/ordered boolean? boolean?)]) {true true}))
+  (is= true  ((f  (t/ordered boolean? boolean?))  {true true}))
+  (is= true  ((f [(t/ordered boolean? boolean?)]) [[true true]]))
+  (is= true  ((f  (t/ordered boolean? boolean?))  [[true true]]))
+  (testing "`indexed?` is treated distinctly from `lookup?` with `integer?` keys"
+    (is= true  ((f [(t/ordered long? boolean?)]) [[0 true]]))
+    (is= true  ((f  (t/ordered long? boolean?))  [[0 true]]))
+    (is= false ((f [(t/ordered long? boolean?)]) [true]))
+    (is= false ((f  (t/ordered long? boolean?))  [true]))
+    (is= true  ((f [(t/ordered long? boolean?)]) {0 true}))
+    (is= true  ((f  (t/ordered long? boolean?))  {0 true}))))
+
+(deftest test|unordered
+  (test-basic-finite)
+  (testing "Order should not matter; only frequency"
+    (is= true ((t/unordered (t/value 1) (t/value 2) (t/value 3) (t/value 4) (t/value 5) (t/value 6))
+                [1 2 3 4 5 6]))
+    (dotimes [i 100]
+      (is= true ((t/unordered (t/value 1) (t/value 2) (t/value 3) (t/value 4)(t/value 5)(t/value 6))
+                  (shuffle [1 2 3 4 5 6]))))
+    (is= true ((t/unordered (t/value 1) (t/value 2) (t/value 3) (t/value 4) (t/value 5) (t/value 6))
+                #{1 2 3 4 5 6}))
+    (is= true ((t/unordered (t/ordered (t/value :a) (t/value :b))
+                            (t/ordered (t/value :c) (t/value :d))
+                            (t/ordered (t/value :e) (t/value :f))
+                            (t/ordered (t/value :g) (t/value :h))
+                            (t/ordered (t/value :i) (t/value :j)))
+                {:a :b :c :d :e :f :g :h :i :j}))
+    (let [t (t/unordered (t/unordered (t/value :a) (t/value :b))
+                         (t/unordered (t/value :c) (t/value :d))
+                         (t/unordered (t/value :e) (t/value :f))
+                         (t/unordered (t/value :g) (t/value :h))
+                         (t/unordered (t/value :i) (t/value :j)))]
+      (is= true (t (->> {:a :b :c :d :e :f :g :h :i :j} (map shuffle) (into {}))))))
+  (testing "Internally should sort types deterministically"
+    (let [ts (->> (range 15) (map t/value))
+          t  (t/unordered ts)]
+      (dotimes [i 100]
+        (is= t (t/unordered (shuffle ts))))))
+  (testing "Combinatoric equality between `t/ordered` and `t/unordered`"
+    (test-comparison =ident
+      (t/unordered (t/value 1) (t/value 2))
+      (t/or (t/ordered (t/value 1) (t/value 2))
+            (t/ordered (t/value 2) (t/value 1))))
+    (test-comparison =ident
+      (t/unordered (t/unordered (t/value 1) (t/value 2))
+                   (t/unordered (t/value 1) (t/value 2)))
+      (t/or (t/ordered (t/ordered (t/value 1) (t/value 2))
+                       (t/ordered (t/value 1) (t/value 2)))
+            (t/ordered (t/ordered (t/value 1) (t/value 2))
+                       (t/ordered (t/value 2) (t/value 1)))
+            (t/ordered (t/ordered (t/value 2) (t/value 1))
+                       (t/ordered (t/value 1) (t/value 2)))
+            (t/ordered (t/ordered (t/value 2) (t/value 1))
+                       (t/ordered (t/value 2) (t/value 1)))))))
+
+(deftest test|ordered
+  (test-basic-finite)
+  (testing "Order should matter"
+    (is= true  ((t/ordered (t/value 1) (t/value 2) (t/value 3) (t/value 4) (t/value 5) (t/value 6))
+                 [1 2 3 4 5 6]))
+    (is= false ((t/ordered (t/value 1) (t/value 2) (t/value 3) (t/value 4) (t/value 5) (t/value 6))
+                 #{1 2 3 4 5 6}))
+    (let [t (t/ordered (t/ordered (t/value :a) (t/value :b))
+                       (t/ordered (t/value :c) (t/value :d))
+                       (t/ordered (t/value :e) (t/value :f))
+                       (t/ordered (t/value :g) (t/value :h))
+                       (t/ordered (t/value :i) (t/value :j)))]
+      (is= false (t {           :a :b :c :d :e :f :g :h :i :j}))
+      (is= true  (t (umap/om    :a :b :c :d :e :f :g :h :i :j)))
+      (is= true  (t (sorted-map :a :b :c :d :e :f :g :h :i :j))))
+    (let [t (t/ordered (t/unordered (t/value :a) (t/value :b))
+                       (t/unordered (t/value :c) (t/value :d))
+                       (t/unordered (t/value :e) (t/value :f))
+                       (t/unordered (t/value :g) (t/value :h))
+                       (t/unordered (t/value :i) (t/value :j)))]
+      (dotimes [i 100]
+        (is= false (t (->> {           :a :b :c :d :e :f :g :h :i :j}
+                           (map shuffle) (into {}))))
+        (is= true  (t (->> (umap/om    :a :b :c :d :e :f :g :h :i :j)
+                           (map shuffle) (into umap/om))))
+        (is= true  (t (->> (sorted-map :a :b :c :d :e :f :g :h :i :j)
+                           (map shuffle) (apply sorted-map))))))))
 
 (deftest test|value
   (test-equality #(t/value 1))

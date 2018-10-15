@@ -479,6 +479,8 @@
           (test-comparison ><ident (t/isa? Iterable) (t/? tt/comparable?)))
         (testing "<> nilabled: #{<>}"
           (test-comparison <>ident t/long?           (t/? t/string?)))))
+    (testing "+ UnorderedType")
+    (testing "+ OrderedType")
     (testing "+ ValueType"
       (testing "arg <"
         (testing "+ arg <")
