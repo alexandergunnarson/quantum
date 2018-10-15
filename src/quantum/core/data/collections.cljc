@@ -16,6 +16,9 @@
 ;; TODO move to `quantum.core.data.sequence`
 ;; ===== Sequences and sequence-wrappers ===== ;;
 ;; Sequential (generally not efficient Lookup / RandomAccess)
+;; Note that lists and seqs are not fundamentally different and so we don't distinguish between them
+;; here.
+
 
 (def iseqable? (t/isa?|direct #?(:clj clojure.lang.Seqable :cljs cljs.core/ISeqable)))
 
@@ -69,52 +72,88 @@
 ;; TODO excise — this is used later on elsewhere
 (def misc-seq? (t/or chunked-seq? indexed-seq? key-seq? val-seq?))
 
-;; ----- Lists ----- ;; Not extremely different from Sequences ; TODO clean this up
-
-(def cdlist? t/none? #_(:clj  (t/or (t/isa? clojure.data.finger_tree.CountedDoubleList)
-                                    (t/isa? quantum.core.data.finger_tree.CountedDoubleList))
-                        :cljs (t/isa? quantum.core.data.finger-tree/CountedDoubleList)))
-(def dlist?  t/none? #_(:clj  (t/or (t/isa? clojure.data.finger_tree.CountedDoubleList)
-                                    (t/isa? quantum.core.data.finger_tree.CountedDoubleList))
-                        :cljs (t/isa? quantum.core.data.finger-tree/CountedDoubleList)))
-
 (var/defalias ut/+list|built-in?)
+
+(def cdseq? t/none? #_(:clj  (t/or (t/isa? clojure.data.finger_tree.CountedDoubleList)
+                                   (t/isa? quantum.core.data.finger_tree.CountedDoubleList))
+                       :cljs (t/isa? quantum.core.data.finger-tree/CountedDoubleList)))
+(def dseq?  t/none? #_(:clj  (t/or (t/isa? clojure.data.finger_tree.CountedDoubleList)
+                                   (t/isa? quantum.core.data.finger_tree.CountedDoubleList))
+                       :cljs (t/isa? quantum.core.data.finger-tree/CountedDoubleList)))
 
 (def +list?  (t/isa? #?(:clj clojure.lang.IPersistentList :cljs cljs.core/IList)))
 
-(def !list?  #?(:clj (t/isa? java.util.LinkedList) :cljs t/none?))
-(def  list?  #?(:clj (t/isa? java.util.List) :cljs +list?))
+(def !seq?   #?(:clj (t/isa? java.util.LinkedList) :cljs t/none?))
 
 ;; ===== End sequences ===== ;;
 
 (def record? (t/isa?|direct #?(:clj clojure.lang.IRecord :cljs cljs.core/IRecord)))
 
-(def sorted?
+(var/def comparator-ordered?
+  "Something that guarantees the invariant that its elements will always be ordered by some
+   comparator."
   (t/or (t/isa?|direct #?(:clj clojure.lang.Sorted :cljs cljs.core/ISorted))
         #?@(:clj  [(t/isa? java.util.SortedMap)
                    (t/isa? java.util.SortedSet)]
-            :cljs [(t/isa? goog.structs.AvlTree)])
-        ; TODO implement — monotonically <, <=, =, >=, >
-      #_(t/>expr monotonic?)))
+            :cljs [(t/isa? goog.structs.AvlTree)])))
 
-(def transient? (t/isa? #?(:clj  clojure.lang.ITransientCollection
-                           :cljs cljs.core/ITransientCollection)))
+(var/def sorted?
+  "Something that is either (necessarily) `comparator-ordered?` or contingently comparator-ordered
+   (i.e. whose elements happen to be in monotonically decreasing or increasing order by `compare`)."
+  (t/or comparator-ordered?
+        ; TODO implement — it means monotonically <= or >=
+        monotonic?))
 
-(def editable? (t/isa? #?(:clj  clojure.lang.IEditableCollection
-                          :cljs cljs.core/IEditableCollection)))
+(def transient? (t/isa?|direct #?(:clj  clojure.lang.ITransientCollection
+                                  :cljs cljs.core/ITransientCollection)))
+
+(def editable? (t/isa?|direct #?(:clj  clojure.lang.IEditableCollection
+                                 :cljs cljs.core/IEditableCollection)))
 
 (def iindexed? (t/isa?|direct #?(:clj clojure.lang.Indexed :cljs cljs.core/IIndexed)))
 
-;; Indicates efficient lookup by (`dn/integer?`) index (via `get`), and that its indices are dense.
-;; An `indexed?` is distinct from a non-`indexed?` `lookup?` whose keys densely satisfy `integer?`
-;; in that when traversed sequentially, the former will behave as sequence of (unindexed) elements
-;; while the latter will behave as a sequence of key-value pairs.
-(def indexed?
+(var/def indexed?
+  "Indicates efficient lookup by (`dn/integer?`) index (via `get`), and that its indices are dense.
+   An `indexed?` is distinct from a non-`indexed?` `lookup?` whose keys densely satisfy `integer?`
+   in that when traversed sequentially, the former will behave as sequence of (unindexed) elements
+   while the latter will behave as a sequence of key-value pairs."
   (t/or iindexed?
         ;; Doesn't guarantee `java.util.List` is implemented, except by convention
         #?(:clj (t/isa? java.util.RandomAccess))
         #?(:clj dstr/char-seq? :cljs dstr/string?)
         arr/array?))
+
+(var/def insertion-ordered?
+  "Collections whose elements are ordered, whether in forward or reverse direction, by their
+   insertion."
+  ...)
+
+(var/def sequentially-ordered?
+  "Collections defined by the fact that their elements must appear in a particular order,
+   specifically due to the criterion of 'nextness' rather than e.g. a value-comparator or insertion
+   order."
+  (t/or (t/isa|direct? #?(:clj clojure.lang.Sequential :cljs cljs.core/ISequential))
+        iseq?
+        #?(:clj (t/isa? java.util.List))
+        +list?
+        indexed?))
+
+(var/def ordered?
+  "Collections defined by the fact that their elements must appear in a particular order. Note:
+   - `sequentially-ordered?` (even if non-`indexed?`) implies `ordered?`, as the ordering criterion
+     can be thought of as each element's implicit sequential designator / index.
+   - `indexed?` implies `ordered?`, as the ordering criterion can be thought of as each element's
+     explicit sequential designator / index.
+   - `comparator-ordered?` implies `ordered?` while `sorted?` does not necessarily, as while a
+     collection may happen to be sorted, this does not imply that order is one of its defining
+     aspects.
+   - `insertion-ordered?` implies `ordered`, as the ordering criterion can be thought of as the
+     designator / index of each element's insertion.
+   - While all good hashing algorithms are deterministic, order is not (generally) guaranteed for
+     hash-ordered collections."
+  (t/or sequentially-ordered?
+        comparator-ordered?
+        insertion-ordered?))
 
 (def  +associative? (t/isa?|direct #?(:clj  clojure.lang.Associative
                                       :cljs cljs.core/IAssociative)))
@@ -122,18 +161,15 @@
 (def !+associative? (t/isa?|direct #?(:clj  clojure.lang.ITransientAssociative
                                       :cljs cljs.core/ITransientAssociative)))
 
-;; Indicates whether `assoc?!` is supported
-(def associative? (t/or +associative? !+associative? (t/or map/map? indexed?)))
-
-(def sequential?
-  (t/or (t/isa? #?(:clj clojure.lang.Sequential :cljs cljs.core/ISequential))
-        list? indexed?))
+(var/def associative?
+  "Indicates whether `assoc?!` is supported."
+  (t/or +associative? !+associative? (t/or map/map? indexed?)))
 
 (def icounted? (t/isa?|direct #?(:clj clojure.lang.Counted :cljs cljs.core/ICounted)))
 
-;; If something is `counted?`, it is supposed to implement a constant-time `count`
-;; `nil` is counted but this type ignores that
-(def counted?
+(var/def counted?
+  "Objects guaranteed to implement a constant-time `count`. `nil` is technically counted but this
+   type ignores that."
   (t/or icounted?
         ;; It's not guaranteed that `char-seq?`s have constant-time `.length`/`count` but it's very
         ;; reasonable to assume.

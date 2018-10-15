@@ -432,8 +432,7 @@
     (is= true  ((f [(t/ordered long? boolean?)]) {0 true}))
     (is= true  ((f  (t/ordered long? boolean?))  {0 true}))))
 
-(deftest test|unordered
-  (test-basic-finite)
+(defn- test-basic-unordered [t]
   (testing "Order should not matter; only frequency"
     (is= true ((t/unordered (t/value 1) (t/value 2) (t/value 3) (t/value 4) (t/value 5) (t/value 6))
                 [1 2 3 4 5 6]))
@@ -458,7 +457,11 @@
     (let [ts (->> (range 15) (map t/value))
           t  (t/unordered ts)]
       (dotimes [i 100]
-        (is= t (t/unordered (shuffle ts))))))
+        (is= t (t/unordered (shuffle ts)))))))
+
+(deftest test|unordered
+  (test-basic-finite t/unordered)
+  (test-basic-unordered t/unordered)
   (testing "Combinatoric equality between `t/ordered` and `t/unordered`"
     (test-comparison =ident
       (t/unordered (t/value 1) (t/value 2))
@@ -476,8 +479,13 @@
             (t/ordered (t/ordered (t/value 2) (t/value 1))
                        (t/ordered (t/value 2) (t/value 1)))))))
 
+(deftest test|set ; i.e. as `unique-unordered`
+  (test-basic-finite t/set)
+  (test-basic-unordered t/set)
+  (testing "Order and frequency should not matter"))
+
 (deftest test|ordered
-  (test-basic-finite)
+  (test-basic-finite t/ordered)
   (testing "Order should matter"
     (is= true  ((t/ordered (t/value 1) (t/value 2) (t/value 3) (t/value 4) (t/value 5) (t/value 6))
                  [1 2 3 4 5 6]))
