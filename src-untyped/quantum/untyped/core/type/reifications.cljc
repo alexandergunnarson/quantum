@@ -301,8 +301,8 @@
    ?Fn            {invoke    ([_ xs] (satisfies-unordered-type? xs data))}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (UnorderedType. hash hash-code meta' data name))}
-   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      OrderedType data))}
-   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code OrderedType data))
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      UnorderedType data))}
+   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code UnorderedType data))
                    equals    ([this that #_any?]
                                (or (== this that)
                                    (and (instance? UnorderedType that)

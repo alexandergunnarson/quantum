@@ -506,11 +506,11 @@
                        (t/unordered (t/value :i) (t/value :j)))]
       (dotimes [i 100]
         (is= false (t (->> {           :a :b :c :d :e :f :g :h :i :j}
-                           (map shuffle) (into {}))))
+                           (map shuffle) shuffle (into {}))))
         (is= true  (t (->> (umap/om    :a :b :c :d :e :f :g :h :i :j)
-                           (map shuffle) (into umap/om))))
+                           (map shuffle) (into (umap/om)))))
         (is= true  (t (->> (sorted-map :a :b :c :d :e :f :g :h :i :j)
-                           (map shuffle) (apply sorted-map))))))))
+                           (map shuffle) (into (sorted-map)))))))))
 
 (deftest test|value
   (test-equality #(t/value 1))
