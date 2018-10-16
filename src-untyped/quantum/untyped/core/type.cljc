@@ -163,11 +163,11 @@
 (defns- isa?|class [c #?(:clj c/class? :cljs c/fn?)]
   (ClassType. uhash/default uhash/default nil c nil))
 
-;; ----- FiniteType ----- ;;
+;; ----- OrderedType ----- ;;
 
-(defns finite
-  ([> utr/finite-type?] (finite []))
-  ([data _ > utr/finite-type?]
+(defns ordered
+  ([> utr/ordered-type?] (ordered []))
+  ([data _ > utr/ordered-type?]
     (let [data' (if (type? data)
                     [data]
                     (if-not (sequential? data)
@@ -175,8 +175,8 @@
                       (if-not (seq-and type? data)
                         (err! "Not every element of finite type data is a type" {})
                         data)))]
-      (FiniteType. uhash/default uhash/default nil data' nil)))
-  ([datum _ & data _ > utr/finite-type?] (finite (cons datum data))))
+      (OrderedType. uhash/default uhash/default nil data' nil)))
+  ([datum _ & data _ > utr/ordered-type?] (ordered (cons datum data))))
 
 ;; ----- ValueType ----- ;;
 

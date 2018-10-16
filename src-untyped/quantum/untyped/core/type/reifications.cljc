@@ -265,16 +265,15 @@
 
 (defns class-type>class [t class-type?] (.-c ^ClassType t))
 
-;; ----- FiniteType ----- ;;
+;; ----- OrderedType ----- ;;
 
-(udt/deftype FiniteType
+(udt/deftype OrderedType
   [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
    #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
    meta     #_meta/meta?
    data     #_dc/sequential?
    name     #_(t/? symbol?)]
   {PType          nil
-                             ;; TODO this is probably not quite right
    ?Fn            {invoke    ([_ xs] (if (seqable? xs)
                                          (reduce-2 ;; Similar to `seq-and`
                                                    (fn [ret t x] (if (t x) true (reduced false)))
@@ -283,23 +282,23 @@
                                                    (fn [_ _] false))
                                          false))}
    ?Meta          {meta      ([this] meta)
-                   with-meta ([this meta'] (FiniteType. hash hash-code meta' data name))}
-   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      FiniteType data))}
-   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code FiniteType data))
+                   with-meta ([this meta'] (OrderedType. hash hash-code meta' data name))}
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      OrderedType data))}
+   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code OrderedType data))
                    equals    ([this that #_any?]
                                (or (== this that)
-                                   (and (instance? FiniteType that)
-                                        (= data (.-data ^FiniteType that)))))}
-   uform/PGenForm {>form     ([this] (-> (list 'quantum.untyped.core.type/finite (>form data))
+                                   (and (instance? OrderedType that)
+                                        (= data (.-data ^OrderedType that)))))}
+   uform/PGenForm {>form     ([this] (-> (list 'quantum.untyped.core.type/ordered (>form data))
                                          (accounting-for-meta meta)))}
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] (if name
                                          (-> name (accounting-for-meta meta))
                                          (>form this)))}})
 
-(defn finite-type? [x] (instance? FiniteType x))
+(defn ordered-type? [x] (instance? OrderedType x))
 
-(defns finite-type>data [t finite-type?] (.-data ^FiniteType t))
+(defns ordered-type>data [t ordered-type?] (.-data ^OrderedType t))
 
 ;; ----- ValueType ----- ;;
 

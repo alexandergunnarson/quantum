@@ -15,7 +15,7 @@
 
 ;; TODO move to `quantum.core.data.sequence`
 ;; ===== Sequences and sequence-wrappers ===== ;;
-;; Sequential (generally not efficient Lookup / RandomAccess)
+;; Sequential (generally not `lookup?`)
 ;; Note that lists and seqs are not fundamentally different and so we don't distinguish between them
 ;; here.
 
