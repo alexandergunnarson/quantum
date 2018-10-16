@@ -223,19 +223,20 @@
   (let [{:keys [all-values? m]}
           (->> form
                (uc/map+ (fn [[form-k form-v]] [(analyze* env form-k) (analyze* env form-v)]))
-               (educe (fn [{:as ret :keys [all-values? m]} [k v]]
-                        (-> ret
-                            (cond-> (and all-values?
-                                         (-> k :type utr/value-type?)
-                                         (-> v :type utr/value-type?))
-                              (assoc :all-values? true))
-                            (update :m assoc k v)))
+               (educe (fn ([ret] ret)
+                          ([{:as ret :keys [all-values? m]} [k v]]
+                            (-> ret
+                                (cond-> (and all-values?
+                                             (-> k :type utr/value-type?)
+                                             (-> v :type utr/value-type?))
+                                  (assoc :all-values? true))
+                                (update :m assoc k v))))
                       {:all-values? true :m {}}))
         t (if all-values?
               (->> m (uc/map+ (fn [[k v]] [(-> k :type t/unvalue) (-> v :type t/unvalue)]))
                      (join {})
                      t/value)
-              (t/and t/+map|built-in? (t/finite (seq m))))]
+              (t/and t/+map|built-in? (->> m (uc/map (fn [[k v]] (t/ordered k v))) t/unordered)))]
     (uast/map-node {:env             env
                     :unanalyzed-form form
                     :form            (->> m (uc/map+ (fn [[k v]] [(:form k) (:form v)]))
@@ -367,7 +368,7 @@
                :arg-types          (mapv :type args|analyzed)})
         ret)))
 
-(defns- |method-call|incrementally-analyze
+(defns- analyze-seq|dot|method-call|incrementally-analyze
   [env ::env, form _, target uast/node?, target-class class?, method-form _
    args|form _ methods-for-ct-and-kind (s/seq-of t/any?) > uast/method-call?]
   (let [{:keys [args|analyzed call-sites]}
@@ -863,7 +864,8 @@
            (uast/symbol env form node (:type node))))))
 
 (defns- analyze* [env ::env, form _ > uast/node?]
-  (when (> (uref/update! !!analyze-depth inc) 200) (throw (ex-info "Stack too deep" {:form form})))
+  (when (> (uref/get (uref/update! !!analyze-depth inc)) 200)
+    (throw (ex-info "Stack too deep" {:form form})))
   (ifs (symbol? form)
          (analyze-symbol env form)
        (t/literal? form)

@@ -166,6 +166,7 @@
 ;; ----- OrderedType ----- ;;
 
 (defns unordered
+  "Creates a type representing an unordered collection."
   ([> utr/unordered-type?] (unordered []))
   ([data _ > utr/unordered-type?]
     (let [data' (if (utr/type? data)
@@ -179,6 +180,7 @@
   ([datum _ & data _ > utr/unordered-type?] (unordered (cons datum data))))
 
 (defns ordered
+  "Creates a type representing an ordered collection."
   ([> utr/ordered-type?] (ordered []))
   ([data _ > utr/ordered-type?]
     (let [data' (if (utr/type? data)

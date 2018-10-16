@@ -168,7 +168,8 @@
   ([a t/ref?, b t/ref?]
     (if (== a b)
         (int 0)
-        (throw (ex-info "Cannot compare incomparable values" {:type0 (type a) :type1 (type b)})))))
+        (throw (clojure.lang.ExceptionInfo. "Cannot compare incomparable values"
+                 {:type0 (type a) :type1 (type b)})))))
 
 (defn ^number compare
   [x y]
