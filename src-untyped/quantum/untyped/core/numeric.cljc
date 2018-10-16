@@ -51,3 +51,5 @@
       (bit-or 1 (bit-shift-right x 63))))
 
 #?(:cljs (def abs js/Math.abs))
+
+(defn inc-default [x] (if (nil? x) 1 (inc x)))

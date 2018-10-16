@@ -20,6 +20,9 @@
             [quantum.untyped.core.form.generate.deftype :as udt]
             [quantum.untyped.core.loops
               :refer [reduce-2]]
+            [quantum.untyped.core.numeric               :as unum]
+            [quantum.untyped.core.refs                  :as uref
+              :refer [!]]
             [quantum.untyped.core.spec                  :as us])
  #?(:clj  (:import
             [quantum.untyped.core.analyze.expr Expression])))
@@ -265,22 +268,72 @@
 
 (defns class-type>class [t class-type?] (.-c ^ClassType t))
 
+;; ----- UnorderedType ----- ;;
+
+(defn- satisfies-unordered-type? [xs data]
+  (and (seqable? xs) ; TODO `dc/reducible?`
+       (let [!frequencies (! {})
+             each-input-matches-one-type-not-exceeding-frequency?
+               (->> xs
+                    (reduce
+                      (fn [each-input-matches-one-type-not-exceeding-frequency? x]
+                        (->> data
+                             (reduce-kv
+                               (fn [input-matches-one-type? t freq]
+                                 (if (t x)
+                                     (do (uref/update! !frequencies #(update % t unum/inc-default))
+                                         (if (> (get @!frequencies t) (get data t))
+                                             (reduced (reduced false))
+                                             true))
+                                     input-matches-one-type?))
+                               false)))
+                      true))]
+         (and each-input-matches-one-type-not-exceeding-frequency?
+              (= @!frequencies data)))))
+
+(udt/deftype UnorderedType
+  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
+   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
+   meta #_meta/meta?
+   data #_(t/type (dc/map-of t/type? (t/and integer? (> 1))) "Val is frequency of type")
+   name #_(t/? symbol?)]
+  {PType          nil
+   ?Fn            {invoke    ([_ xs] (satisfies-unordered-type? xs data))}
+   ?Meta          {meta      ([this] meta)
+                   with-meta ([this meta'] (UnorderedType. hash hash-code meta' data name))}
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      OrderedType data))}
+   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code OrderedType data))
+                   equals    ([this that #_any?]
+                               (or (== this that)
+                                   (and (instance? UnorderedType that)
+                                        (= data (.-data ^UnorderedType that)))))}
+   uform/PGenForm {>form     ([this] (-> (list 'quantum.untyped.core.type/unordered (>form data))
+                                         (accounting-for-meta meta)))}
+   fedn/IOverride nil
+   fedn/IEdn      {-edn      ([this] (if name
+                                         (-> name (accounting-for-meta meta))
+                                         (>form this)))}})
+
+(defn unordered-type? [x] (instance? UnorderedType x))
+
+(defns unordered-type>data [t unordered-type?] (.-data ^UnorderedType t))
+
 ;; ----- OrderedType ----- ;;
 
 (udt/deftype OrderedType
   [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
    #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
-   meta     #_meta/meta?
-   data     #_dc/sequential?
-   name     #_(t/? symbol?)]
+   meta #_meta/meta?
+   data #_dc/sequential?
+   name #_(t/? symbol?)]
   {PType          nil
-   ?Fn            {invoke    ([_ xs] (if (seqable? xs)
-                                         (reduce-2 ;; Similar to `seq-and`
-                                                   (fn [ret t x] (if (t x) true (reduced false)))
-                                                   true ; vacuously
-                                                   (sequence data) (sequence xs)
-                                                   (fn [_ _] false))
-                                         false))}
+   ?Fn            {invoke    ([_ xs] (and (seqable? xs) ; TODO `dc/reducible?`
+                                          (reduce-2
+                                            ;; Similar to `seq-and`
+                                            (fn [ret t x] (if (t x) true (reduced false)))
+                                            true ; vacuously
+                                            (sequence data) (sequence xs)
+                                            (fn [_ _] false))))}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (OrderedType. hash hash-code meta' data name))}
    ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      OrderedType data))}

@@ -68,7 +68,7 @@
            [quantum.untyped.core.type.reifications
               UniversalSetType EmptySetType
               NotType OrType AndType
-              ProtocolType ClassType FiniteType
+              ProtocolType ClassType UnorderedType OrderedType
               ValueType
               FnType])))
 
@@ -165,14 +165,27 @@
 
 ;; ----- OrderedType ----- ;;
 
+(defns unordered
+  ([> utr/unordered-type?] (unordered []))
+  ([data _ > utr/unordered-type?]
+    (let [data' (if (utr/type? data)
+                    {data 1}
+                    (if-not (sequential? data)
+                      (err! "Finite type info must be sequential" {:type (c/type data)})
+                      (if-not (seq-and utr/type? data)
+                        (err! "Not every element of finite type data is a type" {})
+                        (frequencies data))))]
+      (UnorderedType. uhash/default uhash/default nil data' nil)))
+  ([datum _ & data _ > utr/unordered-type?] (unordered (cons datum data))))
+
 (defns ordered
   ([> utr/ordered-type?] (ordered []))
   ([data _ > utr/ordered-type?]
-    (let [data' (if (type? data)
+    (let [data' (if (utr/type? data)
                     [data]
                     (if-not (sequential? data)
                       (err! "Finite type info must be sequential" {:type (c/type data)})
-                      (if-not (seq-and type? data)
+                      (if-not (seq-and utr/type? data)
                         (err! "Not every element of finite type data is a type" {})
                         data)))]
       (OrderedType. uhash/default uhash/default nil data' nil)))

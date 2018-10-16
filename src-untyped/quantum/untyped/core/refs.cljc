@@ -30,7 +30,9 @@
 
 (defn update!
   "A nonatomic update."
-  [x f] (-> x (quantum.untyped.core.refs/set! (f (get x)))))
+  [x f]
+  (quantum.untyped.core.refs/set! x (f (get x)))
+  x)
 
 ;; ===== Unsynchronized mutability ===== ;;
 
@@ -43,6 +45,8 @@
   #?(:clj  clojure.lang.IDeref
      :cljs cljs.core/IDeref)
   (#?(:clj deref :cljs -deref) [this] val))
+
+(defn ! [x] (MutableReference. x))
 
 ;; ===== Thread-local mutability ===== ;;
 

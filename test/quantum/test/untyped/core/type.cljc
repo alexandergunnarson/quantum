@@ -445,7 +445,7 @@
       (dotimes [i 100]
         (is= false ((t/unordered (t/value 1) (t/value 2) (t/value 3)
                                  (t/value 4) (t/value 5) (t/value 6)) (shuffle [1 2 3 4 5 6 6])))
-        (is= false ((t/unordered (t/value 1) (t/value 2) (t/value 3) (t/value 4) (t/value 5)
+        (is= true  ((t/unordered (t/value 1) (t/value 2) (t/value 3) (t/value 4) (t/value 5)
                                  (t/value 6) (t/value 6)) (shuffle [1 2 3 4 5 6 6])))))
     (is= true ((t/unordered (t/value 1) (t/value 2) (t/value 3) (t/value 4) (t/value 5) (t/value 6))
                 #{1 2 3 4 5 6}))
@@ -466,8 +466,8 @@
           t  (t/unordered ts)]
       (dotimes [i 100]
         (is= t (t/unordered (shuffle ts))))))
-  ;; This may be too computationally expensive though
-  (testing "Combinatoric equality between `t/ordered` and `t/unordered`"
+  ;; This may be too computationally expensive though, given the `O(n!)` nature of it
+  #_(testing "Combinatoric equality between `t/ordered` and `t/unordered`"
     (test-comparison =ident
       (t/unordered (t/value 1) (t/value 2))
       (t/or (t/ordered (t/value 1) (t/value 2))
@@ -496,7 +496,7 @@
                        (t/ordered (t/value :e) (t/value :f))
                        (t/ordered (t/value :g) (t/value :h))
                        (t/ordered (t/value :i) (t/value :j)))]
-      (is= false (t {           :a :b :c :d :e :f :g :h :i :j}))
+      (is= false (t (->> {:a :b :c :d :e :f :g :h :i :j} seq shuffle (into {}))))
       (is= true  (t (umap/om    :a :b :c :d :e :f :g :h :i :j)))
       (is= true  (t (sorted-map :a :b :c :d :e :f :g :h :i :j))))
     (let [t (t/ordered (t/unordered (t/value :a) (t/value :b))
