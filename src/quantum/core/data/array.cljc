@@ -29,6 +29,9 @@
 
 (ulog/this-ns)
 
+;; TODO add `c?/compare` support
+;; Note that in CLJS you can directly `<` arrays but it's not sufficient because it does `<` comparisons on its contents which might not be expected
+
 (def typed-arrays-supported? (p/val? (aget usys/global "ArrayBuffer")))
 
 ;; A polyfill for the `.slice` prototype method missing in Safari and some mobile browser versions

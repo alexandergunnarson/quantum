@@ -261,6 +261,8 @@
           (c?/>= (.multiply (.numerator   a) (.numerator   b))
                  (.multiply (.denominator a) (.denominator b))))))
 
+;; TODO `c?/compare`
+
 ;; ===== Comparisons to constants (e.g. to 0 or 1) ===== ;;
 
 (t/defn ^:inline >zero-of-type #_> #_zero?

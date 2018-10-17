@@ -9,7 +9,10 @@
          [quantum.core.data.primitive :as p]
          [quantum.core.type           :as t]
          ;; TODO TYPED excise
-         [quantum.untyped.core.core   :as ucore])
+         [quantum.untyped.core.core   :as ucore]
+         ;; TODO TYPED excise
+         [quantum.untyped.core.logic
+           :refer [ifs]])
        (:import
 #?(:clj  [com.carrotsearch.hppc CharArrayDeque])
 #?(:cljs [goog.string           StringBuffer])))
@@ -149,11 +152,15 @@
   (t/fn [x integer?]
     (comp/<= #?(:clj Character/MIN_RADIX :cljs 2) x #?(:clj Character/MAX_RADIX :cljs 36))))
 
-(t/extend-defn! ?c/compare
-#?(:clj (^:in [a string?, b string?] (.compareTo a b))))
-
 (t/extend-defn! ?c/=
-#?(:clj (^:in [a string?, b string?] (.equals a b))))
+  (^:in [a string?, b string?] (#?(:clj .equals :cljs ?c/==) a b)))
+
+(t/extend-defn! ?c/compare
+#?(:clj  (^:in [a string?, b string?] (.compareTo a b)))
+#?(:cljs (     [a string?, b string?]
+           (ifs ^boolean (js* "(~{} < ~{})" a b) -1
+                ^boolean (js* "(~{} > ~{})" a b)  1
+                0))))
 
 (t/extend-defn! dn/>boolean
   ([x (t/value "true")] true)

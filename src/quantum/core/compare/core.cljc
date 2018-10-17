@@ -171,20 +171,6 @@
         (throw (#?(:clj clojure.lang.ExceptionInfo. :cljs cljs.core/ExceptionInfo.)
                  "Cannot compare incomparable values" {:type0 (type a) :type1 (type b)} nil)))))
 
-(defn ^number compare
-  [x y]
-  (cond
-   (number? x) (if (number? y)
-                 (garray/defaultCompare x y)
-                 (throw (js/Error. (str "Cannot compare " x " to " y))))
-
-   :else
-   (if (and (or (string? x) (array? x) (true? x) (false? x))
-            (identical? (type x) (type y)))
-     (garray/defaultCompare x y)
-     (throw (js/Error. (str "Cannot compare " x " to " y))))))
-
-
 ; ----- `comp<` ----- ;
 
 #?(:clj  (defnt' ^boolean comp<-bin

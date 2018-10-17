@@ -278,5 +278,10 @@
   )
 
 (t/extend-defn! c?/compare
-#?(:clj ([a c?/icomparable?, b primitive?]      (.compareTo a       b)))
-        ([a primitive?     , b c?/icomparable?] (.compareTo (box a) b)))
+         ([a false?                 , b false?]   0)
+         ([a false?                 , b true?]   -1)
+         ([a true?                  , b false?]   1)
+         ([a true?                  , b true?]    0)
+         ([a numeric?               , b numeric?] (ifs (c?/< a b) -1 (c?/> a b) 1 0))
+#?(:clj  ([a (t/ref c?/icomparable?), b primitive?]              (.compareTo a       b)))
+#?(:clj  ([a primitive?             , b (t/ref c?/icomparable?)] (.compareTo (box a) b))))
