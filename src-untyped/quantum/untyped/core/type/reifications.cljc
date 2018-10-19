@@ -386,7 +386,8 @@
    name
    out-type #_t/type?
    arities-form
-   arities #_(s/map-of non-zero-int? (s/seq-of :quantum.untyped.core.type/fn-type|arity))]
+   arities #_(s/map-of nneg-int? (s/seq-of (s/kv {:input-types (s/vec-of type?)
+                                                  :output-type type?})))]
   {PType          nil
    ;; Outputs whether the args match any input spec
    ?Fn            {invoke    ([this args] (TODO))}
