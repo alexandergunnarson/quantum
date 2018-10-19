@@ -60,8 +60,14 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  [0] - Reflection warning, /Users/alexander/Code/quantum/src/quantum/core/data/primitive.cljc:250:1 - call to method invoke on quantum.core.compare.core.byte>boolean can't be resolved (no such method).
-  [1] - t/numerically : e.g. a double representing exactly what a float is able to represent
+  [1] - t/input-type
+        - This is pretty simple with the current dependent type system
+        - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
+  [2] - t/output-type
+        - This is pretty simple with the current dependent type system
+        - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
+  [3] - Direct dispatch needs to actually work correctly in `t/defn`
+  [4] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.
         - t/numerically-integer?
         - Primitive conversions not requiring checks can go in data.primitive
@@ -69,15 +75,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
             - numeric definitions
             - numeric ranges
             - numeric characteristics
-  [2] - t/input-type
-        - `(t/input-type >namespace :?)` meaning the possible input types to the first input to
-          `>namespace`
-        - `(t/input-type reduce :_ :_ :?)`
-        - This is pretty simple with the current dependent type system
-        - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
-  [3] - t/output-type
-        - This is pretty simple with the current dependent type system
-  [4] - Direct dispatch needs to actually work correctly in `t/defn`
   [5] - No trailing `>` means `> ?`
       - ? : type inference
         - use logic programming and variable unification e.g. `?1` `?2` ?
@@ -143,11 +140,17 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - (t/seq vector? [   [0 (t/value :a)]    [1 (t/value :b)]     [2 (t/value :c)]])
           - (t/kv  vector? { 0 [0 (t/value :a)]  1 [1 (t/value :b)]   2 [2 (t/value :c)]})
         - and so on ad infinitum. Therefore we reserve `t/kv` for `(t/and t/lookup? (t/not indexed?))`.
-  - Analysis
+  - Analysis/Optimization
     - `(p/nil? ...)` should probably be inlined to `(?/== ... nil)` rather than using the overhead of the
       deftype
     - This should realize that we're negating a `<` and change the operator to `<=`
       - `(t/def nneg? (fn/comp ?/not neg?))`
+    - For numbers:
+      - (< (compare a b) 0)
+        ->
+        (< (ifs (< a b) -1 (> a b) 1 0) 0)
+        -> the only one that can be < 0 is the -1
+        -> (< a b)
     - Better analysis of compound literals
       - Literal vectors need to be analyzed — (t/finite-of t/built-in-vector? a-type b-type ...)
       - Literal sets need to be analyzed — (t/finite-of t/built-in-set? a-type b-type ...)
@@ -210,6 +213,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         analyzer when doing direct dispatch. Should emit a warning, not just fail.
     - (t/and (t/or a b) c) should -> (t/or (t/and a c) (t/and b c)) for purposes of separating dispatches
     - ^:inline
+      - should be able to mark either ^:unline or ^{:inline false} on arities of an inline function
       - if you do (Numeric/bitAnd a b) inline then bitAnd needs to know the primitive type so maybe
         we do the `let*`-binding approach to typing vars?
       - A good example of inlining:
@@ -635,16 +639,16 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [   ] map-indexed
           - [   ] mapcat
           - [   ] mapv
-          - [   ] max
-          - [   ] max-key
+          - [x x] max
+          - [x x] max-key
           - [   ] memfn
           - [   ] memoize
           - [   ] merge
           - [   ] merge-with
           - [x x] meta
           - [   ] methods
-          - [   ] min
-          - [   ] min-key
+          - [x x] min
+          - [x x] min-key
           - [   ] mix-collection-hash
           - [|  ] mk-bound-fn
           - [   ] mod
@@ -1099,8 +1103,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] Math.log10(double) > double
           - [ ] Math.pow(double, double) > double
           - [ ] Math.exp(double) > double
-          - [ ] Math.min(int, int) > int
-          - [ ] Math.max(int, int) > int
+          - [x] Math.min(int, int) > int
+          - [x] Math.max(int, int) > int
           - [ ] Math.addExact(int, int) > int
           - [ ] Math.addExact(long, long) > long
           - [ ] Math.decrementExact(int) > int
@@ -1557,7 +1561,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] char_array
           - [ ] chars
           - [ ] clearBit
-          - [ ] compare
+          - [x] compare
           - [ ] dec
           - [ ] decP
           - [ ] denominator
@@ -1585,8 +1589,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] longs
           - [x] lt
           - [x] lte
-          - [ ] max
-          - [ ] min
+          - [x] max
+          - [x] min
           - [ ] minus
           - [ ] minusP
           - [ ] multiply
@@ -1768,8 +1772,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - [ ] negate
     - [ ] multiply
     - [ ] divide
-    - [ ] max
-    - [ ] min
+    - [x] max
+    - [x] min
     - [ ] rem
   - List of Primitive fns to implement:
     - uncheckedByteCast
