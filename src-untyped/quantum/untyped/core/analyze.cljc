@@ -813,7 +813,7 @@
   (let [expanded-form (ufeval/macroexpand form)]
     (if-let [no-expansion? (ucomp/== form expanded-form)]
       (analyze-seq* env expanded-form)
-      (let [expanded-form' (-> expanded-form (update-meta merge (meta form)))
+      (let [expanded-form' (some-> expanded-form (update-meta merge (meta form)))
             expanded (analyze* env expanded-form')]
         (uast/macro-call
           {:env             env
