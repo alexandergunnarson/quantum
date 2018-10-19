@@ -519,7 +519,7 @@
 (defns input-type
   "Outputs the type of a specified input to a typed fn.
 
-   Usage in typed contexts:
+   Usage in arglist contexts:
    - `(t/input-type >namespace :?)`
      - Outputs the union of the possible types of the first input to `>namespace`.
    - `(t/input-type reduce :_ :_ :?)`
@@ -528,7 +528,7 @@
      - Outputs the union of the possible types of the first input to `reduce` when the third input
        satisfies `string?`.
 
-   Usage outside of typed contexts is the same except the first input must be a `utr/fn-type?`."
+   Usage outside of arglist contexts is the same except the first input must be a `utr/fn-type?`."
   [t utr/fn-type? & args (us/seq-of (us/or* #{:_ :?} type?))
    | (->> args (filter #(c/= % :?)) count (c/= 1))
    > type?]
@@ -540,14 +540,14 @@
 (defns output-type
   "Outputs the output type of a typed fn.
 
-   Usage in typed contexts:
+   Usage in arglist contexts:
    - `(t/output-type >namespace)`
      - Outputs the union of the possible output types of `>namespace` given any valid inputs at all
    - `(t/output-type reduce :_ :_ string?)`
      - Outputs the union of the possible output types of `reduce` when the third input satisfies
        `string?`.
 
-   Usage outside of typed contexts is the same except the first input must be a `utr/fn-type?`."
+   Usage outside of arglist contexts is the same except the first input must be a `utr/fn-type?`."
   ([t utr/fn-type?]
     (->> t utr/fn-type>arities (uc/mapcat+ val) (uc/map :output-type) (apply or)))
   ([t utr/fn-type? & args (us/seq-of (us/or* #{:_} type?)) > type?]
@@ -615,30 +615,35 @@
 #?(:clj (def primitive-classes (->> unboxed-symbol->type-meta vals (uc/map+ :unboxed) (join #{}))))
 
 (defns- -type>classes
-  [t utr/type?, classes c/set? > (us/set-of (us/nilable #?(:clj c/class? :cljs c/fn?)))]
+  [t utr/type?, include-classes-of-value-type? c/boolean?, classes c/set?
+   > (us/set-of (us/nilable #?(:clj c/class? :cljs c/fn?)))]
   (cond (utr/class-type? t)
           (conj classes (utr/class-type>class t))
         (utr/value-type? t)
-          (conj classes (-> t utr/value-type>value c/type))
+          (cond-> classes
+            include-classes-of-value-type? (conj (-> t utr/value-type>value c/type)))
         (c/= t universal-set)
           #?(:clj  #{nil java.lang.Object}
              :cljs (TODO "Not sure what to do in the case of universal CLJS set"))
         (c/= t empty-set)
           #{}
         (utr/and-type? t)
-          (reduce (c/fn [classes' t'] (-type>classes t' classes'))
+          (reduce (c/fn [classes' t'] (-type>classes t' include-classes-of-value-type? classes'))
             classes (utr/and-type>args t))
         (utr/or-type? t)
-          (reduce (c/fn [classes' t'] (-type>classes t' classes'))
+          (reduce (c/fn [classes' t'] (-type>classes t' include-classes-of-value-type? classes'))
             classes (utr/or-type>args t))
         (c/= val?)
-          (-type>classes val|by-class? classes)
+          (-type>classes val|by-class? include-classes-of-value-type? classes)
         :else
           (err! "Not sure how to handle type" t)))
 
 (defns type>classes
   "Outputs the set of all the classes ->`t` can embody, possibly including nil."
-  [t utr/type? > (us/set-of (us/nilable #?(:clj c/class? :cljs c/fn?)))] (-type>classes t #{}))
+  ([t utr/type? > (us/set-of (us/nilable #?(:clj c/class? :cljs c/fn?)))] (type>classes t true))
+  ([t utr/type?, include-classes-of-value-type? c/boolean?
+    > (us/set-of (us/nilable #?(:clj c/class? :cljs c/fn?)))]
+    (-type>classes t include-classes-of-value-type? #{})))
 
 ;; TODO move
 #?(:clj
@@ -666,14 +671,17 @@
       (->> cs (uc/map+ class>most-primitive-class) (ur/join #{}))))))
 
 #?(:clj
-(defns type>primitive-subtypes [t type? > (us/set-of type?)]
+(defns type>primitive-subtypes
+  ([t type? > (us/set-of type?)] (type>primitive-subtypes t true))
+  ([t type?, include-subtypes-of-value-type? c/boolean? > (us/set-of type?)]
   (if (-> t c/meta :quantum.core.type/ref?)
       #{}
-      (->> t type>classes
+      (->> t
+           (type>classes include-subtypes-of-value-type?)
            (uc/mapcat+ class>boxed-subclasses+)
            uc/distinct+
            (uc/map+ isa?)
-           (ur/join #{})))))
+           (ur/join #{}))))))
 
 #?(:clj
 (defns- -type>?class-value [t utr/type?, type-nilable? c/boolean?]

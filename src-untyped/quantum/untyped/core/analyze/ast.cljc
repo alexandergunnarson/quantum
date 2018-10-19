@@ -264,6 +264,7 @@
 
 (defrecord FieldAccess
   [env             #_::env
+   unanalyzed-form #_::t/form
    form            #_::t/form
    target          #_::node
    field           #_unqualified-symbol?

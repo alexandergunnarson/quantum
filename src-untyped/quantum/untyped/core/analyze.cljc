@@ -418,11 +418,12 @@
   [env ::env, form _, target _, field-form simple-symbol?, field (t/isa? Field)
    > uast/field-access?]
   (uast/field-access
-    {:env    env
-     :form   form
-     :target target
-     :field  field-form
-     :type   (-> field :class (maybe-with-assume-val form))}))
+    {:env             env
+     :unanalyzed-form form
+     :form            (:form target)
+     :target          target
+     :field           field-form
+     :type            (-> field :class (maybe-with-assume-val form))}))
 
 (defns classes>class
   "Ensure that given a set of classes, that set consists of at most a class C and nil.
@@ -665,20 +666,26 @@
     :dispatchable-overloads-seq))
 
 (defns- analyze-seq|dependent-type-call
-  [env ::env, [caller|form _, arg-form _ & extra-args-form _ :as form] _ > uast/node?]
-  (if (not (empty? extra-args-form))
+  [env ::env, [caller|form _, & args-form _ :as form] _ > uast/node?]
+  (if (and (-> caller|form name (= "type"))
+           (-> args-form count (not= 1)))
       (err! "Incorrect number of args passed to dependent type call"
-            {:form form :args-ct (-> extra-args-form count inc)})
-      (let [arg-node (analyze* env arg-form)
-            caller|node (analyze* env caller|form)]
+            {:form form :args-ct (count args-form)})
+      (let [arg-nodes   (->> args-form (mapv #(analyze* env %)))
+            caller|node (analyze* env caller|form)
+            t (case (name caller|form)
+                "type"        (-> arg-nodes first :type)
+                "input-type"  (apply t/input-type (-> arg-nodes first :type)
+                                (->> arg-nodes rest (map :type) (map t/unvalue)))
+                "output-type" (apply t/output-type (-> arg-nodes first :type)
+                                (->> arg-nodes rest (map :type) (map t/unvalue))))]
         (uast/call-node
           {:env             env
-                            ;; We replace the `form` with the form of the arg type
            :unanalyzed-form form
-           :form            (-> arg-node :type uform/>form)
+           :form            (uform/>form t)
            :caller          caller|node
-           :args            [arg-node]
-           :type            (t/value (:type arg-node))}))))
+           :args            arg-nodes
+           :type            (t/value t)}))))
 
 (defns- apply-arg-type-combine [combinef fn?, input-nodes _ > t/value-type?]
   (->> input-nodes
@@ -792,7 +799,11 @@
                         (when-let [sym (some-> (uvar/resolve *ns* caller|form) uid/>symbol)]
                           (case sym
                             (quantum.core.type/type
-                             quantum.untyped.core.type/type) true
+                             quantum.untyped.core.type/type
+                             quantum.core.type/input-type
+                             quantum.untyped.core.type/input-type
+                             quantum.core.type/output-type
+                             quantum.untyped.core.type/output-type) true
                             false)))]
           (analyze-seq|dependent-type-call env form)
           (analyze-seq|call env form))
@@ -926,7 +937,8 @@
 ;; TODO excise
 (defn pr! [x]
   (binding [quantum.untyped.core.analyze.ast/*print-env?* false
-            quantum.untyped.core.print/*collapse-symbols?* true]
+            quantum.untyped.core.print/*collapse-symbols?* true
+            *print-meta* true]
     (quantum.untyped.core.print/ppr x)))
 
 #?(:clj
@@ -953,7 +965,7 @@
 (defns type>split+primitivized [t t/type? > (s/vec-of t/type?)]
   (let [primitive-subtypes
           (->> t
-               t/type>primitive-subtypes
+               (t/type>primitive-subtypes false)
                (sort-by sort-guide) ; For cleanliness and reproducibility in tests
                vec)]
     (uc/distinct (join primitive-subtypes (type>split t)))))
