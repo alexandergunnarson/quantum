@@ -721,10 +721,10 @@
         fn|output-type       (eval fn|output-type|form)
         fn|types-decl-name   (symbol (str fn|name "|__types"))]
     (if (empty? overloads-bases)
-        `(do (declare
+        `(do (def ~fn|types-decl-name (atom []))
+             (declare
                ~(with-meta fn|name
-                  (assoc fn|meta :quantum.core.type/type `(t/ftype ~(>form fn|output-type)))))
-             (def ~fn|types-decl-name (atom [])))
+                  (assoc fn|meta :quantum.core.type/type `(t/ftype ~(>form fn|output-type))))))
         (let [gen-gensym-base      (ufgen/>reproducible-gensym|generator)
               gen-gensym           (c/fn [x] (symbol (str (gen-gensym-base x) "__")))
               opts                 (kw-map compilation-mode gen-gensym kind lang)
