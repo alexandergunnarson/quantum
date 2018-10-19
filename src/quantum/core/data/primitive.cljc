@@ -7,6 +7,8 @@
  #?(:cljs goog.math.Long)
           [quantum.core.compare.core         :as c?]
           [quantum.core.type                 :as t]
+          [quantum.untyped.core.logic
+            :refer [ifs]]
           [quantum.untyped.core.type         :as ut]
           ;; TODO TYPED excise reference
           [quantum.untyped.core.vars         :as var
@@ -50,6 +52,11 @@
            'primitive' in some contexts."
           (t/or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
 
+        (def primitive-type?
+          (t/or (t/value boolean?)
+      #?@(:clj [(t/value byte?) (t/value short?) (t/value char?) (t/value int?) (t/value long?)
+                (t/value float?)]) (t/value double?)))
+
         (var/def integer? "Specifically primitive integers."
           (t/or #?@(:clj [byte? short? int? long?])))
 
@@ -60,6 +67,8 @@
           "Specifically primitive numeric things.
            Something 'numeric' is something that may be treated as a number but may not actually *be* one."
           (t/- primitive? boolean?))
+
+        (def numeric-type? (t/- primitive-type? (t/value boolean?)))
 
         (defaliases ut true? false?)
 
@@ -125,58 +134,81 @@
 ;; ===== Extreme magnitudes and values ===== ;;
 
 (t/defn ^:inline >min-magnitude
-  #?(:clj ([x byte?   > (t/type x)]          (byte  0)))
-  #?(:clj ([x short?  > (t/type x)]          (short 0)))
-  #?(:clj ([x char?   > (t/type x)]          (char  0)))
-  #?(:clj ([x int?    > (t/type x)]          (int   0)))
-  #?(:clj ([x long?   > (t/type x)]          (long  0)))
-  #?(:clj ([x float?  > (t/type x)]          Float/MIN_VALUE))
-          ([x double? > (t/type x)] #?(:clj  Double/MIN_VALUE
-                                       :cljs js/Number.MIN_VALUE)))
+#?(:clj ([x (t/or byte?   (t/value byte?))   > byte?]  (byte  0)))
+#?(:clj ([x (t/or short?  (t/value short?))  > short?] (short 0)))
+#?(:clj ([x (t/or char?   (t/value char?))   > char?]  (char  0)))
+#?(:clj ([x (t/or int?    (t/value int?))    > int?]   (int   0)))
+#?(:clj ([x (t/or long?   (t/value long?))   > long?]  (long  0)))
+#?(:clj ([x (t/or float?  (t/value float?))  > float?] Float/MIN_VALUE))
+        ([x (t/or double? (t/value double?)) > double?]
+          #?(:clj Double/MIN_VALUE :cljs js/Number.MIN_VALUE)))
 
 ;; TODO TYPED these are probably getting boxed
 #?(:clj (var/def- min-float  (Numeric/negate Float/MAX_VALUE)))
         (var/def- min-double (- #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
 
 (t/defn ^:inline >min-value
-  #?(:clj ([x byte?   > (t/type x)] Byte/MIN_VALUE))
-  #?(:clj ([x short?  > (t/type x)] Short/MIN_VALUE))
-  #?(:clj ([x char?   > (t/type x)] Character/MIN_VALUE))
-  #?(:clj ([x int?    > (t/type x)] Integer/MIN_VALUE))
-  #?(:clj ([x long?   > (t/type x)] Long/MIN_VALUE))
-  #?(:clj ([x float?  > (t/type x)] min-float))
-          ([x double? > (t/type x)] min-double))
+#?(:clj ([x (t/or byte?   (t/value byte?))   > byte?]   Byte/MIN_VALUE))
+#?(:clj ([x (t/or short?  (t/value short?))  > short?]  Short/MIN_VALUE))
+#?(:clj ([x (t/or char?   (t/value char?))   > char?]   Character/MIN_VALUE))
+#?(:clj ([x (t/or int?    (t/value int?))    > int?]    Integer/MIN_VALUE))
+#?(:clj ([x (t/or long?   (t/value long?))   > long?]   Long/MIN_VALUE))
+#?(:clj ([x (t/or float?  (t/value float?))  > float?]  min-float))
+        ([x (t/or double? (t/value double?)) > double?] min-double))
 
 (t/defn ^:inline >max-value
-  #?@(:clj [([x byte?   > (t/type x)]         Byte/MAX_VALUE)
-            ([x short?  > (t/type x)]         Short/MAX_VALUE)
-            ([x char?   > (t/type x)]         Character/MAX_VALUE)
-            ([x int?    > (t/type x)]         Integer/MAX_VALUE)
-            ([x long?   > (t/type x)]         Long/MAX_VALUE)
-            ([x float?  > (t/type x)]         Float/MAX_VALUE)])
-            ([x double? > (t/type x)] #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
+#?@(:clj [([x (t/or byte?   (t/value byte?))   > byte?]   Byte/MAX_VALUE)
+          ([x (t/or short?  (t/value short?))  > short?]  Short/MAX_VALUE)
+          ([x (t/or char?   (t/value char?))   > char?]   Character/MAX_VALUE)
+          ([x (t/or int?    (t/value int?))    > int?]    Integer/MAX_VALUE)
+          ([x (t/or long?   (t/value long?))   > long?]   Long/MAX_VALUE)
+          ([x (t/or float?  (t/value float?))  > float?]  Float/MAX_VALUE)])
+          ([x (t/or double? (t/value double?)) > double?]
+            #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
+
+(t/defn ^:inline >min-safe-integer-value
+#?@(:clj [([x (t/or byte?   (t/value byte?))   > byte?]   (>min-value x))
+          ([x (t/or short?  (t/value short?))  > short?]  (>min-value x))
+          ([x (t/or char?   (t/value char?))   > char?]   (>min-value x))
+          ([x (t/or int?    (t/value int?))    > int?]    (>min-value x))
+          ([x (t/or long?   (t/value long?))   > long?]   (>min-value x))
+          ;; [2 ^ (<mantissa bits> + 1)] - 1
+          ([x (t/or float?  (t/value float?))  > float?]  (float -16777216.0))])
+          ([x (t/or double? (t/value double?)) > double?] -9007199254740991.0))
+
+(t/defn ^:inline >max-safe-integer-value
+#?@(:clj [([x (t/or byte?   (t/value byte?))   > byte?]   (>max-value x))
+          ([x (t/or short?  (t/value short?))  > short?]  (>max-value x))
+          ([x (t/or char?   (t/value char?))   > char?]   (>max-value x))
+          ([x (t/or int?    (t/value int?))    > int?]    (>max-value x))
+          ([x (t/or long?   (t/value long?))   > long?]   (>max-value x))
+          ;; [2 ^ (<mantissa bits> + 1)] - 1
+          ([x (t/or float?  (t/value float?))  > float?]  (float 16777216.0))])
+          ([x (t/or double? (t/value double?)) > double?] 9007199254740991.0))
 
 ;; ===== Primitive type properties ===== ;;
 
 (t/defn ^:inline signed?
-          ([x (t/or char?    (t/value Character))]             false)
-#?@(:clj [([x (t/or byte?    (t/value Byte)
-                    short?   (t/value Short)
-                    int?     (t/value Integer)
-                    long?    (t/value Long)
-                    float?   (t/value Float)
-                    double?  #?(:clj Double :cljs js/Number))] true)]))
+          ([x (t/or char?    (t/value Character)             (t/value char?))]   false)
+#?@(:clj [([x (t/or byte?    (t/value Byte)                  (t/value byte?)
+                    short?   (t/value Short)                 (t/value short?)
+                    int?     (t/value Integer)               (t/value int?)
+                    long?    (t/value Long)                  (t/value long?)
+                    float?   (t/value Float)                 (t/value float?)
+                    double?  #?(:clj Double :cljs js/Number) (t/value double?))] true)]))
 
 ;; TODO TYPED `t/numerically-integer?`
 (t/defn ^:inline >bit-size ; > t/numerically-integer?
-          ([x (t/or boolean? (t/value #?(:clj Boolean :cljs js/Boolean)))] boolean-bits)
-#?@(:clj [([x (t/or byte?    (t/value Byte))]                              byte-bits)
-          ([x (t/or short?   (t/value Short))]                             short-bits)
-          ([x (t/or char?    (t/value Character))]                         char-bits)
-          ([x (t/or int?     (t/value Integer))]                           int-bits)
-          ([x (t/or long?    (t/value Long))]                              long-bits)
-          ([x (t/or float?   (t/value Float))]                             float-bits)])
-          ([x (t/or double?  #?(:clj Double :cljs js/Number))]             double-bits))
+          ([x (t/or boolean? (t/value #?(:clj Boolean :cljs js/Boolean)) (t/value boolean?))]
+            boolean-bits)
+#?@(:clj [([x (t/or byte?    (t/value Byte)      (t/value byte?))]         byte-bits)
+          ([x (t/or short?   (t/value Short)     (t/value short?))]        short-bits)
+          ([x (t/or char?    (t/value Character) (t/value char?))]         char-bits)
+          ([x (t/or int?     (t/value Integer)   (t/value int?))]          int-bits)
+          ([x (t/or long?    (t/value Long)      (t/value long?))]         long-bits)
+          ([x (t/or float?   (t/value Float)     (t/value float?))]        float-bits)])
+          ([x (t/or double?  #?(:clj Double :cljs js/Number) (t/value double?))]
+            double-bits))
 
 ;; ===== Conversion ===== ;;
 ;; Note that numeric-primitive conversions do not go here (but may be found in
@@ -234,9 +266,7 @@
 #?(:clj  (     [a (t/- numeric? double?)      , b double?]                      (Numeric/lt a b)))
 #?(:clj  (     [a (t/- numeric? double? long?), b (t/- numeric? double? long?)] (Numeric/lt a b)))
 #?(:cljs (     [a numeric?                    , b numeric?]                     (cljs.core/< a b)))
-  ;; TODO rest of numbers, but not nil
-  ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
-  )
+)
 
 (t/extend-defn! c?/<=
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/lte  a b)))
@@ -247,9 +277,7 @@
 #?(:clj  (     [a (t/- numeric? double?)      , b double?]                      (Numeric/lte  a b)))
 #?(:clj  (     [a (t/- numeric? double? long?), b (t/- numeric? double? long?)] (Numeric/lte  a b)))
 #?(:cljs (     [a numeric?                    , b numeric?]                     (cljs.core/<= a b)))
-  ;; TODO rest of numbers, but not nil
-  ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
-  )
+)
 
 (t/extend-defn! c?/>
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/gt  a b)))
@@ -260,9 +288,7 @@
 #?(:clj  (     [a (t/- numeric? double?)      , b double?]                      (Numeric/gt  a b)))
 #?(:clj  (     [a (t/- numeric? double? long?), b (t/- numeric? double? long?)] (Numeric/gt  a b)))
 #?(:cljs (     [a numeric?                    , b numeric?]                     (cljs.core/> a b)))
-  ;; TODO rest of numbers, but not nil
-  ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
-  )
+)
 
 (t/extend-defn! c?/>=
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/gte  a b)))
@@ -273,15 +299,74 @@
 #?(:clj  (     [a (t/- numeric? double?)      , b double?]                      (Numeric/gte  a b)))
 #?(:clj  (     [a (t/- numeric? double? long?), b (t/- numeric? double? long?)] (Numeric/gte  a b)))
 #?(:cljs (     [a numeric?                    , b numeric?]                     (cljs.core/>= a b)))
-  ;; TODO rest of numbers, but not nil
-  ;; CLJ just does `>long` for both args and performs comparison that way (which is kind of unsafe)
-  )
+)
 
 (t/extend-defn! c?/compare
-         ([a false?                 , b false?]   0)
-         ([a false?                 , b true?]   -1)
-         ([a true?                  , b false?]   1)
-         ([a true?                  , b true?]    0)
-         ([a numeric?               , b numeric?] (ifs (c?/< a b) -1 (c?/> a b) 1 0))
-#?(:clj  ([a (t/ref c?/icomparable?), b primitive?]              (.compareTo a       b)))
-#?(:clj  ([a primitive?             , b (t/ref c?/icomparable?)] (.compareTo (box a) b))))
+        ([a false?                 , b false?]   0)
+        ([a false?                 , b true?]   -1)
+        ([a true?                  , b false?]   1)
+        ([a true?                  , b true?]    0)
+        ([a numeric?               , b numeric?] (ifs (c?/< a b) -1 (c?/> a b) 1 0))
+#?(:clj ([a (t/ref c?/icomparable?), b primitive?]              (.compareTo a       b)))
+#?(:clj ([a primitive?             , b (t/ref c?/icomparable?)] (.compareTo (box a) b))))
+
+(t/extend-defn! c?/comp<
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+    (c?/<  (c?/compare a b) 0)))
+
+(t/extend-defn! c?/comp<=
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+    (c?/<= (c?/compare a b) 0)))
+
+(t/extend-defn! c?/comp=
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+    (c?/=  (c?/compare a b) 0)))
+
+(t/extend-defn! c?/comp>=
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+    (c?/>= (c?/compare a b) 0)))
+
+(t/extend-defn! c?/comp>
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+    (c?/>  (c?/compare a b) 0)))
+
+(t/defn promote-type [a nil?, b nil?])
+
+(t/defn narrowest
+  > t/type?
+  ([t0 (t/and (t/input-type >min-safe-integer-value :?)
+              (t/input-type >max-safe-integer-value :?))
+    t1 (t/and (t/input-type >min-safe-integer-value :?)
+              (t/input-type >max-safe-integer-value :?))]
+    (let [t0-min (>min-safe-integer-value t0)
+          t1-min (>min-safe-integer-value t1)
+          t0-max (>max-safe-integer-value t0)
+          t1-max (>max-safe-integer-value t1)]
+      (ifs (c?/= t0-min t1-min)
+             (ifs (c?/= t0-max t1-max) t0
+                  (c?/< t0-max t1-max) t1
+                  t0)
+           (c?/< t0-min t1-min)
+             (ifs (c?/< t0-max t1-max) (promote-type t0 t1)
+                  (c?/= t0-max t1-max) t0
+                  t0)
+           (ifs (c?/> t0-max t1-max) (promote-type t0 t1)
+                (c?/= t0-max t1-max) t1
+                t1)))))
+
+(t/extend-defn! c?/min
+#?(:clj  (     [a (t/- numeric? int?), b numeric?]            (Numeric/min a b)))
+#?(:clj  (     [a numeric?           , b (t/- numeric? int?)] (Numeric/min a b)))
+#?(:clj  (^:in [a int?               , b int?]                (Math/min    a b)))
+#?(:cljs (     [a double?            , b double? > (t/assume double?)] (js/Math.min a b))))
+
+(t/extend-defn! c?/max
+#?(:clj  (     [a (t/- integer? int?), b integer? > (t/narrowest (t/type a) (t/type b))]
+           (if (c?/> a b) a b)))
+#?(:clj  (     [a integer?           , b (t/- integer? int?)]
+           (if (c?/> a b) a b)))
+#?(:clj  (^:in [a int?               , b int?] (Math/max a b)))
+#?(:clj  (     [a float?             , b float?]                       (Math/max    a b)))
+#?(:clj  (     [a float?             , b float?]                       (Math/max    a b)))
+#?(:clj  (     [a double?            , b double?]                      (Math/max    a b)))
+#?(:cljs (     [a double?            , b double? > (t/assume double?)] (js/Math.max a b))))
