@@ -501,6 +501,21 @@
 (defns compare|out [x0 utr/fn-type?, x1 utr/fn-type? > uset/comparison?]
   (utcomp/compare (fn-type>output-type x0) (fn-type>output-type x1)))
 
+(defn- match-spec>type-data-seq [t args]
+  (let [type-data-seq (-> t utr/fn-type>arities (get (count args)))]
+    (->> args
+         (uc/map-indexed+ vector)
+         (uc/remove (fn-> second #{:_ :?}))
+         (educe
+           (c/fn ([] type-data-seq)
+                 ([type-data-seq'] type-data-seq')
+                 ([type-data-seq' [i|arg arg-type]]
+                   (c/or (->> type-data-seq'
+                              (uc/lfilter (c/fn [{:keys [input-types]}]
+                                            (utcomp/<= arg-type (get input-types i|arg))))
+                              seq)
+                         (reduced nil))))))))
+
 (defns input-type
   "Outputs the type of a specified input to a typed fn.
 
@@ -517,21 +532,9 @@
   [t utr/fn-type? & args (us/seq-of (us/or* #{:_ :?} type?))
    | (->> args (filter #(c/= % :?)) count (c/= 1))
    > type?]
-  (let [type-data-for-arity (-> t utr/fn-type>arities (get (count args)))
-        i|? (->> args (reducei (c/fn [_ t i] (when (c/= t :?) (reduced i))) nil))]
-    (->> args
-         (uc/map-indexed+ vector)
-         (uc/remove (fn-> second #{:_ :?}))
-         (educe
-           (c/fn ([] (->> type-data-for-arity (uc/lmap :input-types)))
-                 ([input-types-seq] input-types-seq)
-                 ([input-types-seq [i|arg arg-type]]
-                   (c/or (->> input-types-seq
-                              (uc/lfilter (c/fn [input-types]
-                                            (utcomp/<= arg-type (get input-types i|arg))))
-                              seq)
-                         (reduced nil)))))
-         (uc/lmap (c/fn [input-types] (get input-types i|?)))
+  (let [i|? (->> args (reducei (c/fn [_ t i] (when (c/= t :?) (reduced i))) nil))]
+    (->> (match-spec>type-data-seq t args)
+         (uc/lmap (c/fn [{:keys [input-types]}] (get input-types i|?)))
          (apply or))))
 
 (defns output-type
@@ -545,8 +548,12 @@
        `string?`.
 
    Usage outside of typed contexts is the same except the first input must be a `utr/fn-type?`."
-  [t utr/fn-type? > type?]
-  (TODO))
+  ([t utr/fn-type?]
+    (->> t utr/fn-type>arities (uc/mapcat+ val) (uc/map :output-type) (apply or)))
+  ([t utr/fn-type? & args (us/seq-of (us/or* #{:_} type?)) > type?]
+    (->> (match-spec>type-data-seq t args)
+         (uc/lmap :output-type)
+         (apply or))))
 
 ;; ===== Dependent types ===== ;;
 
