@@ -605,7 +605,14 @@
                      (t/<= (:type input|analyzed) (get input-types i))))
                  seq)]
     (assoc ret :dispatchable-overloads-seq dispatchable-overloads-seq')
-    (filter-dynamic-dispatchable-overloads ret input|analyzed i caller|node body)))
+    (if (-> caller|node :unanalyzed-form meta :dyn)
+        (filter-dynamic-dispatchable-overloads ret input|analyzed i caller|node body)
+        (err! (str "No overloads satisfy the inputs via direct dispatch; "
+                   "dynamic dispatch not requested")
+              {:caller caller|node
+               :inputs body
+               :failing-input-form (:form input|analyzed)
+               :failing-input-type (:type input|analyzed)}))))
 
 (defn- >dispatch|out-type [dispatch-type dispatchable-overloads-seq]
   (case dispatch-type
