@@ -1229,20 +1229,20 @@ public class Numeric {
 
     public static byte   max (final byte   a, final byte   b) { return (a < b) ? b : a; }
     public static short  max (final byte   a, final short  b) { return (a < b) ? b : a; }
-    public static char   max (final byte   a, final char   b) { return (char)((a < b) ? b : a); }
+    public static int    max (final byte   a, final char   b) { return (a < b) ? b : a; }
     public static int    max (final byte   a, final int    b) { return (a < b) ? b : a; }
     public static long   max (final byte   a, final long   b) { return (a < b) ? b : a; }
     public static float  max (final byte   a, final float  b) { return (a < b) ? b : a; }
     public static double max (final byte   a, final double b) { return (a < b) ? b : a; }
     public static short  max (final short  a, final byte   b) { return (a < b) ? b : a; }
     public static short  max (final short  a, final short  b) { return (a < b) ? b : a; }
-    public static short  max (final short  a, final char   b) { return (short)((a < b) ? b : a); }
+    public static int    max (final short  a, final char   b) { return (a < b) ? b : a; }
     public static int    max (final short  a, final int    b) { return (a < b) ? b : a; }
     public static long   max (final short  a, final long   b) { return (a < b) ? b : a; }
     public static float  max (final short  a, final float  b) { return (a < b) ? b : a; }
     public static double max (final short  a, final double b) { return (a < b) ? b : a; }
-    public static char   max (final char   a, final byte   b) { return (char)((a < b) ? b : a); }
-    public static short  max (final char   a, final short  b) { return (short)((a < b) ? b : a); }
+    public static int    max (final char   a, final byte   b) { return (a < b) ? b : a; }
+    public static int    max (final char   a, final short  b) { return (a < b) ? b : a; }
     public static char   max (final char   a, final char   b) { return (a < b) ? b : a; }
     public static int    max (final char   a, final int    b) { return (a < b) ? b : a; }
     public static long   max (final char   a, final long   b) { return (a < b) ? b : a; }
@@ -1253,49 +1253,49 @@ public class Numeric {
     public static int    max (final int    a, final char   b) { return (a < b) ? b : a; }
     public static int    max (final int    a, final int    b) { return Math.max(a, b);  }
     public static long   max (final int    a, final long   b) { return (a < b) ? b : a; }
-    public static float  max (final int    a, final float  b) { return (a < b) ? b : a; }
+    public static double max (final int    a, final float  b) { return (a < b) ? b : a; }
     public static double max (final int    a, final double b) { return (a < b) ? b : a; }
     public static long   max (final long   a, final byte   b) { return (a < b) ? b : a; }
     public static long   max (final long   a, final short  b) { return (a < b) ? b : a; }
     public static long   max (final long   a, final char   b) { return (a < b) ? b : a; }
     public static long   max (final long   a, final int    b) { return (a < b) ? b : a; }
-    public static long   max (final long   a, final long   b) { return Math.max(a, b);  }
-    public static float  max (final long   a, final float  b) { return (a < b) ? b : a; }
-    public static double max (final long   a, final double b) { return (a < b) ? b : a; }
+    public static long   max (final long   a, final long   b) { return (a < b) ? b : a; }
+    public static Object max (final long   a, final float  b) { return (a < b) ? b : a; }
+    public static Object max (final long   a, final double b) { return (a < b) ? b : a; }
     public static float  max (final float  a, final byte   b) { return (a < b) ? b : a; }
     public static float  max (final float  a, final short  b) { return (a < b) ? b : a; }
     public static float  max (final float  a, final char   b) { return (a < b) ? b : a; }
-    public static float  max (final float  a, final int    b) { return (a < b) ? b : a; }
-    public static float  max (final float  a, final long   b) { return (a < b) ? b : a; }
-    public static float  max (final float  a, final float  b) { return Math.max(a, b);  }
+    public static double max (final float  a, final int    b) { return (a < b) ? b : a; }
+    public static Object max (final float  a, final long   b) { return (a < b) ? b : a; }
+    public static float  max (final float  a, final float  b) { return (a < b) ? b : a; }
     public static double max (final float  a, final double b) { return (a < b) ? b : a; }
     public static double max (final double a, final byte   b) { return (a < b) ? b : a; }
     public static double max (final double a, final short  b) { return (a < b) ? b : a; }
     public static double max (final double a, final char   b) { return (a < b) ? b : a; }
     public static double max (final double a, final int    b) { return (a < b) ? b : a; }
-    public static double max (final double a, final long   b) { return (a < b) ? b : a; }
+    public static Object max (final double a, final long   b) { return (a < b) ? b : a; }
     public static double max (final double a, final float  b) { return (a < b) ? b : a; }
-    public static double max (final double a, final double b) { return Math.max(a, b);  }
+    public static double max (final double a, final double b) { return (a < b) ? b : a; }
 
     // ============================== min (implicitly checked) ================================== //
     // "Infectious": uses the largest data type passed
 
     public static byte   min (final byte   a, final byte   b) { return (a > b) ? b : a; }
     public static short  min (final byte   a, final short  b) { return (a > b) ? b : a; }
-    public static char   min (final byte   a, final char   b) { return (char)((a > b) ? b : a); }
+    public static int    min (final byte   a, final char   b) { return (a > b) ? b : a; }
     public static int    min (final byte   a, final int    b) { return (a > b) ? b : a; }
     public static long   min (final byte   a, final long   b) { return (a > b) ? b : a; }
     public static float  min (final byte   a, final float  b) { return (a > b) ? b : a; }
     public static double min (final byte   a, final double b) { return (a > b) ? b : a; }
     public static short  min (final short  a, final byte   b) { return (a > b) ? b : a; }
     public static short  min (final short  a, final short  b) { return (a > b) ? b : a; }
-    public static short  min (final short  a, final char   b) { return (short)((a > b) ? b : a); }
+    public static int    min (final short  a, final char   b) { return (a > b) ? b : a; }
     public static int    min (final short  a, final int    b) { return (a > b) ? b : a; }
     public static long   min (final short  a, final long   b) { return (a > b) ? b : a; }
     public static float  min (final short  a, final float  b) { return (a > b) ? b : a; }
     public static double min (final short  a, final double b) { return (a > b) ? b : a; }
-    public static char   min (final char   a, final byte   b) { return (char)((a > b) ? b : a); }
-    public static short  min (final char   a, final short  b) { return (short)((a > b) ? b : a); }
+    public static int    min (final char   a, final byte   b) { return (a > b) ? b : a; }
+    public static int    min (final char   a, final short  b) { return (a > b) ? b : a; }
     public static char   min (final char   a, final char   b) { return (a > b) ? b : a; }
     public static int    min (final char   a, final int    b) { return (a > b) ? b : a; }
     public static long   min (final char   a, final long   b) { return (a > b) ? b : a; }
@@ -1304,33 +1304,31 @@ public class Numeric {
     public static int    min (final int    a, final byte   b) { return (a > b) ? b : a; }
     public static int    min (final int    a, final short  b) { return (a > b) ? b : a; }
     public static int    min (final int    a, final char   b) { return (a > b) ? b : a; }
-    // Intrinsic; maybe the others could be acclerated in the same way?
-    // TODO maybe use if-optimization?
     public static int    min (final int    a, final int    b) { return Math.min(a, b);  }
     public static long   min (final int    a, final long   b) { return (a > b) ? b : a; }
-    public static float  min (final int    a, final float  b) { return (a > b) ? b : a; }
+    public static double min (final int    a, final float  b) { return (a > b) ? b : a; }
     public static double min (final int    a, final double b) { return (a > b) ? b : a; }
     public static long   min (final long   a, final byte   b) { return (a > b) ? b : a; }
     public static long   min (final long   a, final short  b) { return (a > b) ? b : a; }
     public static long   min (final long   a, final char   b) { return (a > b) ? b : a; }
     public static long   min (final long   a, final int    b) { return (a > b) ? b : a; }
-    public static long   min (final long   a, final long   b) { return Math.min(a, b);  }
-    public static float  min (final long   a, final float  b) { return (a > b) ? b : a; }
-    public static double min (final long   a, final double b) { return (a > b) ? b : a; }
+    public static long   min (final long   a, final long   b) { return (a > b) ? b : a; }
+    public static Object min (final long   a, final float  b) { return (a > b) ? b : a; }
+    public static Object min (final long   a, final double b) { return (a > b) ? b : a; }
     public static float  min (final float  a, final byte   b) { return (a > b) ? b : a; }
     public static float  min (final float  a, final short  b) { return (a > b) ? b : a; }
     public static float  min (final float  a, final char   b) { return (a > b) ? b : a; }
-    public static float  min (final float  a, final int    b) { return (a > b) ? b : a; }
-    public static float  min (final float  a, final long   b) { return (a > b) ? b : a; }
-    public static float  min (final float  a, final float  b) { return Math.min(a, b);  }
+    public static double min (final float  a, final int    b) { return (a > b) ? b : a; }
+    public static Object min (final float  a, final long   b) { return (a > b) ? b : a; }
+    public static float  min (final float  a, final float  b) { return (a > b) ? b : a; }
     public static double min (final float  a, final double b) { return (a > b) ? b : a; }
     public static double min (final double a, final byte   b) { return (a > b) ? b : a; }
     public static double min (final double a, final short  b) { return (a > b) ? b : a; }
     public static double min (final double a, final char   b) { return (a > b) ? b : a; }
     public static double min (final double a, final int    b) { return (a > b) ? b : a; }
-    public static double min (final double a, final long   b) { return (a > b) ? b : a; }
+    public static Object min (final double a, final long   b) { return (a > b) ? b : a; }
     public static double min (final double a, final float  b) { return (a > b) ? b : a; }
-    public static double min (final double a, final double b) { return Math.min(a, b);  }
+    public static double min (final double a, final double b) { return (a > b) ? b : a; }
 
     // ================================== rem (unchecked) ====================================== //
 
