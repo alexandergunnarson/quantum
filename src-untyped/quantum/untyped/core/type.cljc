@@ -45,7 +45,7 @@
            [quantum.untyped.core.numeric               :as unum]
            [quantum.untyped.core.print                 :as upr]
            [quantum.untyped.core.reducers              :as ur
-             :refer [educe join]]
+             :refer [educe join reducei]]
            [quantum.untyped.core.refs
              :refer [?deref]]
            [quantum.untyped.core.spec                  :as us]
@@ -224,6 +224,14 @@
 
 ;; ------------------
 
+(defns- -|or [t0 utr/type?, t1 utr/type?]
+  (let [args (->> t0 utr/or-type>args (uc/remove (fn1 = t1)))]
+    (case (count args)
+      0 empty-set
+      1 (first args)
+      (OrType. uhash/default uhash/default nil args
+        (atom nil)))))
+
 (defns -
   "Computes the difference of `t0` from `t1`: (& t0 (! t1))
    If `t0` =       `t1`, `∅`
@@ -248,12 +256,8 @@
                                     ValueType (AndType. uhash/default uhash/default nil
                                                 [t0 (not t1)] (atom nil))))
               OrType  (condp == c1
-                        ClassType (let [args (->> t0 utr/or-type>args (uc/remove (fn1 = t1)))]
-                                    (case (count args)
-                                      0 empty-set
-                                      1 (first args)
-                                      (OrType. uhash/default uhash/default nil args
-                                        (atom nil))))))))))
+                        ClassType (-|or t0 t1)
+                        ValueType (-|or t0 t1)))))))
   ([t0 utr/type?, t1 utr/type? & ts _ > utr/type?] (reduce - (- t0 t1) ts)))
 
 ;; TODO clean up
@@ -274,7 +278,8 @@
                               (if-let [t (get reg name-sym)]
                                 (if (c/= (.-name ^ClassType t) name-sym)
                                     reg
-                                    (err! "Class already registered with type; must first undef" {:class x :type-name name-sym}))
+                                    (err! "Class already registered with type; must first undef"
+                                          {:class x :type-name name-sym}))
                                 (let [t (ClassType. uhash/default uhash/default nil x name-sym)]
                                   (uc/assoc-in reg [name-sym]    t
                                                    [:by-class x] t))))))]
@@ -495,6 +500,53 @@
 
 (defns compare|out [x0 utr/fn-type?, x1 utr/fn-type? > uset/comparison?]
   (utcomp/compare (fn-type>output-type x0) (fn-type>output-type x1)))
+
+(defns input-type
+  "Outputs the type of a specified input to a typed fn.
+
+   Usage in typed contexts:
+   - `(t/input-type >namespace :?)`
+     - Outputs the union of the possible types of the first input to `>namespace`.
+   - `(t/input-type reduce :_ :_ :?)`
+     - Outputs the union of the possible types of the third input to `reduce`.
+   - `(t/input-type reduce :? :_ string?)`
+     - Outputs the union of the possible types of the first input to `reduce` when the third input
+       satisfies `string?`.
+
+   Usage outside of typed contexts is the same except the first input must be a `utr/fn-type?`."
+  [t utr/fn-type? & args (us/seq-of (us/or* #{:_ :?} type?))
+   | (->> args (filter #(c/= % :?)) count (c/= 1))
+   > type?]
+  (let [type-data-for-arity (-> t utr/fn-type>arities (get (count args)))
+        i|? (->> args (reducei (c/fn [_ t i] (when (c/= t :?) (reduced i))) nil))]
+    (->> args
+         (uc/map-indexed+ vector)
+         (uc/remove (fn-> second #{:_ :?}))
+         (educe
+           (c/fn ([] (->> type-data-for-arity (uc/lmap :input-types)))
+                 ([input-types-seq] input-types-seq)
+                 ([input-types-seq [i|arg arg-type]]
+                   (c/or (->> input-types-seq
+                              (uc/lfilter (c/fn [input-types]
+                                            (utcomp/<= arg-type (get input-types i|arg))))
+                              seq)
+                         (reduced nil)))))
+         (uc/lmap (c/fn [input-types] (get input-types i|?)))
+         (apply or))))
+
+(defns output-type
+  "Outputs the output type of a typed fn.
+
+   Usage in typed contexts:
+   - `(t/output-type >namespace)`
+     - Outputs the union of the possible output types of `>namespace` given any valid inputs at all
+   - `(t/output-type reduce :_ :_ string?)`
+     - Outputs the union of the possible output types of `reduce` when the third input satisfies
+       `string?`.
+
+   Usage outside of typed contexts is the same except the first input must be a `utr/fn-type?`."
+  [t utr/fn-type? > type?]
+  (TODO))
 
 ;; ===== Dependent types ===== ;;
 
@@ -723,7 +775,7 @@
 
 ;; Used by `quantum.untyped.core.analyze`
 (def fn? #?(:clj  (isa? clojure.lang.Fn)
-            :cljs (or (isa? js/Function) ( cljs.core/Fn))))
+            :cljs (or (isa? js/Function) (isa? cljs.core/Fn))))
 
 ;; Used by `quantum.untyped.core.analyze` via `t/callable?`
 (uvar/def ifn?

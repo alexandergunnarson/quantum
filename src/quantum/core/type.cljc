@@ -15,12 +15,12 @@
 (defaliases udefnt fn defn extend-defn!)
 
 (defaliases ut
-  type
+  type type?
   ;; Generators
   ? *, isa? isa?|direct
   ; fn ; TODO TYPED rename
-  ftype
-  value, unvalue
+  ftype input-type output-type
+  value unvalue
   ;; Combinators
   and or - if not
   ;; Metadata suppliers

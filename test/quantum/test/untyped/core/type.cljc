@@ -1,6 +1,6 @@
 (ns quantum.test.untyped.core.type
         (:refer-clojure :exclude
-          [boolean? char? double? float? int? ratio? string?])
+          [boolean? char? double? float? fn? ifn? int? ratio? string? symbol?])
         (:require
           [clojure.core                               :as core]
           [quantum.untyped.core.data.map              :as umap]
@@ -40,6 +40,11 @@
 
 #?(:clj (def char-seq?   (t/isa? CharSequence)))
         (def string?     (t/isa? #?(:clj String :cljs js/String)))
+
+        (def symbol?     t/symbol?)
+
+        (def fn?         t/fn?)
+        (def ifn?        t/ifn?)
 
 #?(:clj (def comparable? (t/isa? Comparable)))
 #?(:clj (def java-set?   (t/isa? java.util.Set)))
@@ -518,3 +523,13 @@
     (is= (hash (t/value 1)) (hash (t/value 1)))
     (is= 1 (count (hash-set (t/value 1)
                             (t/value 1))))))
+
+(deftest test|input-type
+  (let [>namespace|type (t/ftype string? [string?] [symbol?])
+        reduce|type (t/ftype t/any? [fn? t/any? string?] [ifn? t/any? java-set?])]
+    (is= (t/or string? symbol?)
+         (t/input-type >namespace|type :?))
+    (is= (t/or string? java-set?)
+         (t/input-type reduce|type :_ :_ :?)))
+    (is= fn?
+         (t/input-type reduce|type :? :_ string?)))
