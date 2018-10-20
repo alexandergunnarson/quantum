@@ -42,3 +42,4 @@ pom.xml.asc
 *.class
 *.extract-native-dependencies
 *.swp
+*.swo

@@ -15,27 +15,48 @@
     [quantum.untyped.core.identifiers    :as uident]
     [quantum.untyped.core.string         :as ustr]))
 
-(defn ?Associative   [lang] (case lang :clj 'clojure.lang.Associative           :cljs 'cljs.core/IAssociative))
-(defn ?Collection    [lang] (case lang :clj 'clojure.lang.IPersistentCollection :cljs 'cljs.core/ICollection ))
-(defn ?Comparable    [lang] (case lang :clj 'java.lang.Comparable               :cljs 'cljs.core/IComparable ))
-(defn ?Counted       [lang] (case lang :clj 'clojure.lang.Counted               :cljs 'cljs.core/ICounted    ))
-(defn ?Deref         [lang] (case lang :clj 'clojure.lang.IDeref                :cljs 'cljs.core/IDeref      ))
-(defn ?Fn            [lang] (case lang :clj 'clojure.lang.IFn                   :cljs 'cljs.core/IFn         ))
-(defn ?Hash          [lang] (case lang :clj 'clojure.lang.IHashEq               :cljs 'cljs.core/IHash       ))
-(defn ?Indexed       [lang] (case lang :clj 'clojure.lang.Indexed               :cljs 'cljs.core/IIndexed    ))
-(defn ?Iterable      [lang] (case lang :clj 'java.lang.Iterable                 :cljs 'cljs.core/IIterable   ))
-(defn ?Lookup        [lang] (case lang :clj 'clojure.lang.ILookup               :cljs 'cljs.core/ILookup     ))
-(defn ?Map           [lang] (case lang :clj 'clojure.lang.IPersistentMap        :cljs 'cljs.core/IMap        ))
-(defn ?MutableMap    [lang] (case lang :clj 'java.util.Map                      nil))
-(defn ?Object        [lang] (case lang :clj 'java.lang.Object                   :cljs 'Object                ))
-(defn ?Record        [lang] (case lang :clj 'clojure.lang.IRecord               :cljs 'cljs.core/IRecord     ))
-(defn ?Reset         [lang] (case lang :clj 'clojure.lang.IAtom                 :cljs 'cljs.core/IReset      ))
-(defn ?Reversible    [lang] (case lang :clj 'clojure.lang.Reversible            :cljs 'cljs.core/IReversible ))
-(defn ?Seq           [lang] (case lang :clj 'clojure.lang.ISeq                  :cljs 'cljs.core/ISeq        ))
-(defn ?Seqable       [lang] (case lang :clj 'clojure.lang.Seqable               :cljs 'cljs.core/ISeqable    ))
-(defn ?Sequential    [lang] (case lang :clj 'clojure.lang.Sequential            :cljs 'cljs.core/ISequential ))
-(defn ?Stack         [lang] (case lang :clj 'clojure.lang.IPersistentStack      :cljs 'cljs.core/IStack      ))
-(defn ?Swap          [lang] (case lang :clj 'clojure.lang.IAtom                 :cljs 'cljs.core/ISwap       ))
+(defn ?Associative   [lang]
+  (case lang :clj 'clojure.lang.Associative           :cljs 'cljs.core/IAssociative))
+(defn ?Collection    [lang]
+  (case lang :clj 'clojure.lang.IPersistentCollection :cljs 'cljs.core/ICollection ))
+(defn ?Comparable    [lang]
+  (case lang :clj 'java.lang.Comparable               :cljs 'cljs.core/IComparable ))
+(defn ?Counted       [lang]
+  (case lang :clj 'clojure.lang.Counted               :cljs 'cljs.core/ICounted    ))
+(defn ?Deref         [lang]
+  (case lang :clj 'clojure.lang.IDeref                :cljs 'cljs.core/IDeref      ))
+(defn ?Fn            [lang]
+  (case lang :clj 'clojure.lang.IFn                   :cljs 'cljs.core/IFn         ))
+(defn ?Hash          [lang]
+  (case lang :clj 'clojure.lang.IHashEq               :cljs 'cljs.core/IHash       ))
+(defn ?Indexed       [lang]
+  (case lang :clj 'clojure.lang.Indexed               :cljs 'cljs.core/IIndexed    ))
+(defn ?Iterable      [lang]
+  (case lang :clj 'java.lang.Iterable                 :cljs 'cljs.core/IIterable   ))
+(defn ?Lookup        [lang]
+  (case lang :clj 'clojure.lang.ILookup               :cljs 'cljs.core/ILookup     ))
+(defn ?Map           [lang]
+  (case lang :clj 'clojure.lang.IPersistentMap        :cljs 'cljs.core/IMap        ))
+(defn ?MutableMap    [lang]
+  (case lang :clj 'java.util.Map                      nil))
+(defn ?Object        [lang]
+  (case lang :clj 'java.lang.Object                   :cljs 'Object                ))
+(defn ?Record        [lang]
+  (case lang :clj 'clojure.lang.IRecord               :cljs 'cljs.core/IRecord     ))
+(defn ?Reset         [lang]
+  (case lang :clj 'clojure.lang.IAtom                 :cljs 'cljs.core/IReset      ))
+(defn ?Reversible    [lang]
+  (case lang :clj 'clojure.lang.Reversible            :cljs 'cljs.core/IReversible ))
+(defn ?Seq           [lang]
+  (case lang :clj 'clojure.lang.ISeq                  :cljs 'cljs.core/ISeq        ))
+(defn ?Seqable       [lang]
+  (case lang :clj 'clojure.lang.Seqable               :cljs 'cljs.core/ISeqable    ))
+(defn ?Sequential    [lang]
+  (case lang :clj 'clojure.lang.Sequential            :cljs 'cljs.core/ISequential ))
+(defn ?Stack         [lang]
+  (case lang :clj 'clojure.lang.IPersistentStack      :cljs 'cljs.core/IStack      ))
+(defn ?Swap          [lang]
+  (case lang :clj 'clojure.lang.IAtom                 :cljs 'cljs.core/ISwap       ))
 
 (defn- pfn
   "Protocol fn"
@@ -323,15 +344,24 @@
            (merge methods-spec
              {interface-sym (->> methods (map :quantum.core.form.generate.deftype/deftype|method) (reduce merge))})}))))
 
+;; WARNING: actually evals interface code when requested ; TODO fix this
 #?(:clj
-(defmethod ufgen/generate :quantum.core.form.generate.deftype/deftype ; WARNING: actually evals interface code when requested ; TODO fix this
+(defmethod ufgen/generate :quantum.core.form.generate.deftype/deftype
   [_ {:keys [&env lang type-sym fields methods-spec]}]
-  (let [{:keys [preamble methods-spec]}
-          (apply-getters+setters lang type-sym fields methods-spec)
+  (let [fields' (->> fields
+                     (mapv #(vary-meta %
+                              (fn [m] (let [m' (dissoc m :! :mutable :unsynchronized-mutable)]
+                                        (if (contains? m :!)
+                                            (case lang
+                                              :clj  (assoc m' :unsynchronized-mutable (:! m))
+                                              :cljs (assoc m' :mutable                (:! m)))
+                                            m'))))))
+        {:keys [preamble methods-spec]}
+          (apply-getters+setters lang type-sym fields' methods-spec)
         _ (eval preamble)
         deftype-code
           (apply (case lang :clj deftype|clj :cljs deftype|cljs)
-            &env type-sym fields
+            &env type-sym fields'
             (apply concat (deftype-helper methods-spec lang)))] ; in order to help `deftype` recognize that there is an interface, when there is one
     `(do ~deftype-code
          ~(when (= lang :clj) `(import (quote ~(uident/qualify|class type-sym)))))))) ; TODO doesn't this already happen?

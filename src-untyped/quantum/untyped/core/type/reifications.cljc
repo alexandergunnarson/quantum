@@ -88,8 +88,8 @@
 ;; ----- NotType (`t/not` / `t/!`) ----- ;;
 
 (udt/deftype NotType
-  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
-   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
+  [#?(:clj ^int ^:! hash      :cljs ^number ^:! hash)
+   #?(:clj ^int ^:! hash-code :cljs ^number ^:! hash-code)
    meta #_(t/? ::meta)
    t #_t/type?]
   {PType          nil
@@ -114,8 +114,8 @@
 ;; ----- OrType (`t/or` / `t/|`) ----- ;;
 
 (udt/deftype OrType
-  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
-   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
+  [#?(:clj ^int ^:! hash      :cljs ^number ^:! hash)
+   #?(:clj ^int ^:! hash-code :cljs ^number ^:! hash-code)
    meta #_(t/? ::meta)
    args #_(t/and t/indexed? (t/seq t/type?))
    *logical-complement]
@@ -146,8 +146,8 @@
 ;; ----- AndType (`t/and` | `t/&`) ----- ;;
 
 (udt/deftype AndType
-  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
-   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
+  [#?(:clj ^int ^:! hash      :cljs ^number ^:! hash)
+   #?(:clj ^int ^:! hash-code :cljs ^number ^:! hash-code)
    meta #_(t/? ::meta)
    args #_(t/and t/indexed? (t/seq t/type?))
    *logical-complement]
@@ -180,8 +180,8 @@
 ;; ----- ProtocolType ----- ;;
 
 (udt/deftype ProtocolType
-  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
-   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
+  [#?(:clj ^int ^:! hash      :cljs ^number ^:! hash)
+   #?(:clj ^int ^:! hash-code :cljs ^number ^:! hash-code)
    meta #_(t/? ::meta)
    p    #_t/protocol?
    name #_(t/? symbol?)]
@@ -213,8 +213,8 @@
   ^{:doc "Differs from `ProtocolType` in that an `implements?` check is performed instead of a
           `satisfies?` check, i.e. native-type protocol dispatch is ignored."}
   DirectProtocolType
-  [^number ^:mutable hash
-   ^number ^:mutable hash-code
+  [^number ^:! hash
+   ^number ^:! hash-code
    meta #_(t/? ::meta)
    p    #_t/protocol?
    name #_(t/? symbol?)]
@@ -242,8 +242,8 @@
 ;; ----- ClassType ----- ;;
 
 (udt/deftype ClassType
-  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
-   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
+  [#?(:clj ^int ^:! hash      :cljs ^number ^:! hash)
+   #?(:clj ^int ^:! hash-code :cljs ^number ^:! hash-code)
    meta     #_meta/meta?
    ^Class c #_t/class?
    name     #_(t/? symbol?)]
@@ -292,8 +292,8 @@
               (= @!frequencies data)))))
 
 (udt/deftype UnorderedType
-  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
-   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
+  [#?(:clj ^int ^:! hash      :cljs ^number ^:! hash)
+   #?(:clj ^int ^:! hash-code :cljs ^number ^:! hash-code)
    meta #_meta/meta?
    data #_(t/type (dc/map-of t/type? (t/and integer? (> 1))) "Val is frequency of type")
    name #_(t/? symbol?)]
@@ -321,8 +321,8 @@
 ;; ----- OrderedType ----- ;;
 
 (udt/deftype OrderedType
-  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
-   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
+  [#?(:clj ^int ^:! hash      :cljs ^number ^:! hash)
+   #?(:clj ^int ^:! hash-code :cljs ^number ^:! hash-code)
    meta #_meta/meta?
    data #_dc/sequential?
    name #_(t/? symbol?)]
@@ -356,8 +356,8 @@
 ;; ----- ValueType ----- ;;
 
 (udt/deftype ValueType
-  [#?(:clj ^int ^:unsynchronized-mutable hash      :cljs ^number ^:mutable hash)
-   #?(:clj ^int ^:unsynchronized-mutable hash-code :cljs ^number ^:mutable hash-code)
+  [#?(:clj ^int ^:! hash      :cljs ^number ^:! hash)
+   #?(:clj ^int ^:! hash-code :cljs ^number ^:! hash-code)
    meta #_(t/? ::meta)
    v #_any?]
   {PType          nil
