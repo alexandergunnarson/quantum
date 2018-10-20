@@ -529,12 +529,13 @@
        satisfies `string?`.
 
    Usage outside of arglist contexts is the same except the first input must be a `utr/fn-type?`."
-  [t utr/fn-type? & args (us/seq-of (us/or* #{:_ :?} type?))
+  [t utr/fn-type? & args _ #_(us/seq-of (us/or* #{:_ :?} type?))
    | (->> args (filter #(c/= % :?)) count (c/= 1))
    > type?]
   (let [i|? (->> args (reducei (c/fn [_ t i] (when (c/= t :?) (reduced i))) nil))]
     (->> (match-spec>type-data-seq t args)
-         (uc/lmap (c/fn [{:keys [input-types]}] (get input-types i|?)))
+         (uc/lmap (c/fn [{:keys [input-types]}]
+                    (get input-types i|?)))
          (apply or))))
 
 (defns output-type
@@ -676,8 +677,7 @@
   ([t type?, include-subtypes-of-value-type? c/boolean? > (us/set-of type?)]
   (if (-> t c/meta :quantum.core.type/ref?)
       #{}
-      (->> t
-           (type>classes include-subtypes-of-value-type?)
+      (->> (type>classes t include-subtypes-of-value-type?)
            (uc/mapcat+ class>boxed-subclasses+)
            uc/distinct+
            (uc/map+ isa?)

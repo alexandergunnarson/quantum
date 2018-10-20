@@ -964,8 +964,7 @@
 
 (defns type>split+primitivized [t t/type? > (s/vec-of t/type?)]
   (let [primitive-subtypes
-          (->> t
-               (t/type>primitive-subtypes false)
+          (->> (t/type>primitive-subtypes t false)
                (sort-by sort-guide) ; For cleanliness and reproducibility in tests
                vec)]
     (uc/distinct (join primitive-subtypes (type>split t)))))

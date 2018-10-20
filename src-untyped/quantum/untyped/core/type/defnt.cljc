@@ -747,7 +747,7 @@
                        ~dynamic-dispatch]
                        (remove nil?))]
           (case kind
-            :fn                   (TODO)
+            :fn                   (TODO "Haven't done t/fn yet")
             (:defn :extend-defn!) `(do ~@fn-codelist))))))
 
 #?(:clj

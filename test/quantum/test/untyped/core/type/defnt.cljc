@@ -1470,19 +1470,8 @@
   (testing "t/input-type"
     (let [actual
             (macroexpand '
-              (self/defn dependent-type-combo
-                #_"1. Analyze `a` = `(t/type (>long-checked \"23\"))`
-                      1. Analyze `(>long-checked \"23\")`
-                         -> `(t/value 23)`
-                      -> Put `out` in env as `(t/value 23)`"
-                [out (t/type (>long-checked "23"))]
-                (self/fn dependent-type-combo-inner
-                  ([a (t/or tt/boolean? (t/type b))
-                    b (t/or tt/byte? (t/type d))
-                    c (t/or tt/short? tt/char?)
-                    d (let [b (t/- tt/char? tt/long?)]
-                        (t/or tt/char? (t/type b) (t/type c)))
-                    > (t/or (t/type b) (t/type d))] b))))
+              (self/defn input-type-test
+                [a (t/input-type >long-checked (t/value "23"))]))
           expected
             (case (env-lang)
               :clj
