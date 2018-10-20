@@ -551,7 +551,7 @@
    Usage outside of arglist contexts is the same except the first input must be a `utr/fn-type?`."
   ([t utr/fn-type?]
     (->> t utr/fn-type>arities (uc/mapcat+ val) (uc/map :output-type) (apply or)))
-  ([t utr/fn-type? & args (us/seq-of (us/or* #{:_} type?)) > type?]
+  ([t utr/fn-type? args (us/seq-of (us/or* #{:_} type?)) > type?]
     (->> (match-spec>type-data-seq t args)
          (uc/lmap :output-type)
          (apply or))))

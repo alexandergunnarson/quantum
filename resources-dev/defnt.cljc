@@ -61,11 +61,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
   [1] - t/input-type
-        - This is pretty simple with the current dependent type system
-        - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
+        - If fns ever get extended then it should trigger a chain-reaction of recompilations
   [2] - t/output-type
-        - This is pretty simple with the current dependent type system
-        - Then if those fns ever get extended then it should trigger a chain-reaction of recompilations
+        - If fns ever get extended then it should trigger a chain-reaction of recompilations
   [3] - Direct dispatch needs to actually work correctly in `t/defn`
   [4] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.
@@ -188,8 +186,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     - (if (A) ...) should be (if ^boolean (A) ...) if A returns a `p/boolean?`
   - We'll should make a special class or *something* like that to ensure that typed bindings are only
     bound within typed contexts.
-  - `t/defn` declaration: `(t/defn >std-fixint > std-fixint?)`
-  - `t/defn` `|` (pre-types)
   - t/defrecord
   - t/def-concrete-type (i.e. `t/deftype`)
   - expressions (`quantum.untyped.core.analyze.expr`)
@@ -206,6 +202,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       we annotate like `(name ^:dyn (read ...))`, meaning figure out at runtime what the out-type of
       the call to `(read ...)` is, not, call `name` dynamically.
   - `t/defn`
+    - `|` (pre-types)
     - Arity elision: if any type in an arity is `t/none?` then elide it and emit a warning
       - `([x bigint?] x)`
     - t/defn-

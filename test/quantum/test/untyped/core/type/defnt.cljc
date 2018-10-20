@@ -1471,7 +1471,7 @@
     (let [actual
             (macroexpand '
               (self/defn input-type-test
-                [a (t/input-type >long-checked (t/value "23"))]))
+                [> (t/output-type >long-checked [t/string?])] 1))
           expected
             (case (env-lang)
               :clj

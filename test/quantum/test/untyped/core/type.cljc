@@ -537,4 +537,4 @@
 (deftest test|output-type
   (is= string?                      (t/output-type >namespace|type))
   (is= (t/or char-seq? comparable?) (t/output-type reduce|type))
-  (is= char-seq?                    (t/output-type reduce|type :_ :_ string?)))
+  (is= char-seq?                    (t/output-type reduce|type [:_ :_ string?])))
