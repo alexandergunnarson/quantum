@@ -72,6 +72,8 @@
 
 (defonce- *running (atom 0))
 
+(defonce- global-queue (alist))
+
 (defn #?(:clj reactive? :cljs ^boolean reactive?) [] (some? *ratom-context*))
 
 (defn- check-watches [old new]
@@ -103,7 +105,7 @@
           (if (nil? w)
               ;; Copy watches to array-list for speed
               (->> (.getWatches this)
-                   (reduce-kv conj-kv! alist)
+                   (reduce-kv conj-kv! (alist))
                    (.setWatchesArr this))
               w)]
     (let [len (long (alist-count a))]
@@ -163,6 +165,7 @@
                remove-watch! ([this k]   (remove-w! this k))}
    PWatchable {getWatches    ([this]   watches)
                setWatches    ([this v] (set! watches    v))
+               getWatchesArr ([this]   watchesArr)
                setWatchesArr ([this v] (set! watchesArr v))}
    ?Meta      {meta      ([_] meta)
                with-meta ([_ meta'] (ReactiveAtom. state meta' validator watches watchesArr))}
@@ -188,20 +191,21 @@
 ;; - captured
 ;; - ratomGeneration
 (udt/deftype Reaction
-  [^:!          auto-run
-   ^:!          caught
-   ^:!          captured
-   ^:! ^boolean dirty?
-                eq-f
-                f
-   ^boolean     no-cache?
-   ^:!          on-dispose
-   ^:!          on-dispose-arr
-   ^:!          on-set
-                queue
-   ^:!          state
-   ^:!          watching ; i.e. 'dependents'
-   ^:!          watches]
+  [^:!          ^:get       autoRun
+   ^:!          ^:get ^:set caught
+   ^:!                      captured
+   ^:! ^boolean ^:get ^:set dirty
+                            eq-f
+                            f
+       ^boolean             no-cache?
+   ^:!                      on-dispose
+   ^:!                      on-dispose-arr
+   ^:!                      on-set
+                            queue
+   ^:!          ^:get ^:set state
+   ^:!          ^:get ^:set watching ; i.e. 'dependents'
+   ^:!                      watches
+   ^:!                      watchesArr]
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-atom a w opts (str "Reaction " (hash a) ":")))
    ?Equals {= ([this that] (identical? this that))}
@@ -211,14 +215,14 @@
                        (when-some [e caught] (throw e))
                        (let [non-reactive? (nil? *ratom-context*)]
                          (when non-reactive? (flush! queue))
-                         (if (and non-reactive? (nil? auto-run))
-                             (when dirty?
+                         (if (and non-reactive? (nil? autoRun))
+                             (when dirty
                                (let [old-state state]
                                  (set! state (f))
                                  (when-not (or (nil? watches) (eq-f old-state state))
                                    (notify-w! this old-state state))))
                              (do (notify-deref-watcher! this)
-                                 (when dirty? (run-reaction! this false)))))
+                                 (when dirty (run-reaction! this false)))))
                        state)}
    ?Watchable {add-watch!    ([this k f] (add-w! this k f))
                remove-watch! ([this k]
@@ -226,10 +230,12 @@
                                  (remove-w! this k)
                                  (when (and (not was-empty?)
                                             (empty? watches)
-                                            (nil? auto-run))
+                                            (nil? autoRun))
                                    (.dispose this))))}
-   PWatchable {getWatches ([this]   watches)
-               setWatches ([this v] (set! watches v))}
+   PWatchable {getWatches    ([this]   watches)
+               setWatches    ([this v] (set! watches v))
+               getWatchesArr ([this]   watchesArr)
+               setWatchesArr ([this v] (set! watchesArr v))}
    ?Atom
      {reset! ([a newv]
                 (assert (fn? (.-on-set a)) "Reaction is read only; on-set is not allowed")
@@ -242,14 +248,17 @@
               ([a f x]        (#?(:clj .reset :cljs -reset!) a (f (peek-at a) x)))
               ([a f x y]      (#?(:clj .reset :cljs -reset!) a (f (peek-at a) x y)))
               ([a f x y more] (#?(:clj .reset :cljs -reset!) a (apply f (peek-at a) x y more))))}
+  PHasCaptured
+    {getCaptured ([this]   captured)
+     setCaptured ([this v] (set! captured v))}
    PDisposable
      {dispose
        ([this]
          (let [s state, wg watching]
            (set! watching nil)
            (set! state    nil)
-           (set! auto-run nil)
-           (set! dirty?   #?(:clj (boolean true) :cljs true))
+           (set! autoRun  nil)
+           (set! dirty    #?(:clj (boolean true) :cljs true))
            (doseq [w (set wg)] (#?(:clj remove-watch :cljs -remove-watch) w this))
            (when (some? (.-on-dispose this)) ((.-on-dispose this) s))
            (when-some [a (.-on-dispose-arr this)]
@@ -266,38 +275,38 @@
 (defn- deref-capture!
   "Returns `(in-context f r)`. Calls `_update-watching` on r with any
    `deref`ed atoms captured during `in-context`, if any differ from the
-   `watching` field of r. Clears the `dirty?` flag on r.
+   `watching` field of r. Clears the `dirty` flag on r.
 
    Inside '_update-watching' along with adding the ratoms in 'r.watching' of reaction,
    the reaction is also added to the list of watches on each ratoms f derefs."
   [f ^Reaction rx]
-  (set! (.-captured rx) nil)
+  (.setCaptured rx nil)
   (let [res (in-context rx f)
-        c (.-captured rx)]
-    (set! (.-dirty? rx) false)
+        c   (.getCaptured rx)]
+    (.setDirty rx false)
     ;; Optimize common case where derefs occur in same order
-    (when-not (alist== c (.-watching rx)) (update-watching! rx c))
+    (when-not (alist== c (.getWatching rx)) (update-watching! rx c))
     res))
 
 (defn- try-capture! [^Reaction rx f]
   (uerr/catch-all
-    (do (set! (.-caught rx) nil)
+    (do (.setCaught rx nil)
         (deref-capture! f rx))
     e
-    (do (set! (.-state  rx) e)
-        (set! (.-caught rx) e)
-        (set! (.-dirty? rx) false))))
+    (do (.setState  rx e)
+        (.setCaught rx e)
+        (.setDirty  rx false))))
 
 (defn- run-reaction! [^Reaction rx check?]
-  (let [old-state (.-state rx)
+  (let [old-state (.getState rx)
         res (if check?
                 (try-capture! rx (.-f rx))
                 (deref-capture! (.-f rx) rx))]
     (when-not (.-no-cache? rx)
-      (set! (.-state rx) res)
+      (.setState rx res)
       ;; Use = to determine equality from reactions, since
       ;; they are likely to produce new data structures.
-      (when-not (or (nil? (.-watches rx))
+      (when-not (or (nil? (.getWatches rx))
                     (= old-state res))
         (notify-w! rx old-state res)))
     res))
@@ -310,10 +319,10 @@
   (alist-conj! queue rx))
 
 (defn- handle-reaction-change! [^Reaction rx sender oldv newv]
-  (when-not (or (identical? oldv newv) (.-dirty? rx))
-    (let [auto-run (.-auto-run rx)]
+  (when-not (or (identical? oldv newv) (.getDirty rx))
+    (let [auto-run (.getAutoRun rx)]
       (ifs (nil? auto-run)
-             (do (set! (.-dirty? rx) true)
+             (do (.setDirty rx true)
                  (enqueue! rx (.-queue rx)))
            (true? auto-run)
              (run-reaction! rx false)
@@ -333,16 +342,16 @@
         (alist-empty! queue)
         (let [remaining-ct (unchecked-subtract ct i)]
           (dotimes [i* remaining-ct]
-            (let [rx (alist-get queue (unchecked-add i i*))]
-              (when (and (.-dirty? rx) (some? (.-watching rx)))
+            (let [^Reaction rx (alist-get queue (unchecked-add i i*))]
+              (when (and (.getDirty rx) (some? (.getWatching rx)))
                 (run-reaction! rx true))))
           ;; `recur`s because sometimes the queue gets added to in the process of running rx's
           (recur (+ i remaining-ct)))))))
 
 (defn- update-watching! [^Reaction rx derefed]
-  (let [new (set (.-derefed  rx)) ; TODO incrementally calculate `set`
-        old (set (.-watching rx))]
-    (set! (.-watching rx) derefed)
+  (let [new (set derefed) ; TODO incrementally calculate `set`
+        old (set (.getWatching rx))]
+    (.setWatching rx derefed)
     (doseq [w (set/difference new old)]
       (#?(:clj add-watch    :cljs -add-watch)    w rx handle-reaction-change!))
     (doseq [w (set/difference old new)]
@@ -358,25 +367,26 @@
   ([f] (>reaction f nil))
   ([f {:keys [auto-run eq-f no-cache? on-set on-dispose queue]}]
     (Reaction. auto-run nil nil true (or eq-f =) f (if (nil? no-cache?) false no-cache?) on-dispose
-               nil on-set queue nil nil nil)))
+               nil on-set queue nil nil nil nil)))
 
-#?(:clj (defmacro reaction [& body] `(>reaction (fn [] ~@body))))
+#?(:clj (defmacro reaction [& body] `(>reaction (fn [] ~@body) {:queue global-queue})))
 
 #?(:clj
 (defmacro run!
   "Runs body immediately, and runs again whenever atoms deferenced in the body change. Body should side effect."
   [& body]
-  `(let [co# (>reaction (fn [] ~@body) {:auto-run true})]
+  `(let [co# (>reaction (fn [] ~@body) {:auto-run true :queue (alist)})]
      (deref co#)
      co#)))
 
 ;; ===== Track ===== ;;
 
-(udt/deftype TrackableFn [f ^:! rx-cache])
+(udt/deftype TrackableFn [f ^:! ^:get ^:set rxCache])
 
 (declare cached-reaction)
 
-(udt/deftype Track [^TrackableFn trackable-fn, args, ^:! ^Reaction rx]
+(udt/deftype Track
+  [^TrackableFn trackable-fn, args, ^:! ^quantum.untyped.core.data.reactive.Reaction ^:get ^:set rx]
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-atom a w opts "Track:"))
    PReactiveAtom {}
@@ -391,10 +401,10 @@
                          (-> ^Track other .-args             (= args))))}
    ?Hash   {hash  ([_] (hash [f args]))})
 
-(defn- cached-reaction [f trackable-fn k ^Track obj destroy-fn]
-  (let [m (.-rx-cache trackable-fn)
-        m (if (nil? m) {} m)
-        r (m k nil)]
+(defn- cached-reaction [f ^TrackableFn trackable-fn k ^Track t destroy-fn]
+  (let [          m (.getRxCache trackable-fn)
+                  m (if (nil? m) {} m)
+        ^Reaction r (m k nil)]
     (cond
       (some? r) (#?(:clj .deref :cljs -deref) r)
       (nil? *ratom-context*) (f)
@@ -402,25 +412,28 @@
                       {:on-dispose
                         (fn [x]
                           (when debug? (swap! *running dec))
-                          (as-> (.-rx-cache trackable-fn) cache
+                          (as-> (.getRxCache trackable-fn) cache
                             (dissoc cache k)
-                            (set! (.-rx-cache trackable-fn) cache))
-                          (when (some? obj)
-                            (set! (.-rx obj) nil))
+                            (.setRxCache trackable-fn cache))
+                          (when (some? t)
+                            (.setRx t nil))
                           (when (some? destroy-fn)
-                            (destroy-fn x)))})
+                            (destroy-fn x)))
+                       ;; Inherits the queue
+                       :queue (some-> t .getRx .-queue)})
                   v (#?(:clj .deref :cljs -deref) r)]
-              (set! (.-rx-cache trackable-fn) (assoc m k r))
+              (.setRxCache trackable-fn (assoc m k r))
               (when debug? (swap! *running inc))
-              (when (some? obj)
-                (set! (.-rx obj) r))
+              (when (some? t)
+                (.setRx t r))
               v))))
 
 (defn ^Track >track [f args] (Track. (TrackableFn. f nil) args nil))
 
-(defn >track! [f args]
+(defn >track! [f args opts]
   (let [t (>track f args)
-        r (>reaction #(#?(:clj .deref :cljs -deref) t) {:auto-run true})]
+        r (>reaction #(#?(:clj .deref :cljs -deref) t)
+                     {:auto-run true :queue (or (:queue opts) global-queue)})]
     @r
     r))
 
@@ -432,7 +445,7 @@
           f   (fn [] (quot (long @a) 10))
           q   (alist)
           mid (>reaction f {:queue q})
-          res (>track! (fn [] (inc (long @mid))) [])]
+          res (>track! (fn [] (inc (long @mid))) [] {:queue q})]
       @res
       (time (dotimes [_ 100000]
               (swap! a inc)
@@ -440,4 +453,5 @@
       (dispose res))))
 
 ;; TODO move
+;; TODO maybe have the queue as a binding and default to `default-queue`? Bindings can be complicated/subtle but at least think about it. For now we can just pass the params in
 (ratom-perf)
