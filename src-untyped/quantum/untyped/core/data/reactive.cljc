@@ -60,7 +60,7 @@
                    (recur (inc i))
                    false))))))
 
-(defn- #?(:clj ^ArrayList alist :cljs alist)
+(defn #?(:clj ^ArrayList alist :cljs alist)
   ([]  #?(:clj (ArrayList.) :cljs #js []))
   ([x] #?(:clj (doto (ArrayList.) (.add x)) :cljs #js [x])))
 
@@ -72,7 +72,7 @@
 
 (defonce- *running (atom 0))
 
-(defonce- global-queue (alist))
+(defonce global-queue (alist))
 
 (defn #?(:clj reactive? :cljs ^boolean reactive?) [] (some? *ratom-context*))
 
@@ -184,7 +184,7 @@
   (dispose      [this])
   (addOnDispose [this f]))
 
-(declare flush! peek-at run-reaction!)
+(declare flush! peek-at run-reaction! update-watching!)
 
 ;; TODO
 ;; Fields of a Reaction
@@ -195,7 +195,8 @@
    ^:!          ^:get ^:set caught
    ^:!                      captured
    ^:! ^boolean ^:get ^:set dirty
-                            eq-f
+                            enqueue-fn
+                            eq-fn
                             f
        ^boolean             no-cache?
    ^:!                      on-dispose
@@ -219,7 +220,7 @@
                              (when dirty
                                (let [old-state state]
                                  (set! state (f))
-                                 (when-not (or (nil? watches) (eq-f old-state state))
+                                 (when-not (or (nil? watches) (eq-fn old-state state))
                                    (notify-w! this old-state state))))
                              (do (notify-deref-watcher! this)
                                  (when dirty (run-reaction! this false)))))
@@ -272,6 +273,13 @@
 
 (defn- peek-at [^Reaction rx] (binding [*ratom-context* nil] (#?(:clj .deref :cljs -deref) rx)))
 
+(defn- in-context
+  "When f is executed, if (f) derefs any ratoms, they are then added to
+   'obj.captured'(*ratom-context*).
+
+   See function notify-deref-watcher! to know how *ratom-context* is updated"
+  [obj f] (binding [*ratom-context* obj] (f)))
+
 (defn- deref-capture!
   "Returns `(in-context f r)`. Calls `_update-watching` on r with any
    `deref`ed atoms captured during `in-context`, if any differ from the
@@ -311,42 +319,15 @@
         (notify-w! rx old-state res)))
     res))
 
-;; Gets flushed in a scheduled way by `flush!`
-;; TODO `enqueue!` needs to be a parameter of `Reaction`
-(defn- enqueue! [rx queue]
-  ;; It is at this point in CLJS that the rendering is scheduled like so:
-  ;; `(when (alist-empty? queue) (schedule! global-render-queue queue))`
-  (alist-conj! queue rx))
-
 (defn- handle-reaction-change! [^Reaction rx sender oldv newv]
   (when-not (or (identical? oldv newv) (.getDirty rx))
     (let [auto-run (.getAutoRun rx)]
       (ifs (nil? auto-run)
              (do (.setDirty rx true)
-                 (enqueue! rx (.-queue rx)))
+                 ((.-enqueue-fn rx) (.-queue rx) rx))
            (true? auto-run)
              (run-reaction! rx false)
            (auto-run rx)))))
-
-;; Called by:
-;; - `(when non-reactive? (flush! queue))` in `Reactive`.deref
-;; - when a scheduled flushing is performed
-(defn- flush! [queue]
-  (loop [i 0]
-    (let [ct (-> queue alist-count long)]
-      ;; NOTE: We avoid `pop`-ing in order to reduce churn but in theory it presents a memory issue
-      ;; NOTE: In the Reagent version, every time a new "chunk" of the queue is worked on, that
-      ;;       chunk is scheduled for re-render
-      ;; I.e. took care of all queue entries and reached a stable state
-      (if-let [reached-last-index? (>= i (unchecked-dec ct))]
-        (alist-empty! queue)
-        (let [remaining-ct (unchecked-subtract ct i)]
-          (dotimes [i* remaining-ct]
-            (let [^Reaction rx (alist-get queue (unchecked-add i i*))]
-              (when (and (.getDirty rx) (some? (.getWatching rx)))
-                (run-reaction! rx true))))
-          ;; `recur`s because sometimes the queue gets added to in the process of running rx's
-          (recur (+ i remaining-ct)))))))
 
 (defn- update-watching! [^Reaction rx derefed]
   (let [new (set derefed) ; TODO incrementally calculate `set`
@@ -357,25 +338,48 @@
     (doseq [w (set/difference old new)]
       (#?(:clj remove-watch :cljs -remove-watch) w rx))))
 
-(defn- in-context
-  "When f is executed, if (f) derefs any ratoms, they are then added to 'obj.captured'(*ratom-context*).
+(defn- run-reaction-from-queue! [^Reaction rx]
+  (when (and (.getDirty rx) (some? (.getWatching rx)))
+    (run-reaction! rx true)))
 
-   See function notify-deref-watcher! to know how *ratom-context* is updated"
-  [obj f] (binding [*ratom-context* obj] (f)))
+(defn- flush! [queue]
+  (loop [i 0]
+    (let [ct (-> queue alist-count long)]
+      ;; NOTE: We avoid `pop`-ing in order to reduce churn but in theory it presents a memory issue
+      ;;       due to the possible unboundedness of the queue
+      ;; NOTE: In the Reagent version, every time a new "chunk" of the queue is worked on, that
+      ;;       chunk is scheduled for re-render
+      ;; I.e. took care of all queue entries and reached a stable state
+      (if-let [reached-last-index? (>= i ct)]
+        (alist-empty! queue)
+        (let [remaining-ct (unchecked-subtract ct i)]
+          (dotimes [i* remaining-ct]
+            (run-reaction-from-queue! (alist-get queue (unchecked-add i i*))))
+          ;; `recur`s because sometimes the queue gets added to in the process of running rx's
+          (recur (+ i remaining-ct)))))))
 
-(defn ^Reaction >reaction
-  ([f] (>reaction f nil))
-  ([f {:keys [auto-run eq-f no-cache? on-set on-dispose queue]}]
-    (Reaction. auto-run nil nil true (or eq-f =) f (if (nil? no-cache?) false no-cache?) on-dispose
-               nil on-set queue nil nil nil nil)))
+(defn- default-enqueue! [queue rx]
+  ;; Immediate run without touching the queue
+  (run-reaction-from-queue! rx))
 
-#?(:clj (defmacro reaction [& body] `(>reaction (fn [] ~@body) {:queue global-queue})))
+(def ^:dynamic *enqueue!* default-enqueue!)
+
+(def ^:dynamic *queue* global-queue)
+
+(defn ^Reaction >rx
+  ([f] (>rx f nil))
+  ([f {:keys [auto-run enqueue-fn eq-fn no-cache? on-set on-dispose queue]}]
+    (Reaction. auto-run nil nil true (or enqueue-fn *enqueue!*) (or eq-fn =) f
+               (if (nil? no-cache?) false no-cache?) on-dispose nil on-set (or queue *queue*) nil
+               nil nil nil)))
+
+#?(:clj (defmacro rx [& body] `(>rx (fn [] ~@body))))
 
 #?(:clj
 (defmacro run!
   "Runs body immediately, and runs again whenever atoms deferenced in the body change. Body should side effect."
   [& body]
-  `(let [co# (>reaction (fn [] ~@body) {:auto-run true :queue (alist)})]
+  `(let [co# (>rx (fn [] ~@body) {:auto-run true})]
      (deref co#)
      co#)))
 
@@ -386,7 +390,7 @@
 (declare cached-reaction)
 
 (udt/deftype Track
-  [^TrackableFn trackable-fn, args, ^:! ^quantum.untyped.core.data.reactive.Reaction ^:get ^:set rx]
+  [^TrackableFn trackable-fn, args, ^:! ^:get ^:set ^quantum.untyped.core.data.reactive.Reaction rx]
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-atom a w opts "Track:"))
    PReactiveAtom {}
@@ -408,7 +412,7 @@
     (cond
       (some? r) (#?(:clj .deref :cljs -deref) r)
       (nil? *ratom-context*) (f)
-      :else (let [r (>reaction f
+      :else (let [r (>rx f
                       {:on-dispose
                         (fn [x]
                           (when debug? (swap! *running dec))
@@ -432,26 +436,7 @@
 
 (defn >track! [f args opts]
   (let [t (>track f args)
-        r (>reaction #(#?(:clj .deref :cljs -deref) t)
-                     {:auto-run true :queue (or (:queue opts) global-queue)})]
+        r (>rx #(#?(:clj .deref :cljs -deref) t)
+               {:auto-run true :queue (or (:queue opts) global-queue)})]
     @r
     r))
-
-;; TODO move
-(defn ratom-perf []
-  ;; (set! debug? false) ; yes but we need to think about CLJ
-  (dotimes [_ 10]
-    (let [a   (ratom 0)
-          f   (fn [] (quot (long @a) 10))
-          q   (alist)
-          mid (>reaction f {:queue q})
-          res (>track! (fn [] (inc (long @mid))) [] {:queue q})]
-      @res
-      (time (dotimes [_ 100000]
-              (swap! a inc)
-              (flush! q)))
-      (dispose res))))
-
-;; TODO move
-;; TODO maybe have the queue as a binding and default to `default-queue`? Bindings can be complicated/subtle but at least think about it. For now we can just pass the params in
-(ratom-perf)
