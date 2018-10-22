@@ -33,11 +33,6 @@ Note that for anything built-in js/<whatever>, the `t/isa?` predicates might nee
   [expr #_t/form?, & body #_(? (t/seq-of t/form?))]
   `(let [expr# ~expr] ~@body expr#)))
 
-
-(rx @)
-
-
-
 ;; Truncation is different from safe coercion
 `>integer` is for e.g.:
 - truncation e.g. js/Math.trunc
@@ -60,12 +55,19 @@ TODO:
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 
 - TODO implement the following:
-  [1] - t/input-type
-        - If fns ever get extended then it should trigger a chain-reaction of recompilations
-  [2] - t/output-type
-        - If fns ever get extended then it should trigger a chain-reaction of recompilations
-  [3] - Direct dispatch needs to actually work correctly in `t/defn`
-  [4] - t/numerically : e.g. a double representing exactly what a float is able to represent
+  [1] - Reactive recompilation
+        - Non-constant types should trigger a chain-reaction of recompilations for its
+          dependents/watchers when they change:
+          - t/input-type
+          - t/output-type
+          - `t/defn` that gets extended via `t/extend-defn!` (if the input-types and output-types have
+            changed)
+        - Examples
+          - (rx/rx @(t/output-type ...))
+        - We want the reactivity to be explicit somehow but perhaps we want to hide the implementation?:
+          - (t/rx @(t/output-type ...))
+  [2] - Direct dispatch needs to actually work correctly in typed contexts
+  [3] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.
         - t/numerically-integer?
         - Primitive conversions not requiring checks can go in data.primitive
@@ -73,7 +75,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
             - numeric definitions
             - numeric ranges
             - numeric characteristics
-  [5] - No trailing `>` means `> ?`
+  [4] - No trailing `>` means `> ?`f
       - ? : type inference
         - use logic programming and variable unification e.g. `?1` `?2` ?
         - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
@@ -237,11 +239,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - t/dotyped
   - t/extend-defn!
     [ ] Ability to add output type restriction after the fact?
-    [ ] Should we trigger a recompilation of everything that depended on that `t/defn` because the
-        input-types and output-types will have both gotten bigger? (Maybe not on that overload but
-        still.)
-        - This will be a more advanced feature. For now we just accept that we might have some odd
-          behavior around extending `t/defn`s.
   - lazy compilation especially around `t/input-type`
   - equivalence of typed predicates (i.e. that which is `t/<=` `(t/fn [x t/any? :> p/boolean?])`)
     to types:
@@ -1838,10 +1835,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
             ever changes, `abcde` needs to be recompiled and `abcde`'s output type recomputed. If,
             on the other hand, `f`'s output type (given the input) ever changes, `abcde` need not be
             recompiled, but rather, only its output type need be recomputed.
-          - I think this reactive approach (do we need a library for that? probably not?) should
-            solve our problems and let us code in a very flexible way. It'll just (currently) be a
-            way that depends on a compiler in which the metalanguage and object language are
-            identical.
+          - I think this reactive approach should solve our problems and let us code in a very flexible
+            way.
 [ ] Runtime (Dynamic) Dispatch
     [—] Protocol generation
         - For now we won't do it because we can very often find the correct overload at compile

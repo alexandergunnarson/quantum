@@ -435,7 +435,7 @@
       (is= @b-lazy-ct 1)
       (is= @c-lazy-ct 1)
 
-      (reset! a 234)
+      (reset! a 234) ; resetting to the same state
 
       @c-lazy
       (is= @b-lazy-ct 2)

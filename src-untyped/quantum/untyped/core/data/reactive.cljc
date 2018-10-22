@@ -1,5 +1,8 @@
 (ns quantum.untyped.core.data.reactive
-  "Most of the content adapted from `reagent.ratom` 2018-10-20.
+  "Most of the content adapted from `reagent.ratom` 2018-10-20. Note that `lynaghk/reflex` was the
+   source of the Reagent Atom and Reaction (and before that https://knockoutjs.com/documentation/computedObservables.html, and before that probably
+   something else), and it makes do with 78 LOC (!) whereas we grapple with nearly 400 for
+   presumably very similar functionality. Perhaps someday this code can be compressed.
 
    Includes `Atom` and `Reaction`; may include `Subscription` at some point.
 
@@ -81,40 +84,30 @@
   new)
 
 (defprotocol PWatchable
-  (getWatches    [this])
-  (setWatches    [this v])
-  (getWatchesArr [this])
-  (setWatchesArr [this v]))
+  (getWatches [this])
+  (setWatches [this v]))
 
-(defn- add-w! [^quantum.untyped.core.data.reactive.PWatchable this k f]
-  (let [w (.getWatches this)]
-    (.setWatches    this (check-watches w (assoc w k f)))
-    (.setWatchesArr this nil)))
+(defn- add-w! [^quantum.untyped.core.data.reactive.PWatchable x k f]
+  (let [w (.getWatches x)]
+    (.setWatches x (check-watches w (assoc w k f)))
+    x))
 
-(defn- remove-w! [^quantum.untyped.core.data.reactive.PWatchable this k]
-  (let [w (.getWatches this)]
-    (.setWatches    this (check-watches w (dissoc w k)))
-    (.setWatchesArr this nil)))
+(defn- remove-w! [^quantum.untyped.core.data.reactive.PWatchable x k]
+  (let [w (.getWatches x)]
+    (.setWatches x (check-watches w (dissoc w k)))
+    x))
 
 (defn- conj-kv! [#?(:clj ^ArrayList xs :cljs xs) k v]
   (-> xs (alist-conj! k) (alist-conj! v)))
 
-(defn- notify-w! [^quantum.untyped.core.data.reactive.PWatchable this old new]
-  (let [w (.getWatchesArr this)
-        #?(:clj ^ArrayList a :cljs a)
-          (if (nil? w)
-              ;; Copy watches to array-list for speed
-              (->> (.getWatches this)
-                   (reduce-kv conj-kv! (alist))
-                   (.setWatchesArr this))
-              w)]
-    (let [len (long (alist-count a))]
-      (loop [i (int 0)]
-        (when (< i len)
-          (let [k (alist-get a i)
-                f (alist-get a (unchecked-inc-int i))]
-            (f k this old new))
-          (recur (+ 2 i)))))))
+(defn- notify-w! [^quantum.untyped.core.data.reactive.PWatchable x old new]
+  ;; Unlike Reagent, we do not copy to an array-list because in order to do so, we have to traverse
+  ;; the map anyway if the watches have changed. Plus we avoid garbage (except for the closure).
+  ;; Reagent optimizes for the case that watches will more rarely change than not. It would be nice
+  ;; to avoid that tradeoff by having a sufficiently fast reduction.
+  (when-some [w #?(:clj ^clojure.lang.IKVReduce (.getWatches x) :cljs ^non-native (.getWatches x))]
+    (#?(:clj .kvreduce :cljs -kv-reduce) w (fn [_ k f] (f k x old new)) nil))
+  x)
 
 #?(:cljs
 (defn- pr-atom! [a writer opts s]
@@ -141,7 +134,7 @@
         (alist-conj! c derefed)
         (.setCaptured r (alist derefed))))))
 
-(udt/deftype Atom [^:! state meta validator ^:! watches ^:! watchesArr]
+(udt/deftype Atom [^:! state meta validator ^:! watches]
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-atom a w opts "Atom:"))
    PReactiveAtom {}
@@ -153,10 +146,13 @@
                      (when-not (nil? validator)
                        (assert (validator new-value) "Validator rejected reference state"))
                      (let [old-value state]
-                       (set! state new-value)
-                       (when-not (nil? watches)
-                         (notify-w! a old-value new-value))
-                       new-value))
+                       (if (identical? old-value new-value)
+                           new-value
+                           (let [old-value state]
+                             (set! state new-value)
+                             (when-not (nil? watches)
+                               (notify-w! a old-value new-value))
+                             new-value))))
             swap!  (([a f]          (#?(:clj .reset :cljs -reset!) a (f state)))
                     ([a f x]        (#?(:clj .reset :cljs -reset!) a (f state x)))
                     ([a f x y]      (#?(:clj .reset :cljs -reset!) a (f state x y)))
@@ -164,17 +160,15 @@
    ?Watchable {add-watch!    ([this k f] (add-w!    this k f))
                remove-watch! ([this k]   (remove-w! this k))}
    PWatchable {getWatches    ([this]   watches)
-               setWatches    ([this v] (set! watches    v))
-               getWatchesArr ([this]   watchesArr)
-               setWatchesArr ([this v] (set! watchesArr v))}
+               setWatches    ([this v] (set! watches v))}
    ?Meta      {meta      ([_] meta)
-               with-meta ([_ meta'] (Atom. state meta' validator watches watchesArr))}
+               with-meta ([_ meta'] (Atom. state meta' validator watches))}
 #?@(:cljs [?Hash {hash    ([_] (goog/getUid this))}])})
 
 (defn atom
   "Reactive 'atom'. Like `core/atom`, except that it keeps track of derefs."
-  ([x] (Atom. x nil nil nil nil))
-  ([x & {:keys [meta validator]}] (Atom. x meta validator nil nil)))
+  ([x] (Atom. x nil nil nil))
+  ([x & {:keys [meta validator]}] (Atom. x meta validator nil)))
 
 ;; ===== Reaction ("Computed Observable") ===== ;;
 
@@ -204,8 +198,7 @@
                             queue
    ^:!          ^:get ^:set state
    ^:!          ^:get ^:set watching ; i.e. 'dependents'
-   ^:!                      watches
-   ^:!                      watchesArr]
+   ^:!                      watches]
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-atom a w opts (str "Reaction " (hash a) ":")))
    ?Equals {= ([this that] (identical? this that))}
@@ -233,10 +226,8 @@
                                             (empty? watches)
                                             (true? alwaysRecompute))
                                    (.dispose this))))}
-   PWatchable {getWatches    ([this]   watches)
-               setWatches    ([this v] (set! watches v))
-               getWatchesArr ([this]   watchesArr)
-               setWatchesArr ([this v] (set! watchesArr v))}
+   PWatchable {getWatches ([this]   watches)
+               setWatches ([this v] (set! watches v))}
    ?Atom
      {reset! ([a newv]
                 (assert (fn? (.-on-set a)) "Reaction is read only; on-set is not allowed")
@@ -378,7 +369,7 @@
                nil
                on-set
                (or queue *queue*)
-               nil nil nil nil)))
+               nil nil nil)))
 
 #?(:clj (defmacro rx [& body] `(>rx (fn [] ~@body))))
 
