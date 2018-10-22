@@ -4,6 +4,7 @@
          (:require
            [clojure.core              :as core]
    #?(:clj [clojure.future            :as fcore])
+           [clojure.string            :as str]
            [cuerdas.core              :as str+]
  #?@(:clj [[environ.core              :as env]]))
 #?(:cljs (:require-macros
@@ -38,6 +39,54 @@
 (def >object >sentinel)
 
 (defonce sentinel (>sentinel))
+
+(defn- js-call [f args]
+  (let [argstr (->> (repeat (count args) "~{}")
+                    (str/join ","))]
+    (list* 'js* (str "~{}(" argstr ")") f args)))
+
+(defn- dot-args [object member]
+  (assert (symbol? member)
+          (str "Symbol expected, not " (pr-str member)))
+  (assert (not (re-find #"\." (name object)))
+          (str "Dot not allowed in " object))
+  (let [n (name member)
+        field? (= (subs n 0 1) "-")
+        names (-> (str/replace n #"^-" "")
+                  (str/split #"\."))]
+    [field? names]))
+
+#?(:clj
+(defmacro dot
+  "Access member in a JavaScript object, in a Closure-safe way.
+   `member` is assumed to be a field if it is a keyword or if the name starts with '-', otherwise
+   the named function is called with the optional args.
+   'member' may contain '.', to allow access in nested objects.
+   If 'object' is a symbol it is not allowed contain '.'.
+   `(dot o :foo)` is equivalent to `(.-foo o)`, except that it gives the same result under advanced
+   compilation.
+   `(dot o foo arg1 arg2)` is the same as `(.foo o arg1 arg2)`."
+  {:adapted-from 'reagent.interop/$!}
+  [object member & args]
+  (let [[field names] (dot-args object member)]
+    (if field
+        (do (assert (empty? args) (str "Passing args to field doesn't make sense: " member))
+            `(cljs.core/aget ~object ~@names))
+        (js-call (list* `cljs.core/aget object names) args)))))
+
+#?(:clj
+(defmacro dot!
+  "Set field in a JavaScript object, in a Closure-safe way.
+   `field` should be a keyword or a symbol starting with '-'.
+   `field` may contain '.', to allow access in nested objects.
+   If `object` is a symbol it is not allowed contain '.'.
+   `(dot! o :foo 1)` is equivalent to `(set! (.-foo o) 1)`, except that it gives the same result
+   under advanced compilation."
+  {:adapted-from 'reagent.interop/dot!}
+  [object field value]
+  (let [[field names] (dot-args object field)]
+    (assert field (str "Field name must start with - in " field))
+    `(cljs.core/aset ~object ~@names ~value))))
 
 ;; From `quantum.untyped.core.form.evaluate` — used below in `defalias`
 
