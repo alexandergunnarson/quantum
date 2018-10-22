@@ -77,7 +77,7 @@
 (defn #?(:clj reactive? :cljs ^boolean reactive?) [] (some? *ratom-context*))
 
 (defn- check-watches [old new]
-  (when (boolean *debug?*) (swap! *running + (- (count new) (count old))))
+  (when (true? *debug?*) (swap! *running + (- (count new) (count old))))
   new)
 
 (defprotocol PWatchable
@@ -184,7 +184,8 @@
   (dispose      [this])
   (addOnDispose [this f]))
 
-(defn dispose! [x] (dispose x))
+(defn dispose!        [x]   (dispose      x))
+(defn add-on-dispose! [x f] (addOnDispose x f))
 
 (declare flush! peek-at run-reaction! update-watching!)
 
@@ -417,7 +418,7 @@
       :else (let [r (>rx f
                       {:on-dispose
                         (fn [x]
-                          (when (boolean *debug?*) (swap! *running dec))
+                          (when (true? *debug?*) (swap! *running dec))
                           (as-> (.getRxCache trackable-fn) cache
                             (dissoc cache k)
                             (.setRxCache trackable-fn cache))
@@ -429,7 +430,7 @@
                        :queue (some-> t .getRx .-queue)})
                   v (#?(:clj .deref :cljs -deref) r)]
               (.setRxCache trackable-fn (assoc m k r))
-              (when (boolean *debug?*) (swap! *running inc))
+              (when (true? *debug?*) (swap! *running inc))
               (when (some? t)
                 (.setRx t r))
               v))))
