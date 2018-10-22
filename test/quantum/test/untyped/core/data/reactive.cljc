@@ -4,8 +4,7 @@
     [quantum.untyped.core.test          :as utest
       :refer [deftest is testing]]
     [quantum.untyped.core.data.reactive :as self
-      :refer [dispose! flush! ratom rx]]
-    [quantum.untyped.core.error         :as uerr]))
+      :refer [dispose! flush! ratom rx]]))
 
 (defn with-debug [f]
   (flush! self/global-queue)
@@ -317,4 +316,22 @@
     (flush! self/global-queue)
     (is (= (:derived @state) 33))
     (dispose! rxn)
+    (is (= runs (running)))))
+
+(deftest exception-recover
+  (let [runs  (running)
+        state (ratom 1)
+        count (ratom 0)
+        r     (self/run!
+                (swap! count inc)
+                (when (> @state 1) (throw (ex-info "oops" {}))))]
+    (is (= @count 1))
+    (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
+                 (do (swap! state inc)
+                     (flush! self/global-queue))))
+    (is (= @count 2))
+    (swap! state dec)
+    (flush! self/global-queue)
+    (is (= @count 3))
+    (dispose! r)
     (is (= runs (running)))))
