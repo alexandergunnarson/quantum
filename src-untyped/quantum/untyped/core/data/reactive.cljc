@@ -1,15 +1,15 @@
 (ns quantum.untyped.core.data.reactive
   "Most of the content adapted from `reagent.ratom` 2018-10-20.
 
-   Includes ReactiveAtom and Reaction; will include Subscription.
+   Includes `Atom` and `Reaction`; may include `Subscription` at some point.
 
    Currently only safe for single-threaded use; needs a rethink to accommodate concurrent
    modification/access and customizable queueing strategies.
-   - We could either introduce concurrency-safe versions of `Reaction` and `ReactiveAtom`, or we
-     could introduce a global single thread on which `Reaction`s and `ReactiveAtom`s are modified,
+   - We could either introduce concurrency-safe versions of `Reaction` and `Atom`, or we
+     could introduce a global single thread on which `Reaction`s and `Atom`s are modified,
      but from which any number of threads can read, in a clojure.async sort of way."
         (:refer-clojure :exclude
-          [run!])
+          [atom run!])
         (:require
           [clojure.set                                :as set]
           [quantum.untyped.core.async                 :as uasync]
@@ -23,9 +23,6 @@
           [quantum.untyped.core.vars
             :refer [defonce-]])
 #?(:clj (:import [java.util ArrayList])))
-
-;; TODO add subscriptions to this too; for now we will just use the Reagent ratom
-;; TODO the update batching is very Reagent-specific; we need to abstract that for it to work in CLJS
 
 ;; TODO move
 ;; ===== Array-list fns ===== ;;
@@ -69,7 +66,7 @@
 
 ;; ===== Internal functions for reactivity ===== ;;
 
-(def ^:dynamic *ratom-context* nil)
+(def ^:dynamic *atom-context* nil)
 
 (def ^:dynamic #?(:clj *debug?* :cljs ^boolean *debug?*) false)
 
@@ -77,7 +74,7 @@
 
 (defonce global-queue (alist))
 
-(defn #?(:clj reactive? :cljs ^boolean reactive?) [] (some? *ratom-context*))
+(defn #?(:clj reactive? :cljs ^boolean reactive?) [] (some? *atom-context*))
 
 (defn- check-watches [old new]
   (when (true? *debug?*) (swap! *running + (- (count new) (count old))))
@@ -122,29 +119,29 @@
 #?(:cljs
 (defn- pr-atom! [a writer opts s]
   (-write writer (str "#<" s " "))
-  (pr-writer (binding [*ratom-context* nil] (-deref a)) writer opts)
+  (pr-writer (binding [*atom-context* nil] (-deref a)) writer opts)
   (-write writer ">")))
 
-;; ===== RAtom ===== ;;
+;; ===== Atom ===== ;;
 
-(defprotocol PReactiveAtom)
+(defprotocol PReactive)
 
 (defprotocol PHasCaptured
   (getCaptured [this])
   (setCaptured [this v]))
 
 (defn- notify-deref-watcher!
-  "Add `derefed` to the `captured` field of `*ratom-context*`.
+  "Add `derefed` to the `captured` field of `*atom-context*`.
 
   See also `in-context`"
   [derefed]
-  (when-some [context *ratom-context*]
+  (when-some [context *atom-context*]
     (let [^quantum.untyped.core.data.reactive.PHasCaptured r context]
       (if-some [c (.getCaptured r)]
         (alist-conj! c derefed)
         (.setCaptured r (alist derefed))))))
 
-(udt/deftype ReactiveAtom [^:! state meta validator ^:! watches ^:! watchesArr]
+(udt/deftype Atom [^:! state meta validator ^:! watches ^:! watchesArr]
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-atom a w opts "Atom:"))
    PReactiveAtom {}
@@ -171,13 +168,13 @@
                getWatchesArr ([this]   watchesArr)
                setWatchesArr ([this v] (set! watchesArr v))}
    ?Meta      {meta      ([_] meta)
-               with-meta ([_ meta'] (ReactiveAtom. state meta' validator watches watchesArr))}
+               with-meta ([_ meta'] (Atom. state meta' validator watches watchesArr))}
 #?@(:cljs [?Hash {hash    ([_] (goog/getUid this))}])})
 
-(defn ratom
-  "'R'eactive 'atom'. Like `core/atom`, except that it keeps track of derefs."
-  ([x] (ReactiveAtom. x nil nil nil nil))
-  ([x & {:keys [meta validator]}] (ReactiveAtom. x meta validator nil nil)))
+(defn atom
+  "Reactive 'atom'. Like `core/atom`, except that it keeps track of derefs."
+  ([x] (Atom. x nil nil nil nil))
+  ([x & {:keys [meta validator]}] (Atom. x meta validator nil nil)))
 
 ;; ===== Reaction ("Computed Observable") ===== ;;
 
@@ -193,10 +190,10 @@
 (declare flush! peek-at run-reaction! update-watching!)
 
 (udt/deftype Reaction
-  [^:!          ^:get       autoRun
+  [^:! ^boolean ^:get       alwaysRecompute
    ^:!          ^:get ^:set caught
    ^:!                      captured
-   ^:! ^boolean ^:get ^:set dirty
+   ^:! ^boolean ^:get ^:set computed
                             enqueue-fn
                             eq-fn
                             f
@@ -213,27 +210,28 @@
    ;;   (-pr-writer [a w opts] (pr-atom a w opts (str "Reaction " (hash a) ":")))
    ?Equals {= ([this that] (identical? this that))}
 #?@(:cljs [?Hash {hash ([this] (goog/getUid this))}])
-   PReactiveAtom {}
+   PReactive  {}
    ?Deref     {deref ([this]
-                       (when-some [e caught] (throw e))
-                       (let [non-reactive? (nil? *ratom-context*)]
-                         (when non-reactive? (flush! queue))
-                         (if (and non-reactive? (nil? autoRun))
-                             (when dirty
-                               (let [old-state state]
-                                 (set! state (f))
-                                 (when-not (or (nil? watches) (eq-fn old-state state))
-                                   (notify-w! this old-state state))))
-                             (do (notify-deref-watcher! this)
-                                 (when dirty (run-reaction! this false)))))
-                       state)}
+                       (if-not (nil? caught)
+                         (throw caught)
+                         (let [non-reactive? (nil? *atom-context*)]
+                           (when non-reactive? (flush! queue))
+                           (if (and non-reactive? (true? alwaysRecompute))
+                               (when-not computed
+                                 (let [old-state state]
+                                   (set! state (f))
+                                   (when-not (or (nil? watches) (eq-fn old-state state))
+                                     (notify-w! this old-state state))))
+                               (do (notify-deref-watcher! this)
+                                   (when-not computed (run-reaction! this false))))
+                           state)))}
    ?Watchable {add-watch!    ([this k f] (add-w! this k f))
                remove-watch! ([this k]
                                (let [was-empty? (empty? watches)]
                                  (remove-w! this k)
                                  (when (and (not was-empty?)
                                             (empty? watches)
-                                            (nil? autoRun))
+                                            (true? alwaysRecompute))
                                    (.dispose this))))}
    PWatchable {getWatches    ([this]   watches)
                setWatches    ([this v] (set! watches v))
@@ -258,10 +256,10 @@
      {dispose
        ([this]
          (let [s state, wg watching]
-           (set! watching nil)
-           (set! state    nil)
-           (set! autoRun  nil)
-           (set! dirty    #?(:clj (boolean true) :cljs true))
+           (set! watching        nil)
+           (set! state           nil)
+           (set! alwaysRecompute #?(:clj (boolean true)  :cljs true))
+           (set! computed        #?(:clj (boolean false) :cljs false))
            (doseq [w (set wg)] (#?(:clj remove-watch :cljs -remove-watch) w this))
            (when (some? (.-on-dispose this)) ((.-on-dispose this) s))
            (when-some [a (.-on-dispose-arr this)]
@@ -273,27 +271,27 @@
             (alist-conj! a f)
             (set! (.-on-dispose-arr this) (alist f))))}})
 
-(defn- peek-at [^Reaction rx] (binding [*ratom-context* nil] (#?(:clj .deref :cljs -deref) rx)))
+(defn- peek-at [^Reaction rx] (binding [*atom-context* nil] (#?(:clj .deref :cljs -deref) rx)))
 
 (defn- in-context
-  "When f is executed, if (f) derefs any ratoms, they are then added to
-   'obj.captured'(*ratom-context*).
+  "When f is executed, if (f) derefs any atoms, they are then added to
+   'obj.captured'(*atom-context*).
 
-   See function notify-deref-watcher! to know how *ratom-context* is updated"
-  [obj f] (binding [*ratom-context* obj] (f)))
+   See function notify-deref-watcher! to know how *atom-context* is updated"
+  [obj f] (binding [*atom-context* obj] (f)))
 
 (defn- deref-capture!
   "Returns `(in-context f r)`. Calls `_update-watching` on r with any
    `deref`ed atoms captured during `in-context`, if any differ from the
-   `watching` field of r. Clears the `dirty` flag on r.
+   `watching` field of r. Sets the `computed` flag on r to true.
 
-   Inside '_update-watching' along with adding the ratoms in 'r.watching' of reaction,
-   the reaction is also added to the list of watches on each ratoms f derefs."
+   Inside '_update-watching' along with adding the atoms in 'r.watching' of reaction,
+   the reaction is also added to the list of watches on each atoms f derefs."
   [f ^Reaction rx]
   (.setCaptured rx nil)
   (let [res (in-context rx f)
         c   (.getCaptured rx)]
-    (.setDirty rx false)
+    (.setComputed rx true)
     ;; Optimize common case where derefs occur in same order
     (when-not (alist== c (.getWatching rx)) (update-watching! rx c))
     res))
@@ -305,7 +303,7 @@
     e
     (do (.setState  rx e)
         (.setCaught rx e)
-        (.setDirty  rx false))))
+        (.setComputed rx true))))
 
 (defn- run-reaction! [^Reaction rx check?]
   (let [old-state (.getState rx)
@@ -322,14 +320,11 @@
     res))
 
 (defn- handle-reaction-change! [^Reaction rx sender oldv newv]
-  (when-not (or (identical? oldv newv) (.getDirty rx))
-    (let [auto-run (.getAutoRun rx)]
-      (ifs (nil? auto-run)
-             (do (.setDirty rx true)
-                 ((.-enqueue-fn rx) (.-queue rx) rx))
-           (true? auto-run)
-             (run-reaction! rx false)
-           (auto-run rx)))))
+  (when-not (or (identical? oldv newv) (not (.getComputed rx)))
+    (if (.getAlwaysRecompute rx)
+        (do (.setComputed rx false) ; TODO is this line necessary?
+            ((.-enqueue-fn rx) (.-queue rx) rx))
+        (run-reaction! rx false))))
 
 (defn- update-watching! [^Reaction rx derefed]
   (let [new (set derefed) ; TODO incrementally calculate `set`
@@ -341,7 +336,7 @@
       (#?(:clj remove-watch :cljs -remove-watch) w rx))))
 
 (defn- run-reaction-from-queue! [^Reaction rx]
-  (when (and (.getDirty rx) (some? (.getWatching rx)))
+  (when-not (or (.getComputed rx) (nil? (.getWatching rx)))
     (run-reaction! rx true)))
 
 (defn flush! [queue]
@@ -370,20 +365,30 @@
 
 (defn ^Reaction >rx
   ([f] (>rx f nil))
-  ([f {:keys [auto-run enqueue-fn eq-fn no-cache? on-set on-dispose queue]}]
-    (Reaction. auto-run nil nil true (or enqueue-fn *enqueue!*) (or eq-fn =) f
-               (if (nil? no-cache?) false no-cache?) on-dispose nil on-set (or queue *queue*) nil
-               nil nil nil)))
+  ([f {:keys [always-recompute? enqueue-fn eq-fn no-cache? on-set on-dispose queue]}]
+    (Reaction. (if (nil? always-recompute?) false always-recompute?)
+               nil
+               nil
+               false
+               (or enqueue-fn *enqueue!*)
+               (or eq-fn =)
+               f
+               (if (nil? no-cache?) false no-cache?)
+               on-dispose
+               nil
+               on-set
+               (or queue *queue*)
+               nil nil nil nil)))
 
 #?(:clj (defmacro rx [& body] `(>rx (fn [] ~@body))))
+
+#?(:clj (defmacro eager-rx [& body] `(>rx (fn [] ~@body) {:always-recompute? true})))
 
 #?(:clj
 (defmacro run!
   "Runs body immediately, and runs again whenever atoms deferenced in the body change. Body should side effect."
   [& body]
-  `(let [co# (>rx (fn [] ~@body) {:auto-run true})]
-     (deref co#)
-     co#)))
+  `(doto (rx ~@body) deref)))
 
 ;; ===== Track ===== ;;
 
@@ -395,7 +400,7 @@
   [^TrackableFn trackable-fn, args, ^:! ^:get ^:set ^quantum.untyped.core.data.reactive.Reaction rx]
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-atom a w opts "Track:"))
-   PReactiveAtom {}
+   PReactive {}
    ?Deref  {deref ([this]
                     (if (nil? rx)
                         (cached-reaction #(apply (.-f trackable-fn) args)
@@ -413,7 +418,7 @@
         ^Reaction r (m k nil)]
     (cond
       (some? r) (#?(:clj .deref :cljs -deref) r)
-      (nil? *ratom-context*) (f)
+      (nil? *atom-context*) (f)
       :else (let [r (>rx f
                       {:on-dispose
                         (fn [x]
@@ -439,6 +444,6 @@
 (defn >track! [f args opts]
   (let [t (>track f args)
         r (>rx #(#?(:clj .deref :cljs -deref) t)
-               {:auto-run true :queue (or (:queue opts) global-queue)})]
+               {:queue (or (:queue opts) global-queue)})]
     @r
     r))
