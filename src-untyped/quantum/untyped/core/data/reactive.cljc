@@ -1,5 +1,10 @@
 (ns quantum.untyped.core.data.reactive
-  "Adapted from `reagent.ratom` 2018-10-20."
+  "Most of the content adapted from `reagent.ratom` 2018-10-20.
+
+   Includes ReactiveAtom and Reaction; will include Subscription.
+
+   Currently only safe for single-threaded use; needs a rethink to accommodate concurrent
+   modification/access and customizable queueing strategies."
         (:refer-clojure :exclude
           [run!])
         (:require
@@ -187,6 +192,7 @@
    ^:!          caught
    ^:!          captured
    ^:! ^boolean dirty?
+                eq-f
                 f
    ^boolean     no-cache?
    ^:!          on-dispose
@@ -194,7 +200,7 @@
    ^:!          on-set
                 queue
    ^:!          state
-   ^:!          watching
+   ^:!          watching ; i.e. 'dependents'
    ^:!          watches]
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-atom a w opts (str "Reaction " (hash a) ":")))
@@ -209,7 +215,7 @@
                              (when dirty?
                                (let [old-state state]
                                  (set! state (f))
-                                 (when-not (or (nil? watches) (= old-state state))
+                                 (when-not (or (nil? watches) (eq-f old-state state))
                                    (notify-w! this old-state state))))
                              (do (notify-deref-watcher! this)
                                  (when dirty? (run-reaction! this false)))))
@@ -297,6 +303,7 @@
     res))
 
 ;; Gets flushed in a scheduled way by `flush!`
+;; TODO `enqueue!` needs to be a parameter of `Reaction`
 (defn- enqueue! [rx queue]
   ;; It is at this point in CLJS that the rendering is scheduled like so:
   ;; `(when (alist-empty? queue) (schedule! global-render-queue queue))`
@@ -312,17 +319,25 @@
              (run-reaction! rx false)
            (auto-run rx)))))
 
-(defn- queued-run-reaction! [^Reaction rx]
-  (when (and (.-dirty? rx) (some? (.-watching rx)))
-    (run-reaction! rx true)))
-
+;; Called by:
+;; - `(when non-reactive? (flush! queue))` in `Reactive`.deref
+;; - when a scheduled flushing is performed
 (defn- flush! [queue]
-  (loop []
-    (let [q queue]
-      (when-not (alist-empty? queue)
+  (loop [i 0]
+    (let [ct (-> queue alist-count long)]
+      ;; NOTE: We avoid `pop`-ing in order to reduce churn but in theory it presents a memory issue
+      ;; NOTE: In the Reagent version, every time a new "chunk" of the queue is worked on, that
+      ;;       chunk is scheduled for re-render
+      ;; I.e. took care of all queue entries and reached a stable state
+      (if-let [reached-last-index? (>= i (unchecked-dec ct))]
         (alist-empty! queue)
-        (dotimes [i (alist-count q)] (queued-run-reaction! (alist-get q i)))
-        (recur)))))
+        (let [remaining-ct (unchecked-subtract ct i)]
+          (dotimes [i* remaining-ct]
+            (let [rx (alist-get queue (unchecked-add i i*))]
+              (when (and (.-dirty? rx) (some? (.-watching rx)))
+                (run-reaction! rx true))))
+          ;; `recur`s because sometimes the queue gets added to in the process of running rx's
+          (recur (+ i remaining-ct)))))))
 
 (defn- update-watching! [^Reaction rx derefed]
   (let [new (set (.-derefed  rx)) ; TODO incrementally calculate `set`
@@ -341,9 +356,9 @@
 
 (defn ^Reaction >reaction
   ([f] (>reaction f nil))
-  ([f {:keys [auto-run no-cache? on-set on-dispose queue]}]
-    (Reaction. auto-run nil nil true f (if (nil? no-cache?) false no-cache?) on-dispose nil
-               on-set queue nil nil nil)))
+  ([f {:keys [auto-run eq-f no-cache? on-set on-dispose queue]}]
+    (Reaction. auto-run nil nil true (or eq-f =) f (if (nil? no-cache?) false no-cache?) on-dispose
+               nil on-set queue nil nil nil)))
 
 #?(:clj (defmacro reaction [& body] `(>reaction (fn [] ~@body))))
 
