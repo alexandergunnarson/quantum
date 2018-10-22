@@ -41,6 +41,13 @@
     `(core/defonce ~name ~expr))))
 
 #?(:clj
+(defmacro defonce-
+  "`defonce-` : `defonce` :: `defn-` : `defn`"
+  [name & sigs]
+  (let [[name [expr]] (ufgen/name-with-attrs (vary-meta name assoc :private true) sigs)]
+    `(core/defonce ~name ~expr))))
+
+#?(:clj
 (defmacro def-
   "Like `def` but adds the ^:private metadatum to the bound var.
    `def-` : `def` :: `defn-` : `defn`"
