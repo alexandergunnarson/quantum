@@ -398,3 +398,10 @@
       (flush! self/global-queue)
       (dispose! r1)
       (is (= runs (running))))))
+
+(deftest ratom-with-meta
+  (let [value {:val 1}
+        meta-value {:meta-val 1}
+        state (with-meta (ratom value) meta-value)]
+    (is (= (meta state) meta-value))
+    (is (= @state value))))
