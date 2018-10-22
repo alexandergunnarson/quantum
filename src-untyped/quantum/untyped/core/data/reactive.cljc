@@ -189,10 +189,6 @@
 
 (declare flush! peek-at run-reaction! update-watching!)
 
-;; TODO
-;; Fields of a Reaction
-;; - captured
-;; - ratomGeneration
 (udt/deftype Reaction
   [^:!          ^:get       autoRun
    ^:!          ^:get ^:set caught
