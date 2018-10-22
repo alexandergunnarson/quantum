@@ -358,26 +358,27 @@
     (is (= runs (running)))))
 
 (deftest exception-side-effect
-  (let [runs   (running)
-        state  (ratom {:val 1})
-        rstate (rx @state)
-        spy    (atom nil)
-        r1     (self/run! @rstate)
-        r2     (let [val (rx (:val @rstate))]
-                 (self/run!
-                   (reset! spy @val)
-                   (is (some? @val))))
-        r3     (self/run!
-                 (when (:error? @rstate)
-                   (throw (ex-info "Error detected!" {}))))]
-    (swap! state assoc :val 2)
-    (flush! self/global-queue)
-    (swap! state assoc :error? true)
-    (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
-                 (flush! self/global-queue)))
-    (flush! self/global-queue)
-    (flush! self/global-queue)
-    (dispose! r1)
-    (dispose! r2)
-    (dispose! r3)
-    (is (= runs (running)))))
+  (binding [self/*enqueue!* @#'self/alist-conj!]
+    (let [runs   (running)
+          state  (ratom {:val 1})
+          rstate (rx @state)
+          spy    (atom nil)
+          r1     (self/run! @rstate)
+          r2     (let [val (rx (:val @rstate))]
+                   (self/run!
+                     (reset! spy @val)
+                     (is (some? @val))))
+          r3     (self/run!
+                   (when (:error? @rstate)
+                     (throw (ex-info "Error detected!" {}))))]
+      (swap! state assoc :val 2)
+      (flush! self/global-queue)
+      (swap! state assoc :error? true)
+      (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
+                   (flush! self/global-queue)))
+      (flush! self/global-queue)
+      (flush! self/global-queue)
+      (dispose! r1)
+      (dispose! r2)
+      (dispose! r3)
+      (is (= runs (running))))))
