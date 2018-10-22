@@ -266,3 +266,21 @@
       (is (= @disposed-c true))
       (is (= @disposed-cns true))
       (is (= runs (running))))))
+
+(deftest test-on-set
+  (let [runs (running)
+        a (ratom 0)
+        b (self/>rx #(+ 5 @a)
+                    {:auto-run true
+                     :on-set   (fn [oldv newv]
+                                 (reset! a (+ 10 newv)))
+                     :queue    self/global-queue})]
+    @b
+    (is (= 5 @b))
+    (reset! a 1)
+    (is (= 6 @b))
+    (reset! b 1)
+    (is (= 11 @a))
+    (is (= 16 @b))
+    (dispose! b)
+    (is (= runs (running)))))
