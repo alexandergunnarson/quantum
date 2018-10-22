@@ -65,8 +65,13 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - `t/defn` that gets extended via `t/extend-defn!` (if the input-types and output-types have
             changed)
         - Examples
-          - (t/rx @(t/rx-input-type ...))
-          - (t/rx @(t/rx-output-type ...))
+          - (t/input-type ...)
+            - This returns a `PReactive` in an arglist context for extensible targets (i.e. `t/defn`
+              but not `t/fn`). This is because the `:type` of a `defn` is reactive.
+            - Thus there is no special behavior for `input|output-type` but just special behavior
+              for the underlying type.
+          - (t/output-type ...)
+            - Same as above
           - One could imagine a dynamic set of types corresponding to a given predicate, e.g.
             `decimal?`. Say someone comes up with a new `decimal?`-like class and wants to redefine
             `decimal?` to accommodate. We could define `decimal?` as a reactive/extensible type to
