@@ -342,7 +342,7 @@
   (when (and (.getDirty rx) (some? (.getWatching rx)))
     (run-reaction! rx true)))
 
-(defn- flush! [queue]
+(defn flush! [queue]
   (loop [i 0]
     (let [ct (-> queue alist-count long)]
       ;; NOTE: We avoid `pop`-ing in order to reduce churn but in theory it presents a memory issue
