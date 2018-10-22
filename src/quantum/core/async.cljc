@@ -42,6 +42,7 @@
       :refer [val?]]
     [quantum.core.vars                 :as var
       :refer [defalias defmalias]]
+    [quantum.untyped.core.async         :as uasync]
     [quantum.untyped.core.form.evaluate :as ufeval
       :refer [case-env]]
     [quantum.untyped.core.string
@@ -819,15 +820,4 @@
 #?(:clj (defmacro if-timeout!   [[v c timeout-ms] then else] `(handle-timeout! [~v ~c ~timeout-ms] if   ~then ~else)))
 #?(:clj (defmacro when-timeout! [[v c timeout-ms] & body]    `(handle-timeout! [~v ~c ~timeout-ms] when ~@body)))
 
-#?(:cljs
-(def request-animation-frame
-  (or (.-requestAnimationFrame       sys/global)
-      (.-webkitRequestAnimationFrame sys/global)
-      (.-mozRequestAnimationFrame    sys/global)
-      (.-msRequestAnimationFrame     sys/global)
-      (.-oRequestAnimationFrame      sys/global)
-      (let [t0 (.getTime (js/Date.))]
-        (fn [f]
-          (js/setTimeout
-           #(f (- (.getTime (js/Date.)) t0))
-           16.66666))))))
+(defalias uasync/at-next-tick)
