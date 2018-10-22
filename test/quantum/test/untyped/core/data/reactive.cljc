@@ -335,3 +335,24 @@
     (is (= @count 3))
     (dispose! r)
     (is (= runs (running)))))
+
+(deftest exception-recover-indirect
+  (let [runs  (running)
+        state (ratom 1)
+        count (ratom 0)
+        ref   (rx (when (= @state 2)
+                    (throw (ex-info "err" {}))))
+        r (self/run!
+            (swap! count inc)
+            @ref)]
+    (is (= @count 1))
+    (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
+                 (do (swap! state inc)
+                     (flush! self/global-queue))))
+    (is (= @count 2))
+    (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo) @ref))
+    (swap! state inc)
+    (flush! self/global-queue)
+    (is (= @count 3))
+    (dispose! r)
+    (is (= runs (running)))))
