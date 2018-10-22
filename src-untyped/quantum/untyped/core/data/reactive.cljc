@@ -322,7 +322,7 @@
 (defn- handle-reaction-change! [^Reaction rx sender oldv newv]
   (when-not (or (identical? oldv newv) (not (.getComputed rx)))
     (if (.getAlwaysRecompute rx)
-        (do (.setComputed rx false) ; TODO is this line necessary?
+        (do (.setComputed rx false)
             ((.-enqueue-fn rx) (.-queue rx) rx))
         (run-reaction! rx false))))
 
@@ -386,7 +386,8 @@
 
 #?(:clj
 (defmacro run!
-  "Runs body immediately, and runs again whenever atoms deferenced in the body change. Body should side effect."
+  "Runs body immediately, and runs again whenever atoms deferenced in the body change. Body should
+   side effect."
   [& body]
   `(doto (rx ~@body) deref)))
 
@@ -396,6 +397,7 @@
 
 (declare cached-reaction)
 
+;; For perf test in `quantum.test.untyped.core.data.reactive`. TODO excise?
 (udt/deftype Track
   [^TrackableFn trackable-fn, args, ^:! ^:get ^:set ^quantum.untyped.core.data.reactive.Reaction rx]
   {;; IPrintWithWriter

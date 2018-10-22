@@ -34,7 +34,7 @@ Note that for anything built-in js/<whatever>, the `t/isa?` predicates might nee
   `(let [expr# ~expr] ~@body expr#)))
 
 
-
+(rx @)
 
 
 
@@ -86,6 +86,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   [ ] - Non-boxed `def`s: `(var/def- min-float  (Numeric/negate Float/MAX_VALUE))`
   - `(t/validate x (t/* t/string?))` for `(t/* t/string?)` needs to be more performant
     - Don't re-create type on each call
+  - replace `deref` with `ref/deref` in typed contexts? So we can do `@` still
   - Type Logic and Predicates
     - We should probably have a 'normal form' so we can correctly hash if we do spec lookup
     - t/- : fix

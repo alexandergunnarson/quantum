@@ -290,7 +290,7 @@
     (is (= @b 6))
     (is (= runs (running)))))
 
-(deftest rx/
+(deftest reset-in-reaction
   (let [runs  (running)
         state (rx/atom {})
         c1    (eager-rx (get-in @state [:data :a]))
