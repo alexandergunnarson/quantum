@@ -258,11 +258,13 @@
           schema        (when db-mode? (spec->schema sym-0 spec))
           code `(do (def ~conformer-sym ~conformer)
                     (deftype/deftype ~(with-meta sym {:no-factory? true}) ~'[v]
-                      {~'?Object
-                        {~'hash-code ([_#] (.hashCode ~'v))
-                         ~'equals    ~(std-equals sym other '=)}
+                      {~'?Equals
+                        {~'=         ~(std-equals sym other '=)}
                        ~'?Hash
-                         {~'hash     ([_#] (int (bit-xor ~type-hash (~(case-env :clj '.hashEq :cljs '-hash) ~'v))))}
+                         {~'hash      ([_#] (int (bit-xor ~type-hash
+                                                   (~(case-env :clj  '.hashEq
+                                                               :cljs '-hash) ~'v))))
+                          ~'hash-code ([_#] (.hashCode ~'v))}
                        ~'?Deref
                          {~'deref    ([_#] ~'v)}
                        refs/IValue
@@ -413,7 +415,6 @@
                {~'empty       ([_#] (~(case-env :clj '.empty   :cljs '-empty) ~'v))
                 ~'empty!      ([_#] (throw (UnsupportedOperationException.)))
                 ~'empty?      ([_#] (~(case-env :clj '.isEmpty :cljs nil    ) ~'v))
-                ~'equals      ~(std-equals sym other (case-env :clj '.equiv :cljs '-equiv))
                 ~'conj        ([_# [k0# v0#]]
                                 (let [~k-gen (or (get ~all-mod-keys-record k0#)
                                                  (get ~un-ks-to-ks         k0#)
@@ -468,9 +469,8 @@
                 ~'find        ([_# k#]
                                 #_(enforce-get ~empty-record ~sym ~spec-sym k#)
                                 (~(case-env :clj '.entryAt :cljs nil) ~'v k#))}
-             ~'?Object
-               {~'hash-code   ([_#] (.hashCode ~'v))
-                ~'equals      ~(std-equals sym other (case-env :clj '.equiv :cljs '.equiv))}
+             ~'?Equals
+               {~'=           ~(std-equals sym other (case-env :clj '.equiv :cljs '-equiv))}
              ~'?Iterable
                {~'iterator    ([_#] (~(case-env :clj '.iterator :cljs '-iterator) ~'v))}
              ~'?Meta
@@ -479,7 +479,8 @@
              ~'?Print
                {~'pr          ([_# w# opts#] (~'-pr-writer ~'v w# opts#))}
              ~'?Hash
-               {~'hash        ([_#] (int (bit-xor ~type-hash (~(case-env :clj '.hashEq :cljs '-hash) ~'v))))}
+               {~'hash        ([_#] (int (bit-xor ~type-hash (~(case-env :clj '.hashEq :cljs '-hash) ~'v))))
+                ~'hash-code   ([_#] (.hashCode ~'v))}
              refs/IValue
                {~'get         ([_#] ~'v)
                 ~'set         ([_# v#] (if (instance? ~sym v#) v# (new ~sym (~create v#))))}})

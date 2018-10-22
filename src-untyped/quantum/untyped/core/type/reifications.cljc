@@ -55,9 +55,9 @@
    ?Fn            {invoke    ([_ x] true)}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (UniversalSetType. meta'))}
-   ?Hash          {hash      ([this] (hash       UniversalSetType))}
-   ?Object        {hash-code ([this] (uhash/code UniversalSetType))
-                   equals    ([this that] (or (== this that) (instance? UniversalSetType that)))}
+   ?Hash          {hash      ([this] (hash       UniversalSetType))
+                   hash-code ([this] (uhash/code UniversalSetType))}
+   ?Equals        {=         ([this that] (or (== this that) (instance? UniversalSetType that)))}
    uform/PGenForm {>form     ([this] (-> 'quantum.untyped.core.type/any?
                                          (accounting-for-meta meta)))}
    fedn/IOverride nil
@@ -75,9 +75,9 @@
    ?Fn            {invoke    ([_ x] false)}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (EmptySetType. meta'))}
-   ?Hash          {hash      ([this] (hash       EmptySetType))}
-   ?Object        {hash-code ([this] (uhash/code EmptySetType))
-                   equals    ([this that] (or (== this that) (instance? EmptySetType that)))}
+   ?Hash          {hash      ([this] (hash       EmptySetType))
+                   hash-code ([this] (uhash/code EmptySetType))}
+   ?Equals        {=         ([this that] (or (== this that) (instance? EmptySetType that)))}
    uform/PGenForm {>form     ([this] (-> 'quantum.untyped.core.type/none?
                                          (accounting-for-meta meta)))}
    fedn/IOverride nil
@@ -96,9 +96,9 @@
    ?Fn            {invoke    ([_ x] (not (t x)))}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (NotType. hash hash-code meta' t))}
-   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      NotType t))}
-   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code NotType t))
-                   equals    ([this that]
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      NotType t))
+                   hash-code ([this] (uhash/caching-set-code!    hash-code NotType t))}
+   ?Equals        {=         ([this that]
                                (or (== this that)
                                    (and (instance? NotType that)
                                         (= t (.-t ^NotType that)))))}
@@ -128,9 +128,9 @@
                                       args))}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (OrType. hash hash-code meta' args *logical-complement))}
-   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      OrType args))}
-   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code OrType args))
-                   equals    ([this that]
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      OrType args))
+                   hash-code ([this] (uhash/caching-set-code!    hash-code OrType args))}
+   ?Equals        {=         ([this that]
                                (or (== this that)
                                    (and (instance? OrType that)
                                         (= args (.-args ^OrType that)))))}
@@ -158,9 +158,9 @@
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (AndType. hash hash-code meta' args
                                              *logical-complement))}
-   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      AndType args))}
-   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code AndType args))
-                   equals    ([this that]
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      AndType args))
+                   hash-code ([this] (uhash/caching-set-code!    hash-code AndType args))}
+   ?Equals        {=         ([this that]
                                (or (== this that)
                                    (and (instance? AndType that)
                                         (= args (.-args ^AndType that)))))}
@@ -189,9 +189,9 @@
    ?Fn            {invoke    ([_ x] (satisfies? p x))}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (ProtocolType. hash hash-code meta' p name))}
-   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      ProtocolType p))}
-   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code ProtocolType p))
-                   equals    ([this that #_any?]
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      ProtocolType p))
+                   hash-code ([this] (uhash/caching-set-code!    hash-code ProtocolType p))}
+   ?Equals        {=         ([this that #_any?]
                                (or (== this that)
                                    (and (instance? ProtocolType that)
                                         (= p (.-p ^ProtocolType that)))))}
@@ -222,9 +222,9 @@
    ?Fn            {invoke    ([_ x] (implements? p x))}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (ProtocolType. hash hash-code meta' p name))}
-   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      ProtocolType p))}
-   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code ProtocolType p))
-                   equals    ([this that #_any?]
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      ProtocolType p))
+                   hash-code ([this] (uhash/caching-set-code!    hash-code ProtocolType p))}
+   ?Equals        {=         ([this that #_any?]
                                (or (== this that)
                                    (and (instance? ProtocolType that)
                                         (= p (.-p ^ProtocolType that)))))}
@@ -251,9 +251,9 @@
    ?Fn            {invoke    ([_ x] (instance? c x))}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (ClassType. hash hash-code meta' c name))}
-   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      ClassType c))}
-   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code ClassType c))
-                   equals    ([this that #_any?]
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      ClassType c))
+                   hash-code ([this] (uhash/caching-set-code!    hash-code ClassType c))}
+   ?Equals        {=         ([this that #_any?]
                                (or (== this that)
                                    (and (instance? ClassType that)
                                         (= c (.-c ^ClassType that)))))}
@@ -301,9 +301,9 @@
    ?Fn            {invoke    ([_ xs] (satisfies-unordered-type? xs data))}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (UnorderedType. hash hash-code meta' data name))}
-   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      UnorderedType data))}
-   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code UnorderedType data))
-                   equals    ([this that #_any?]
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      UnorderedType data))
+                   hash-code ([this] (uhash/caching-set-code!    hash-code UnorderedType data))}
+   ?Equals        {=         ([this that #_any?]
                                (or (== this that)
                                    (and (instance? UnorderedType that)
                                         (= data (.-data ^UnorderedType that)))))}
@@ -336,9 +336,9 @@
                                             (fn [_ _] false))))}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (OrderedType. hash hash-code meta' data name))}
-   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      OrderedType data))}
-   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code OrderedType data))
-                   equals    ([this that #_any?]
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      OrderedType data))
+                   hash-code ([this] (uhash/caching-set-code!    hash-code OrderedType data))}
+   ?Equals        {=         ([this that #_any?]
                                (or (== this that)
                                    (and (instance? OrderedType that)
                                         (= data (.-data ^OrderedType that)))))}
@@ -364,9 +364,9 @@
    ?Fn            {invoke    ([_ x] (= x v))}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (ValueType. hash hash-code meta' v))}
-   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      ValueType v))}
-   ?Object        {hash-code ([this] (uhash/caching-set-code!    hash-code ValueType v))
-                   equals    ([this that #_any?]
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      ValueType v))
+                   hash-code ([this] (uhash/caching-set-code!    hash-code ValueType v))}
+   ?Equals        {=         ([this that #_any?]
                                (or (== this that)
                                    (and (instance? ValueType that)
                                         (= v (.-v ^ValueType that)))))}

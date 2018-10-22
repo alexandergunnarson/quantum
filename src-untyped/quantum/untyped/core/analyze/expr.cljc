@@ -68,6 +68,12 @@
                                    (#?(:clj eval :cljs (TODO "eval not supported")) form')))
                    update-form ([this f]       (with-form this (f form)))
                    >evaled     ([this]         evaled)}
+   ?Equals        {=           ([this that]
+                                 (or (== this that)
+                                     (and (instance? Expression that)
+                                          (let [^Expression that that]
+                                            (= evaled (.-evaled that))
+                                            (= form   (.-form   that))))))}
    ;; `form`-like
    ?Associative   {assoc       ([this k v]     (with-form this (assoc  form k v)))
                    dissoc      ([this k]       (with-form this (dissoc form k)))
@@ -78,12 +84,7 @@
                                 ([this k else] (with-form this (find   form else))))}
    ?Collection    {empty       ([this]         (with-form this (empty  form)))
                    conj        ([this x]       (with-form this (conj   form x)))
-                   empty?      ([this]         (empty? form))
-                   equals      ([this that]    (or (== this that)
-                                                   (and (instance? Expression that)
-                                                        (let [^Expression that that]
-                                                          (= evaled (.-evaled that))
-                                                          (= form   (.-form   that))))))}
+                   empty?      ([this]         (empty? form))}
    ?Counted       {count       ([this]         (count form))}
    ?Indexed       {nth         ([this i]       (with-form this (nth form i)))}
    ?Lookup        {get         (([this k]      (with-form this (get form k)))

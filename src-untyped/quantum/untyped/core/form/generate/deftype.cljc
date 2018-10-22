@@ -84,8 +84,7 @@
       'java.util.Map
       'java.util.Collection))
 
-(defn- deftype-helper
-  [methods-spec lang]
+(defn- deftype-helper [methods-spec lang]
   (for [[iname impls] methods-spec]
     (case iname
       ?Comparable
@@ -105,21 +104,21 @@
           :clj
            `[~(?Seq lang)
                ~@(p-arity 'first  (get impls 'first))
-               ~@(p-arity 'more   (get impls 'rest ))
-               ~@(p-arity 'next   (get impls 'next ))]
+               ~@(p-arity 'more   (get impls 'rest))
+               ~@(p-arity 'next   (get impls 'next))]
           :cljs
            `[~(?Seq lang)
                ~@(p-arity '-first (get impls 'first))
-               ~@(p-arity '-rest  (get impls 'rest ))
+               ~@(p-arity '-rest  (get impls 'rest))
              cljs.core/INext
-               ~@(p-arity '-next  (get impls 'next ))])
+               ~@(p-arity '-next  (get impls 'next))])
       ?Stack
          `[~(?Stack lang)
            ~@(p-arity (pfn 'peek lang) (get impls 'peek))
-           ~@(p-arity (pfn 'pop  lang) (get impls 'pop ))]
+           ~@(p-arity (pfn 'pop  lang) (get impls 'pop))]
       ?Reversible
          `[~(?Reversible lang)
-           ~@(p-arity (pfn 'rseq  lang) (get impls 'rseq ))]
+           ~@(p-arity (pfn 'rseq  lang) (get impls 'rseq))]
       ?Counted
          `[~(?Counted lang)
            ~@(p-arity (pfn 'count lang) (get impls 'count))
@@ -127,18 +126,23 @@
                `[~(implement-map-or-collection methods-spec)
                  ~@(p-arity 'size (get impls 'count))]
                nil)]
-      ?Object
+      ?Equals
         (case lang
           :clj
             `[~(?Object lang)
-               ~@(p-arity 'equals   (get impls 'equals   ))
-               ~@(p-arity 'hashCode (get impls 'hash-code))]
+               ~@(p-arity 'equals   (get impls '=))]
           :cljs
             `[~(?Object lang)
-               ~@(p-arity 'equiv    (get impls 'equals))])
+               ~@(p-arity 'equiv    (get impls '=))
+              cljs.core/IEquiv
+               ~@(p-arity '-equiv   (get impls '=))])
       ?Hash
         `[~(?Hash lang)
-          ~@(p-arity (case lang :clj 'hasheq :cljs '-hash) (get impls 'hash))]
+           ~@(p-arity (case lang :clj 'hasheq :cljs '-hash) (get impls 'hash))
+          ~@(case lang
+              :clj `[~(?Object lang)
+                      ~@(p-arity 'hashCode (or (get impls 'hash-code) (get impls 'hash)))]
+              nil)]
       ?Meta
         (case lang
           :clj
@@ -146,27 +150,25 @@
                ~@(p-arity 'meta       (get impls 'meta     ))
                ~@(p-arity 'withMeta   (get impls 'with-meta))]
           :cljs
-            `[cljs.core/IMeta
+            `[~@(when (get impls 'meta) ['cljs.core/IMeta])
                ~@(p-arity '-meta      (get impls 'meta     ))
-              cljs.core/IWithMeta
+              ~@(when (get impls 'with-meta) ['cljs.core/IWithMeta])
                ~@(p-arity '-with-meta (get impls 'with-meta))])
       ?Collection
         (case lang
           :clj
            `[~(?Collection lang)
-               ~@(p-arity 'empty   (get impls 'empty ))
-               ~@(p-arity 'equiv   (get impls 'equals)) ; TBD
-               ~@(p-arity 'cons    (get impls 'conj  ))
+               ~@(p-arity 'empty   (get    impls 'empty))
+               ~@(p-arity 'equiv   (get-in impls ['?Equals '=])) ; TBD
+               ~@(p-arity 'cons    (get    impls 'conj))
              ~(implement-map-or-collection methods-spec)
                ~@(p-arity 'isEmpty (get impls 'empty?))
                ~@(p-arity 'clear   (get impls 'empty!))]
           :cljs
-           `[cljs.core/IEmptyableCollection
-               ~@(p-arity '-empty (get impls 'empty ))
-             cljs.core/IEquiv
-               ~@(p-arity '-equiv (get impls 'equals)) ; TBD
-             ~(?Collection lang)
-               ~@(p-arity '-conj  (get impls 'conj  ))])
+           `[~@(when (get impls 'empty) ['cljs.core/IEmptyableCollection])
+               ~@(p-arity '-empty (get impls 'empty))
+             ~@(when (get impls 'conj) [(?Collection lang)])
+               ~@(p-arity '-conj  (get impls 'conj))])
       ?Lookup
         `[~(?Lookup lang)
           ~@(p-arity (case lang :clj 'valAt :cljs '-lookup) (get impls 'get))
@@ -210,13 +212,22 @@
       ?Deref
         `[~(?Deref lang)
           ~@(p-arity (pfn 'deref lang) (get impls 'deref))]
+      ?Watchable
+        (case lang
+          :clj  `[clojure.lang.IRef
+                  ~@(p-arity 'addWatch                (get impls 'add-watch!))
+                  ~@(p-arity 'removeWatch             (get impls 'remove-watch!))]
+          :cljs `[cljs.core/IWatchable
+                  ~@(p-arity (pfn 'add-watch    lang) (get impls 'add-watch!))
+                  ~@(p-arity (pfn 'remove-watch lang) (get impls 'remove-watch!))])
       ?Atom
         (case lang
           :clj  `[clojure.lang.IAtom
                   ~@(p-arity (pfn 'swap          lang) (get impls 'swap!))
                   ~@(p-arity (pfn 'compareAndSet lang) (get impls 'compare-and-set!))
                   ~@(p-arity (pfn 'reset         lang) (get impls 'reset!))]
-          :cljs `[cljs.core/IReset
+          :cljs `[cljs.core/IAtom
+                  cljs.core/IReset
                   ~@(p-arity (pfn 'reset!        lang) (get impls 'reset!))
                   cljs.core/ISwap
                   ~@(p-arity (pfn 'swap!         lang) (get impls 'swap!))])
@@ -291,7 +302,8 @@
           body)})
 
 (defn- ?symbol->getter|setter
-  "Generates a getter or setter from a field symbol"
+  "Generates a getter or setter from a field symbol.
+   Useful for Clojure mutable `deftype` fields which are private."
   [qualified-interface-sym prefix field-sym]
   (when (-> field-sym meta (get prefix))
     (let [type-sym  (type-hint field-sym)

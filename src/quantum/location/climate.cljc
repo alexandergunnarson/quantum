@@ -77,12 +77,12 @@
   (.evaluate grid (org.geotools.geometry.DirectPosition2D. longitude latitude)))
 
 (deftype/deftype ClimateDataPoint ; 8 (ref) + 8 (header) + 6*4 (fields) -> 40 bytes
-  [^:get ^:set ^:unsynchronized-mutable ^float precipitation
-   ^:get ^:set ^:unsynchronized-mutable ^float solar-radiation
-   ^:get ^:set ^:unsynchronized-mutable ^float wind
-   ^:get ^:set ^:unsynchronized-mutable ^float min-temperature
-   ^:get ^:set ^:unsynchronized-mutable ^float avg-temperature
-   ^:get ^:set ^:unsynchronized-mutable ^float max-temperature])
+  [^:get ^:set ^:! ^float precipitation
+   ^:get ^:set ^:! ^float solar-radiation
+   ^:get ^:set ^:! ^float wind
+   ^:get ^:set ^:! ^float min-temperature
+   ^:get ^:set ^:! ^float avg-temperature
+   ^:get ^:set ^:! ^float max-temperature])
 
 (def ^GeoTiffReader reader ; If you load this first (after importing the class), it's fine, but if you load it after the namespaces, certain classes aren't found... strange!
   (GeoTiffReader.

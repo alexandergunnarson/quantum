@@ -119,8 +119,10 @@
                                 (v (+ (int 2) i)))))))))))
 
 (deftype/deftype EmptyTree [meter-obj]
-  {?Seqable
-     {seq ([_] nil)}
+  {?Equals
+     {=     ([_ x] false)} ; TBD
+   ?Seqable
+     {seq   ([_] nil)}
    ?Sequential true
    ?Seq
      {first ([_]    nil  )
@@ -133,7 +135,6 @@
      {rseq  ([_]    nil  )}
    ?Collection
      {empty ([this] this)
-      equiv ([_ x] false) ; TBD
       conj  ([_ b] (newSingleTree meter-obj b))}
    ?Counted
      {count ([_   ] 0    )}  ; not needed?
@@ -164,7 +165,9 @@
   (->> t getMeter idElem (split t p)))
 
 (deftype/deftype DelayedTree [tree-ref mval]
-  {?Seqable
+  {?Equals
+     {=           ([_ x] false)} ; TBD
+   ?Seqable
      {seq         ([this] this)}
    ?Sequential true
    ?Seq
@@ -180,7 +183,6 @@
      {count       ([_])} ; not needed?
    ?Collection
      {empty       ([_]   (empty @tree-ref))
-      equals      ([_ x] false) ; TBD
       cons        ([_ b] (conj  @tree-ref b))}
    ConjL
      {conjl       ([_ a] (conjl @tree-ref a))}
@@ -219,7 +221,9 @@
   (app3 t1 nil t2))
 
 (deftype/deftype SingleTree [meter-obj x]
-  {?Seqable
+  {?Equals
+     {=      ([_ x] false)} ; TBD
+   ?Seqable
      {seq    ([this] this)}
    ?Sequential true
    ?Seq
@@ -235,7 +239,6 @@
      {count  ([_])}; not needed?
    ?Collection
      {empty  ([_] (EmptyTree. meter-obj)) ; not needed?
-      equals ([_ x] false) ; TBD
       conj   ([_ b] (deep (digit meter-obj x)
                            (EmptyTree. (finger-meter meter-obj))
                            (digit meter-obj b)))}
@@ -266,7 +269,9 @@
         (measured suf))))
 
 (deftype/deftype DeepTree [meter-obj pre mid suf mval]
-  {?Seqable
+  {?Equals
+    {=       ([_ x] false)} ; TBD
+   ?Seqable
     {seq     ([this] this)}
    ?Sequential true
    ?Seq
@@ -282,7 +287,6 @@
      {count  ([_])} ; not needed?
    ?Collection
      {empty  ([_] (newEmptyTree meter-obj))
-      equals ([_ x] false) ; TBD
       conj   ([_ a]
                  (if (< (count suf) 4)
                      (deep pre mid (conj suf a))
@@ -341,11 +345,11 @@
                             (op (measured pre) (measured suf))))))))
 
 (deftype/deftype CountedDoubleList [tree mdata]
-  {?Object
-      {equals    ([_ x] (seq= tree x))
-       hash-code ([this] (hashcode (map identity this)))}
+  {?Equals
+      {=         ([_ x] (seq= tree x))}
    ?Hash
-      {hash      ([this] (hash-ordered this))}
+      {hash      ([this] (hash-ordered this))
+       hash-code ([this] (hashcode (map identity this)))}
    ?Meta
       {meta      ([_]    mdata)
        with-meta ([_ mdata] (CountedDoubleList. tree mdata))}
@@ -365,7 +369,6 @@
       {count ([_]    (measured tree))}
    ?Collection
       {empty ([_]    (CountedDoubleList. (empty tree) mdata))
-       equiv ([_ x] (seq= tree x)) ; TBD
        conj  ([_ x] (CountedDoubleList. (conj tree x) mdata))}
    ?Associative
       {assoc       ([this k v]
