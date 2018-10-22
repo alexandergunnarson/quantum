@@ -4,21 +4,21 @@
     [quantum.untyped.core.test
       :refer [deftest is testing]]
     [quantum.untyped.core.data.reactive :as self
-      :refer [ratom rx]]))
+      :refer [dispose! flush! ratom rx]]))
 
 (defn test-perf []
   ;; (set! debug? false) ; yes but we need to think about CLJ
   (dotimes [_ 10]
-    (let [a   (self/ratom 0)
+    (let [a   (ratom 0)
           f   (fn [] (quot (long @a) 10))
-          q   (self/alist)
+          q   (@#'self/alist)
           mid (self/>rx f {:queue q})
           res (self/>track! (fn [] (inc (long @mid))) [] {:queue q})]
       @res
       (time (dotimes [_ 100000] ; ~70ms per 100K
               (swap! a inc)
               (@#'self/flush! q)))
-      (self/dispose! res))))
+      (dispose! res))))
 
 (deftest basic-ratom
   (binding [self/*enqueue!* @#'self/alist-conj!]
@@ -35,10 +35,10 @@
       (is (= @ct 1) "constrain ran")
       (is (= @out 2))
       (reset! start 1)
-      (self/flush! self/global-queue)
+      (flush! self/global-queue)
       (is (= @out 3)) ; not correct; showing 2
       (is (<= 2 @ct 3))
-      (self/dispose! const)
+      (dispose! const)
       (is (= @@#'self/*running runs)))))
 
 (deftest double-dependency
@@ -52,19 +52,19 @@
               (swap! c3-count inc)
               (+ @c1 @c2))
             {:auto-run true :queue self/global-queue})]
-    (self/flush! self/global-queue)
+    (flush! self/global-queue)
     (is (= @c3-count 0))
     (is (= @c3 1))
     (is (= @c3-count 1) "t1")
     (swap! start inc)
-    (self/flush! self/global-queue)
+    (flush! self/global-queue)
     (is (= @c3-count 2) "t2")
     (is (= @c3 2))
     (is (= @c3-count 2) "t3")
-    (self/dispose! c3)
+    (dispose! c3)
     (is (= @@#'self/*running runs))))
 
-(deftest test-from-reflex
+(deftest test-from-reflex ; https://github.com/reflex-frp/reflex
   (let [runs @@#'self/*running]
     (let [*counter (ratom 0)
           *signal  (ratom "All I do is change")
@@ -75,14 +75,56 @@
               (swap! *counter inc))]
       (is (= 1 @*counter) "Constraint run on init")
       (reset! *signal "foo")
-      (self/flush! self/global-queue)
+      (flush! self/global-queue)
       (is (= 2 @*counter)
           "Counter auto updated")
-      (self/dispose co))
+      (dispose! co))
     (let [*x  (ratom 0)
           *co (self/>rx #(inc @*x) {:auto-run true :queue self/global-queue})]
       (is (= 1 @*co) "CO has correct value on first deref")
       (swap! *x inc)
       (is (= 2 @*co) "CO auto-updates")
-      (self/dispose! *co))
+      (dispose! *co))
     (is (= runs @@#'self/*running))))
+
+(deftest test-unsubscribe
+  (dotimes [x 10]
+    (let [runs @@#'self/*running
+          a  (ratom 0)
+          a1 (rx (inc @a))
+          a2 (rx @a)
+          b-changed (ratom 0)
+          c-changed (ratom 0)
+          b (rx (swap! b-changed inc)
+                (inc @a1))
+          c (rx (swap! c-changed inc)
+                (+ 10 @a2))
+          res (self/run! (if (< @a2 1) @b @c))]
+      (is (= @res (+ 2 @a)))
+      (is (= @b-changed 1))
+      (is (= @c-changed 0))
+
+      (reset! a -1)
+      (is (= @res (+ 2 @a)))
+      (is (= @b-changed 2))
+      (is (= @c-changed 0))
+
+      (reset! a 2)
+      (is (= @res (+ 10 @a)))
+      (is (<= 2 @b-changed 3))
+      (is (= @c-changed 1))
+
+      (reset! a 3)
+      (is (= @res (+ 10 @a)))
+      (is (<= 2 @b-changed 3))
+      (is (= @c-changed 2))
+
+      (reset! a 3)
+      (is (= @res (+ 10 @a)))
+      (is (<= 2 @b-changed 3))
+      (is (= @c-changed 2))
+
+      (reset! a -1)
+      (is (= @res (+ 2 @a)))
+      (dispose! res)
+      (is (= runs @@#'self/*running)))))

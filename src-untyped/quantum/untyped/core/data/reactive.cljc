@@ -60,7 +60,7 @@
                    (recur (inc i))
                    false))))))
 
-(defn #?(:clj ^ArrayList alist :cljs alist)
+(defn- #?(:clj ^ArrayList alist :cljs alist)
   ([]  #?(:clj (ArrayList.) :cljs #js []))
   ([x] #?(:clj (doto (ArrayList.) (.add x)) :cljs #js [x])))
 
