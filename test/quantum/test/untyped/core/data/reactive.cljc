@@ -1,10 +1,16 @@
 (ns quantum.test.untyped.core.data.reactive
   "Tests adapted from `reagenttest.testratom`."
   (:require
-    [quantum.untyped.core.test
+    [quantum.untyped.core.test          :as utest
       :refer [deftest is testing]]
     [quantum.untyped.core.data.reactive :as self
       :refer [dispose! flush! ratom rx]]))
+
+(defn with-debug [f]
+  (flush! self/global-queue)
+  (binding [self/*debug?* true] (f)))
+
+(utest/use-fixtures :once with-debug)
 
 (defn- running [] @@#'self/*running)
 
@@ -87,7 +93,7 @@
       (swap! *x inc)
       (is (= 2 @*co) "CO auto-updates")
       (dispose! *co))
-    (is (= runs (running)))))
+    (is (= (running) runs))))
 
 (deftest test-unsubscribe
   (dotimes [x 10]
@@ -129,7 +135,7 @@
       (reset! a -1)
       (is (= @res (+ 2 @a)))
       (dispose! res)
-      (is (= runs (running))))))
+      (is (= (running) runs)))))
 
 (deftest maybe-broken
   (let [runs (running)]
@@ -160,4 +166,56 @@
         (is (= @res [1 -1]))
         (dispose! e))
       (dispose! d))
-    (is (= runs (running)))))
+    (is (= (running) runs))))
+
+(deftest test-dispose
+  (dotimes [x 10]
+    (let [runs         (running)
+          a            (ratom 0)
+          disposed     (ratom nil)
+          disposed-c   (ratom nil)
+          disposed-cns (ratom nil)
+          count-b      (ratom 0)
+          b   (self/>rx (fn []
+                          (swap! count-b inc)
+                          (inc @a))
+                        {:on-dispose (fn [r] (reset! disposed true))
+                         :queue      self/global-queue})
+          c   (self/>rx #(if (< @a 1) (inc @b) (dec @a))
+                        {:on-dispose (fn [r] (reset! disposed-c true))
+                         :queue      self/global-queue})
+          res (ratom nil)
+          cns (self/>rx #(reset! res @c)
+                        {:auto-run   true
+                         :on-dispose (fn [r] (reset! disposed-cns true))
+                         :queue      self/global-queue})]
+      @cns
+      (is (= @res 2))
+      (is (= (+ 4 runs) (running)))
+      (is (= @count-b 1))
+      (reset! a -1)
+      (flush! self/global-queue)
+      (is (= @res 1))
+      (is (= @disposed nil))
+      (is (= @count-b 2))
+      (is (= (+ 4 runs) (running)) "still running")
+      (reset! a 2)
+      (flush! self/global-queue)
+      (is (= @res 1))
+      (is (= @disposed true))
+      (is (= (+ 2 runs) (running)) "less running count")
+
+      (reset! disposed nil)
+      (reset! a -1)
+      (flush! self/global-queue)
+      ;; This fails sometimes on node. I have no idea why.
+      (is (= 1 @res) "should be one again")
+      (is (= @disposed nil))
+      (reset! a 2)
+      (flush! self/global-queue)
+      (is (= @res 1))
+      (is (= @disposed true))
+      (dispose! cns)
+      (is (= @disposed-c true))
+      (is (= @disposed-cns true))
+      (is (= runs (running))))))

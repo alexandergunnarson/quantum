@@ -68,7 +68,7 @@
 
 (def ^:dynamic *ratom-context* nil)
 
-(defonce #?(:clj debug? :cljs ^boolean debug?) false)
+(def ^:dynamic #?(:clj *debug?* :cljs ^boolean *debug?*) false)
 
 (defonce- *running (atom 0))
 
@@ -77,7 +77,7 @@
 (defn #?(:clj reactive? :cljs ^boolean reactive?) [] (some? *ratom-context*))
 
 (defn- check-watches [old new]
-  (when debug? (swap! *running + (- (count new) (count old))))
+  (when (boolean *debug?*) (swap! *running + (- (count new) (count old))))
   new)
 
 (defprotocol PWatchable
@@ -417,7 +417,7 @@
       :else (let [r (>rx f
                       {:on-dispose
                         (fn [x]
-                          (when debug? (swap! *running dec))
+                          (when (boolean *debug?*) (swap! *running dec))
                           (as-> (.getRxCache trackable-fn) cache
                             (dissoc cache k)
                             (.setRxCache trackable-fn cache))
@@ -429,7 +429,7 @@
                        :queue (some-> t .getRx .-queue)})
                   v (#?(:clj .deref :cljs -deref) r)]
               (.setRxCache trackable-fn (assoc m k r))
-              (when debug? (swap! *running inc))
+              (when (boolean *debug?*) (swap! *running inc))
               (when (some? t)
                 (.setRx t r))
               v))))

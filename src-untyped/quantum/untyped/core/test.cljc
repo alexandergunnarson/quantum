@@ -16,10 +16,11 @@
     [quantum.untyped.core.vars
       :refer [defalias defmalias metable?]]))
 
-#?(:clj (defmalias is      clojure.test/is      cljs.test/is     ))
-#?(:clj (defmalias deftest clojure.test/deftest cljs.test/deftest))
-#?(:clj (defmalias testing clojure.test/testing cljs.test/testing))
+#?(:clj (defmalias is      clojure.test/is           cljs.test/is     ))
+#?(:clj (defmalias deftest clojure.test/deftest      cljs.test/deftest))
+#?(:clj (defmalias testing clojure.test/testing      cljs.test/testing))
 #?(:clj (defalias test/test-ns))
+        (defalias test/use-fixtures)
 
 #?(:clj (defn test-nss [& ns-syms] (->> ns-syms (map test-ns) doall)))
 
