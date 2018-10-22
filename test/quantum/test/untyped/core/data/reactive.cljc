@@ -6,6 +6,8 @@
     [quantum.untyped.core.data.reactive :as self
       :refer [dispose! flush! ratom rx]]))
 
+(defn- running [] @@#'self/*running)
+
 (defn test-perf []
   ;; (set! debug? false) ; yes but we need to think about CLJ
   (dotimes [_ 10]
@@ -22,7 +24,7 @@
 
 (deftest basic-ratom
   (binding [self/*enqueue!* @#'self/alist-conj!]
-    (let [runs  @@#'self/*running
+    (let [runs  (running)
           start (ratom 0)
           sv    (rx @start)
           comp  (rx @sv (+ 2 @sv))
@@ -39,10 +41,10 @@
       (is (= @out 3)) ; not correct; showing 2
       (is (<= 2 @ct 3))
       (dispose! const)
-      (is (= @@#'self/*running runs)))))
+      (is (= (running) runs)))))
 
 (deftest double-dependency
-  (let [runs @@#'self/*running
+  (let [runs (running)
         start (ratom 0)
         c3-count (ratom 0)
         c1 (rx @start 1)
@@ -62,10 +64,10 @@
     (is (= @c3 2))
     (is (= @c3-count 2) "t3")
     (dispose! c3)
-    (is (= @@#'self/*running runs))))
+    (is (= (running) runs))))
 
-(deftest test-from-reflex ; https://github.com/reflex-frp/reflex
-  (let [runs @@#'self/*running]
+(deftest test-from-reflex ; https://github.com/lynaghk/reflex
+  (let [runs (running)]
     (let [*counter (ratom 0)
           *signal  (ratom "All I do is change")
           co (self/run!
@@ -85,11 +87,11 @@
       (swap! *x inc)
       (is (= 2 @*co) "CO auto-updates")
       (dispose! *co))
-    (is (= runs @@#'self/*running))))
+    (is (= runs (running)))))
 
 (deftest test-unsubscribe
   (dotimes [x 10]
-    (let [runs @@#'self/*running
+    (let [runs (running)
           a  (ratom 0)
           a1 (rx (inc @a))
           a2 (rx @a)
@@ -127,4 +129,35 @@
       (reset! a -1)
       (is (= @res (+ 2 @a)))
       (dispose! res)
-      (is (= runs @@#'self/*running)))))
+      (is (= runs (running))))))
+
+(deftest maybe-broken
+  (let [runs (running)]
+    (let [runs (running)
+          a    (ratom 0)
+          b    (rx (inc @a))
+          c    (rx (dec @a))
+          d    (rx (str @b))
+          res  (ratom 0)
+          cs   (self/run! (reset! res @d))]
+      (is (= @res "1"))
+      (dispose! cs))
+    ;; should be broken according to https://github.com/lynaghk/reflex/issues/1
+    ;; but isnt
+    (let [a (ratom 0)
+          b (rx (inc @a))
+          c (rx (dec @a))
+          d (self/run! [@b @c])]
+      (is (= @d [1 -1]))
+      (dispose! d))
+    (let [a (ratom 0)
+          b (rx (inc @a))
+          c (rx (dec @a))
+          d (self/run! [@b @c])
+          res (ratom 0)]
+      (is (= @d [1 -1]))
+      (let [e (self/run! (reset! res @d))]
+        (is (= @res [1 -1]))
+        (dispose! e))
+      (dispose! d))
+    (is (= runs (running)))))

@@ -176,7 +176,7 @@
   ([x] (ReactiveAtom. x nil nil nil nil))
   ([x & {:keys [meta validator]}] (ReactiveAtom. x meta validator nil nil)))
 
-;; ===== Reaction ===== ;;
+;; ===== Reaction ("Computed Observable") ===== ;;
 
 ;; Similar to java.io.Closeable
 ;; TODO move
