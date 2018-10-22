@@ -382,3 +382,19 @@
       (dispose! r2)
       (dispose! r3)
       (is (= runs (running))))))
+
+(deftest exception-reporting
+  (binding [self/*enqueue!* @#'self/alist-conj!]
+    (let [runs   (running)
+          state  (ratom {:val 1})
+          rstate (rx (:val @state))
+          r1     (self/run!
+                   (when (= @rstate 13)
+                     (throw (ex-info "fail" {}))))]
+      (swap! state assoc :val 13)
+      (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
+                   (flush! self/global-queue)))
+      (swap! state assoc :val 2)
+      (flush! self/global-queue)
+      (dispose! r1)
+      (is (= runs (running))))))
