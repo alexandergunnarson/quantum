@@ -184,6 +184,8 @@
   (dispose      [this])
   (addOnDispose [this f]))
 
+(defn dispose! [x] (dispose x))
+
 (declare flush! peek-at run-reaction! update-watching!)
 
 ;; TODO
