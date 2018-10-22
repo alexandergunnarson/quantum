@@ -4,7 +4,10 @@
    Includes ReactiveAtom and Reaction; will include Subscription.
 
    Currently only safe for single-threaded use; needs a rethink to accommodate concurrent
-   modification/access and customizable queueing strategies."
+   modification/access and customizable queueing strategies.
+   - We could either introduce concurrency-safe versions of `Reaction` and `ReactiveAtom`, or we
+     could introduce a global single thread on which `Reaction`s and `ReactiveAtom`s are modified,
+     but from which any number of threads can read, in a clojure.async sort of way."
         (:refer-clojure :exclude
           [run!])
         (:require
