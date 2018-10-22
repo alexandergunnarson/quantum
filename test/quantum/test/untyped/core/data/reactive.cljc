@@ -4,7 +4,8 @@
     [quantum.untyped.core.test          :as utest
       :refer [deftest is testing]]
     [quantum.untyped.core.data.reactive :as self
-      :refer [dispose! flush! ratom rx]]))
+      :refer [dispose! flush! ratom rx]]
+    [quantum.untyped.core.error         :as uerr]))
 
 (defn with-debug [f]
   (flush! self/global-queue)
@@ -294,4 +295,26 @@
 
     (reset! a 1)
     (is (= @b 6))
+    (is (= runs (running)))))
+
+(deftest reset-in-reaction
+  (let [runs  (running)
+        state (ratom {})
+        c1    (rx (get-in @state [:data :a]))
+        c2    (rx (get-in @state [:data :b]))
+        rxn   (self/>rx
+                #(let [cc1 @c1
+                       cc2 @c2]
+                  (swap! state assoc :derived (+ (or cc1 0) (or cc2 0)))
+                nil)
+             {:auto-run true :queue self/global-queue})]
+    @rxn
+    (is (= (:derived @state) 0))
+    (swap! state assoc :data {:a 1 :b 2})
+    (flush! self/global-queue)
+    (is (= (:derived @state) 3))
+    (swap! state assoc :data {:a 11 :b 22})
+    (flush! self/global-queue)
+    (is (= (:derived @state) 33))
+    (dispose! rxn)
     (is (= runs (running)))))
