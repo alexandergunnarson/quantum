@@ -284,3 +284,14 @@
     (is (= 16 @b))
     (dispose! b)
     (is (= runs (running)))))
+
+(deftest non-reactive-deref
+  (let [runs (running)
+        a    (ratom 0)
+        b    (self/>rx #(+ 5 @a))]
+    (is (= @b 5))
+    (is (= runs (running)))
+
+    (reset! a 1)
+    (is (= @b 6))
+    (is (= runs (running)))))
