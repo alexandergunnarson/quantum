@@ -112,7 +112,7 @@
 #?(:cljs
 (defn- pr-atom! [a writer opts s]
   (-write writer (str "#<" s " "))
-  (pr-writer (binding [*atom-context* nil] (-deref a)) writer opts)
+  (pr-writer (binding [*atom-context* nil] (-deref ^non-native a)) writer opts)
   (-write writer ">")))
 
 ;; ===== Atom ===== ;;
@@ -198,7 +198,7 @@
                             queue
    ^:!          ^:get ^:set state
    ^:!          ^:get ^:set watching ; i.e. 'dependents'
-   ^:!                      watches]
+   ^:!                      watches] ; TODO consider a mutable map for `watches`
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-atom a w opts (str "Reaction " (hash a) ":")))
    ?Equals {= ([this that] (identical? this that))}
@@ -262,7 +262,8 @@
             (alist-conj! a f)
             (set! (.-on-dispose-arr this) (alist f))))}})
 
-(defn- peek-at [^Reaction rx] (binding [*atom-context* nil] (#?(:clj .deref :cljs -deref) rx)))
+(defn- peek-at [^Reaction rx]
+  (binding [*atom-context* nil] #?(:clj (.deref rx) :cljs (-deref ^non-native rx))))
 
 (defn- in-context
   "When f is executed, if (f) derefs any atoms, they are then added to
@@ -298,17 +299,15 @@
 
 (defn- run-reaction! [^Reaction rx check?]
   (let [old-state (.getState rx)
-        res (if check?
+        new-state (if check?
                 (try-capture! rx (.-f rx))
                 (deref-capture! (.-f rx) rx))]
     (when-not (.-no-cache? rx)
-      (.setState rx res)
-      ;; Use = to determine equality from reactions, since
-      ;; they are likely to produce new data structures.
+      (.setState rx new-state)
       (when-not (or (nil? (.getWatches rx))
-                    (= old-state res))
-        (notify-w! rx old-state res)))
-    res))
+                    ((.-eq-fn rx) old-state new-state))
+        (notify-w! rx old-state new-state)))
+    new-state))
 
 (defn- handle-reaction-change! [^Reaction rx sender oldv newv]
   (when-not (or (identical? oldv newv) (not (.getComputed rx)))
@@ -319,11 +318,11 @@
 
 (defn- update-watching! [^Reaction rx derefed]
   (let [new (set derefed) ; TODO incrementally calculate `set`
-        old (set (.getWatching rx))]
+        old (set (.getWatching rx))] ; TODO incrementally calculate `set`
     (.setWatching rx derefed)
-    (doseq [w (set/difference new old)]
+    (doseq [w (set/difference new old)] ; TODO optimize
       (#?(:clj add-watch    :cljs -add-watch)    w rx handle-reaction-change!))
-    (doseq [w (set/difference old new)]
+    (doseq [w (set/difference old new)] ; TODO optimize
       (#?(:clj remove-watch :cljs -remove-watch) w rx))))
 
 (defn- run-reaction-from-queue! [^Reaction rx]
@@ -398,7 +397,7 @@
                     (if (nil? rx)
                         (cached-reaction #(apply (.-f trackable-fn) args)
                           trackable-fn args this nil)
-                        (#?(:clj .deref :cljs -deref) rx)))}}
+                        #?(:clj (.deref rx) :cljs (-deref ^non-native rx))))}}
    ?Equals {=     ([_ other]
                     (and (instance? Track other)
                          (-> ^Track other .-trackable-fn .-f (= (.-f trackable-fn)))
@@ -410,7 +409,7 @@
                   m (if (nil? m) {} m)
         ^Reaction r (m k nil)]
     (cond
-      (some? r) (#?(:clj .deref :cljs -deref) r)
+      (some? r) #?(:clj (.deref r) :cljs (-deref ^non-native r))
       (nil? *atom-context*) (f)
       :else (let [r (>rx f
                       {:on-dispose
@@ -425,7 +424,7 @@
                             (destroy-fn x)))
                        ;; Inherits the queue
                        :queue (some-> t .getRx .-queue)})
-                  v (#?(:clj .deref :cljs -deref) r)]
+                  v #?(:clj (.deref r) :cljs (-deref ^non-native r))]
               (.setRxCache trackable-fn (assoc m k r))
               (when (true? *debug?*) (swap! *running inc))
               (when (some? t)
@@ -436,7 +435,7 @@
 
 (defn >track! [f args opts]
   (let [t (>track f args)
-        r (>rx #(#?(:clj .deref :cljs -deref) t)
+        r (>rx (fn [] #?(:clj (.deref t) :cljs (-deref ^non-native t)))
                {:queue (or (:queue opts) global-queue)})]
     @r
     r))
