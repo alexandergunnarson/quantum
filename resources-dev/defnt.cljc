@@ -59,13 +59,20 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         - Non-constant types should trigger a chain-reaction of recompilations for its
           dependents/watchers when they change:
           - t/input-type
+            - changed via `t/extend-defn!`
           - t/output-type
+            - changed via `t/extend-defn!`
           - `t/defn` that gets extended via `t/extend-defn!` (if the input-types and output-types have
             changed)
         - Examples
-          - (rx/rx @(t/output-type ...))
-        - We want the reactivity to be explicit somehow but perhaps we want to hide the implementation?:
-          - (t/rx @(t/output-type ...))
+          - (t/rx @(t/rx-input-type ...))
+          - (t/rx @(t/rx-output-type ...))
+          - One could imagine a dynamic set of types corresponding to a given predicate, e.g.
+            `decimal?`. Say someone comes up with a new `decimal?`-like class and wants to redefine
+            `decimal?` to accommodate. We could define `decimal?` as a reactive/extensible type to
+            do this. However, it seems preferable to instead define a marker protocol called
+            `PDecimal` or some such and put that on the defined `deftype` itself, and incorporate
+            `PDecimal` into `decimal?` from the start.
   [2] - Direct dispatch needs to actually work correctly in typed contexts
   [3] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.
