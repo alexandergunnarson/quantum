@@ -538,3 +538,14 @@
   (is= string?                      (t/output-type >namespace|type))
   (is= (t/or char-seq? comparable?) (t/output-type reduce|type))
   (is= char-seq?                    (t/output-type reduce|type [:_ :_ string?])))
+
+(deftest test|rx
+  (testing "="
+              ;; TODO use a generator
+    (doseq [gen-t [#(t/isa? #?(:clj Double :cljs js/Number))
+                   #(do t/empty-set)
+                   #(do t/universal-set)
+                   #(t/value 1)
+                   #(t/value "abc")
+                   #(t/or (t/isa? #?(:clj Double :cljs js/Number)) (t/value "abc"))]]
+      (= (t/rx (gen-t)) (t/rx (gen-t))))))

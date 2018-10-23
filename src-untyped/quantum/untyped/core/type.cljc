@@ -28,6 +28,7 @@
            [quantum.untyped.core.core                  :as ucore]
            [quantum.untyped.core.data.bits             :as ubit]
            [quantum.untyped.core.data.hash             :as uhash]
+           [quantum.untyped.core.data.reactive         :as urx]
            [quantum.untyped.core.data.set              :as uset
              :refer [<ident =ident >ident ><ident <>ident]]
            [quantum.untyped.core.data.tuple]
@@ -37,6 +38,8 @@
              :refer [err! TODO catch-all]]
            [quantum.untyped.core.fn                    :as ufn
              :refer [fn1 rcomp <- fn->]]
+           [quantum.untyped.core.form
+             :refer [$]]
            [quantum.untyped.core.form.generate.deftype :as udt]
            [quantum.untyped.core.identifiers
              :refer [>symbol]]
@@ -70,7 +73,8 @@
               NotType OrType AndType
               ProtocolType ClassType UnorderedType OrderedType
               ValueType
-              FnType])))
+              FnType
+              ReactiveType])))
 
 (ucore/log-this-ns)
 
@@ -95,6 +99,16 @@
 ;; ----- EmptySetType (`t/∅`) ----- ;;
 
 (uvar/defalias utr/empty-set)
+
+;; ----- ReactiveType (`t/rx`) ----- ;;
+
+(defns rx* [r urx/reactive?, body-codelist _ > utr/reactive-type?]
+  (ReactiveType. uhash/default uhash/default nil body-codelist nil r))
+
+#?(:clj
+(defmacro rx
+  "The only macro in all of the core type predicates."
+  [& body] `(rx* (urx/rx ~@body) ($ ~(vec body)))))
 
 ;; ----- NotType (`t/not` / `t/!`) ----- ;;
 

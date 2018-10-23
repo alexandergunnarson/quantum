@@ -2,6 +2,7 @@
           (:refer-clojure :exclude
             [==])
           (:require
+            [clojure.core                               :as core]
             [clojure.set                                :as set]
             [fipp.ednize                                :as fedn]
             [quantum.untyped.core.analyze.expr
@@ -10,11 +11,11 @@
               :refer [== not==]]
             [quantum.untyped.core.core                  :as ucore]
             [quantum.untyped.core.data.hash             :as uhash]
-
+            [quantum.untyped.core.data.reactive         :as urx]
             [quantum.untyped.core.defnt
               :refer [defns]]
             [quantum.untyped.core.error
-              :refer [TODO]]
+              :refer [err! TODO]]
             [quantum.untyped.core.form                  :as uform
               :refer [>form]]
             [quantum.untyped.core.form.generate.deftype :as udt]
@@ -414,3 +415,51 @@
       (fn [x] (-> x (update :output-type-pair :type)
                     (update :input-types vec)
                     (set/rename-keys {:output-type-pair :output-type}))))))
+
+;; ----- ReactiveType ----- ;;
+
+(defn- validate-type [x]
+  (or (type? x)
+      (err! "Found non-type when derefing `ReactiveType`"
+            {:kind (core/type x)})))
+
+(udt/deftype ReactiveType
+  [#?(:clj ^int ^:! hash      :cljs ^number ^:! hash)
+   #?(:clj ^int ^:! hash-code :cljs ^number ^:! hash-code)
+       meta          #_(t/? ::meta)
+       body-codelist #_(t/seq-of form?)
+   ^:! v             #_(t/? type?)
+       rx            #_(t/isa? urx/PReactive)]
+  {PType          nil
+   urx/PReactive  nil
+   ?Fn            {invoke    ([_ x] (let [t (urx/norx-deref rx)]
+                                      (validate-type t)
+                                      (t x)))}
+   ?Meta          {meta      ([this] meta)
+                   with-meta ([this meta'] (ReactiveType. hash hash-code meta' body-codelist v rx))}
+   ?Hash          {hash      ([this] (let [v' (urx/norx-deref rx)]
+                                       (if (identical? v' v)
+                                           (uhash/caching-set-ordered! hash ReactiveType v)
+                                           (do (validate-type v')
+                                               (set! v v')
+                                               (set! hash (uhash/ordered-args ReactiveType v'))))))
+                   hash-code ([this] (let [v' (urx/norx-deref rx)]
+                                       (if (identical? v' v)
+                                           (uhash/caching-set-code! hash-code ReactiveType v)
+                                           (do (validate-type v')
+                                               (set! v v')
+                                               (set! hash-code
+                                                     (uhash/code-args ReactiveType v'))))))}
+   ?Equals        {=         ([this that #_any?]
+                               (or (== this that)
+                                   (and (instance? ReactiveType that)
+                                        ;; TODO determine if this should be reactive or not
+                                        (= (doto (urx/norx-deref rx) validate-type)
+                                           (urx/norx-deref that)))))}
+   ?Deref         {deref     ([this] (doto @rx validate-type))}
+   uform/PGenForm {>form     ([this] (-> (list* 'quantum.untyped.core.type/rx body-codelist)
+                                         (accounting-for-meta meta)))}
+   fedn/IOverride nil
+   fedn/IEdn      {-edn      ([this] (>form this))}})
+
+(defn reactive-type? [x] (instance? ReactiveType x))
