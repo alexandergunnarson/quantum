@@ -18,6 +18,7 @@
 #?(:clj (prefer-method print-method fipp.ednize.IEdn clojure.lang.IPersistentMap))
 #?(:clj (prefer-method print-method fipp.ednize.IEdn java.util.Map))
 #?(:clj (prefer-method print-method fipp.ednize.IEdn clojure.lang.ISeq))
+#?(:clj (prefer-method print-method fipp.ednize.IEdn clojure.lang.IDeref))
 #?(:clj (prefer-method print-method clojure.lang.IRecord Throwable))
 
 #?(:clj (in-ns 'fipp.visit))
