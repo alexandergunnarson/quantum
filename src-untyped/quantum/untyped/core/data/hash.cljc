@@ -19,6 +19,13 @@
 (def mix       mix-collection-hash)
 
 #?(:clj
+;; Macro for efficiency; we will demacro in the typed version
+(defmacro unordered-args [& args]
+  `(-> 0 ~@(->> args (map (fn [arg] `(unchecked-add-int (hash ~arg)))))
+         (mix-collection-hash ~(count args))
+         int)))
+
+#?(:clj
 (defmacro caching-set-unordered!
   "Tries to retrive an cached unordered hash value at the provided field. If not found, sets the
    field with an unordered hash value computed using the provided args.
@@ -26,11 +33,17 @@
    See also https://clojure.org/reference/data_structures."
   [field #_simple-symbol? & args]
   `(if (identical? ~field default)
-       (set! ~field
-         (-> 0 ~@(->> args (map (fn [arg] `(unchecked-add-int (hash ~arg)))))
-               (mix-collection-hash ~(count args))
-               int))
+       (set! ~field (unordered-args ~@args))
        ~field)))
+
+#?(:clj
+;; Macro for efficiency; we will demacro in the typed version
+(defmacro ordered-args [& args]
+  `(-> 1 ~@(->> args (map (fn [arg]
+                           `(-> (unchecked-multiply-int 31)
+                                (unchecked-add-int (hash ~arg))))))
+        (mix-collection-hash ~(count args))
+        int)))
 
 #?(:clj
 (defmacro caching-set-ordered!
@@ -40,17 +53,13 @@
    See also https://clojure.org/reference/data_structures."
   [field #_simple-symbol? & args]
   `(if (identical? ~field default)
-       (set! ~field
-         (-> 1 ~@(->> args (map (fn [arg]
-                                  `(-> (unchecked-multiply-int 31)
-                                       (unchecked-add-int (hash ~arg))))))
-               (mix-collection-hash ~(count args))
-               int))
+       (set! ~field (ordered-args ~@args))
        ~field)))
 
-(defn hash-unordered [collection]
-  (-> (reduce unchecked-add-int 0 (map hash collection))
-      (mix-collection-hash (count collection))))
+#?(:clj
+;; Macro for efficiency; we will demacro in the typed version
+(defmacro code-args [& args]
+  `(-> 0 ~@(->> args (map (fn [arg] `(unchecked-add-int (code ~arg))))))))
 
 #?(:clj
 (defmacro caching-set-code!
@@ -58,5 +67,5 @@
    with a computed hash-code using the sum of the hash-codes of the provided args."
   [field #_simple-symbol? & args]
   `(if (identical? ~field default)
-       (set! ~field (-> 0 ~@(->> args (map (fn [arg] `(unchecked-add-int (code ~arg)))))))
+       (set! ~field (code-args ~@args))
        ~field)))
