@@ -262,11 +262,44 @@
           (@#'cljs.core/build-positional-factory t r fields))
        ~t))))
 
+(defn- parse-impls
+  "Exists because `clojure.core/parse-impls` overwrites when interface, impls, same interface, more
+   impls."
+  {:adapted-from 'clojure.core/parse-impls}
+  [specs]
+  (loop [ret {} s specs]
+    (if (seq s)
+      (recur (update ret (first s) #(concat % (take-while seq? (next s))))
+             (drop-while seq? (next s)))
+      ret)))
+
+(defn- parse-opts+specs
+  "Exists because `clojure.core/parse-impls` overwrites when interface, impls, same interface, more
+   impls."
+  {:adapted-from 'clojure.core/parse-opts+specs}
+  [opts+specs]
+  (let [[opts specs] (@#'clojure.core/parse-opts opts+specs)
+        impls (parse-impls specs)
+        interfaces (-> (map #(if (var? (resolve %))
+                               (:on (deref (resolve %)))
+                               %)
+                            (keys impls))
+                       set
+                       (disj 'Object 'java.lang.Object)
+                       vec)
+        methods (->> impls vals (apply concat)
+                     (map (fn [[name params & body]]
+                            (cons name (@#'clojure.core/maybe-destructured params body)))))]
+    (when-let [bad-opts (seq (remove #{:no-print :load-ns} (keys opts)))]
+      (throw (IllegalArgumentException.
+               ^String (apply print-str "Unsupported option(s) -" bad-opts))))
+    [interfaces methods opts]))
+
 #?(:clj
 (defn- deftype|clj [env name fields & opts+specs]
   (@#'clojure.core/validate-fields fields name)
   (let [gname name
-        [interfaces methods opts] (@#'clojure.core/parse-opts+specs opts+specs)
+        [interfaces methods opts] (parse-opts+specs opts+specs)
         ns-part                   (namespace-munge *ns*)
         classname                 (symbol (str ns-part "." gname))
         hinted-fields             fields
