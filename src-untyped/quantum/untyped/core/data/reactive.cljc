@@ -77,11 +77,14 @@
 
 (defonce global-queue (alist))
 
-(defn #?(:clj reactive? :cljs ^boolean reactive?) [] (some? *atom-context*))
-
 (defn- check-watches [old new]
   (when (true? *debug?*) (swap! *running + (- (count new) (count old))))
   new)
+
+(defn norx-deref [rx]
+  (binding [*atom-context* nil]
+    #?(:clj  (.deref ^clojure.lang.IDeref rx)
+       :cljs (-deref ^non-native          rx))))
 
 (defprotocol PWatchable
   (getWatches [this])
@@ -137,7 +140,7 @@
 (udt/deftype Atom [^:! state meta validator ^:! watches]
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-atom a w opts "Atom:"))
-   PReactiveAtom {}
+   PReactive nil
    ?Equals {=      ([this that] (identical? this that))}
    ?Deref  {deref  ([this]
                      (notify-deref-watcher! this)
@@ -181,7 +184,7 @@
 (defn dispose!        [x]   (dispose      x))
 (defn add-on-dispose! [x f] (addOnDispose x f))
 
-(declare flush! peek-at run-reaction! update-watching!)
+(declare flush! run-reaction! update-watching!)
 
 (udt/deftype Reaction
   [^:! ^boolean ^:get       alwaysRecompute
@@ -203,7 +206,7 @@
    ;;   (-pr-writer [a w opts] (pr-atom a w opts (str "Reaction " (hash a) ":")))
    ?Equals {= ([this that] (identical? this that))}
 #?@(:cljs [?Hash {hash ([this] (goog/getUid this))}])
-   PReactive  {}
+   PReactive  nil
    ?Deref     {deref ([this]
                        (if-not (nil? caught)
                          (throw caught)
@@ -236,10 +239,10 @@
                   ((.-on-set a) oldv newv)
                   (notify-w! a oldv newv)
                   newv))
-      swap!  (([a f]          (#?(:clj .reset :cljs -reset!) a (f (peek-at a))))
-              ([a f x]        (#?(:clj .reset :cljs -reset!) a (f (peek-at a) x)))
-              ([a f x y]      (#?(:clj .reset :cljs -reset!) a (f (peek-at a) x y)))
-              ([a f x y more] (#?(:clj .reset :cljs -reset!) a (apply f (peek-at a) x y more))))}
+      swap!  (([a f]          (#?(:clj .reset :cljs -reset!) a (f (norx-deref a))))
+              ([a f x]        (#?(:clj .reset :cljs -reset!) a (f (norx-deref a) x)))
+              ([a f x y]      (#?(:clj .reset :cljs -reset!) a (f (norx-deref a) x y)))
+              ([a f x y more] (#?(:clj .reset :cljs -reset!) a (apply f (norx-deref a) x y more))))}
   PHasCaptured
     {getCaptured ([this]   captured)
      setCaptured ([this v] (set! captured v))}
@@ -261,9 +264,6 @@
           (if-some [a (.-on-dispose-arr this)]
             (alist-conj! a f)
             (set! (.-on-dispose-arr this) (alist f))))}})
-
-(defn- peek-at [^Reaction rx]
-  (binding [*atom-context* nil] #?(:clj (.deref rx) :cljs (-deref ^non-native rx))))
 
 (defn- in-context
   "When f is executed, if (f) derefs any atoms, they are then added to
@@ -392,7 +392,7 @@
   [^TrackableFn trackable-fn, args, ^:! ^:get ^:set ^quantum.untyped.core.data.reactive.Reaction rx]
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-atom a w opts "Track:"))
-   PReactive {}
+   PReactive nil
    ?Deref  {deref ([this]
                     (if (nil? rx)
                         (cached-reaction #(apply (.-f trackable-fn) args)
@@ -439,3 +439,5 @@
                {:queue (or (:queue opts) global-queue)})]
     @r
     r))
+
+(defn #?(:clj reactive? :cljs ^boolean reactive?) [x] (satisfies? PReactive x))
