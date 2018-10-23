@@ -65,8 +65,11 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - `t/defn` that gets extended via `t/extend-defn!` (if the input-types and output-types have
             changed)
         - Examples
+          - Every `t/` needs to accommodate for reactive types now
+          - t/defn needs to emit a reactive ftype in its `::type` meta
+          - quantum.untyped.core.data.reactive
           - (t/input-type ...)
-            - This returns a `PReactive` in an arglist context for extensible targets (i.e. `t/defn`
+            - This returns a `PReactive` for extensible targets (i.e. `t/defn`
               but not `t/fn`). This is because the `:type` of a `defn` is reactive.
             - Thus there is no special behavior for `input|output-type` but just special behavior
               for the underlying type.
