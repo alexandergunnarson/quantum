@@ -6,7 +6,7 @@
     [quantum.untyped.core.test          :as utest
       :refer [deftest is is= testing]]
     [quantum.untyped.core.data.reactive :as rx
-      :refer [dispose! eager-rx flush! rx]]))
+      :refer [! !eager-rx !run-rx !rx >!rx dispose! flush!]]))
 
 (defn with-debug [f]
   (flush! rx/global-queue)
@@ -19,10 +19,10 @@
 (defn test-perf []
   ;; (set! debug? false) ; yes but we need to think about CLJ
   (dotimes [_ 10]
-    (let [a   (rx/atom 0)
+    (let [a   (! 0)
           f   (fn [] (quot (long @a) 10))
           q   (@#'rx/alist)
-          mid (rx/>rx f {:queue q})
+          mid (>!rx f {:queue q})
           res (rx/>track! (fn [] (inc (long @mid))) [] {:queue q})]
       @res
       (time (dotimes [_ 100000] ; ~70ms per 100K in CLJ so 0.0007ms for one (0.7 µs or 700 ns)
@@ -33,14 +33,14 @@
 (deftest basic-atom
   (binding [rx/*enqueue!* @#'rx/alist-conj!]
     (let [runs  (running)
-          start (rx/atom 0)
-          sv    (eager-rx @start)
-          comp  (eager-rx @sv (+ 2 @sv))
-          c2    (eager-rx (inc @comp))
-          ct    (rx/atom 0)
-          out   (rx/atom 0)
-          res   (eager-rx (swap! ct inc) @sv @c2 @comp)
-          const (rx/run! (reset! out @res))]
+          start (! 0)
+          sv    (!eager-rx @start)
+          comp  (!eager-rx @sv (+ 2 @sv))
+          c2    (!eager-rx (inc @comp))
+          ct    (! 0)
+          out   (! 0)
+          res   (!eager-rx (swap! ct inc) @sv @c2 @comp)
+          const (!run-rx (reset! out @res))]
       (is (= @ct 1) "constrain ran")
       (is (= @out 2))
       (reset! start 1)
@@ -52,11 +52,11 @@
 
 (deftest double-dependency
   (let [runs     (running)
-        start    (rx/atom 0)
-        c3-count (rx/atom 0)
-        c1       (eager-rx @start 1)
-        c2       (eager-rx @start)
-        c3       (rx (swap! c3-count inc)
+        start    (! 0)
+        c3-count (! 0)
+        c1       (!eager-rx @start 1)
+        c2       (!eager-rx @start)
+        c3       (!rx (swap! c3-count inc)
                      (+ @c1 @c2))]
     (flush! rx/global-queue)
     (is (= @c3-count 0))
@@ -72,17 +72,17 @@
 
 (deftest test-from-reflex ; https://github.com/lynaghk/reflex
   (let [runs (running)]
-    (let [*counter (rx/atom 0)
-          *signal  (rx/atom "All I do is change")
-          co (rx/run! @*signal (swap! *counter inc))]
+    (let [*counter (! 0)
+          *signal  (! "All I do is change")
+          co (!run-rx @*signal (swap! *counter inc))]
       (is (= 1 @*counter) "Constraint run on init")
       (reset! *signal "foo")
       (flush! rx/global-queue)
       (is (= 2 @*counter)
           "Counter auto updated")
       (dispose! co))
-    (let [*x  (rx/atom 0)
-          *co (rx (inc @*x))]
+    (let [*x  (! 0)
+          *co (!rx (inc @*x))]
       (is (= 1 @*co) "CO has correct value on first deref")
       (swap! *x inc)
       (is (= 2 @*co) "CO auto-updates")
@@ -92,18 +92,18 @@
 (deftest test-unsubscribe
   (dotimes [x 10]
     (let [runs      (running)
-          a         (rx/atom 0)
-          a1        (eager-rx (inc @a))
-          a2        (eager-rx @a)
-          b-changed (rx/atom 0)
-          c-changed (rx/atom 0)
-          b         (eager-rx
+          a         (! 0)
+          a1        (!eager-rx (inc @a))
+          a2        (!eager-rx @a)
+          b-changed (! 0)
+          c-changed (! 0)
+          b         (!eager-rx
                       (swap! b-changed inc)
                       (inc @a1))
-          c         (eager-rx
+          c         (!eager-rx
                       (swap! c-changed inc)
                       (+ 10 @a2))
-          res       (rx/run! (if (< @a2 1) @b @c))]
+          res       (!run-rx (if (< @a2 1) @b @c))]
       (is (= @res (+ 2 @a)))
       (is (= @b-changed 1))
       (is (= @c-changed 0))
@@ -136,29 +136,29 @@
 (deftest maybe-broken
   (let [runs (running)]
     (let [runs (running)
-          a    (rx/atom 0)
-          b    (eager-rx (inc @a))
-          c    (eager-rx (dec @a))
-          d    (eager-rx (str @b))
-          res  (rx/atom 0)
-          cs   (rx/run! (reset! res @d))]
+          a    (! 0)
+          b    (!eager-rx (inc @a))
+          c    (!eager-rx (dec @a))
+          d    (!eager-rx (str @b))
+          res  (! 0)
+          cs   (!run-rx (reset! res @d))]
       (is (= @res "1"))
       (dispose! cs))
     ;; should be broken according to https://github.com/lynaghk/reflex/issues/1
     ;; but isnt
-    (let [a (rx/atom 0)
-          b (eager-rx (inc @a))
-          c (eager-rx (dec @a))
-          d (rx/run! [@b @c])]
+    (let [a (! 0)
+          b (!eager-rx (inc @a))
+          c (!eager-rx (dec @a))
+          d (!run-rx [@b @c])]
       (is (= @d [1 -1]))
       (dispose! d))
-    (let [a (rx/atom 0)
-          b (eager-rx (inc @a))
-          c (eager-rx (dec @a))
-          d (rx/run! [@b @c])
-          res (rx/atom 0)]
+    (let [a (! 0)
+          b (!eager-rx (inc @a))
+          c (!eager-rx (dec @a))
+          d (!run-rx [@b @c])
+          res (! 0)]
       (is (= @d [1 -1]))
-      (let [e (rx/run! (reset! res @d))]
+      (let [e (!run-rx (reset! res @d))]
         (is (= @res [1 -1]))
         (dispose! e))
       (dispose! d))
@@ -168,21 +168,21 @@
   (binding [rx/*enqueue!* @#'rx/alist-conj!]
     (dotimes [x 10]
       (let [runs         (running)
-            a            (rx/atom 0)
-            disposed     (rx/atom nil)
-            disposed-c   (rx/atom nil)
-            disposed-cns (rx/atom nil)
-            count-b      (rx/atom 0)
-            b   (rx/>rx (fn [] (swap! count-b inc) (inc @a))
+            a            (! 0)
+            disposed     (! nil)
+            disposed-c   (! nil)
+            disposed-cns (! nil)
+            count-b      (! 0)
+            b   (>!rx (fn [] (swap! count-b inc) (inc @a))
                         {:always-recompute? true
                          :on-dispose        (fn [r] (reset! disposed true))
                          :queue             rx/global-queue})
-            c   (rx/>rx #(if (< @a 1) (inc @b) (dec @a))
+            c   (>!rx #(if (< @a 1) (inc @b) (dec @a))
                         {:always-recompute? true
                          :on-dispose        (fn [r] (reset! disposed-c true))
                          :queue             rx/global-queue})
-            res (rx/atom nil)
-            cns (rx/>rx #(reset! res @c)
+            res (! nil)
+            cns (>!rx #(reset! res @c)
                         {:on-dispose (fn [r] (reset! disposed-cns true))
                          :queue      rx/global-queue})]
         @cns
@@ -219,15 +219,15 @@
 (deftest test-add-dispose
   (dotimes [x 10]
     (let [runs         (running)
-          a            (rx/atom 0)
-          disposed     (rx/atom nil)
-          disposed-c   (rx/atom nil)
-          disposed-cns (rx/atom nil)
-          count-b      (rx/atom 0)
-          b            (eager-rx (swap! count-b inc) (inc @a))
-          c            (eager-rx (if (< @a 1) (inc @b) (dec @a)))
-          res          (rx/atom nil)
-          cns          (rx (reset! res @c))]
+          a            (! 0)
+          disposed     (! nil)
+          disposed-c   (! nil)
+          disposed-cns (! nil)
+          count-b      (! 0)
+          b            (!eager-rx (swap! count-b inc) (inc @a))
+          c            (!eager-rx (if (< @a 1) (inc @b) (dec @a)))
+          res          (! nil)
+          cns          (!rx (reset! res @c))]
       (rx/add-on-dispose! b (fn [r]
                                 (is (= r b))
                                 (reset! disposed true)))
@@ -265,8 +265,8 @@
 
 (deftest test-on-set
   (let [runs (running)
-        a (rx/atom 0)
-        b (rx/>rx #(+ 5 @a)
+        a (! 0)
+        b (>!rx #(+ 5 @a)
                   {:on-set (fn [oldv newv] (reset! a (+ 10 newv)))
                    :queue  rx/global-queue})]
     @b
@@ -281,8 +281,8 @@
 
 (deftest non-reactive-deref
   (let [runs (running)
-        a    (rx/atom 0)
-        b    (eager-rx (+ 5 @a))]
+        a    (! 0)
+        b    (!eager-rx (+ 5 @a))]
     (is (= @b 5))
     (is (= runs (running)))
 
@@ -292,10 +292,10 @@
 
 (deftest reset-in-reaction
   (let [runs  (running)
-        state (rx/atom {})
-        c1    (eager-rx (get-in @state [:data :a]))
-        c2    (eager-rx (get-in @state [:data :b]))
-        rxn   (rx (let [cc1 @c1, cc2 @c2]
+        state (! {})
+        c1    (!eager-rx (get-in @state [:data :a]))
+        c2    (!eager-rx (get-in @state [:data :b]))
+        rxn   (!rx (let [cc1 @c1, cc2 @c2]
                     (swap! state assoc :derived (+ (or cc1 0) (or cc2 0)))
                     nil))]
     @rxn
@@ -311,9 +311,9 @@
 
 (deftest exception-recover
   (let [runs  (running)
-        state (rx/atom 1)
-        count (rx/atom 0)
-        r     (rx/run!
+        state (! 1)
+        count (! 0)
+        r     (!run-rx
                 (swap! count inc)
                 (when (> @state 1) (throw (ex-info "oops" {}))))]
     (is (= @count 1))
@@ -329,11 +329,11 @@
 
 (deftest exception-recover-indirect
   (let [runs  (running)
-        state (rx/atom 1)
-        count (rx/atom 0)
-        ref   (eager-rx (when (= @state 2)
+        state (! 1)
+        count (! 0)
+        ref   (!eager-rx (when (= @state 2)
                           (throw (ex-info "err" {}))))
-        r (rx/run!
+        r (!run-rx
             (swap! count inc)
             @ref)]
     (is (= @count 1))
@@ -351,15 +351,15 @@
 (deftest exception-side-effect
   (binding [rx/*enqueue!* @#'rx/alist-conj!]
     (let [runs   (running)
-          state  (rx/atom {:val 1})
-          rstate (eager-rx @state)
+          state  (! {:val 1})
+          rstate (!eager-rx @state)
           spy    (atom nil)
-          r1     (rx/run! @rstate)
-          r2     (let [val (eager-rx (:val @rstate))]
-                   (rx/run!
+          r1     (!run-rx @rstate)
+          r2     (let [val (!eager-rx (:val @rstate))]
+                   (!run-rx
                      (reset! spy @val)
                      (is (some? @val))))
-          r3     (rx/run!
+          r3     (!run-rx
                    (when (:error? @rstate)
                      (throw (ex-info "Error detected!" {}))))]
       (swap! state assoc :val 2)
@@ -377,9 +377,9 @@
 (deftest exception-reporting
   (binding [rx/*enqueue!* @#'rx/alist-conj!]
     (let [runs   (running)
-          state  (rx/atom {:val 1})
-          rstate (eager-rx (:val @state))
-          r1     (rx/run!
+          state  (! {:val 1})
+          rstate (!eager-rx (:val @state))
+          r1     (!run-rx
                    (when (= @rstate 13)
                      (throw (ex-info "fail" {}))))]
       (swap! state assoc :val 13)
@@ -393,20 +393,20 @@
 (deftest atom-with-meta
   (let [value      {:val 1}
         meta-value {:meta-val 1}
-        state      (with-meta (rx/atom value) meta-value)]
+        state      (with-meta (! value) meta-value)]
     (is (= (meta state) meta-value))
     (is (= @state value))))
 
 (deftest test-eager-vs-lazy-reaction
-  (let [a         (rx/atom 123)
+  (let [a         (! 123)
         b-ct      (atom 0)
-        b         (eager-rx (swap! b-ct inc) (+ @a  2))
+        b         (!eager-rx (swap! b-ct inc) (+ @a  2))
         c-ct      (atom 0)
-        c         (eager-rx (swap! c-ct inc) (* @b -1))
+        c         (!eager-rx (swap! c-ct inc) (* @b -1))
         b-lazy-ct (atom 0)
-        b-lazy    (rx (swap! b-lazy-ct inc) (+ @a       2))
+        b-lazy    (!rx (swap! b-lazy-ct inc) (+ @a       2))
         c-lazy-ct (atom 0)
-        c-lazy    (rx (swap! c-lazy-ct inc) (* @b-lazy -1))]
+        c-lazy    (!rx (swap! c-lazy-ct inc) (* @b-lazy -1))]
     (testing "eager"
       @c
       (is= @b-ct 1)
