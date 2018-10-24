@@ -14,6 +14,7 @@
         (:refer-clojure :exclude
           [atom run!])
         (:require
+          [clojure.core                               :as core]
           [clojure.set                                :as set]
           [quantum.untyped.core.async                 :as uasync]
           [quantum.untyped.core.core
@@ -73,7 +74,7 @@
 
 (def ^:dynamic #?(:clj *debug?* :cljs ^boolean *debug?*) false)
 
-(defonce- *running (atom 0))
+(defonce- *running (core/atom 0))
 
 (defonce global-queue (alist))
 

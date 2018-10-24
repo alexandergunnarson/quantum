@@ -102,22 +102,6 @@
 
 ;; ----- ReactiveType (`t/rx`) ----- ;;
 
-(defn- deref-when-reactive [x]
-  (if (utr/reactive-type? x)
-      @x
-      x))
-
-(defns- separate-rx-and-apply
-  "Only works for commutative functions."
-  [f fn?, type-args (fn-> count (c/> 1)) > utr/type?]
-  ;; For efficiency, so as much as possible gets run outside a reaction
-  (if-let [rx-args (->> type-args (filter utr/reactive-type?) seq)]
-    (if-let [norx-args (->> type-args (remove utr/reactive-type?) seq)]
-      (let [t (f norx-args)]
-        (rx (f (cons t (map deref rx-args)))))
-      (rx (f (map deref rx-args))))
-    (f type-args)))
-
 (defns rx* [r urx/reactive?, body-codelist _ > utr/reactive-type?]
   (ReactiveType. uhash/default uhash/default nil body-codelist nil r))
 
@@ -130,6 +114,22 @@
    Note that if a type-generating fn (e.g. `and` or `or`) is provided with even one reactive input,
    then the whole type will become reactive. Thus, reactivity is 'infectious'."
   [& body] `(rx* (urx/rx ~@body) ($ ~(vec body)))))
+
+(defn- deref-when-reactive [x]
+  (if (utr/reactive-type? x)
+      @x
+      x))
+
+(defns- separate-rx-and-apply
+  "Only works for commutative functions."
+  [f c/fn?, type-args (fn-> count (c/> 1)) > utr/type?]
+  ;; For efficiency, so as much as possible gets run outside a reaction
+  (if-let [rx-args (->> type-args (filter utr/reactive-type?) seq)]
+    (if-let [norx-args (->> type-args (remove utr/reactive-type?) seq)]
+      (let [t (f norx-args)]
+        (rx (f (cons t (map deref rx-args)))))
+      (rx (f (map deref rx-args))))
+    (f type-args)))
 
 ;; ----- NotType (`t/not` / `t/!`) ----- ;;
 
@@ -156,7 +156,7 @@
     comparison-denotes-supersession?|or ts))
 
 (defn or
-  "Sequential/ordered `or`. Analogous to `set/union`.
+  "Unordered `or`. Analogous to `set/union`.
    Applies as much 'compression'/deduplication/simplification as possible to the supplied types.
    Effectively computes the union of the extension of the ->`ts`."
   ([] empty-set)
@@ -174,7 +174,7 @@
     comparison-denotes-supersession?|and ts))
 
 (defn and
-  "Sequential/ordered `and`. Analogous to `set/intersection`.
+  "Unordered `and`. Analogous to `set/intersection`.
    Applies as much 'compression'/deduplication/simplification as possible to the supplied types.
    Effectively computes the intersection of the extension of the ->`ts`."
   ([] universal-set)
@@ -244,7 +244,7 @@
            (err! "Not every element of finite type data is a type")
          (seq-or utr/reactive-type? data)
            (rx (OrderedType. uhash/default uhash/default nil
-                 (->> data (uc/map+ deref-when-reactive) uc/frequencies) nil))
+                 (->> data (uc/map deref-when-reactive)) nil))
          (OrderedType. uhash/default uhash/default nil data nil)))
   ([datum _ & data _ > utr/ordered-type?] (ordered (cons datum data))))
 

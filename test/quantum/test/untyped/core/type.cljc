@@ -136,7 +136,7 @@
 
 (def protocol-types
   (->> [AProtocolAll AProtocolString AProtocolNonNil AProtocolOnlyNil AProtocolNone]
-       (map t/>type) set))
+       (map t/isa?) set))
 
 )
 
@@ -510,8 +510,11 @@
                        (t/unordered (t/value :g) (t/value :h))
                        (t/unordered (t/value :i) (t/value :j)))]
       (dotimes [i 100]
-        (is= false (t (->> {           :a :b :c :d :e :f :g :h :i :j}
-                           (map shuffle) shuffle (into {}))))
+        (let [base [[:a :b] [:c :d] [:e :f] [:g :h] [:i :j]]
+              shuffled (->> base (map shuffle) shuffle (into {}))]
+          (if (= base (->> shuffled (map sort)))
+              (is= true  (t shuffled))
+              (is= false (t shuffled))))
         (is= true  (t (->> (umap/om    :a :b :c :d :e :f :g :h :i :j)
                            (map shuffle) (into (umap/om)))))
         (is= true  (t (->> (sorted-map :a :b :c :d :e :f :g :h :i :j)
