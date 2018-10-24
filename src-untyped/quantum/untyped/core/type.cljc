@@ -547,6 +547,15 @@
                               seq)
                          (reduced nil))))))))
 
+(defn- input-or-output-type-handle-reactive [f t args]
+  (if (utr/reactive-type? t)
+      (if (seq-or utr/reactive-type? args)
+          (rx (f @t (map deref-when-reactive args)))
+          (rx (f @t args)))
+      (if (seq-or utr/reactive-type? args)
+          (rx (f t (map deref-when-reactive args)))
+          (f t args))))
+
 (defn- input-type*|norx [t args]
   (let [i|? (->> args (reducei (c/fn [_ t i] (when (c/= t :?) (reduced i))) nil))]
     (->> (match-spec>type-data-seq t args)
@@ -555,22 +564,22 @@
 
 (defns input-type*
   "Outputs the type of a specified input to a typed fn."
-  [t utr/fn-type? args _ #_(us/seq-of (us/or* #{:_ :?} type?))
+  [t (us/or* utr/fn-type? utr/reactive-type?) args _ #_(us/seq-of (us/or* #{:_ :?} type?))
    | (->> args (filter #(c/= % :?)) count (c/= 1))
    > type?]
-  (if (seq-or utr/reactive-type? args)
-      (rx (input-type*|norx t (map deref-when-reactive args)))
-      (input-type*|norx t args)))
+  (input-or-output-type-handle-reactive input-type*|norx t args))
 
 (defn input-type
   "Usage in arglist contexts:
    - `(t/input-type >namespace [:?])`
-     - Outputs the union of the possible types of the first input to `>namespace`.
+     - Outputs a reactive type embodying the union of the possible types of the first input to
+       `>namespace`.
    - `(t/input-type reduce [:_ :_ :?])`
-     - Outputs the union of the possible types of the third input to `reduce`.
+     - Outputs a reactive type embodying the union of the possible types of the third input to
+       `reduce`.
    - `(t/input-type reduce [:? :_ string?])`
-     - Outputs the union of the possible types of the first input to `reduce` when the third input
-       satisfies `string?`."
+     - Outputs a reactive type embodying the union of the possible types of the first input to
+       `reduce` when the third input satisfies `string?`."
   ([t] (err! "Can't use `input-type` outside of arglist contexts"))
   ([t args] (err! "Can't use `input-type` outside of arglist contexts")))
 
@@ -581,20 +590,19 @@
 
 (defns output-type*
   "Outputs the output type of a typed fn."
-  ([t utr/fn-type?]
+  ([t (us/or* utr/fn-type? utr/reactive-type?)]
     (->> t utr/fn-type>arities (uc/mapcat+ val) (uc/map :output-type) (apply or)))
-  ([t utr/fn-type? args (us/seq-of (us/or* #{:_} type?)) > type?]
-    (if (seq-or utr/reactive-type? args)
-        (rx (output-type*|norx t (map deref-when-reactive args)))
-        (output-type*|norx t args))))
+  ([t (us/or* utr/fn-type? utr/reactive-type?) args (us/seq-of (us/or* #{:_} type?)) > type?]
+    (input-or-output-type-handle-reactive output-type*|norx t args)))
 
 (defn output-type
   "Usage in arglist contexts:
    - `(t/output-type >namespace)`
-     - Outputs the union of the possible output types of `>namespace` given any valid inputs at all
+     - Outputs a reactive type embodying the union of the possible output types of `>namespace`
+       given any valid inputs at all
    - `(t/output-type reduce [:_ :_ string?])`
-     - Outputs the union of the possible output types of `reduce` when the third input satisfies
-       `string?`."
+     - Outputs a reactive type embodying the union of the possible output types of `reduce` when
+       the third input satisfies `string?`."
   ([t] (err! "Can't use `output-type` outside of arglist contexts"))
   ([t args] (err! "Can't use `output-type` outside of arglist contexts")))
 

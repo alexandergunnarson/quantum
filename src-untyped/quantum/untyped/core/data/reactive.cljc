@@ -213,7 +213,7 @@
                          (throw caught)
                          (let [non-reactive? (nil? *atom-context*)]
                            (when non-reactive? (flush! queue))
-                           (if (and non-reactive? (true? alwaysRecompute))
+                           (if (and non-reactive? alwaysRecompute)
                                (when-not computed
                                  (let [old-state state]
                                    (set! state (f))
@@ -301,8 +301,8 @@
 (defn- run-reaction! [^Reaction rx check?]
   (let [old-state (.getState rx)
         new-state (if check?
-                (try-capture! rx (.-f rx))
-                (deref-capture! (.-f rx) rx))]
+                      (try-capture! rx (.-f rx))
+                      (deref-capture! (.-f rx) rx))]
     (when-not (.-no-cache? rx)
       (.setState rx new-state)
       (when-not (or (nil? (.getWatches rx))

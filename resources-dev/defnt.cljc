@@ -66,6 +66,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
             - changed via `t/extend-defn!`
           - `t/defn` that gets extended via `t/extend-defn!` (if the input-types and output-types have
             changed)
+          - We can `defonce` a `urx/atom` per `t/defn` and `reset!` on each `t/extend-defn!`
         - Examples
           - t/defn needs to emit a reactive ftype in its `::type` meta
           - quantum.untyped.core.data.reactive

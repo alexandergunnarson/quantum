@@ -673,11 +673,12 @@
             {:form form :args-ct (count args-form)})
       (let [arg-nodes   (->> args-form (mapv #(analyze* env %)))
             caller|node (analyze* env caller|form)
+            caller|type (-> arg-nodes first :type)
             t (case (name caller|form)
-                "type"        (-> arg-nodes first :type)
-                "input-type"  (t/input-type (-> arg-nodes first :type)
+                "type"        caller|type
+                "input-type"  (t/input-type* caller|type
                                 (->> arg-nodes rest (map :type) (map t/unvalue)))
-                "output-type" (t/output-type (-> arg-nodes first :type)
+                "output-type" (t/output-type* caller|type
                                 (->> arg-nodes rest (map :type) (map t/unvalue))))]
         (uast/call-node
           {:env             env

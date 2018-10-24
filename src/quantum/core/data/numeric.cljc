@@ -241,7 +241,7 @@
 #?(:clj ([a numeric?   , b bigdec?]  (c?/> (>bigdec a) b)))
 #?(:clj ([a clj-bigint?, b clj-bigint?]
           (if (and (p/nil? (.bipart a)) (p/nil? (.bipart b)))
-              (c?/>     (.lpart      a) (.lpart      b))
+              (c?/>     (.lpart       a) (.lpart       b))
               (c?/comp> (>java-bigint a) (>java-bigint b)))))
 #?(:clj ([a ratio?     , b ratio?]
           (c?/> (.multiply (.numerator   a) (.numerator   b))
@@ -255,7 +255,7 @@
 #?(:clj ([a numeric?   , b bigdec?]  (c?/>= (>bigdec a) b)))
 #?(:clj ([a clj-bigint?, b clj-bigint?]
           (if (and (p/nil? (.bipart a)) (p/nil? (.bipart b)))
-              (c?/>=     (.lpart      a) (.lpart      b))
+              (c?/>=     (.lpart       a) (.lpart       b))
               (c?/comp>= (>java-bigint a) (>java-bigint b)))))
 #?(:clj ([a ratio?     , b ratio?]
           (c?/>= (.multiply (.numerator   a) (.numerator   b))
