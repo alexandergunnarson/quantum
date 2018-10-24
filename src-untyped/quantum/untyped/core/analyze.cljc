@@ -675,9 +675,9 @@
             caller|node (analyze* env caller|form)
             t (case (name caller|form)
                 "type"        (-> arg-nodes first :type)
-                "input-type"  (apply t/input-type (-> arg-nodes first :type)
+                "input-type"  (t/input-type (-> arg-nodes first :type)
                                 (->> arg-nodes rest (map :type) (map t/unvalue)))
-                "output-type" (apply t/output-type (-> arg-nodes first :type)
+                "output-type" (t/output-type (-> arg-nodes first :type)
                                 (->> arg-nodes rest (map :type) (map t/unvalue))))]
         (uast/call-node
           {:env             env
@@ -792,6 +792,7 @@
     quote    (analyze-seq|quote env form)
     new      (analyze-seq|new   env form)
     throw    (analyze-seq|throw env form)
+    try      (TODO "try")
     var      (analyze-seq|var   env form)
     (if (-> env :opts :arglist-context?)
         (if-let [caller-form-dependent-type-call?
@@ -887,7 +888,7 @@
   (ifs (symbol? form)
          (analyze-symbol env form)
        (t/literal? form)
-         (uast/literal env form (t/>type form))
+         (uast/literal env form (t/value form))
        (or (vector? form)
            (set?    form))
          ;; TODO use `uast/vector-node` and `uast/set-node`

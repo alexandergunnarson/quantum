@@ -418,12 +418,16 @@
 
 ;; ----- ReactiveType ----- ;;
 
+(declare reactive-type?)
+
 (defn- validate-type [x]
-  (or (type? x)
-      (err! "Found non-type when derefing `ReactiveType`"
+  (or (and (type? x) (not (reactive-type? x)))
+      (err! "Found invalid value when derefing `ReactiveType`"
             {:kind (core/type x)})))
 
-(udt/deftype ReactiveType
+(udt/deftype
+  ^{:doc "Warning: produces a possibly different hash every time its value is recomputed."}
+  ReactiveType
   [#?(:clj ^int ^:! hash      :cljs ^number ^:! hash)
    #?(:clj ^int ^:! hash-code :cljs ^number ^:! hash-code)
        meta          #_(t/? ::meta)

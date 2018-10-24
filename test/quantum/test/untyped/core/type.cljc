@@ -529,15 +529,15 @@
 (def reduce|type (t/ftype t/any? [fn?  t/any? string?   :> char-seq?]
                                  [ifn? t/any? java-set? :> comparable?]))
 
-(deftest test|input-type
-  (is= (t/or string? symbol?)   (t/input-type >namespace|type :?))
-  (is= (t/or string? java-set?) (t/input-type reduce|type     :_ :_ :?)))
-  (is= fn?                      (t/input-type reduce|type     :? :_ string?))
+(deftest test|input-type*
+  (is= (t/or string? symbol?)   (t/input-type* >namespace|type [:?]))
+  (is= (t/or string? java-set?) (t/input-type* reduce|type     [:_ :_ :?])))
+  (is= fn?                      (t/input-type* reduce|type     [:? :_ string?]))
 
-(deftest test|output-type
-  (is= string?                      (t/output-type >namespace|type))
-  (is= (t/or char-seq? comparable?) (t/output-type reduce|type))
-  (is= char-seq?                    (t/output-type reduce|type [:_ :_ string?])))
+(deftest test|output-type*
+  (is= string?                      (t/output-type* >namespace|type))
+  (is= (t/or char-seq? comparable?) (t/output-type* reduce|type))
+  (is= char-seq?                    (t/output-type* reduce|type [:_ :_ string?])))
 
 (deftest test|rx
   (testing "="

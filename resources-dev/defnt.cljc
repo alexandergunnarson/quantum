@@ -53,6 +53,8 @@ TODO:
 
 #_"
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
+- There will be some code duplication with untyped code for now and that's okay.
+- No typed namespace should refer to any untyped namespace
 
 - TODO implement the following:
   [1] - Reactive recompilation
@@ -65,16 +67,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - `t/defn` that gets extended via `t/extend-defn!` (if the input-types and output-types have
             changed)
         - Examples
-          - Every `t/` needs to accommodate for reactive types now
           - t/defn needs to emit a reactive ftype in its `::type` meta
           - quantum.untyped.core.data.reactive
-          - (t/input-type ...)
-            - This returns a `PReactive` for extensible targets (i.e. `t/defn`
-              but not `t/fn`). This is because the `:type` of a `defn` is reactive.
-            - Thus there is no special behavior for `input|output-type` but just special behavior
-              for the underlying type.
-          - (t/output-type ...)
-            - Same as above
           - One could imagine a dynamic set of types corresponding to a given predicate, e.g.
             `decimal?`. Say someone comes up with a new `decimal?`-like class and wants to redefine
             `decimal?` to accommodate. We could define `decimal?` as a reactive/extensible type to

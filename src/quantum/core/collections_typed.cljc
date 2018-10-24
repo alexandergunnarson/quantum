@@ -367,9 +367,9 @@
    Like `reduce`, does not have a notion of a transforming function (unlike `transduce`). Like
    `transduce`, uses the seed (0-arity) and completing (1-arity) arities of the reducing function
    `rf` when performing a reduction (unlike `reduce`)."
-  ([rf rf?,              xs (t/input-type reduce :_ :_ :?)] (educe rf (rf) xs))
+  ([rf rf?,              xs (t/input-type reduce [:_ :_ :?])] (educe rf (rf) xs))
   ([rf rf?, init t/any?, x  dasync/read-chan?] (async/go (rf (async/<! (reduce rf init x)))))
-  ([rf rf?, init t/any?, xs (t/input-type reduce :_ :_ :?)] (rf (reduce rf init xs))))
+  ([rf rf?, init t/any?, xs (t/input-type reduce [:_ :_ :?])] (rf (reduce rf init xs))))
 
 ;; ===== Count / length / size ===== ;;
 
@@ -406,7 +406,7 @@
 #?(:clj  ([xs dc/java-coll?    > p/int?] (.size xs)))
 #?(:clj  ([xs dc/java-map?     > p/int?] (.size xs)))
          ;; Not counted
-         ([xs (t/input-type educe :_ :_ :?)] (educe count|rf xs)))
+         ([xs (t/input-type educe [:_ :_ :?])] (educe count|rf xs)))
 
 (t/defn ^:inline gen-bounded-count|rf [n dn/std-integer?]
   (t/fn {:inline true}
@@ -416,7 +416,7 @@
 
 (t/defn ^:inline bounded-count > dn/std-integer?
   ([n dn/std-integer?, xs dc/counted?] (count xs))
-  ([n dn/std-integer?, xs (t/input-type educe :_ :_ :?)] (educe (gen-bounded-count|rf n) xs)))
+  ([n dn/std-integer?, xs (t/input-type educe [:_ :_ :?])] (educe (gen-bounded-count|rf n) xs)))
 
 (t/def ^:inline empty?|rf
   (fn/aritoid
@@ -428,4 +428,4 @@
 (t/defn ^:inline empty? > p/boolean?
   ([x p/nil?] true)
   ([xs dc/counted?] (-> xs count num/zero?))
-  ([xs (t/input-type educe :_ :_ :?)] (educe empty?|rf x)))
+  ([xs (t/input-type educe [:_ :_ :?])] (educe empty?|rf x)))

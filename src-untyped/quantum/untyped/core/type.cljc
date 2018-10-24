@@ -102,51 +102,84 @@
 
 ;; ----- ReactiveType (`t/rx`) ----- ;;
 
+(defn- deref-when-reactive [x]
+  (if (utr/reactive-type? x)
+      @x
+      x))
+
+(defns- separate-rx-and-apply
+  "Only works for commutative functions."
+  [f fn?, type-args (fn-> count (c/> 1)) > utr/type?]
+  ;; For efficiency, so as much as possible gets run outside a reaction
+  (if-let [rx-args (->> type-args (filter utr/reactive-type?) seq)]
+    (if-let [norx-args (->> type-args (remove utr/reactive-type?) seq)]
+      (let [t (f norx-args)]
+        (rx (f (cons t (map deref rx-args)))))
+      (rx (f (map deref rx-args))))
+    (f type-args)))
+
 (defns rx* [r urx/reactive?, body-codelist _ > utr/reactive-type?]
   (ReactiveType. uhash/default uhash/default nil body-codelist nil r))
 
 #?(:clj
 (defmacro rx
-  "The only macro in all of the core type predicates."
+  "Creates a reactive type.
+
+   The only macro in all of the core type predicates.
+
+   Note that if a type-generating fn (e.g. `and` or `or`) is provided with even one reactive input,
+   then the whole type will become reactive. Thus, reactivity is 'infectious'."
   [& body] `(rx* (urx/rx ~@body) ($ ~(vec body)))))
 
 ;; ----- NotType (`t/not` / `t/!`) ----- ;;
 
 (defns not [t utr/type? > utr/type?]
-  (ifs (= t universal-set) empty-set
-       (= t empty-set)     universal-set
-       (= t val|by-class?) nil?
-       (utr/not-type? t)   (utr/not-type>inner-type t)
+  (ifs (utr/reactive-type? t) (rx (not @t))
+       (= t universal-set)    empty-set
+       (= t empty-set)        universal-set
+       (= t val|by-class?)    nil?
+       (utr/not-type? t)      (utr/not-type>inner-type t)
        ;; DeMorgan's Law
-       (utr/or-type?  t)   (->> t utr/or-type>args  (uc/lmap not) (apply and))
+       (utr/or-type?  t)      (->> t utr/or-type>args  (uc/lmap not) (apply and))
        ;; DeMorgan's Law
-       (utr/and-type? t)   (->> t utr/and-type>args (uc/lmap not) (apply or ))
+       (utr/and-type? t)      (->> t utr/and-type>args (uc/lmap not) (apply or ))
        (NotType. uhash/default uhash/default nil t)))
 
 (uvar/defalias ! not)
 
 ;; ----- OrType (`t/or` / `t/|`) ----- ;;
 
+(def- comparison-denotes-supersession?|or (fn1 c/= >ident))
+
+(defn- or* [ts]
+  (create-logical-type :or ->OrType utr/or-type? utr/or-type>args
+    comparison-denotes-supersession?|or ts))
+
 (defn or
   "Sequential/ordered `or`. Analogous to `set/union`.
    Applies as much 'compression'/deduplication/simplification as possible to the supplied types.
-   Effectively computes the union of the extension of the ->`args`."
+   Effectively computes the union of the extension of the ->`ts`."
   ([] empty-set)
-  ([arg & args]
-    (create-logical-type :or ->OrType utr/or-type? utr/or-type>args
-      (cons arg args) (fn1 c/= >ident))))
+  ([t] t)
+  ([t & ts] (separate-rx-and-apply or* (cons t ts))))
 
 (uvar/defalias | or)
 
 ;; ----- AndType (`t/and` | `t/&`) ----- ;;
 
+(def- comparison-denotes-supersession?|and (fn1 c/= <ident))
+
+(defn- and* [ts]
+  (create-logical-type :and ->AndType utr/and-type? utr/and-type>args
+    comparison-denotes-supersession?|and ts))
+
 (defn and
   "Sequential/ordered `and`. Analogous to `set/intersection`.
    Applies as much 'compression'/deduplication/simplification as possible to the supplied types.
-   Effectively computes the intersection of the extension of the ->`args`."
-  [arg & args]
-  (create-logical-type :and ->AndType utr/and-type? utr/and-type>args
-    (cons arg args) (fn1 c/= <ident)))
+   Effectively computes the intersection of the extension of the ->`ts`."
+  ([] universal-set)
+  ([t] t)
+  ([t & ts] (separate-rx-and-apply and* (cons t ts))))
 
 (uvar/defalias & and)
 
@@ -183,28 +216,36 @@
   "Creates a type representing an unordered collection."
   ([> utr/unordered-type?] (unordered []))
   ([data _ > utr/unordered-type?]
-    (let [data' (if (utr/type? data)
-                    {data 1}
-                    (if-not (sequential? data)
-                      (err! "Finite type info must be sequential" {:type (c/type data)})
-                      (if-not (seq-and utr/type? data)
-                        (err! "Not every element of finite type data is a type" {})
-                        (frequencies data))))]
-      (UnorderedType. uhash/default uhash/default nil data' nil)))
+    (ifs (utr/reactive-type? data)
+           (rx (UnorderedType. uhash/default uhash/default nil {@data 1} nil))
+         (utr/type? data)
+           (UnorderedType. uhash/default uhash/default nil {data 1} nil)
+         (c/not (sequential? data))
+           (err! "Finite type info must be sequential" {:type (c/type data)})
+         (c/not (seq-and utr/type? data))
+           (err! "Not every element of finite type data is a type")
+         (seq-or utr/reactive-type? data)
+           (rx (UnorderedType. uhash/default uhash/default nil
+                 (->> data (uc/map+ deref-when-reactive) uc/frequencies) nil))
+         (UnorderedType. uhash/default uhash/default nil (frequencies data) nil)))
   ([datum _ & data _ > utr/unordered-type?] (unordered (cons datum data))))
 
 (defns ordered
   "Creates a type representing an ordered collection."
   ([> utr/ordered-type?] (ordered []))
   ([data _ > utr/ordered-type?]
-    (let [data' (if (utr/type? data)
-                    [data]
-                    (if-not (sequential? data)
-                      (err! "Finite type info must be sequential" {:type (c/type data)})
-                      (if-not (seq-and utr/type? data)
-                        (err! "Not every element of finite type data is a type" {})
-                        data)))]
-      (OrderedType. uhash/default uhash/default nil data' nil)))
+    (ifs (utr/reactive-type? data)
+           (rx (OrderedType. uhash/default uhash/default nil [@data] nil))
+         (utr/type? data)
+           (OrderedType. uhash/default uhash/default nil [data] nil)
+         (c/not (sequential? data))
+           (err! "Finite type info must be sequential" {:type (c/type data)})
+         (c/not (seq-and utr/type? data))
+           (err! "Not every element of finite type data is a type")
+         (seq-or utr/reactive-type? data)
+           (rx (OrderedType. uhash/default uhash/default nil
+                 (->> data (uc/map+ deref-when-reactive) uc/frequencies) nil))
+         (OrderedType. uhash/default uhash/default nil data nil)))
   ([datum _ & data _ > utr/ordered-type?] (ordered (cons datum data))))
 
 ;; ----- ValueType ----- ;;
@@ -254,63 +295,31 @@
    If `t0` > | ><  `t1`, `t0` with all elements of `t1` removed"
   ([t0 utr/type? > utr/type?] t0)
   ([t0 utr/type?, t1 utr/type? > utr/type?]
-    (let [c (compare t0 t1)]
-      (case c
-        (0 -1) empty-set
-         3     t0
-        (1 2)
-          (let [c0 (c/type t0) c1 (c/type t1)]
-            ;; TODO add dispatch?
-            (condp == c0
-              NotType (condp == (-> t0 utr/not-type>inner-type c/type)
-                        ClassType (condp == c1
-                                    ClassType (AndType. uhash/default uhash/default nil
-                                                [t0 (not t1)] (atom nil)))
-                        ValueType (condp == c1
-                                    ValueType (AndType. uhash/default uhash/default nil
-                                                [t0 (not t1)] (atom nil))))
-              OrType  (condp == c1
-                        ClassType (-|or t0 t1)
-                        ValueType (-|or t0 t1)))))))
+    (if (utr/reactive-type? t0)
+        (if (utr/reactive-type? t1)
+            (rx (- @t0 @t1))
+            (rx (- @t0  t1)))
+        (if (utr/reactive-type? t1)
+            (rx (-  t0 @t1))
+            (let [c (c/int (compare t0 t1))]
+              (case c
+                (0 -1) empty-set
+                 3     t0
+                (1 2)
+                  (let [c0 (c/type t0) c1 (c/type t1)]
+                    ;; TODO add dispatch?
+                    (condp == c0
+                      NotType (condp == (-> t0 utr/not-type>inner-type c/type)
+                                ClassType (condp == c1
+                                            ClassType (AndType. uhash/default uhash/default nil
+                                                        [t0 (not t1)] (atom nil)))
+                                ValueType (condp == c1
+                                            ValueType (AndType. uhash/default uhash/default nil
+                                                        [t0 (not t1)] (atom nil))))
+                      OrType  (condp == c1
+                                ClassType (-|or t0 t1)
+                                ValueType (-|or t0 t1)))))))))
   ([t0 utr/type?, t1 utr/type? & ts _ > utr/type?] (reduce - (- t0 t1) ts)))
-
-;; TODO clean up
-(defns >type
-  "Coerces ->`x` to a type, recording its ->`name-sym` if provided."
-  ([x _ > utr/type?] (>type x nil))
-  ([x _, name-sym (us/nilable c/symbol?) > utr/type?]
-    #?(:clj
-        (ifs
-          (satisfies? PType x)
-            x ; TODO should add in its name?
-          (c/class? x)
-            (let [x (c/or #?(:clj (utcore/unboxed->boxed x)) x)
-                  reg (if (c/nil? name-sym)
-                          @*type-registry
-                          (swap! *type-registry
-                            (c/fn [reg]
-                              (if-let [t (get reg name-sym)]
-                                (if (c/= (.-name ^ClassType t) name-sym)
-                                    reg
-                                    (err! "Class already registered with type; must first undef"
-                                          {:class x :type-name name-sym}))
-                                (let [t (ClassType. uhash/default uhash/default nil x name-sym)]
-                                  (uc/assoc-in reg [name-sym]    t
-                                                   [:by-class x] t))))))]
-              (c/or (get-in reg [:by-class x])
-                    (ClassType. uhash/default uhash/default nil ^Class x name-sym)))
-          (c/fn? x)
-            (let [sym (c/or name-sym (>symbol x))
-                  _ (when-not name-sym
-                      (let [resolved (?deref (ns-resolve *ns* sym))]
-                        (assert (== resolved x) {:x x :sym sym :resolved resolved})))]
-              (Expression. sym x))
-          (c/nil? x)
-            nil?
-          (uclass/protocol? x)
-            (ProtocolType. uhash/default uhash/default nil x name-sym)
-          (value x))
-       :cljs nil)))
 
 (def type?          (isa? PType))
 (def not-type?      (isa? NotType))
@@ -324,26 +333,36 @@
 (def nil?           (value nil))
 (def object?        (isa? #?(:clj java.lang.Object :cljs js/Object)))
 
-;; ===== Type metadata ===== ;;
+;; ===== Type metadata (not for reactive types) ===== ;;
 
 (defns assume
   "Denotes that, whatever the declared output type (to which `assume` is applied) of a function may
    be, it is assumed that the output satisfies that type."
-  [t utr/type? > utr/type?] (update-meta t assoc :quantum.core.type/assume? true))
+  [t utr/type? > utr/type?]
+  (assert (c/not (utr/reactive-type? t)))
+  (update-meta t assoc :quantum.core.type/assume? true))
 
-(defns unassume [t utr/type? > utr/type?] (update-meta t dissoc :quantum.core.type/assume?))
+(defns unassume [t utr/type? > utr/type?]
+  (assert (c/not (utr/reactive-type? t)))
+  (update-meta t dissoc :quantum.core.type/assume?))
 
 (defns *
   "Denote on a type that it must be enforced at runtime.
    For use with `defnt`."
-  [t utr/type? > utr/type?] (update-meta t assoc :quantum.core.type/runtime? true))
+  [t utr/type? > utr/type?]
+  (assert (c/not (utr/reactive-type? t)))
+  (update-meta t assoc :quantum.core.type/runtime? true))
 
 (defns ref
   "Denote on a type that it must not be expanded to use primitive values.
    For use with `defnt`."
-  [t utr/type? > utr/type?] (update-meta t assoc :quantum.core.type/ref? true))
+  [t utr/type? > utr/type?]
+  (assert (c/not (utr/reactive-type? t)))
+  (update-meta t assoc :quantum.core.type/ref? true))
 
-(defns unref [t utr/type? > utr/type?] (update-meta t dissoc :quantum.core.type/ref?))
+(defns unref [t utr/type? > utr/type?]
+  (assert (c/not (utr/reactive-type? t)))
+  (update-meta t dissoc :quantum.core.type/ref?))
 
 ;; ===== Logical ===== ;;
 
@@ -443,7 +462,7 @@
 (defn- simplify-logical-type|structural-identity+
   "Simplification via structural identity: `(| a b a)` -> `(| a b)`"
   [type-args #_(of reducible? utr/type?)]
-  (->> type-args (uc/map+ >type) uc/distinct+))
+  (->> type-args uc/distinct+))
 
 (defn- simplify-logical-type|comparison
   "Simplification via intension comparison"
@@ -458,19 +477,17 @@
     type-args))
 
 (defns- create-logical-type
-  [kind #{:or :and}, construct-fn _, type-pred _, type>args _, type-args (fn-> count (c/>= 1))
-   comparison-denotes-supersession? c/fn? > utr/type?]
-  (if (-> type-args count (c/= 1))
-      (first type-args)
-      (let [simplified
-              (->> type-args
-                   (simplify-logical-type|inner-expansion+ type-pred type>args)
-                   simplify-logical-type|structural-identity+
-                   (simplify-logical-type|comparison kind comparison-denotes-supersession?))]
-        (assert (-> simplified count (c/>= 1))) ; for internal implementation correctness
-        (if (-> simplified count (c/= 1))
-            (first simplified)
-            (construct-fn uhash/default uhash/default nil simplified (atom nil))))))
+  [kind #{:or :and}, construct-fn _, type-pred _, type>args _
+   comparison-denotes-supersession? c/fn?, type-args (fn-> count (c/>= 1)) > utr/type?]
+  (let [simplified
+          (->> type-args
+               (simplify-logical-type|inner-expansion+ type-pred type>args)
+               simplify-logical-type|structural-identity+
+               (simplify-logical-type|comparison kind comparison-denotes-supersession?))]
+    (assert (-> simplified count (c/>= 1))) ; for internal implementation correctness
+    (if (-> simplified count (c/= 1))
+        (first simplified)
+        (construct-fn uhash/default uhash/default nil simplified (atom nil)))))
 
 ;; ===== `t/ftype` ===== ;;
 
@@ -530,45 +547,56 @@
                               seq)
                          (reduced nil))))))))
 
-(defns input-type
-  "Outputs the type of a specified input to a typed fn.
-
-   Usage in arglist contexts:
-   - `(t/input-type >namespace :?)`
-     - Outputs the union of the possible types of the first input to `>namespace`.
-   - `(t/input-type reduce :_ :_ :?)`
-     - Outputs the union of the possible types of the third input to `reduce`.
-   - `(t/input-type reduce :? :_ string?)`
-     - Outputs the union of the possible types of the first input to `reduce` when the third input
-       satisfies `string?`.
-
-   Usage outside of arglist contexts is the same except the first input must be a `utr/fn-type?`."
-  [t utr/fn-type? & args _ #_(us/seq-of (us/or* #{:_ :?} type?))
-   | (->> args (filter #(c/= % :?)) count (c/= 1))
-   > type?]
+(defn- input-type*|norx [t args]
   (let [i|? (->> args (reducei (c/fn [_ t i] (when (c/= t :?) (reduced i))) nil))]
     (->> (match-spec>type-data-seq t args)
-         (uc/lmap (c/fn [{:keys [input-types]}]
-                    (get input-types i|?)))
+         (uc/lmap (c/fn [{:keys [input-types]}] (get input-types i|?)))
          (apply or))))
 
-(defns output-type
-  "Outputs the output type of a typed fn.
+(defns input-type*
+  "Outputs the type of a specified input to a typed fn."
+  [t utr/fn-type? args _ #_(us/seq-of (us/or* #{:_ :?} type?))
+   | (->> args (filter #(c/= % :?)) count (c/= 1))
+   > type?]
+  (if (seq-or utr/reactive-type? args)
+      (rx (input-type*|norx t (map deref-when-reactive args)))
+      (input-type*|norx t args)))
 
-   Usage in arglist contexts:
-   - `(t/output-type >namespace)`
-     - Outputs the union of the possible output types of `>namespace` given any valid inputs at all
-   - `(t/output-type reduce :_ :_ string?)`
-     - Outputs the union of the possible output types of `reduce` when the third input satisfies
-       `string?`.
+(defn input-type
+  "Usage in arglist contexts:
+   - `(t/input-type >namespace [:?])`
+     - Outputs the union of the possible types of the first input to `>namespace`.
+   - `(t/input-type reduce [:_ :_ :?])`
+     - Outputs the union of the possible types of the third input to `reduce`.
+   - `(t/input-type reduce [:? :_ string?])`
+     - Outputs the union of the possible types of the first input to `reduce` when the third input
+       satisfies `string?`."
+  ([t] (err! "Can't use `input-type` outside of arglist contexts"))
+  ([t args] (err! "Can't use `input-type` outside of arglist contexts")))
 
-   Usage outside of arglist contexts is the same except the first input must be a `utr/fn-type?`."
+(defn- output-type*|norx [t args]
+  (->> (match-spec>type-data-seq t args)
+       (uc/lmap :output-type)
+       (apply or)))
+
+(defns output-type*
+  "Outputs the output type of a typed fn."
   ([t utr/fn-type?]
     (->> t utr/fn-type>arities (uc/mapcat+ val) (uc/map :output-type) (apply or)))
   ([t utr/fn-type? args (us/seq-of (us/or* #{:_} type?)) > type?]
-    (->> (match-spec>type-data-seq t args)
-         (uc/lmap :output-type)
-         (apply or))))
+    (if (seq-or utr/reactive-type? args)
+        (rx (output-type*|norx t (map deref-when-reactive args)))
+        (output-type*|norx t args))))
+
+(defn output-type
+  "Usage in arglist contexts:
+   - `(t/output-type >namespace)`
+     - Outputs the union of the possible output types of `>namespace` given any valid inputs at all
+   - `(t/output-type reduce [:_ :_ string?])`
+     - Outputs the union of the possible output types of `reduce` when the third input satisfies
+       `string?`."
+  ([t] (err! "Can't use `output-type` outside of arglist contexts"))
+  ([t args] (err! "Can't use `output-type` outside of arglist contexts")))
 
 ;; ===== Dependent types ===== ;;
 
@@ -591,10 +619,8 @@
 (defns deducible [x type? > deducible-type?] (DeducibleType. (atom x))))
 
 (defns ?
-  "Arity 1: Computes a type denoting a nilable value satisfying `t`.
-   Arity 2: Computes whether `x` is nil or satisfies `t`."
-  ([t utr/type? > utr/type?] (or nil? t))
-  ([t utr/type?, x _ > c/boolean?] (c/or (c/nil? x) (t x))))
+  "Computes a type denoting a nilable value satisfying `t`."
+  ([t utr/type? > utr/type?] (or nil? t)))
 
 ;; ===== Etc. ===== ;;
 

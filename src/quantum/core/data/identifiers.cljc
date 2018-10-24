@@ -71,8 +71,8 @@
 
 (t/defn unqualify > symbol? [sym symbol?] (-> sym >name >symbol))
 
-(t/defn unqualified? [x (t/input-type >namespace t/?)] (-> x >namespace t/nil?))
-(t/defn qualified?   [x (t/input-type >namespace t/?)] (-> x >namespace t/val?))
+(t/defn unqualified? [x (t/input-type >namespace [:?])] (-> x >namespace t/nil?))
+(t/defn qualified?   [x (t/input-type >namespace [:?])] (-> x >namespace t/val?))
 
 (def unqualified-keyword? (t/and keyword? unqualified?))
 (def qualified-keyword?   (t/and keyword? qualified?))

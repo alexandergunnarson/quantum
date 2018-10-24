@@ -311,33 +311,33 @@
 #?(:clj ([a primitive?             , b (t/ref c?/icomparable?)] (.compareTo (box a) b))))
 
 (t/extend-defn! c?/comp<
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+  ([a (t/input-type c?/compare [:? :_]), b (t/input-type c?/compare [:_ :?])]
     (c?/<  (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp<=
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+  ([a (t/input-type c?/compare [:? :_]), b (t/input-type c?/compare [:_ :?])]
     (c?/<= (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp=
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+  ([a (t/input-type c?/compare [:? :_]), b (t/input-type c?/compare [:_ :?])]
     (c?/=  (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp>=
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+  ([a (t/input-type c?/compare [:? :_]), b (t/input-type c?/compare [:_ :?])]
     (c?/>= (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp>
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+  ([a (t/input-type c?/compare [:? :_]), b (t/input-type c?/compare [:_ :?])]
     (c?/>  (c?/compare a b) 0)))
 
 (t/defn promote-type [a nil?, b nil?])
 
 (t/defn narrowest
   > t/type?
-  ([t0 (t/and (t/input-type >min-safe-integer-value :?)
-              (t/input-type >max-safe-integer-value :?))
-    t1 (t/and (t/input-type >min-safe-integer-value :?)
-              (t/input-type >max-safe-integer-value :?))]
+  ([t0 (t/and (t/input-type >min-safe-integer-value [:?])
+              (t/input-type >max-safe-integer-value [:?]))
+    t1 (t/and (t/input-type >min-safe-integer-value [:?])
+              (t/input-type >max-safe-integer-value [:?]))]
     (let [t0-min (>min-safe-integer-value t0)
           t1-min (>min-safe-integer-value t1)
           t0-max (>max-safe-integer-value t0)

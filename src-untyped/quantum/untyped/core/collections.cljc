@@ -2,7 +2,8 @@
   "Operations on collections."
   (:refer-clojure :exclude
     [#?(:cljs array?) assoc-in cat conj! contains? count distinct distinct? first get group-by
-     filter flatten last map map-indexed mapcat partition-all pmap remove reverse zipmap])
+     filter flatten frequencies last map map-indexed mapcat partition-all pmap remove reverse
+     zipmap])
   (:require
     [clojure.core                  :as core]
     [fast-zip.core                 :as zip]
@@ -331,6 +332,14 @@
         xs
         (recur (dec n) (lcat xs)))))
 
+(defn frequencies
+  "Like `frequencies` but uses `educe` internally"
+  [f xs]
+  (educe (fn ([] (transient {}))
+             ([cts] (persistent! cts))
+             ([cts x] (assoc! cts x (inc (get cts x 0)))))
+         xs))
+
 (defn frequencies-by
   "Like `frequencies` crossed with `group-by`."
   {:in  '[second [[1 2 3] [4 2 6] [5 2 7]]]
@@ -353,12 +362,12 @@
 
 (defn group-by
   "Like `group-by` but uses `educe` internally"
-  [f coll]
+  [f xs]
   (educe (aritoid (fn' (transient {})) persistent!
            (fn [ret x]
              (let [k (f x)]
                (assoc! ret k (conj (get ret k []) x)))))
-         coll))
+         xs))
 
 (defn lcat [xs] (apply concat xs))
 
