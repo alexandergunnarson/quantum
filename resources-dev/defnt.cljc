@@ -51,6 +51,26 @@ TODO:
 - `(- (or ?!+vector? !vector? #?(:clj !!vector?)) (isa? clojure.lang.Counted))` is not right
 - t/or should probably order by `t/compare` descending
 
+- Suppose you have:
+  - (t/defn abcde [a t/int?] ...)
+  - (t/defn fghij [b (t/input-type abcde :_)] ...)
+    - Resulting in `b`'s type as:
+      - (rx (t/input-type* @abcde-type-atom :_))
+    - Resulting in `fghij`'s type as:
+      - (let [bt (rx (t/input-type* @abcde-type-atom :_))]
+          (rx (ftype t/any? [@bt])))
+        - should the equality check for the type atom be `t/=` instead of `=`?
+    - Resulting in `fghij`'s code as:
+      - (rx/run! <some of direct dispatch>
+                 <dynamic dispatch>)
+  - TODO `ftype` should accommodate reactive types
+  -
+  - (rx/dispose! <reactions>) when the `t/defn` is redefined (?)
+  - (t/extend-defn! abcde [c t/string?] ...)
+    - This `reset!`s `abcde-type-atom` to (t/ftype t/any? [t/int?] [t/string?])
+    - This does automatically cause watching reactions to re-run in the thread in which
+      the `reset!` happens.
+
 #_"
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 - There will be some code duplication with untyped code for now and that's okay.
@@ -67,9 +87,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - `t/defn` that gets extended via `t/extend-defn!` (if the input-types and output-types have
             changed)
           - We can `defonce` a `urx/atom` per `t/defn` and `reset!` on each `t/extend-defn!`
+            - reactive ftype in ::type meta
+          - Probably should disallow recursive type references, including:
+            (t/defn f [x (t/input-type f ...)])
         - Examples
-          - t/defn needs to emit a reactive ftype in its `::type` meta
-          - quantum.untyped.core.data.reactive
           - One could imagine a dynamic set of types corresponding to a given predicate, e.g.
             `decimal?`. Say someone comes up with a new `decimal?`-like class and wants to redefine
             `decimal?` to accommodate. We could define `decimal?` as a reactive/extensible type to
