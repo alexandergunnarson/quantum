@@ -53,21 +53,47 @@ TODO:
 
 - Suppose you have:
   - (t/defn abcde [a t/int?] ...)
+    - Resulting in `a`'s type as:
+      - t/int?
+    - Resulting in `abcde`'s type as:
+      - (let [!types-decl (rx/! )
+              out-type t/any?]
+          (rx (type-data>ftype @!types-decl out-type)))
+    - Resulting in `abcde`'s compile-time-emission code (assuming no :test mode) as:
+      - (do (intern '.../abcde|__type
+              (let [out-type t/any?]
+                (rx (type-data>ftype @abcde|__types out-type))))
+            (intern '.../abcde|__types
+              (let [t|0|0 t/int?]
+                (rx/! [{:id 0 :arg-types [t|0|0] :output-type ...}])))
+            (rx/run! (list 'do
+                       (list 'declare 'abcde)
+                       ;; Internally `types-decl>arg-types` reactively derefs
+                       (def abcde|__0|types (types-decl>arg-types abcde|__types 0))
+                       <dynamic dispatch>)))
+    - Resulting in `abcde`'s runtime-emission code (assuming runtime stripping of type data) as:
+      - (do (def )
+            (defn abcde [x00__]
+              (ifs ((Array/get abcde|__0|types)))))
   - (t/defn fghij [b (t/input-type abcde :_)] ...)
     - Resulting in `b`'s type as:
-      - (rx (t/input-type* @abcde-type-atom :_))
+      - (rx (t/input-type* @abcde-type :_))
     - Resulting in `fghij`'s type as:
-      - (let [bt (rx (t/input-type* @abcde-type-atom :_))]
-          (rx (ftype t/any? [@bt])))
-        - should the equality check for the type atom be `t/=` instead of `=`?
+      - (let [!types-decl
+               (rx/! [{:id 0 :arg-types [(rx (t/input-type* @abcde-type :_))] :output-type ...}])
+              out-type t/any?]
+          (rx (type-data>ftype @!types-decl out-type)))
     - Resulting in `fghij`'s code as:
-      - (rx/run! <some of direct dispatch>
-                 <dynamic dispatch>)
+      - (rx/run! (eval `(do <some of direct dispatch>
+                            <dynamic dispatch>)))
   - TODO `ftype` should accommodate reactive types
-  -
+  - TODO `or` and `and` should be `=` regardless of order
+    - To fix this, sort when it's created?
   - (rx/dispose! <reactions>) when the `t/defn` is redefined (?)
+  - Dependents should not get recompiled if the type has not changed but only the implementation has
   - (t/extend-defn! abcde [c t/string?] ...)
-    - This `reset!`s `abcde-type-atom` to (t/ftype t/any? [t/int?] [t/string?])
+    - (reset! abcde|__type-atom
+              (t/ftype t/any? [t/in?] [t/string?]))
     - This does automatically cause watching reactions to re-run in the thread in which
       the `reset!` happens.
 
@@ -1899,8 +1925,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
 [ ] Types yielding generative specs
 [—] Types using the clojure.spec interface
     - Not yet; wait for it to come out of alpha
-[—] Support for compilers in which the metalanguage differs from the object language (i.e. 'normal'
-    non-CLJS-in-CLJS CLJS)
-    - This will have to be approached later. We may or may not choose to figure it out, but it seems
-      promising enough.
+[ ] We don't need to use bootstrapped CLJS per se (though that's cool and we can look into it); we
+    can try to hook in to the JS version of the Closure Compiler. That's for later.
+[ ] We should probably have configurable whether we want to preserve type data at runtime and emit
+    that in the runtime code (e.g. for REPL purposes) or whether we want to strip it to conserve
+    memory.
 "

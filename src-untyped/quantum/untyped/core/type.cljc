@@ -107,12 +107,12 @@
 
 #?(:clj
 (defmacro rx
-  "Creates a reactive type.
-
-   The only macro in all of the core type predicates.
+  "Creates a reactive type. Note that the current implementation of reactivity is thread-unsafe.
 
    Note that if a type-generating fn (e.g. `and` or `or`) is provided with even one reactive input,
-   then the whole type will become reactive. Thus, reactivity is 'infectious'."
+   then the whole type will become reactive. Thus, reactivity is 'infectious'.
+
+   The only macro in all of the core type predicates."
   [& body] `(rx* (urx/rx ~@body) ($ ~(vec body)))))
 
 (defn- deref-when-reactive [x]

@@ -21,6 +21,7 @@
       :refer [kw-map]]
     [quantum.untyped.core.data.array            :as uarr]
     [quantum.untyped.core.data.map              :as umap]
+    [quantum.untyped.core.data.reactive         :as urx]
     [quantum.untyped.core.data.set              :as uset]
     [quantum.untyped.core.error                 :as err
       :refer [TODO err!]]
@@ -788,9 +789,14 @@
                  - Example: `(t/defn ^:inline abc ([] ...) ([...] ...))`
                  Note that inlining is possible only in typed contexts.
 
-   `fnt` only works in languages in which the metalanguage (compiler language) is the same as the
-   object language. As such, for CLJS, we choose to use only a CLJS-in-CLJS / bootstrapped compiler
-   even if that means alienating the mainstream CLJS-in-CLJ workflow."
+   `t/fn` only works fully in contexts in which the metalanguage (compiler language) is the same as
+   the object language. Otherwise, while the compiler could still analyze types symbolically to an
+   extent, it could not actually run evaluated type-predicates on inputs to determine type-satisfaction.
+   - Consumers wishing to use the full-featured `t/fn` in ClojureScript must either use
+     bootstrapped ClojureScript or transpile ClojureScript via the JavaScript implementation of
+     the Google Closure Compiler. Consumers for whom the version of `t/fn` with purely symbolic
+     analysis is acceptable may use the standard approach of transpiling ClojureScript via the Java
+     implementation of the Google Closure Compiler."
   [& args] (fn|code :fn (ufeval/env-lang) *compilation-mode* args)))
 
 #?(:clj
