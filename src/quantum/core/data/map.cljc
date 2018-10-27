@@ -1,6 +1,7 @@
 (ns ^{:attribution "alexandergunnarson"}
   quantum.core.data.map
   "Useful map functions. |map-entry|, a better merge, sorted-maps, etc."
+  {:todo #{"Explore the possibility of 64-bit `PersistentHashMap`s"}}
   (:refer-clojure :exclude
     [split-at, map?, merge, sorted-map sorted-map-by])
   (:require

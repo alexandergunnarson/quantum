@@ -1,5 +1,6 @@
 (ns quantum.core.data.set
   "A set may be thought of as a special type of Map whose keys and vals are identical."
+  {:todo #{"Explore the possibility of 64-bit `PersistentHashSet`s"}}
         (:refer-clojure :exclude
           [+ -, and or not, compare, split-at hash-set])
         (:require

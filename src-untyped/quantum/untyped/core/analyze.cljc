@@ -785,6 +785,7 @@
     do       (analyze-seq|do    env form)
     let*     (analyze-seq|let*  env form)
     deftype* (TODO "deftype*")
+    reify*   (TODO "reify") ; NOTE only for CLJ
     fn*      (TODO "fn*")
     def      (TODO "def")
     set!     (TODO "set!")
