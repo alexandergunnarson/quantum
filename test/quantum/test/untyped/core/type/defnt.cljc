@@ -1878,112 +1878,201 @@
 
 ;; ===== Reactive types ===== ;;
 
-- Suppose you have:
-  - (t/defn abcde [a t/int?] ...)
-    - Resulting in `abcde`'s compile-time-emission code (assuming no :test mode) as:
-      - (do (intern '.../abcde|__types ; CLJS compiler needs this to perform analysis
-              (rx/! [{:id 0 :arg-types [t/int?] :output-type ...}]))
-            (intern '.../abcde|__expanded-types ; CLJS compiler needs this to perform analysis
-              (!rx (split-and-primitivize @abcde|__types)))
-            (intern '.../abcde|__type
-              (let [out-type t/any?]
-                (t/rx (type-data>ftype @abcde|__expanded-types (?deref out-type))))))
-    - Resulting in `abcde`'s runtime-emission code in CLJ as:
-      - (do (def abcde|__0 (reify* [...] (invoke ([x00__ a] ...))))
-            (def abcde
-              (let [;; Each of these types should be completely unreactive.
-                    ;; Internally does a norx deref on `abcde|__expanded-types`
-                    types|0 (types-decl>arg-types abcde|__expanded-types 0)]
-                (fn [x00__]
-                  (ifs ((Array/get types|0 0) x00__) ...
-                       (unsupported! ...))))))
-    - Resulting in `abcde`'s runtime-emission code in CLJS (assuming runtime type data elision i.e.
-      no type decl or reactivity etc.) as:
-      - (do (def abcde|__0 (do (deftype* A [] nil (extend-type A Object (invoke ([x00__ a] ...))))
-                               (new A)))
-            (def abcde
-              (let [0|types (array t/int?))]
-                (fn [x00__]
-                  (ifs ((aget 0|types 0) x00__) ...
-                       (unsupported! ...))))))
-  - (t/defn fghij [b (t/input-type abcde :_)] ...)
-    - Resulting in `fghij`'s compile-time-emission code (assuming no :test mode) as:
-      - (do (intern '.../fghij|__types
-              (rx/! [{:id 0 :arg-types [(rx (t/input-type* @abcde|__type :_))] :output-type ...}]))
-            (intern '.../fghij|__expanded-types
-              (!rx (split-and-primitivize @fghij|__types)))
-            (intern '.../fghij|__type
-              (let [out-type t/any?]
-                (t/rx (type-data>ftype fghij|__types out-type)))))
-    - Resulting in `fghij`'s runtime-emission code in CLJ as:
-      - (do (def fghij|__0 (reify* [...] (invoke ([x00__ b] ...))))
-            (def fghij
-              (let [types|0 (types-decl>arg-types fghij|__expanded-types 0)]
-                (fn [x00__]
-                  (ifs ((Array/get types|0 0) x00__) (. fghij|__0 invoke x00__)
-                       (unsupported! ...))))))
-    - Resulting in `abcde`'s runtime-emission code in CLJS (assuming runtime type data elision i.e.
-      no type decl or reactivity etc.) as:
-      - (do (def fghij|__0 (do (deftype* B [] nil (extend-type A Object (invoke ([x00__ b] ...))))
-                               (new B)))
-            (def fghij
-              (let [0|types (array t/int?))]
-                (fn [x00__]
-                  (ifs ((aget 0|types 0) x00__) (. fghij|__0 invoke x00__)
-                       (unsupported! ...))))))
-  - (t/extend-defn! abcde [c t/string?] ...)
-    ;; We probably need a few things:
-    #_"- A : rx/!   : distinct overload types, in insertion/definition order
-       - B : rx/!rx : split+primitivized types correctly ordered, rx-ly referencing overload types
-       - C : rx/!rx : ftype based on split+primitivized types, reactively referencing them
-       - Q : ArrayList : a global queue which `extend-defn!` conj's to and `defn` pops
+- We need to store the forms of the overloads that are reactive and re-split the whole overload
+  every time to get dependent types right without messing up existing logic too much
+  - Also this is easier anyway. We'll have to see about performance
+- `t/fn`s should either disallow reactive types or norx-deref them (at least for now)
+- Redefining should empty the `watching` (so no reactivity happens) but keep the reference
 
-       A is only touched by `extend-defn!` on that f.
-       - Then B and C are reactively modified
-       - What about overloads to be created? Maybe have a watch on B in which if IDs are added, puts
-         the new ID-entries on Q.
-       "
+([a (t/or tt/boolean? (t/type b))
+  b (t/or tt/byte? (t/type d))
+  c (t/or tt/short? tt/char?)
+  d (let [b (t/- tt/char? tt/long?)]
+      (t/or tt/char? (t/type b) (t/type c)))
+  > (t/or (t/type b) (t/type d))])
+->
+;; Imagine this with `let`s, essentially — reference sharing. This is just written out
+;; Then instead of handing the analyzer forms, we can hand it types to split
+;; In this way we don't have to re-analyze the arglist every time, but we do still have to analyze
+;; the body which is expected
+  ([a (t/rx (t/or tt/boolean?
+              (t/arglist-type ; t/arglist-type is always t/><
+                (t/or tt/byte?
+                      (t/arglist-type
+                        (t/or tt/char?
+                              (t/- @(t/input-type* abcde :?) tt/long?)
+                              (t/arglist-type (t/or tt/short? tt/string?))))))))
+    b (t/rx (t/or tt/byte?
+              (t/arglist-type
+                (t/or tt/char?
+                      (t/- @(t/input-type* abcde :?) tt/long?)
+                      (t/arglist-type (t/or tt/short? tt/string?))))))
+    c (t/or tt/short? tt/string?)
+    d (t/rx (t/or tt/char?
+                  (t/- @(t/input-type* abcde :?) tt/long?)
+                  (t/arglist-type (t/or tt/short? tt/string?))))
+    > (t/rx (t/or (t/arglist-type
+                    (t/or tt/byte?
+                          (t/arglist-type
+                            (t/or tt/char?
+                                  (t/- @(t/input-type* abcde :?) tt/long?)
+                                  (t/arglist-type (t/or tt/short? tt/string?))))))
+                  (t/or tt/char?
+                        (t/- @(t/input-type* abcde :?) tt/long?)
+                        (t/arglist-type (t/or tt/short? tt/string?)))))]))
+
+- Suppose you have:
+  - (defn- expand-rx-types [rx-types]
+      (->> rx-types
+           (c/map+ (fn [{:keys [arg-types out-type]}]
+                     {:arg-types (mapv ?deref arg-types) :out-type (?deref out-type)}))
+           expand-types))
+  - (defn- overload-queue-watch [_ _ oldv newv]
+      (let [first-new-id (count oldv)]
+        (->> newv
+             (c/filter+ (fn-> :id (>= first-new-id)))
+             (c/each (fn [x] (alist-conj! defnt/overload-queue x))))))
+  - (t/defn abcde [a t/int? > t/long?] ...) ; in `ns0`
     - Resulting in `abcde`'s compile-time-emission code (assuming no :test mode) as:
-      - (do (reset! abcde|__types
-              ;; The `arg-types` below are not reconstructed if they've already been defined;
-              ;; they're just shown here in their complete form.
-              [{:id 0 :arg-types [t/int?]    :output-type ...}
-               {:id 1 :arg-types [t/string?] :output-type ...}])
-            ;; Not explicitly executed, but this is what happens reactively as `abcde|__types` is
-            ;; reset.
-            (rx-set! abcde|__expanded-types
-              [{:id 0 :arg-types [t/int?]    :output-type ...}
-               {:id 1 :arg-types [t/string?] :output-type ...}])
-            ;; Reactively in a watch on `abcde|__expanded-types`
+      - (do ;; These are append-only
+            ;; TODO need to analyze these bodies in the proper context. Thus can't do `t/defn`
+            ;; (properly) unless in most "exterior" part of namespace
+            ;; Yes we could drop `:body` for non-reactive, non-inline overloads but it's fine for
+            ;; now; we will optimize later after correctness is achieved
+            ;; Needs to maintain previous fully-derefed version so `overloads>type-decl` knows which
+            ;; reactive overloads have changed
+            (intern 'ns0/abcde|__overload-bases ; CLJS compiler needs this to perform analysis
+              (rx/! {:prev nil
+                     :current
+                      [{:ns          'ns0
+                        :arg-types   [t/int?]
+                        :output-type t/long?
+                        :body        [...]
+                        :reactive?   false}]}))
+            ;; Will not re-analyze overload if it is identical (`=`?) to the previous version of that
+            ;; overload
+            ;; Must include the :body and :defined-in-ns of each one in order to analyze and create
+            ;; new overloads when putting on the overload queue
+            ;; Internally rx-derefs reactive overloads
+            ;; CLJS compiler needs this to perform analysis
+            (intern 'ns0/abcde|__types  (!rx (overloads>type-decl @ns0/abcde|__overload-bases)))
+            (add-watch ns0/abcde|__types :overload-queue overload-queue-watch)
+            (intern 'ns0/abcde|__type
+              (let [out-type t/any?]
+                (t/rx (type-data>ftype @ns0/abcde|__types (?deref out-type)))))
+            ;; Each of these types should be completely unreactive.
+            (when (= lang :clj)
+              (intern '.../abcde|__types|0
+                (types-decl>arg-types (rx/norx-deref ns0/abcde|__types) 0))))
+    - Resulting in `abcde`'s runtime-emission code in CLJ as:
+      - (do (def abcde|__0 (reify* [int>long] (invoke ([x00__ a] ...))))
+            (defn abcde [x00__]
+              (ifs ((Array/get ns0/abcde|__types|0 0) x00__) ...
+                   (unsupported! ...))))
+    - Resulting in `abcde`'s runtime-emission code in CLJS (assuming runtime type data elision i.e.
+      no type decl or reactivity etc.) as:
+      - (do (def abcde|__types|0 (array t/int?))
+            (def abcde|__0 (do (deftype* A [] nil (extend-type A Object (invoke ([x00__ a] ...))))
+                               (new A)))
+            (defn abcde [x00__]
+              (ifs ((aget ns0/abcde|__types|0 0) x00__) ...
+                   (unsupported! ...))))
+  - (t/defn fghij ; in `ns1`
+      ([b t/string? > (t/type b)] ...)
+      ([c (t/input-type ns0/abcde :?) > (t/output-type ns0/abcde (t/type c))] ...))
+    - Resulting in `fghij`'s compile-time-emission code (assuming no :test mode) as:
+      - (do (intern 'ns1/fghij|__overload-bases
+              (rx/! {:prev nil
+                     :current
+                       [(let [t0 t/string?]
+                          {:ns          'ns1
+                           :arg-types   [t0]
+                           :output-type (t/type* t0)
+                           :body        [...]
+                           :reactive?   false})
+                        (let [t0 (t/rx (t/input-type* @ns0/abcde|__type :?))]
+                          {:ns          'ns1
+                           :arg-types   [t0]
+                           :output-type (t/rx (t/output-type* @ns0/abcde|__type (t/type* @t0)))
+                           :body        [...]
+                           :reactive?   true})]}))
+            (intern 'ns1/fghij|__types (!rx (overloads>type-decl @ns1/fghij|__overload-bases)))
+            (add-watch ns1/fghij|__types :overload-queue overload-queue-watch)
+            (intern 'ns1/fghij|__type
+              (let [out-type t/any?]
+                (t/rx (type-data>ftype @ns1/fghij|__types (?deref out-type)))))
+            (when (= lang :clj)
+              (intern 'ns1/fghij|__types|0
+                (types-decl>arg-types (rx/norx-deref ns1/fghij|__types) 0))))
+    - Resulting in `fghij`'s runtime-emission code in CLJ as:
+      - (do (def fghij|__types|0 (types-decl>arg-types ns0/fghij|__types 0))
+            (def fghij|__0 (reify* [int>long]      (invoke ([x00__ b] ...))))
+            (def fghij|__1 (reify* [Object>Object] (invoke ([x00__ c] ...))))
+            (defn fghij [x00__]
+              (ifs ((Array/get ns0/fghij|__types|0 0) x00__) (. ns0/fghij|__0 invoke x00__)
+                   (unsupported! ...))))
+    - Resulting in `abcde`'s runtime-emission code in CLJS (assuming runtime type data elision i.e.
+      no type decl or reactivity etc.) as:
+      - (do (def fghij|__types|0 (array t/int?))
+            (def fghij|__0 (do (deftype* B [] nil (extend-type A Object (invoke ([x00__ b] ...))))
+                               (new B)))
+            (def fghij|__1 (do (deftype* C [] nil (extend-type A Object (invoke ([x00__ c] ...))))
+                               (new C)))
+            (defn fghij [x00__]
+              (ifs ((aget ns1/fghij|__types|0 0) x00__) (. ns1/fghij|__0 invoke x00__)
+                   (unsupported! ...))))
+  - (t/extend-defn! abcde [d t/byte? > t/char?] ...) ; in `ns2`
+    - Resulting in `abcde`'s compile-time-emission code (assuming no :test mode) as:
+      - (do (uref/update! ns0/abcde|__overload-bases
+              (fn [overloads]
+                {:prev overloads
+                 :current
+                   (join overloads
+                     [{:ns          'ns2
+                       :arg-types   [t/byte?]
+                       :output-type t/char?
+                       :body        [...]
+                       :reactive?   false}])}))
+            ;; Not explicitly executed, but this is what happens reactively as
+            ;; `abcde|__overload-bases` is `update!`ed:
+            ;; Reactively due to `abcde|__overload-bases` changing
+            (rx-set! ns0/abcde|__types
+              [{:id 1 :ns 'ns2 :arg-types [t/byte?] :output-type t/char? :body [...]}
+               {:id 0 :ns 'ns0 :arg-types [t/int?]  :output-type t/long? :body [...]}])
+            ;; Reactively in `:overload-queue` watch on `abcde|__types`
             (alist-conj! defnt/overload-queue
-              ['.../abcde {:id 1 :arg-types [t/string?] :output-type ...}])
-            (rx-set! abcde|__type (ftype t/any? [t/int?] [t/string?]))
-            ;; Reactively because `abcde|__type` was set
-            (rx-set! fghij|__expanded-types
-              [{:id 0 :arg-types [t/int?]    :output-type ...}
-               {:id 1 :arg-types [t/string?] :output-type ...}])
-            ;; Reactively in a watch on `fghij|__expanded-types`
+              ['ns0/abcde {:id 1 :ns 'ns2 :arg-types [t/byte?] :output-type t/char? :body [...]}])
+            ;; Reactively due to `abcde|__types` changing
+            (rx-set! ns0/abcde|__type (ftype t/any? [t/byte? :> t/char?] [t/int? :> t/long?]))
+            ;; Reactively due to `abcde|__type` changing
+            (rx-set! ns1/fghij|__types
+              [{:id 2 :ns 'ns1 :arg-types [t/byte?]   :output-type t/char?   :body [...]}
+               {:id 0 :ns 'ns1 :arg-types [t/int?]    :output-type t/long?   :body [...]}
+               {:id 1 :ns 'ns1 :arg-types [t/string?] :output-type t/string? :body [...]}])
+            ;; Reactively in `:overload-queue` watch on `fghij|__types`
             (alist-conj! defnt/overload-queue
-              ['.../fghij {:id 1 :arg-types [t/string?] :output-type ...}])
-            ;; Reactively because `fghij|__expanded-types` was set
-            (rx-set! fghij|__type (ftype t/any? [t/int?] [t/string?])))
+              ['ns1/fghij {:id 2 :ns 'ns1 :arg-types [t/byte?] :output-type t/char? :body [...]}])
+            ;; Reactively due to `fghij|__types` changing
+            (rx-set! fghij|__type (ftype t/any? [t/byte? :> t/char?] [t/int? :> t/long?]))
+            ;; Consuming the `defnt/overload-queue` (iterate then clear, not incremental pop)
+            (when (= lang :clj)
+              (intern 'ns2/abcde|__types|1
+                (types-decl>arg-types (rx/norx-deref ns0/abcde|__types) 1))
+              (intern 'ns2/fghij|__types|2
+                (types-decl>arg-types (rx/norx-deref ns1/fghij|__types) 2))))
     - Resulting in `abcde`'s runtime-emission code in CLJ as (easy to adapt for CLJS):
       - (do ;; Consuming the `defnt/overload-queue` (iterate then clear, not incremental pop)
-            (intern '.../abcde|__1 (reify* [...] (invoke ([x00__ c] ...))))
-            (intern '.../abcde
-              (let [types|0 (types-decl>arg-types .../abcde|__types 0)
-                    types|1 (types-decl>arg-types .../abcde|__types 1)]
-                (fn [x00__]
-                  (ifs ((Array/get types|0 0) x00__) (. .../abcde|__0 invoke x00__)
-                       ((Array/get types|0 1) x00__) (. .../abcde|__1 invoke x00__)
-                       (unsupported! ...)))))
-            ;; TODO figure out how it's going to get the data to figure out the args and body of this
-            (intern '.../fghij|__1 (reify* [...] (invoke ([x00__ b] ...))))
-            (intern '.../fghij
-              (let [types|0 (types-decl>arg-types .../fghij|types 0)
-                    types|1 (types-decl>arg-types .../fghij|types 1)]
-                (fn [x00__]
-                  (ifs ((Array/get types|0 0) x00__) (. .../fghij|__0 invoke x00__)
-                       ((Array/get types|0 1) x00__) (. .../fghij|__1 invoke x00__)
-                       (unsupported! ...)))))
-            (var .../abcde))
+            (intern 'ns2/abcde|__1 (reify* [...] (invoke ([x00__ d] ...))))
+            (intern 'ns0/abcde
+              (fn [x00__]
+                (ifs ((Array/get ns0/abcde|__types|0 0) x00__) (. ns0/abcde|__0 invoke x00__)
+                     ((Array/get ns2/abcde|__types|1 1) x00__) (. ns2/abcde|__1 invoke x00__)
+                     (unsupported! ...))))
+            (intern 'ns2/fghij|__2 (reify* [...] (invoke ([x00__ b] ...))))
+            (intern 'ns1/fghij
+              (fn [x00__]
+                (ifs ((Array/get ns2/fghij|__types|2 0) x00__) (. ns2/fghij|__2 invoke x00__)
+                     ((Array/get ns1/fghij|__types|0 0) x00__) (. ns1/fghij|__0 invoke x00__)
+                     ((Array/get ns1/fghij|__types|1 0) x00__) (. ns1/fghij|__1 invoke x00__)
+                     (unsupported! ...))))
+            (var ns0/abcde))
