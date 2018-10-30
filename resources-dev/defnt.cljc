@@ -223,6 +223,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       we annotate like `(name ^:dyn (read ...))`, meaning figure out at runtime what the out-type of
       the call to `(read ...)` is, not, call `name` dynamically.
   - `t/defn`
+    - `declare` but for `t/defn`
+      - Currently we can declare that there is an fn, and what its output type is, and its metadata,
+        but we cannot currently declare type-overloads. Experience will make clearer what to do in
+        these cases.
     - `|` (pre-types)
     - Arity elision: if any type in an arity is `t/none?` then elide it and emit a warning
       - `([x bigint?] x)`
@@ -1886,6 +1890,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
 [ ] Types yielding generative specs
 [—] Types using the clojure.spec interface
     - Not yet; wait for it to come out of alpha
-[ ] We don't need to use bootstrapped CLJS per se (though that's cool and we can look into it); we
-    can try to hook in to the JS version of the Closure Compiler. That's for later.
+[ ] We do need to rely on bootstrapped CLJS for Figwheel-style dev-time recompilation, but we don't
+    need to rely on bootstrapped CLJS per se for advanced compilation. We can try to hook in to the
+    JS version of the Closure Compiler. All of that is for later.
 "
