@@ -17,16 +17,19 @@
 (defn ?deref [x] (if (derefable? x) @x x))
 
 (defprotocol PMutableReference
-  (get       [this])
-  (set!      [this v])
-  (getAndSet [this v]))
+  (get          [this])
+  (set!         [this v])
+  (get-and-set! [this v]))
+
+(defprotocol PInterceptable
+  (add-interceptor! [this k f]))
 
 #?(:clj
 (extend-protocol PMutableReference
   ThreadLocal
-    (get       [this] (.get this))
-    (set!      [this v] (.set this v) v)
-    (getAndSet [this v] (let [v-prev (.get this)] (.set this v) v-prev))))
+    (get          [this] (.get this))
+    (set!         [this v] (.set this v) v)
+    (get-and-set! [this v] (let [v-prev (.get this)] (.set this v) v-prev))))
 
 (defn update!
   "A nonatomic update."
@@ -40,12 +43,12 @@
 ;; TODO create for every primitive datatype as well
 (deftype MutableReference [#?(:clj ^:unsynchronized-mutable val :cljs ^:mutable val)]
   PMutableReference
-  (get       [this] val)
-  (set!      [this v] (set! val v) val)
-  (getAndSet [this v] (let [v-prev val] (set! val v) v-prev))
+    (get              [this] val)
+    (set!             [this v] (set! val v) val)
+    (get-and-set!     [this v] (let [v-prev val] (set! val v) v-prev))
   #?(:clj  clojure.lang.IDeref
      :cljs cljs.core/IDeref)
-  (#?(:clj deref :cljs -deref) [this] val))
+    (#?(:clj deref :cljs -deref) [this] val))
 
 (defn ! [x] (MutableReference. x))
 

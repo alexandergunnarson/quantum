@@ -97,7 +97,12 @@
         (alist-conj! c derefed)
         (.setCaptured r (alist derefed))))))
 
-(udt/deftype Reference [^:! state meta validator ^:! watches]
+(defn- call|rf
+  ([ret] ret)
+  ([ret f] (f ret))
+  ([ret k f] (f ret)))
+
+(udt/deftype Reference [^:! state meta validator ^:! watches ^:! interceptors]
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-ref a w opts "Reference:"))
    PReactive nil
@@ -114,22 +119,26 @@
                (if (identical? oldv newv)
                    newv
                    (let [oldv state]
-                     (set! state newv)
+                     (set! state (if (nil? interceptors)
+                                     newv
+                                     (reduce-kv call|rf newv interceptors)))
                      (when-not (nil? watches) (notify-w! a oldv newv))
                      newv))))}
    ?Watchable {add-watch!    ([this k f] (add-w!    this k f))
                remove-watch! ([this k]   (remove-w! this k))}
-   PWatchable {getWatches    ([this]   watches)
-               setWatches    ([this v] (set! watches v))}
+   PWatchable {getWatches    ([this]     watches)
+               setWatches    ([this v]   (set! watches v))}
+   uref/PInterceptable
+     {add-interceptor! ([this k f] (set! interceptors (assoc interceptors k f)))}
    ?Meta      {meta          ([_] meta)
-               with-meta     ([_ meta'] (Reference. state meta' validator watches))}
+               with-meta     ([_ meta'] (Reference. state meta' validator watches interceptors))}
 #?@(:cljs [?Hash {hash    ([_] (goog/getUid this))}])})
 
 (defn !
   "Reactive '!' (single-threaded mutable reference). Like `ref/!`, except that it keeps track of
    derefs."
-  ([x] (Reference. x nil nil nil))
-  ([x & {:keys [meta validator]}] (Reference. x meta validator nil)))
+  ([x] (Reference. x nil nil nil nil))
+  ([x validator] (Reference. x nil validator nil nil)))
 
 ;; ===== Reaction ("Computed Observable") ===== ;;
 
@@ -158,7 +167,8 @@
                             queue
    ^:!          ^:get ^:set state
    ^:!          ^:get ^:set watching ; i.e. 'dependents'
-   ^:!                      watches] ; TODO consider a mutable map for `watches`
+   ^:!                      watches       ; TODO consider a mutable map for `watches`
+   ^:!                      interceptors] ; TODO consider a mutable map for `interceptors`
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-ref a w opts (str "Reaction " (hash a) ":")))
    ?Equals {= ([this that] (identical? this that))}
@@ -172,7 +182,9 @@
                            (if (and non-reactive? alwaysRecompute)
                                (when-not computed
                                  (let [old-state state]
-                                   (set! state (f))
+                                   (set! state (if (nil? interceptors)
+                                                   (f)
+                                                   (reduce-kv call|rf (f) interceptors)))
                                    (when-not (or (nil? watches) (eq-fn old-state state))
                                      (notify-w! this old-state state))))
                                (do (notify-deref-watcher! this)
@@ -189,9 +201,11 @@
                                    (.dispose this))))}
    PWatchable {getWatches ([this]   watches)
                setWatches ([this v] (set! watches v))}
-  PHasCaptured
-    {getCaptured ([this]   captured)
-     setCaptured ([this v] (set! captured v))}
+   uref/PInterceptable
+     {add-interceptor! ([this k f] (set! interceptors (assoc interceptors k f)))}
+   PHasCaptured
+     {getCaptured ([this]   captured)
+      setCaptured ([this v] (set! captured v))}
    PDisposable
      {dispose
        ([this]
@@ -201,15 +215,16 @@
            (set! alwaysRecompute #?(:clj (boolean true)  :cljs true))
            (set! computed        #?(:clj (boolean false) :cljs false))
            (doseq [w (set wg)] (#?(:clj remove-watch :cljs -remove-watch) w this))
-           (when (some? (.-on-dispose this)) ((.-on-dispose this) s))
-           (when-some [a (.-on-dispose-arr this)]
+           (set! interceptors    nil)
+           (when (some? on-dispose) (on-dispose s))
+           (when-some [a on-dispose-arr]
              (dotimes [i (long (alist-count a))] ((alist-get a i) this)))))
       addOnDispose
         ([this f]
           ;; f is called with the reaction as argument when it is no longer active
-          (if-some [a (.-on-dispose-arr this)]
+          (if-some [a on-dispose-arr]
             (alist-conj! a f)
-            (set! (.-on-dispose-arr this) (alist f))))}})
+            (set! on-dispose-arr (alist f))))}})
 
 (defn- in-context
   "When f is executed, if (f) derefs any reactive references, they are then added to
@@ -313,7 +328,7 @@
                on-dispose
                nil
                (or queue *queue*)
-               nil nil nil)))
+               nil nil nil nil)))
 
 #?(:clj (defmacro !rx "Creates a single-threaded reaction." [& body] `(>!rx (fn [] ~@body))))
 

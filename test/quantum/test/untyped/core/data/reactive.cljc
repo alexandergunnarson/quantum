@@ -435,3 +435,12 @@
       @c-lazy
       (is= @b-lazy-ct 3)
       (is= @c-lazy-ct 2))))
+
+(deftest test-interceptors
+  (let [a (! 1)]
+    (uref/add-interceptor! a :inc inc)
+    (uref/set! a 4)
+    (is= @a 5)
+    (uref/add-interceptor! a :+23 (fn [x] (+ x 23)))
+    (uref/set! a 8)
+    (is= @a 32))
