@@ -2,7 +2,7 @@
   "Operations on collections."
   (:refer-clojure :exclude
     [#?(:cljs array?) assoc-in cat conj! contains? count distinct distinct? first get group-by
-     filter flatten frequencies last map map-indexed mapcat partition-all pmap remove reverse
+     filter flatten frequencies last map map-indexed mapcat partition-all pmap remove reverse run!
      zipmap])
   (:require
     [clojure.core                  :as core]
@@ -370,6 +370,10 @@
          xs))
 
 (defn lcat [xs] (apply concat xs))
+
+(defn run!
+  "Like `core/run!` but uses `educe` internally."
+  [f xs] (->> xs (educe (fn ([] nil) ([ret] ret) ([ret x] (f x))))))
 
 (defn distinct?
   "Like `clojure.core/distinct?` except operates on reducibles."
