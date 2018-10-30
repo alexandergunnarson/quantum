@@ -143,7 +143,7 @@
 (def intern! intern)
 
 (defn intern-once!
-  "Interns a var corresponding to ->`sym` only if the var does not have a value."
+  "Interns a var corresponding to ->`sym` only if the var has not already been interned."
   ([ns-sym #_symbol?, sym #_symbol?, v #_t/ref?]
     (or (resolve (find-ns ns-sym) sym)
         (intern! ns-sym sym v))))
