@@ -5,33 +5,35 @@
   (:require
     [quantum.untyped.core.test          :as utest
       :refer [deftest is is= testing]]
-    [quantum.untyped.core.data.reactive :as rx
-      :refer [! !eager-rx !run-rx !rx >!rx dispose! flush!]]))
+    [quantum.untyped.core.data.vector   :as uvec]
+    [quantum.untyped.core.data.reactive :as urx
+      :refer [! !eager-rx !run-rx !rx >!rx dispose! flush!]]
+    [quantum.untyped.core.refs          :as uref]))
 
 (defn with-debug [f]
-  (flush! rx/global-queue)
-  (binding [rx/*debug?* true] (f)))
+  (flush! urx/global-queue)
+  (binding [urx/*debug?* true] (f)))
 
 (utest/use-fixtures :once with-debug)
 
-(defn- running [] @@#'rx/*running)
+(defn- running [] @@#'urx/*running)
 
 (defn test-perf []
   ;; (set! debug? false) ; yes but we need to think about CLJ
   (dotimes [_ 10]
     (let [a   (! 0)
           f   (fn [] (quot (long @a) 10))
-          q   (@#'rx/alist)
+          q   (uvec/alist)
           mid (>!rx f {:queue q})
-          res (rx/>track! (fn [] (inc (long @mid))) [] {:queue q})]
+          res (urx/>track! (fn [] (inc (long @mid))) [] {:queue q})]
       @res
       (time (dotimes [_ 100000] ; ~70ms per 100K in CLJ so 0.0007ms for one (0.7 µs or 700 ns)
-              (swap! a inc)
-              (@#'rx/flush! q)))
+              (uref/update! a inc)
+              (@#'urx/flush! q)))
       (dispose! res))))
 
 (deftest basic-atom
-  (binding [rx/*enqueue!* @#'rx/alist-conj!]
+  (binding [urx/*enqueue!* uvec/alist-conj!]
     (let [runs  (running)
           start (! 0)
           sv    (!eager-rx @start)
@@ -39,12 +41,12 @@
           c2    (!eager-rx (inc @comp))
           ct    (! 0)
           out   (! 0)
-          res   (!eager-rx (swap! ct inc) @sv @c2 @comp)
-          const (!run-rx (reset! out @res))]
+          res   (!eager-rx (uref/update! ct inc) @sv @c2 @comp)
+          const (!run-rx (uref/set! out @res))]
       (is (= @ct 1) "constrain ran")
       (is (= @out 2))
-      (reset! start 1)
-      (flush! rx/global-queue)
+      (uref/set! start 1)
+      (flush! urx/global-queue)
       (is (= @out 3)) ; not correct; showing 2
       (is (<= 2 @ct 3))
       (dispose! const)
@@ -56,14 +58,14 @@
         c3-count (! 0)
         c1       (!eager-rx @start 1)
         c2       (!eager-rx @start)
-        c3       (!rx (swap! c3-count inc)
+        c3       (!rx (uref/update! c3-count inc)
                      (+ @c1 @c2))]
-    (flush! rx/global-queue)
+    (flush! urx/global-queue)
     (is (= @c3-count 0))
     (is (= @c3 1))
     (is (= @c3-count 1) "t1")
-    (swap! start inc)
-    (flush! rx/global-queue)
+    (uref/update! start inc)
+    (flush! urx/global-queue)
     (is (= @c3-count 2) "t2")
     (is (= @c3 2))
     (is (= @c3-count 2) "t3")
@@ -74,17 +76,17 @@
   (let [runs (running)]
     (let [*counter (! 0)
           *signal  (! "All I do is change")
-          co (!run-rx @*signal (swap! *counter inc))]
+          co (!run-rx @*signal (uref/update! *counter inc))]
       (is (= 1 @*counter) "Constraint run on init")
-      (reset! *signal "foo")
-      (flush! rx/global-queue)
+      (uref/set! *signal "foo")
+      (flush! urx/global-queue)
       (is (= 2 @*counter)
           "Counter auto updated")
       (dispose! co))
     (let [*x  (! 0)
           *co (!rx (inc @*x))]
       (is (= 1 @*co) "CO has correct value on first deref")
-      (swap! *x inc)
+      (uref/update! *x inc)
       (is (= 2 @*co) "CO auto-updates")
       (dispose! *co))
     (is (= (running) runs))))
@@ -98,37 +100,37 @@
           b-changed (! 0)
           c-changed (! 0)
           b         (!eager-rx
-                      (swap! b-changed inc)
+                      (uref/update! b-changed inc)
                       (inc @a1))
           c         (!eager-rx
-                      (swap! c-changed inc)
+                      (uref/update! c-changed inc)
                       (+ 10 @a2))
           res       (!run-rx (if (< @a2 1) @b @c))]
       (is (= @res (+ 2 @a)))
       (is (= @b-changed 1))
       (is (= @c-changed 0))
 
-      (reset! a -1)
+      (uref/set! a -1)
       (is (= @res (+ 2 @a)))
       (is (= @b-changed 2))
       (is (= @c-changed 0))
 
-      (reset! a 2)
+      (uref/set! a 2)
       (is (= @res (+ 10 @a)))
       (is (<= 2 @b-changed 3))
       (is (= @c-changed 1))
 
-      (reset! a 3)
+      (uref/set! a 3)
       (is (= @res (+ 10 @a)))
       (is (<= 2 @b-changed 3))
       (is (= @c-changed 2))
 
-      (reset! a 3)
+      (uref/set! a 3)
       (is (= @res (+ 10 @a)))
       (is (<= 2 @b-changed 3))
       (is (= @c-changed 2))
 
-      (reset! a -1)
+      (uref/set! a -1)
       (is (= @res (+ 2 @a)))
       (dispose! res)
       (is (= (running) runs)))))
@@ -141,7 +143,7 @@
           c    (!eager-rx (dec @a))
           d    (!eager-rx (str @b))
           res  (! 0)
-          cs   (!run-rx (reset! res @d))]
+          cs   (!run-rx (uref/set! res @d))]
       (is (= @res "1"))
       (dispose! cs))
     ;; should be broken according to https://github.com/lynaghk/reflex/issues/1
@@ -158,14 +160,14 @@
           d (!run-rx [@b @c])
           res (! 0)]
       (is (= @d [1 -1]))
-      (let [e (!run-rx (reset! res @d))]
+      (let [e (!run-rx (uref/set! res @d))]
         (is (= @res [1 -1]))
         (dispose! e))
       (dispose! d))
     (is (= (running) runs))))
 
 (deftest test-dispose
-  (binding [rx/*enqueue!* @#'rx/alist-conj!]
+  (binding [urx/*enqueue!* uvec/alist-conj!]
     (dotimes [x 10]
       (let [runs         (running)
             a            (! 0)
@@ -173,42 +175,42 @@
             disposed-c   (! nil)
             disposed-cns (! nil)
             count-b      (! 0)
-            b   (>!rx (fn [] (swap! count-b inc) (inc @a))
+            b   (>!rx (fn [] (uref/update! count-b inc) (inc @a))
                         {:always-recompute? true
-                         :on-dispose        (fn [r] (reset! disposed true))
-                         :queue             rx/global-queue})
+                         :on-dispose        (fn [r] (uref/set! disposed true))
+                         :queue             urx/global-queue})
             c   (>!rx #(if (< @a 1) (inc @b) (dec @a))
                         {:always-recompute? true
-                         :on-dispose        (fn [r] (reset! disposed-c true))
-                         :queue             rx/global-queue})
+                         :on-dispose        (fn [r] (uref/set! disposed-c true))
+                         :queue             urx/global-queue})
             res (! nil)
-            cns (>!rx #(reset! res @c)
-                        {:on-dispose (fn [r] (reset! disposed-cns true))
-                         :queue      rx/global-queue})]
+            cns (>!rx #(uref/set! res @c)
+                        {:on-dispose (fn [r] (uref/set! disposed-cns true))
+                         :queue      urx/global-queue})]
         @cns
         (is (= @res 2))
         (is (= (+ 4 runs) (running)))
         (is (= @count-b 1))
-        (reset! a -1)
-        (flush! rx/global-queue)
+        (uref/set! a -1)
+        (flush! urx/global-queue)
         (is (= @res 1))
         (is (= @disposed nil))
         (is (= @count-b 2))
         (is (= (+ 4 runs) (running)) "still running")
-        (reset! a 2)
-        (flush! rx/global-queue)
+        (uref/set! a 2)
+        (flush! urx/global-queue)
         (is (= @res 1))
         (is (= @disposed true))
         (is (= (+ 2 runs) (running)) "less running count")
 
-        (reset! disposed nil)
-        (reset! a -1)
-        (flush! rx/global-queue)
+        (uref/set! disposed nil)
+        (uref/set! a -1)
+        (flush! urx/global-queue)
         ;; This fails sometimes on node. I have no idea why.
         (is (= 1 @res) "should be one again")
         (is (= @disposed nil))
-        (reset! a 2)
-        (flush! rx/global-queue)
+        (uref/set! a 2)
+        (flush! urx/global-queue)
         (is (= @res 1))
         (is (= @disposed true))
         (dispose! cns)
@@ -224,60 +226,44 @@
           disposed-c   (! nil)
           disposed-cns (! nil)
           count-b      (! 0)
-          b            (!eager-rx (swap! count-b inc) (inc @a))
+          b            (!eager-rx (uref/update! count-b inc) (inc @a))
           c            (!eager-rx (if (< @a 1) (inc @b) (dec @a)))
           res          (! nil)
-          cns          (!rx (reset! res @c))]
-      (rx/add-on-dispose! b (fn [r]
-                                (is (= r b))
-                                (reset! disposed true)))
-      (rx/add-on-dispose! c   (fn [r] (reset! disposed-c true)))
-      (rx/add-on-dispose! cns (fn [r] (reset! disposed-cns true)))
+          cns          (!rx (uref/set! res @c))]
+      (urx/add-on-dispose! b (fn [r]
+                               (is (= r b))
+                               (uref/set! disposed true)))
+      (urx/add-on-dispose! c   (fn [r] (uref/set! disposed-c true)))
+      (urx/add-on-dispose! cns (fn [r] (uref/set! disposed-cns true)))
       @cns
       (is (= @res 2))
       (is (= (+ 4 runs) (running)))
       (is (= @count-b 1))
-      (reset! a -1)
-      (flush! rx/global-queue)
+      (uref/set! a -1)
+      (flush! urx/global-queue)
       (is (= @res 1))
       (is (= @disposed nil))
       (is (= @count-b 2))
       (is (= (+ 4 runs) (running)) "still running")
-      (reset! a 2)
-      (flush! rx/global-queue)
+      (uref/set! a 2)
+      (flush! urx/global-queue)
       (is (= @res 1))
       (is (= @disposed true))
       (is (= (+ 2 runs) (running)) "less running count")
 
-      (reset! disposed nil)
-      (reset! a -1)
-      (flush! rx/global-queue)
+      (uref/set! disposed nil)
+      (uref/set! a -1)
+      (flush! urx/global-queue)
       (is (= 1 @res) "should be one again")
       (is (= @disposed nil))
-      (reset! a 2)
-      (flush! rx/global-queue)
+      (uref/set! a 2)
+      (flush! urx/global-queue)
       (is (= @res 1))
       (is (= @disposed true))
       (dispose! cns)
       (is (= @disposed-c true))
       (is (= @disposed-cns true))
       (is (= runs (running))))))
-
-(deftest test-on-set
-  (let [runs (running)
-        a (! 0)
-        b (>!rx #(+ 5 @a)
-                  {:on-set (fn [oldv newv] (reset! a (+ 10 newv)))
-                   :queue  rx/global-queue})]
-    @b
-    (is (= 5 @b))
-    (reset! a 1)
-    (is (= 6 @b))
-    (reset! b 1)
-    (is (= 11 @a))
-    (is (= 16 @b))
-    (dispose! b)
-    (is (= runs (running)))))
 
 (deftest non-reactive-deref
   (let [runs (running)
@@ -286,7 +272,7 @@
     (is (= @b 5))
     (is (= runs (running)))
 
-    (reset! a 1)
+    (uref/set! a 1)
     (is (= @b 6))
     (is (= runs (running)))))
 
@@ -296,15 +282,15 @@
         c1    (!eager-rx (get-in @state [:data :a]))
         c2    (!eager-rx (get-in @state [:data :b]))
         rxn   (!rx (let [cc1 @c1, cc2 @c2]
-                    (swap! state assoc :derived (+ (or cc1 0) (or cc2 0)))
+                    (uref/update! state assoc :derived (+ (or cc1 0) (or cc2 0)))
                     nil))]
     @rxn
     (is (= (:derived @state) 0))
-    (swap! state assoc :data {:a 1 :b 2})
-    (flush! rx/global-queue)
+    (uref/update! state assoc :data {:a 1 :b 2})
+    (flush! urx/global-queue)
     (is (= (:derived @state) 3))
-    (swap! state assoc :data {:a 11 :b 22})
-    (flush! rx/global-queue)
+    (uref/update! state assoc :data {:a 11 :b 22})
+    (flush! urx/global-queue)
     (is (= (:derived @state) 33))
     (dispose! rxn)
     (is (= runs (running)))))
@@ -314,15 +300,15 @@
         state (! 1)
         count (! 0)
         r     (!run-rx
-                (swap! count inc)
+                (uref/update! count inc)
                 (when (> @state 1) (throw (ex-info "oops" {}))))]
     (is (= @count 1))
     (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
-                 (do (swap! state inc)
-                     (flush! rx/global-queue))))
+                 (do (uref/update! state inc)
+                     (flush! urx/global-queue))))
     (is (= @count 2))
-    (swap! state dec)
-    (flush! rx/global-queue)
+    (uref/update! state dec)
+    (flush! urx/global-queue)
     (is (= @count 3))
     (dispose! r)
     (is (= runs (running)))))
@@ -334,22 +320,22 @@
         ref   (!eager-rx (when (= @state 2)
                           (throw (ex-info "err" {}))))
         r (!run-rx
-            (swap! count inc)
+            (uref/update! count inc)
             @ref)]
     (is (= @count 1))
     (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
-                 (do (swap! state inc)
-                     (flush! rx/global-queue))))
+                 (do (uref/update! state inc)
+                     (flush! urx/global-queue))))
     (is (= @count 2))
     (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo) @ref))
-    (swap! state inc)
-    (flush! rx/global-queue)
+    (uref/update! state inc)
+    (flush! urx/global-queue)
     (is (= @count 3))
     (dispose! r)
     (is (= runs (running)))))
 
 (deftest exception-side-effect
-  (binding [rx/*enqueue!* @#'rx/alist-conj!]
+  (binding [urx/*enqueue!* uvec/alist-conj!]
     (let [runs   (running)
           state  (! {:val 1})
           rstate (!eager-rx @state)
@@ -362,31 +348,31 @@
           r3     (!run-rx
                    (when (:error? @rstate)
                      (throw (ex-info "Error detected!" {}))))]
-      (swap! state assoc :val 2)
-      (flush! rx/global-queue)
-      (swap! state assoc :error? true)
+      (uref/update! state assoc :val 2)
+      (flush! urx/global-queue)
+      (uref/update! state assoc :error? true)
       (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
-                   (flush! rx/global-queue)))
-      (flush! rx/global-queue)
-      (flush! rx/global-queue)
+                   (flush! urx/global-queue)))
+      (flush! urx/global-queue)
+      (flush! urx/global-queue)
       (dispose! r1)
       (dispose! r2)
       (dispose! r3)
       (is (= runs (running))))))
 
 (deftest exception-reporting
-  (binding [rx/*enqueue!* @#'rx/alist-conj!]
+  (binding [urx/*enqueue!* uvec/alist-conj!]
     (let [runs   (running)
           state  (! {:val 1})
           rstate (!eager-rx (:val @state))
           r1     (!run-rx
                    (when (= @rstate 13)
                      (throw (ex-info "fail" {}))))]
-      (swap! state assoc :val 13)
+      (uref/update! state assoc :val 13)
       (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
-                   (flush! rx/global-queue)))
-      (swap! state assoc :val 2)
-      (flush! rx/global-queue)
+                   (flush! urx/global-queue)))
+      (uref/update! state assoc :val 2)
+      (flush! urx/global-queue)
       (dispose! r1)
       (is (= runs (running))))))
 
@@ -418,7 +404,7 @@
       (is= @b-ct 3)
       (is= @c-ct 3)
 
-      (reset! a 234)
+      (uref/set! a 234)
 
       @c
       (is= @b-ct 4)
@@ -435,13 +421,13 @@
       (is= @b-lazy-ct 1)
       (is= @c-lazy-ct 1)
 
-      (reset! a 234) ; resetting to the same state
+      (uref/set! a 234) ; resetting to the same state
 
       @c-lazy
       (is= @b-lazy-ct 2)
       (is= @c-lazy-ct 1)
 
-      (reset! a 123)
+      (uref/set! a 123)
 
       @c-lazy
       (is= @b-lazy-ct 3)

@@ -30,9 +30,10 @@
 
 (defn update!
   "A nonatomic update."
-  [x f]
-  (quantum.untyped.core.refs/set! x (f (get x)))
-  x)
+  ([x f]            (doto x (quantum.untyped.core.refs/set! (f (get x)))))
+  ([x f a0]         (doto x (quantum.untyped.core.refs/set! (f (get x) a0))))
+  ([x f a0 a1]      (doto x (quantum.untyped.core.refs/set! (f (get x) a0 a1))))
+  ([x f a0 a1 & as] (doto x (quantum.untyped.core.refs/set! (apply f (get x) a0 a1 as)))))
 
 ;; ===== Unsynchronized mutability ===== ;;
 

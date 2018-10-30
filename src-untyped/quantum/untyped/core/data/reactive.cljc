@@ -22,6 +22,7 @@
           [quantum.untyped.core.log                   :as ulog]
           [quantum.untyped.core.logic
             :refer [ifs]]
+          [quantum.untyped.core.refs                  :as uref]
           [quantum.untyped.core.vars
             :refer [defonce-]])
 #?(:clj (:import [java.util ArrayList])))
@@ -100,31 +101,28 @@
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-ref a w opts "Reference:"))
    PReactive nil
-   ?Equals {=      ([this that] (identical? this that))}
-   ?Deref  {deref  ([this]
-                     (notify-deref-watcher! this)
-                     state)}
-   ?Atom   {reset! ([a new-value]
-                     (when-not (nil? validator)
-                       (assert (validator new-value) "Validator rejected reference state"))
-                     (let [old-value state]
-                       (if (identical? old-value new-value)
-                           new-value
-                           (let [old-value state]
-                             (set! state new-value)
-                             (when-not (nil? watches)
-                               (notify-w! a old-value new-value))
-                             new-value))))
-            swap!  (([a f]          (#?(:clj .reset :cljs -reset!) a (f state)))
-                    ([a f x]        (#?(:clj .reset :cljs -reset!) a (f state x)))
-                    ([a f x y]      (#?(:clj .reset :cljs -reset!) a (f state x y)))
-                    ([a f x y more] (#?(:clj .reset :cljs -reset!) a (apply f state x y more))))}
+   ?Equals {=     ([this that] (identical? this that))}
+   ?Deref  {deref ([this]
+                    (notify-deref-watcher! this)
+                    state)}
+   uref/PMutableReference
+     {get  ([this] (norx-deref this))
+      set! ([a newv]
+             (when-not (nil? validator)
+               (assert (validator newv) "Validator rejected reference state"))
+             (let [oldv state]
+               (if (identical? oldv newv)
+                   newv
+                   (let [oldv state]
+                     (set! state newv)
+                     (when-not (nil? watches) (notify-w! a oldv newv))
+                     newv))))}
    ?Watchable {add-watch!    ([this k f] (add-w!    this k f))
                remove-watch! ([this k]   (remove-w! this k))}
    PWatchable {getWatches    ([this]   watches)
                setWatches    ([this v] (set! watches v))}
-   ?Meta      {meta      ([_] meta)
-               with-meta ([_ meta'] (Reference. state meta' validator watches))}
+   ?Meta      {meta          ([_] meta)
+               with-meta     ([_ meta'] (Reference. state meta' validator watches))}
 #?@(:cljs [?Hash {hash    ([_] (goog/getUid this))}])})
 
 (defn !
@@ -157,7 +155,6 @@
        ^boolean             no-cache?
    ^:!                      on-dispose
    ^:!                      on-dispose-arr
-   ^:!                      on-set
                             queue
    ^:!          ^:get ^:set state
    ^:!          ^:get ^:set watching ; i.e. 'dependents'
@@ -181,6 +178,7 @@
                                (do (notify-deref-watcher! this)
                                    (when-not computed (run-reaction! this false))))
                            state)))}
+   uref/PMutableReference {get ([this] (norx-deref this))}
    ?Watchable {add-watch!    ([this k f] (add-w! this k f))
                remove-watch! ([this k]
                                (let [was-empty? (empty? watches)]
@@ -191,18 +189,6 @@
                                    (.dispose this))))}
    PWatchable {getWatches ([this]   watches)
                setWatches ([this v] (set! watches v))}
-   ?Atom
-     {reset! ([a newv]
-                (assert (fn? (.-on-set a)) "Reaction is read only; on-set is not allowed")
-                (let [oldv state]
-                  (set! state newv)
-                  ((.-on-set a) oldv newv)
-                  (notify-w! a oldv newv)
-                  newv))
-      swap!  (([a f]          (#?(:clj .reset :cljs -reset!) a (f (norx-deref a))))
-              ([a f x]        (#?(:clj .reset :cljs -reset!) a (f (norx-deref a) x)))
-              ([a f x y]      (#?(:clj .reset :cljs -reset!) a (f (norx-deref a) x y)))
-              ([a f x y more] (#?(:clj .reset :cljs -reset!) a (apply f (norx-deref a) x y more))))}
   PHasCaptured
     {getCaptured ([this]   captured)
      setCaptured ([this v] (set! captured v))}
@@ -315,7 +301,7 @@
 
 (defn ^Reaction >!rx
   ([f] (>!rx f nil))
-  ([f {:keys [always-recompute? enqueue-fn eq-fn no-cache? on-set on-dispose queue]}]
+  ([f {:keys [always-recompute? enqueue-fn eq-fn no-cache? on-dispose queue]}]
     (Reaction. (if (nil? always-recompute?) false always-recompute?)
                nil
                nil
@@ -326,7 +312,6 @@
                (if (nil? no-cache?) false no-cache?)
                on-dispose
                nil
-               on-set
                (or queue *queue*)
                nil nil nil)))
 
