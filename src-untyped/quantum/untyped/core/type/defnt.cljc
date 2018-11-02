@@ -112,21 +112,19 @@
 (s/def ::overload-basis
   (s/kv {:ns                      simple-symbol?
          :args-form               map? ; from binding to form
-         :varargs-form            map? ; from binding to form
+         :varargs-form            (s/nilable map?) ; from binding to form
          :arglist-form|unanalyzed t/any?
          :arg-types|basis         (s/vec-of t/type?)
          :output-type|form        t/any?
          :output-type|basis       t/type?
-         :body-codelist           (s/vec-of t/any?)
-         :dependent?              t/boolean?
-         :reactive?               t/boolean?}))
+         :body-codelist           (s/vec-of t/any?)}))
 
  ;; Technically it's partially analyzed — its type definitions are analyzed (with the exception of
  ;; requests for type inference) while its body is not.
  (s/def ::unanalyzed-overload
    (s/kv {:arglist-form|unanalyzed  t/any?
           :args-form                map? ; from binding to form
-          :varargs-vorm             map? ; from binding to form
+          :varargs-vorm             (s/nilable map?) ; from binding to form
           :arg-types                (s/vec-of t/type?)
           :output-type|form         t/any?
           :output-type              t/type?
@@ -661,22 +659,24 @@
    {:as fn|globals :keys [fn|meta _, fn|ns-name _, fn|name _, fn|output-type _
                           fn|overload-types-name _, fn|type-name _]} ::fn|globals
    !overload-types _]
- (let [overload-forms
+  (let [overload-forms
          (->> !overload-types
               urx/norx-deref
+              :current
               (group-by (fn-> :arg-types count))
               (sort-by key) ; for purposes of reproducibility and organization
               (map (c/fn [[arg-ct overload-types-for-arity]]
+                     (quantum.untyped.core.print/ppr overload-types-for-arity)
                      (let [arglist (ufgen/gen-args 0 arg-ct "x" gen-gensym)
                            body    (>dynamic-dispatch|body-for-arity
                                      fn|globals overload-types-for-arity arglist)]
                        (list arglist body)))))
       fn|meta' (merge fn|meta {:quantum.core.type/type (uid/qualify fn|ns-name fn|type-name)})]
-  ;; TODO determine whether CLJS needs (update-in m [:jsdoc] conj "@param {...*} var_args")
-  (if (= kind :extend-defn!)
-      `(intern (quote ~fn|ns-name) (quote ~fn|name)
-         (with-meta (fn* ~@overload-forms) ~fn|meta'))
-      `(def ~fn|name (with-meta (fn* ~@overload-forms) ~fn|meta')))))
+    ;; TODO determine whether CLJS needs (update-in m [:jsdoc] conj "@param {...*} var_args")
+    (if (= kind :extend-defn!)
+        `(intern (quote ~fn|ns-name) (quote ~fn|name)
+           (with-meta (fn* ~@overload-forms) ~fn|meta'))
+        `(def ~fn|name (with-meta (fn* ~@overload-forms) ~fn|meta')))))
 
 ;; ===== End dynamic dispatch ===== ;;
 
@@ -724,7 +724,7 @@
      :args-form               args-form
      :arg-types|basis         (->> args-form keys (uc/map binding->arg-type|basis))
      ;; TODO Only needed if `dependent?` or if new
-     :varargs-form            {varargs-binding nil} ; TODO `nil` isn't right
+     :varargs-form            (when varargs {varargs-binding nil}) ; TODO `nil` isn't right
      :arglist-form|unanalyzed arglist-form|unanalyzed
      ;; TODO Only needed if `dependent?` or if new
      :output-type|form        output-type|form
@@ -758,6 +758,7 @@
       (with-do-let [!overload-types (urx/!rx @!overload-bases)]
         (uref/add-interceptor! !overload-types :the-interceptor
           (c/fn [_ _ old-overload-types new-overload-bases]
+            (println "interceptor")
             ;; `fn|globals` is closed over
             (overload-bases>overload-types
               new-overload-bases old-overload-types fn|globals)))
@@ -786,7 +787,7 @@
 (defns- >fn|globals+?overload-bases-form
   "`opts` are per invocation of `t/defn` and/or `extend-defn!`, while `globals` persist for as long
    as the `t/defn` does."
-  [kind ::kind, args _ > ::fn|globals]
+  [kind ::kind, args _ > (s/kv {:fn|globals ::fn|globals :overload-bases-form t/any?})]
   (let [{:as args'
          :keys [:quantum.core.specs/fn|name
                 :quantum.core.defnt/fn|extended-name

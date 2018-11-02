@@ -5,7 +5,7 @@
     [clojure.core                           :as core]
     [quantum.test.untyped.core.type         :as tt]
     [quantum.untyped.core.type.defnt        :as self
-      :refer [types-decl>arg-types types-decl>ftype unsupported!]]
+      :refer [unsupported!]]
     [quantum.untyped.core.data.array
       :refer [*<>]]
     [quantum.untyped.core.form
