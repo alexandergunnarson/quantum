@@ -67,9 +67,9 @@
                                  '(. java.lang.management.ManagementFactory getRuntimeMXBean))
                                'getName)))))
                [{:id 0 :index 0 :arg-types [] :output-type (t/or (t/value nil) (t/isa? String))}]
-               (defn ~'pid|test
-                 {:quantum.core.type/type (types-decl>ftype pid|test|__types t/any?)}
-                 ([] (. pid|test|__0 ~'invoke)))))]
+               (def ~'pid|test
+                 (with-meta (fn* ([] (. pid|test|__0 ~'invoke)))
+                   {:quantum.core.type/type pid|test|__type}))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)

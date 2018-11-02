@@ -128,22 +128,27 @@
   "Ensures that two pieces of code are equivalent.
    This means ensuring that seqs, vectors, and maps are only allowed to be compared with
    each other, and that metadata (minus line and column metadata) is equivalent."
-  ([code0 code1]
-    (if (uvar/metable? code0)
-        (and (uvar/metable? code1)
-             (= (-> code0 meta (or {}) (dissoc :line :column))
-                (-> code1 meta (or {}) (dissoc :line :column)))
+  ([c0 c1]
+    (if (uvar/metable? c0)
+        (and (uvar/metable? c1)
+             (= (-> c0 meta (or {}) (dissoc :line :column))
+                (-> c1 meta (or {}) (dissoc :line :column)))
              (let [similar-class?
-                     (cond (seq?    code0) (seq?    code1)
-                           (seq?    code1) (seq?    code0)
-                           (vector? code0) (vector? code1)
-                           (vector? code1) (vector? code0)
-                           (map?    code0) (map?    code1)
-                           (map?    code1) (map?    code0)
-                           :else           ::not-applicable)]
+                     (cond (seq?    c0) (seq?    c1)
+                           (seq?    c1) (seq?    c0)
+                           (vector? c0) (vector? c1)
+                           (vector? c1) (vector? c0)
+                           (map?    c0) (map?    c1)
+                           (map?    c1) (map?    c0)
+                           (set?    c0) (set?    c1)
+                           (set?    c1) (set?    c0)
+                           :else        ::not-applicable)]
                (if (= similar-class? ::not-applicable)
-                   (= code0 code1)
-                   (and similar-class? (seq= (seq code0) (seq code1) code=)))))
-        (and (not (uvar/metable? code1))
-             (= code0 code1))))
-  ([code0 code1 & codes] (and (code= code0 code1) (every? #(code= code0 %) codes))))
+                   (= c0 c1)
+                   (and similar-class?
+                        (if (or (set? c0) (map? c0))
+                            (seq= (sort c0) (sort c1) code=)
+                            (seq= (seq  c0) (seq  c1) code=))))))
+        (and (not (uvar/metable? c1))
+             (= c0 c1))))
+  ([c0 c1 & cs] (and (code= c0 c1) (every? #(code= c0 %) cs))))

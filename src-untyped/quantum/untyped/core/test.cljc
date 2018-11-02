@@ -38,6 +38,8 @@
                 (vector?     c1) (vector?     c0)
                 (map?        c0) (map?        c1)
                 (map?        c1) (map?        c0)
+                (set?        c0) (set?        c1)
+                (set?        c1) (set?        c0)
                 (+map-entry? c0) (+map-entry? c1)
                 (+map-entry? c1) (+map-entry? c0)
                 :else        ::not-applicable)]
@@ -47,7 +49,9 @@
         (and (or similar-class?
                  (do (pr! "FAIL: should be similar class" (pr-str c0) (pr-str c1))
                      false))
-             (or (uc/seq= (seq c0) (seq c1) code=)
+             (or (if (or (set? c0) (map? c0))
+                     (uc/seq= (sort c0) (sort c1) code=)
+                     (uc/seq= (seq  c0) (seq  c1) code=))
                  (do (pr! "FAIL: `(seq= code0 code1 code=)`" (pr-str c0) (pr-str c1))
                      false))))))
 

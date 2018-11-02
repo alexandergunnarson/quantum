@@ -277,12 +277,12 @@
    `t/fn` overload, which is the foundation for one `reify`."
   [{:as unanalyzed-overload
     :keys [arglist-form|unanalyzed _, args-form _, varargs-form _, arg-types _,
-           output-type|form _, body-codelist|unanalyzed _]
+           output-type|form _, body-codelist _]
     declared-output-type [:output-type _]}
    ::unanalyzed-overload
    {:as opts       :keys [lang _, kind _]} ::opts
    {:as fn|globals :keys [fn|name _, fn|output-type _]} ::fn|globals
-   fn|type (s/nilable utr/fn-type?)
+   fn|type t/type?
    > ::overload]
   (let [;; Not sure if `nil` is the right approach for the value
         recursive-ast-node-reference
@@ -295,7 +295,7 @@
                                      (assoc fn|name recursive-ast-node-reference))))
         variadic?   (not (empty? varargs-form))
         arg-classes (->> arg-types (uc/map type>class))
-        body-node   (uana/analyze env (ufgen/?wrap-do body-codelist|unanalyzed))
+        body-node   (uana/analyze env (ufgen/?wrap-do body-codelist))
         hint-arg|fn (c/fn [i arg-binding]
                       (ufth/with-type-hint arg-binding
                         (ufth/>fn-arglist-tag
@@ -326,7 +326,7 @@
    overloads.
    This is because once we must sort (`O(n•log(n))`) the overloads by comparing their arg types and
    then if we find any duplicates in a linear scan (`O(n)`), we throw an error."
-  [opts ::opts, fn|globals ::fn|globals, fn|type (s/nilable utr/fn-type?)
+  [opts ::opts, fn|globals ::fn|globals, fn|type t/type?
    unanalyzed-overloads (s/vec-of ::unanalyzed-overload)
    > (s/vec-of ::overload)]
   (->> unanalyzed-overloads
@@ -518,7 +518,7 @@
    existing-overload-types (s/nilable (s/vec-of ::types-decl-datum))
    opts ::opts
    {:as fn|globals :keys [fn|overload-types-name _, fn|name _, fn|ns-name _]} ::fn|globals
-   fn|type (s/nilable utr/fn-type?)
+   fn|type t/type?
    > (s/vec-of ::types-decl-datum)]
   (if-not-let [overload-bases-to-analyze (-> overload-bases >overload-bases-to-analyze seq)]
     existing-overload-types

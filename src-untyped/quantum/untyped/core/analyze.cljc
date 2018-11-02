@@ -1018,8 +1018,7 @@
   [env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _
    split-types? boolean?]
   {:arglist-context?        true
-   :arglist-syms|queue      (uset/ordered-set
-                              (-> arg-sym->arg-type-form keys first))
+   :arglist-syms|queue      (uset/ordered-set (-> arg-sym->arg-type-form keys first))
    :arglist-syms|unanalyzed (-> arg-sym->arg-type-form keys set)
    :arg-env                 (atom env) ; Mutable so it can cache
    :arg-sym->arg-type-form  arg-sym->arg-type-form
