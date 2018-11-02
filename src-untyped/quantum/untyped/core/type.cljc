@@ -113,7 +113,7 @@
    then the whole type will become reactive. Thus, reactivity is 'infectious'.
 
    The only macro in all of the core type predicates."
-  [& body] `(rx* (urx/rx ~@body) ($ ~(vec body)))))
+  [& body] `(rx* (urx/!rx ~@body) ($ ~(vec body)))))
 
 (defn- deref-when-reactive [x]
   (if (utr/reactive-type? x)
@@ -847,7 +847,7 @@
   (isa?|direct #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
 
 ;; Used by `quantum.untyped.core.analyze` via `t/callable?`
-(def fnt? (and fn? (>expr (fn-> c/meta :quantum.core.type/type utr/fn-type?))))
+(def fnt? (and fn? (>expr (fn-> c/meta :quantum.core.type/type type?))))
 
 ;; TODO should we allow java.lang.Runnable, java.util.concurrent.Callable, and other
 ;; functional interfaces to be `callable?`?
