@@ -19,8 +19,7 @@
     [quantum.untyped.core.spec              :as s]
     [quantum.untyped.core.test              :as utest
       :refer [deftest is is= is-code= testing throws]]
-    [quantum.untyped.core.type              :as t
-      :refer [?]]
+    [quantum.untyped.core.type              :as t]
     [quantum.untyped.core.type.reifications :as utr])
   (:import
     [clojure.lang ASeq ISeq LazySeq Named Reduced Seqable]
@@ -55,14 +54,11 @@
   (let [actual
           (binding [self/*compilation-mode* :test]
             (macroexpand '
-              (self/defn pid|test [> (? t/string?)]
+              (self/defn pid|test [> (t/? t/string?)]
                 (->> ^:val (java.lang.management.ManagementFactory/getRuntimeMXBean)
                            (.getName)))))
         expected
         ($ (do (declare ~'pid|test)
-               (def ~'pid|test|__types
-                 (atom [{:id 0 :arg-types [] :output-type (t/or (t/value nil) (t/isa? String))}]))
-               (def ~(O<> 'pid|test|__0|types) (types-decl>arg-types pid|test|__types 0))
                (def ~(tag (cstr `>Object) 'pid|test|__0)
                  (reify* [>Object]
                    (~(O 'invoke) [~'_0__]
@@ -70,6 +66,7 @@
                                (tag "java.lang.management.RuntimeMXBean"
                                  '(. java.lang.management.ManagementFactory getRuntimeMXBean))
                                'getName)))))
+               [{:id 0 :index 0 :arg-types [] :output-type (t/or (t/value nil) (t/isa? String))}]
                (defn ~'pid|test
                  {:quantum.core.type/type (types-decl>ftype pid|test|__types t/any?)}
                  ([] (. pid|test|__0 ~'invoke)))))]

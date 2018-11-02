@@ -80,7 +80,7 @@
 
 (defonce *interfaces (atom {}))
 
-(defonce !overload-queue (uvec/alist)) ; (t/!seq-of ::indexed-types-decl-datum)
+(defonce !overload-queue (uvec/alist)) ; (t/!seq-of ::types-decl-datum-with-overload)
 
 ;; ==== Internal specs ===== ;;
 
@@ -177,15 +177,8 @@
   (s/kv {:id          ::overload|id
          :ns-sym      simple-symbol?
          :arg-types   (s/vec-of t/type?)
-         :output-type t/type?}))
-
-(s/def ::indexed-types-decl-datum
-  (s/kv {:id          ::overload|id
-         :ns-sym      simple-symbol?
-         :arg-types   (s/vec-of t/type?)
          :output-type t/type?
-         :index       index? ; overload-index (position in the overall types-decl)
-         :overload    ::overload}))
+         :index       index?})) ; overload-index (position in the overall types-decl)
 
 (s/def ::types-decl
   (s/kv {:name simple-symbol?
@@ -546,7 +539,7 @@
           ;; We can't just concat the currently-being-created overloads' type-decl data with the
           ;; existing type-decl data because we need to maintain the type-decl data's ordering by
           ;; type-specificity so the dynamic dispatch works correctly.
-          overload-types-indexed-data
+          overload-types-data-with-overloads
             (if (empty? existing-overload-types)
                 (->> overload-types-current-data
                      (uc/map-indexed
@@ -565,14 +558,11 @@
                                    (if (:overload datum1) -1 c))
                                c))))
                      (dedupe-overload-types-data fn|ns-name fn|name)
-                     (uc/map-indexed (c/fn [i datum] (assoc datum :index i)))))
-          _ (->> overload-types-indexed-data
-                 (uc/run! (c/fn [x] (uvec/alist-conj! !overload-queue x))))
-          overload-types-data
-            (if (empty? existing-overload-types)
-                overload-types-current-data
-                (->> overload-types-indexed-data (uc/map #(dissoc % :index :overload))))]
-      overload-types-data)))
+                     (uc/map-indexed (c/fn [i datum] (assoc datum :index i)))))]
+      (->> overload-types-data-with-overloads
+           (uc/map (c/fn [datum]
+                     (uvec/alist-conj! !overload-queue datum)
+                     (dissoc datum :overload)))))))
 
 ;; ----- Direct dispatch ----- ;;
 
@@ -615,11 +605,9 @@
    arglist (s/vec-of simple-symbol?)]
   (->> overload-types-for-arity
        (uc/map+
-         (c/fn [{:as types-decl-datum :keys [arg-types ns-sym overload]}]
-          (let [overload|id (:id types-decl-datum)
-                overload-types-decl|name
-                  (>overload-types-decl|name ns-sym fn|name overload|id)
-                reify|name|qualified (>reify-name-unhinted ns-sym fn|name overload|id)]
+         (c/fn [{:as types-decl-datum :keys [arg-types ns-sym] overload|id :id}]
+          (let [overload-types-decl|name (>overload-types-decl|name ns-sym fn|name overload|id)
+                reify|name|qualified     (>reify-name-unhinted      ns-sym fn|name overload|id)]
             [(>dynamic-dispatch|reify-call reify|name|qualified arglist)
              (->> arg-types
                   (uc/map-indexed
@@ -631,7 +619,7 @@
 
 (defns- >dynamic-dispatch|body-for-arity
   [{:as fn|globals :keys [fn|ns-name _, fn|name _]} ::fn|globals
-   overload-types-for-arity (s/vec-of ::indexed-types-decl-datum)
+   overload-types-for-arity (s/vec-of ::types-decl-datum)
    arglist (s/vec-of simple-symbol?)]
   (if (empty? arglist)
       (let [overload|id (-> overload-types-for-arity first :id)]
@@ -656,19 +644,17 @@
           (aritoid combinef combinef (c/fn [x [k [{:keys [getf i]}]]] (combinef x getf k i)))
           (>combinatoric-seq+ fn|globals overload-types-for-arity arglist)))))
 
-(defns- >dynamic-dispatch-fn|form
-  [{:as opts       :keys [gen-gensym _, lang _, kind _]} ::opts
+(defns- >dynamic-dispatch-fn|codelist
+  [{:as opts       :keys [compilation-mode _, gen-gensym _, lang _, kind _]} ::opts
    {:as fn|globals :keys [fn|meta _, fn|ns-name _, fn|name _, fn|output-type _
                           fn|overload-types-name _, fn|type-name _]} ::fn|globals
    !overload-types _]
   (let [overload-forms
          (->> !overload-types
               urx/norx-deref
-              :current
               (group-by (fn-> :arg-types count))
               (sort-by key) ; for purposes of reproducibility and organization
               (map (c/fn [[arg-ct overload-types-for-arity]]
-                     (quantum.untyped.core.print/ppr overload-types-for-arity)
                      (let [arglist (ufgen/gen-args 0 arg-ct "x" gen-gensym)
                            body    (>dynamic-dispatch|body-for-arity
                                      fn|globals overload-types-for-arity arglist)]
@@ -676,9 +662,13 @@
       fn|meta' (merge fn|meta {:quantum.core.type/type (uid/qualify fn|ns-name fn|type-name)})]
     ;; TODO determine whether CLJS needs (update-in m [:jsdoc] conj "@param {...*} var_args")
     (if (= kind :extend-defn!)
-        `(intern (quote ~fn|ns-name) (quote ~fn|name)
-           (with-meta (fn* ~@overload-forms) ~fn|meta'))
-        `(def ~fn|name (with-meta (fn* ~@overload-forms) ~fn|meta')))))
+        [`(intern (quote ~fn|ns-name) (quote ~fn|name)
+            (with-meta (fn* ~@overload-forms) ~fn|meta'))]
+        (let [dispatch-form `(def ~fn|name (with-meta (fn* ~@overload-forms) ~fn|meta'))]
+          (if (= compilation-mode :test)
+              [(->> !overload-types urx/norx-deref >form (uc/map (fn1 dissoc :ns-sym)))
+               dispatch-form]
+              dispatch-form)))))
 
 ;; ===== End dynamic dispatch ===== ;;
 
@@ -845,13 +835,13 @@
         !fn|type        (>!fn|types       opts fn|globals !overload-types)]
     (if (empty? (urx/norx-deref !overload-bases))
         `(declare ~(:fn|name fn|globals))
-        (let [direct-dispatch  (>direct-dispatch          opts fn|globals !overload-types)
-              dynamic-dispatch (>dynamic-dispatch-fn|form opts fn|globals !overload-types)
+        (let [direct-dispatch  (>direct-dispatch              opts fn|globals !overload-types)
+              dynamic-dispatch (>dynamic-dispatch-fn|codelist opts fn|globals !overload-types)
               fn-codelist
                 (->> `[;; For recursion
                        ~@(when (not= kind :extend-defn!) [`(declare ~(:fn|name fn|globals))])
                        ~@(:form direct-dispatch)
-                       ~dynamic-dispatch]
+                       ~@dynamic-dispatch]
                        (remove nil?))]
           (case kind
             :fn                   (TODO "Haven't done t/fn yet")
