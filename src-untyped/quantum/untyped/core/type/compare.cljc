@@ -402,10 +402,12 @@
    Does not compare cardinalities or other relations of sets, but rather only sub/superset
    relations."
   [t0 type?, t1 type? > comparison?]
-  (let [dispatched (-> compare|dispatch (get (type t0)) (get (type t1)))]
-    (if (nil? dispatched)
-        (err! (str "Types not handled: " {:t0 t0 :t1 t1}) {:t0 t0 :t1 t1})
-        (dispatched t0 t1))))
+  (if (identical? t0 t1)
+      =ident
+      (let [dispatched (-> compare|dispatch (get (type t0)) (get (type t1)))]
+        (if (nil? dispatched)
+            (err! (str "Types not handled: " {:t0 t0 :t1 t1}) {:t0 t0 :t1 t1})
+            (dispatched t0 t1)))))
 
 (defns <
   "Computes whether the extension of type ->`t0` is a strict subset of that of ->`t1`."
