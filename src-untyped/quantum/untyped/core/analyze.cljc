@@ -29,7 +29,7 @@
       :refer [if-not-let ifs]]
     [quantum.untyped.core.print
       :refer [ppr]]
-    [quantum.untyped.core.reducers          :as r
+    [quantum.untyped.core.reducers          :as ur
       :refer [educe join reducei]]
     [quantum.untyped.core.refs              :as uref
       :refer [>!thread-local]]
@@ -112,9 +112,9 @@
                   (uc/map-vals+
                     (fn->> (uc/group-by (fn [^Method x] (:kind x)))
                            (uc/map-vals+ with-distinct-arg-class-seqs)
-                           (r/join {})))
-                  (r/join {})))
-         (r/join {})))))
+                           (ur/join {})))
+                  (ur/join {})))
+         (ur/join {})))))
 
 
 (defonce class>methods|with-cache
@@ -153,7 +153,7 @@
                      (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
                          :static
                          :instance))]))
-       (r/join {})))) ; TODO !hash-map
+       (ur/join {})))) ; TODO !hash-map
 
 #?(:clj
 (def class>fields|with-cache
@@ -674,16 +674,16 @@
       (let [arg-nodes   (->> args-form (mapv #(analyze* env %)))
             caller|node (analyze* env caller|form)
             caller|type (-> arg-nodes first :type)
-            t (case (name caller|form)
-                "type"        caller|type
-                "input-type"  (t/input-type* caller|type
-                                (->> arg-nodes rest (map :type) (map t/unvalue)))
-                "output-type" (t/output-type* caller|type
-                                (->> arg-nodes rest (map :type) (map t/unvalue))))]
+            t (if (= (name caller|form) "type")
+                  caller|type
+                  (let [args (->> arg-nodes rest (map :type) (map t/unvalue))]
+                    (case (name caller|form)
+                      "input-type"  (t/rx (t/input-type*  @caller|type args))
+                      "output-type" (t/rx (t/output-type* @caller|type args)))))]
         (uast/call-node
           {:env             env
            :unanalyzed-form form
-           :form            (uform/>form t)
+           :form            (if (utr/reactive-type? t) form (uform/>form t))
            :caller          caller|node
            :args            arg-nodes
            :type            (t/value t)}))))
@@ -692,7 +692,7 @@
   (->> input-nodes
        (uc/map+ :type)
        (uc/map+ t/unvalue)
-       r/join
+       ur/join
        (apply combinef)
        t/value))
 
@@ -782,17 +782,17 @@
    The ->`form` is post- incremental macroexpansion."
   [env ::env, [caller|form _ & body _ :as form] _ > uast/node?]
   (case caller|form
-    do       (analyze-seq|do    env form)
-    let*     (analyze-seq|let*  env form)
-    deftype* (TODO "deftype*")
-    reify*   (TODO "reify") ; NOTE only for CLJ
-    fn*      (TODO "fn*")
-    def      (TODO "def")
-    set!     (TODO "set!")
     .        (analyze-seq|dot   env form)
+    def      (TODO "def")
+    deftype* (TODO "deftype*")
+    do       (analyze-seq|do    env form)
+    fn*      (TODO "fn*")
     if       (analyze-seq|if    env form)
-    quote    (analyze-seq|quote env form)
+    let*     (analyze-seq|let*  env form)
     new      (analyze-seq|new   env form)
+    quote    (analyze-seq|quote env form)
+    reify*   (TODO "reify") ; NOTE only for CLJ
+    set!     (TODO "set!")
     throw    (analyze-seq|throw env form)
     try      (TODO "try")
     var      (analyze-seq|var   env form)
@@ -858,7 +858,7 @@
           result (analyze-arg-syms* env')]
       ;; We need to propagate the result upward and this is arguably the cleanest control flow
       ;; mechanism to do it, sadly
-      (err! ::arg-splits-performed "All arg-splits performed" {:result result}))
+      (err! ::arg-syms-analyzed "All arg syms analyzed" {:result result}))
     (err! "Could not resolve symbol" {:sym form})))
 
 (defns- analyze-symbol
@@ -976,12 +976,12 @@
   (cond-> env
     (-> env :opts :arglist-syms|queue empty?)
     (update-in [:opts :arglist-syms|queue] conj
-        (-> env :opts :arglist-syms|unanalyzed first))))
+      (-> env :opts :arglist-syms|unanalyzed first))))
 
 (defn- analyze-arg-syms* [env #_::env]
   (uref/update! !!analyze-arg-syms|iter inc)
-  (let [{:keys [arg-sym->arg-type-form arglist-syms|queue arglist-syms|unanalyzed out-type-form]}
-          (:opts env)]
+  (let [{:keys [arg-sym->arg-type-form arglist-syms|queue arglist-syms|unanalyzed out-type-form
+                split-types?]} (:opts env)]
     (ifs (empty? arglist-syms|unanalyzed)
            [{:env           env
              :out-type-node (-> (analyze env out-type-form) (update :type t/unvalue))}]
@@ -995,7 +995,9 @@
                env-analyzed (-> analyzed :env
                                 (update-in [:opts :arglist-syms|queue]      disj arg-sym)
                                 (update-in [:opts :arglist-syms|unanalyzed] disj arg-sym))
-               t-split (-> analyzed :type type>split+primitivized)]
+               t-split (if split-types?
+                           (-> analyzed :type type>split+primitivized)
+                           [(:type analyzed)])]
            (if (-> t-split count (= 1))
                (recur (-> env-analyzed
                           (update-in [:opts :arg-env] #(doto % (swap! assoc arg-sym analyzed)))
@@ -1010,7 +1012,19 @@
                                 ;; `(atom (deref %))` in order to create a new env for a new split
                                 #(-> % deref atom
                                      (doto (swap! assoc arg-sym (assoc analyzed :type t)))))))))
-                    r/join))))))
+                    ur/join))))))
+
+(defns- >analyze-arg-syms|opts
+  [env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _
+   split-types? boolean?]
+  {:arglist-context?        true
+   :arglist-syms|queue      (uset/ordered-set
+                              (-> arg-sym->arg-type-form keys first))
+   :arglist-syms|unanalyzed (-> arg-sym->arg-type-form keys set)
+   :arg-env                 (atom env) ; Mutable so it can cache
+   :arg-sym->arg-type-form  arg-sym->arg-type-form
+   :out-type-form           out-type-form
+   :split-types?            split-types?})
 
 (defns analyze-arg-syms
   "Performance characteristics:
@@ -1022,20 +1036,17 @@
      when simplified) which would require a Cartesian product of the splits of the arg types."
   > vector? #_(s/vec-of (s/kv {:env ::env :out-type-node uast/node?}))
   ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _]
-    (analyze-arg-syms {} arg-sym->arg-type-form out-type-form))
+    (analyze-arg-syms {} arg-sym->arg-type-form out-type-form true))
+  ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _, split-types? boolean?]
+    (analyze-arg-syms {} arg-sym->arg-type-form out-type-form split-types?))
   ([env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _
+    split-types? boolean?
     > (s/vec-of (s/kv {:env ::env :out-type-node uast/node?}))]
     (uref/set! !!analyze-arg-syms|iter 0)
     (try (analyze-arg-syms*
-           {:opts (assoc (:opts env)
-                    :arglist-context?        true
-                    :arglist-syms|queue      (uset/ordered-set
-                                               (-> arg-sym->arg-type-form keys first))
-                    :arglist-syms|unanalyzed (-> arg-sym->arg-type-form keys set)
-                    :arg-env                 (atom env) ; Mutable so it can cache
-                    :arg-sym->arg-type-form  arg-sym->arg-type-form
-                    :out-type-form           out-type-form)})
+           {:opts (merge (:opts env)
+                    (>analyze-arg-syms|opts env arg-sym->arg-type-form out-type-form split-types?))})
       (catch Throwable t
-        (if (and (uerr/error-map? t) (-> t :ident (= ::arg-splits-performed)))
+        (if (and (uerr/error-map? t) (-> t :ident (= ::arg-syms-analyzed)))
             (-> t :data :result)
             (throw t))))))

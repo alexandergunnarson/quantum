@@ -1,19 +1,25 @@
 (ns quantum.test.untyped.core.analyze
   (:require
-    [quantum.test.untyped.core.type   :as tt]
-    [quantum.untyped.core.analyze     :as self]
-    [quantum.untyped.core.analyze.ast :as uast]
-    [quantum.untyped.core.collections :as uc]
-    [quantum.untyped.core.data.map    :as umap]
+    [quantum.test.untyped.core.type         :as tt]
+    [quantum.untyped.core.analyze           :as self]
+    [quantum.untyped.core.analyze.ast       :as uast]
+    [quantum.untyped.core.collections       :as uc]
+    [quantum.untyped.core.collections.logic
+      :refer [seq-and-2]]
+    [quantum.untyped.core.data.map          :as umap]
+    [quantum.untyped.core.data.reactive     :as urx]
     [quantum.untyped.core.fn
-      :refer [<-]]
+      :refer [<- fn']]
+    [quantum.untyped.core.loops
+      :refer [reduce-2]]
     [quantum.untyped.core.test
       :refer [deftest is is= testing throws]]
-    [quantum.untyped.core.type        :as t]))
+    [quantum.untyped.core.type              :as t]
+    [quantum.untyped.core.type.reifications :as utr]))
 
 ;; Simulates a typed fn
 (defn- >long-checked
-  {:quantum.core.type/type (t/ftype nil [t/string? :> tt/long?])}
+  {:quantum.core.type/type (t/rx (t/ftype nil [t/string? :> tt/long?]))}
   [])
 
 (defn- transform-ana [ana]
@@ -23,7 +29,7 @@
 
 ;; More dependent type tests in `quantum.test.untyped.core.type.defnt` but those are more like
 ;; integration tests
-(deftest dependent-type-test
+(deftest test|dependent-type
   (testing "Output type dependent on non-splittable input"
     (testing "Not nested within another type"
     #_"1. Analyze `x` = `tt/boolean?`
@@ -407,3 +413,51 @@
                'c (t/isa? Character)
                'd (t/value (t/isa? Character))}
               (t/value (t/isa? Character))]]))))
+
+(defn- rx=* [a b]
+  (if (and (utr/reactive-type? a)
+           (utr/reactive-type? b))
+      (= (urx/norx-deref a) (urx/norx-deref b))
+      (= a b)))
+
+(defn- rx= [a b]
+  (seq-and-2
+    (fn [[input-types-0 output-type-0] [input-types-1 output-type-1]]
+      (and (rx=* output-type-1 output-type-1)
+           (seq-and-2 rx=* (->> input-types-0 (sort-by key) (map val))
+                           (->> input-types-1 (sort-by key) (map val)))))
+    a b))
+
+(deftest test|arglist-forms>arglist-basis
+  (is= (-> (self/analyze-arg-syms
+             '{a (t/or tt/boolean? (t/type b))
+               b (t/or tt/byte? (t/type d))
+               c (t/or tt/short? tt/char?)
+               d (let [b (t/- tt/char? tt/long?)]
+                   (t/or tt/char? (t/type b) (t/type c)))}
+             '(t/or (t/type b) (t/type d))
+             false)
+           transform-ana)
+       (let [c (t/or tt/short? tt/char?)
+             d (t/or tt/char? (t/value (t/- tt/char? tt/long?)) c)
+             b (t/or tt/byte? d)
+             a (t/or tt/boolean? b)]
+         [[{'a a 'b b 'c c 'd d} (t/or b d)]]))
+  (is (rx= (-> (self/analyze-arg-syms
+                 '{a (t/or tt/boolean? (t/type b))
+                   b (t/or tt/byte? (t/type d))
+                   c (t/or tt/short? tt/char?)
+                   d (let [b (t/- tt/char? tt/long?)]
+                       (t/or tt/char? (t/type b) (t/input-type >long-checked :?) (t/type c)))}
+                 '(t/or (t/type b) (t/type d))
+                 false)
+               transform-ana)
+           (let [c (t/or tt/short? tt/char?)
+                 d (t/or tt/char?
+                         (t/value (t/- tt/char? tt/long?))
+                         (t/rx (t/input-type*
+                                 (-> #'>long-checked meta :quantum.core.type/type deref) [:?]))
+                         c)
+                 b (t/or tt/byte? d)
+                 a (t/or tt/boolean? b)]
+             [[{'a a 'b b 'c c 'd d} (t/or b d)]]))))
