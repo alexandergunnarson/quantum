@@ -236,7 +236,7 @@
    'obj.captured' (*ref-context*).
 
    See function notify-deref-watcher! to know how *ref-context* is updated."
-  [obj f] (binding [*ref-context* obj] (f)))
+  [^Reaction rx] (binding [*ref-context* rx] ((.-f rx))))
 
 (defn- deref-capture!
   "Returns `(in-context f r)`. Calls `update-watching!` on `rx` with any `deref`ed reactive
@@ -245,10 +245,10 @@
 
    Inside `update-watching!` along with adding the references in 'rx.watching' of reaction, the
    reaction is also added to the list of watches on each of the references that `f` derefs."
-  [f ^Reaction rx]
+  [^Reaction rx]
   (.setCaptured rx nil)
   (let [oldv         (.getState rx)
-        newv         (in-context rx f)
+        newv         (in-context rx)
         interceptors (.getInterceptors rx)
         newv'        (if (nil? interceptors)
                          newv
@@ -257,12 +257,12 @@
     (.setComputed rx true)
     ;; Optimize common case where derefs occur in same order
     (when-not (alist== c (.getWatching rx)) (update-watching! rx c))
-    newv))
+    newv'))
 
-(defn- try-capture! [^Reaction rx f]
+(defn- try-capture! [^Reaction rx]
   (uerr/catch-all
     (do (.setCaught rx nil)
-        (deref-capture! f rx))
+        (deref-capture! rx))
     e
     (do (.setState  rx e)
         (.setCaught rx e)
@@ -271,8 +271,8 @@
 (defn- run-reaction! [^Reaction rx check?]
   (let [old-state (.getState rx)
         new-state (if check?
-                      (try-capture! rx (.-f rx))
-                      (deref-capture! (.-f rx) rx))]
+                      (try-capture!   rx)
+                      (deref-capture! rx))]
     (when-not (.-no-cache? rx)
       (.setState rx new-state)
       (when-not (or (nil? (.getWatches rx))
