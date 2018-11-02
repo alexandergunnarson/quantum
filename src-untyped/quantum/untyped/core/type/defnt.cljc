@@ -289,7 +289,7 @@
    ::unanalyzed-overload
    {:as opts       :keys [lang _, kind _]} ::opts
    {:as fn|globals :keys [fn|name _, fn|output-type _]} ::fn|globals
-   fn|type t/type?
+   fn|type (s/nilable utr/fn-type?)
    > ::overload]
   (let [;; Not sure if `nil` is the right approach for the value
         recursive-ast-node-reference
@@ -333,8 +333,8 @@
    overloads.
    This is because once we must sort (`O(n•log(n))`) the overloads by comparing their arg types and
    then if we find any duplicates in a linear scan (`O(n)`), we throw an error."
-  [unanalyzed-overloads (s/vec-of ::unanalyzed-overload), opts ::opts, fn|globals ::fn|globals
-   fn|type t/type?
+  [opts ::opts, fn|globals ::fn|globals, fn|type (s/nilable utr/fn-type?)
+   unanalyzed-overloads (s/vec-of ::unanalyzed-overload)
    > (s/vec-of ::overload)]
   (->> unanalyzed-overloads
        ;; We have to analyze everything in order to figure out all the types (or at least, analyze
@@ -502,7 +502,7 @@
     :keys [args-form _, body-codelist _, output-type|form _]}
    ::overload-basis
    {:as fn|globals :keys [fn|output-type _]} ::fn|globals
-   > (s/seq-of ::unanalyzed-overload)]
+   #_> #_(s/+-of ::unanalyzed-overload)]
   (let [overload-basis-selected
           (select-keys overload-basis
             [:arglist-form|unanalyzed :args-form :body-codelist :output-type|form :varargs-form])]
@@ -522,8 +522,10 @@
 (defns- overload-bases>overload-types
   [overload-bases          (s/kv {:norx-prev (s/nilable (s/vec-of ::overload-basis))
                                   :current   (s/vec-of ::overload-basis)})
-   existing-overload-types (s/vec-of ::types-decl-datum)
+   existing-overload-types (s/nilable (s/vec-of ::types-decl-datum))
+   opts ::opts
    {:as fn|globals :keys [fn|overload-types-name _, fn|name _, fn|ns-name _]} ::fn|globals
+   fn|type (s/nilable utr/fn-type?)
    > (s/vec-of ::types-decl-datum)]
   (if-not-let [overload-bases-to-analyze (-> overload-bases >overload-bases-to-analyze seq)]
     existing-overload-types
@@ -531,7 +533,7 @@
           ;; use them later on in the pipeline
           overloads (->> overload-bases-to-analyze
                          (uc/mapcat (fn1 overload-basis>unanalyzed-overloads+ fn|globals))
-                         unanalyzed-overloads>overloads)
+                         (unanalyzed-overloads>overloads opts fn|globals fn|type))
           first-current-overload-id (count existing-overload-types)
           overload-types-current-data ; i.e. being created right now
             (->> overloads
@@ -750,18 +752,21 @@
         (urx/! {:norx-prev nil :current overload-bases}))))
 
 (defns- >!overload-types
+  "Whatever `opts` and `fn|globals` are passed are what the `t/defn` will always use even when being
+   extended in a different namespace."
   [{:as opts       :keys [kind _]} ::opts
-   {:as fn|globals :keys [fn|ns-name _, fn|overload-types-name _]} ::fn|globals
+   {:as fn|globals :keys [fn|ns-name _, fn|overload-types-name _, fn|type-name _]} ::fn|globals
    !overload-bases _]
   (if (= kind :extend-defn!)
       (-> (uid/qualify fn|ns-name fn|overload-types-name) resolve var-get)
       (with-do-let [!overload-types (urx/!rx @!overload-bases)]
         (uref/add-interceptor! !overload-types :the-interceptor
           (c/fn [_ _ old-overload-types new-overload-bases]
-            (println "interceptor")
-            ;; `fn|globals` is closed over
+            ;; `opts` and `fn|globals` are closed over
             (overload-bases>overload-types
-              new-overload-bases old-overload-types fn|globals)))
+              new-overload-bases old-overload-types opts fn|globals
+              (or (some-> (uid/qualify fn|ns-name fn|type-name) resolve var-get urx/norx-deref)
+                  t/none?))))
         (urx/norx-deref !overload-types)
         (intern fn|ns-name fn|overload-types-name !overload-types))))
 
