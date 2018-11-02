@@ -7,6 +7,8 @@
             [fipp.ednize                                :as fedn]
             [quantum.untyped.core.analyze.expr
 #?@(:cljs    [:refer [Expression]])]
+            [quantum.untyped.core.collections.logic
+              :refer [seq-and-2]]
             [quantum.untyped.core.compare
               :refer [== not==]]
             [quantum.untyped.core.core                  :as ucore]
@@ -329,12 +331,8 @@
    name #_(t/? symbol?)]
   {PType          nil
    ?Fn            {invoke    ([_ xs] (and (seqable? xs) ; TODO `dc/reducible?`
-                                          (reduce-2
-                                            ;; Similar to `seq-and`
-                                            (fn [ret t x] (if (t x) true (reduced false)))
-                                            true ; vacuously
-                                            (sequence data) (sequence xs)
-                                            (fn [_ _] false))))}
+                                          (seq-and-2 (fn [t x] (t x))
+                                            (sequence data) (sequence xs))))}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta'] (OrderedType. hash hash-code meta' data name))}
    ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      OrderedType data))
@@ -444,6 +442,6 @@
                                         (= rx (.-rx ^ReactiveType that)))))}
    ?Deref         {deref     ([this] (doto @rx validate-type))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (>form this))}})
+   fedn/IEdn      {-edn      ([this] (list `reactive-type {:value (urx/norx-deref this)}))}})
 
 (defn reactive-type? [x] (instance? ReactiveType x))
