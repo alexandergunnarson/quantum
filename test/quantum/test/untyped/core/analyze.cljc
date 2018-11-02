@@ -9,7 +9,7 @@
     [quantum.untyped.core.data.map          :as umap]
     [quantum.untyped.core.data.reactive     :as urx]
     [quantum.untyped.core.fn
-      :refer [<- fn']]
+      :refer [<-]]
     [quantum.untyped.core.loops
       :refer [reduce-2]]
     [quantum.untyped.core.test

@@ -32,9 +32,9 @@
 
 (defalias not-every? seq-nand)
 
-(defn seq-and-2
+(defn seq-and-pair
   "`seq-and` for pairwise comparisons."
   ([pred xs]
     (reduce (fn [a b] (or (pred a b) (reduced false))) (first xs) (rest xs))))
 
-(defalias every?-2 seq-and-2)
+(defalias every?-pair seq-and-pair)

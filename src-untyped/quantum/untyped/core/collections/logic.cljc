@@ -41,7 +41,7 @@
   "Like `seq-or` but for 2 seqables."
   [pred xs0 xs1]
   (reduce-2 (fn [_ x0 x1] (and (pred x0 x1) (reduced true)))
-            (fn [_ _] false) false xs0 xs1))
+            (fn [_ _ _] false) false xs0 xs1))
 
 ;; ----- `seq-nor` ----- ;;
 
@@ -76,16 +76,14 @@
   "Like `seq-and` but for 2 seqables."
   [pred xs0 xs1]
   (reduce-2 (fn [_ x0 x1] (or (pred x0 x1) (reduced false)))
-            (fn [_ _] false) true xs0 xs1))
+            (fn [_ _ _] false) true xs0 xs1))
 
-;; ----- `seq-and-2` ----- ;;
-
-(defn seq-and-2
+(defn seq-and-pair
   "`seq-and` for pairwise comparisons."
   ([pred xs #_seqable?]
     (reduce (fn [a b] (or (pred a b) (reduced false))) (first xs) (rest xs))))
 
-(defalias every?-2 seq-and-2)
+(defalias every?-pair seq-and-pair)
 
 ;; ----- `seq-nand` ----- ;;
 

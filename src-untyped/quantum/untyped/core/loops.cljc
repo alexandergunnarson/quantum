@@ -6,7 +6,7 @@
 
 (ucore/log-this-ns)
 
-(defn default-on-different-count [xs0 xs1] nil)
+(defn default-on-different-count [ret xs0 xs1] ret)
 
 (defn reduce-2
   "Reduces over two seqables at a time."
@@ -19,7 +19,7 @@
             (or (empty? xs0') (empty? xs1'))
             (if (or (and (empty? xs0') (seq    xs1'))
                     (and (seq    xs0') (empty? xs1')))
-                (unreduced (on-different-count xs0 xs1))
+                (unreduced (on-different-count ret xs0 xs1))
                 ret)
             :else (recur (f ret (first xs0') (first xs1'))
                          (next xs0')
