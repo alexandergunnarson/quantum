@@ -87,80 +87,63 @@
           (case (env-lang)
             :clj
             ($ (do (declare ~'identity|uninlined)
-                   (def ~'identity|uninlined|__types
-                     (atom [{:id 0 :arg-types [(t/isa? Boolean)]   :output-type (t/isa? Boolean)}
-                            {:id 1 :arg-types [(t/isa? Byte)]      :output-type (t/isa? Byte)}
-                            {:id 2 :arg-types [(t/isa? Short)]     :output-type (t/isa? Short)}
-                            {:id 3 :arg-types [(t/isa? Character)] :output-type (t/isa? Character)}
-                            {:id 4 :arg-types [(t/isa? Integer)]   :output-type (t/isa? Integer)}
-                            {:id 5 :arg-types [(t/isa? Long)]      :output-type (t/isa? Long)}
-                            {:id 6 :arg-types [(t/isa? Float)]     :output-type (t/isa? Float)}
-                            {:id 7 :arg-types [(t/isa? Double)]    :output-type (t/isa? Double)}
-                            {:id 8 :arg-types [t/any?]             :output-type t/any?}]))
 
                    ;; [x t/any?]
 
-                   (def ~(O<> 'identity|uninlined|__0|types)
-                     (types-decl>arg-types identity|uninlined|__types 0))
                    (def ~(tag (cstr `boolean>boolean) 'identity|uninlined|__0)
                      (reify* [boolean>boolean] (~(B 'invoke) [~'_0__ ~(B 'x)] ~'x)))
-                   (def ~(O<> 'identity|uninlined|__1|types)
-                     (types-decl>arg-types identity|uninlined|__types 1))
                    (def ~(tag (cstr `byte>byte) 'identity|uninlined|__1)
                      (reify* [byte>byte]       (~(Y 'invoke) [~'_1__ ~(Y 'x)] ~'x)))
-                   (def ~(O<> 'identity|uninlined|__2|types)
-                     (types-decl>arg-types identity|uninlined|__types 2))
                    (def ~(tag (cstr `short>short) 'identity|uninlined|__2)
                      (reify* [short>short]     (~(S 'invoke) [~'_2__ ~(S 'x)] ~'x)))
-                   (def ~(O<> 'identity|uninlined|__3|types)
-                     (types-decl>arg-types identity|uninlined|__types 3))
                    (def ~(tag (cstr `char>char) 'identity|uninlined|__3)
                      (reify* [char>char]       (~(C 'invoke) [~'_3__ ~(C 'x)] ~'x)))
-                   (def ~(O<> 'identity|uninlined|__4|types)
-                     (types-decl>arg-types identity|uninlined|__types 4))
                    (def ~(tag (cstr `int>int) 'identity|uninlined|__4)
                      (reify* [int>int]         (~(I 'invoke) [~'_4__ ~(I 'x)] ~'x)))
-                   (def ~(O<> 'identity|uninlined|__5|types)
-                     (types-decl>arg-types identity|uninlined|__types 5))
                    (def ~(tag (cstr `long>long) 'identity|uninlined|__5)
                      (reify* [long>long]       (~(L 'invoke) [~'_5__ ~(L 'x)] ~'x)))
-                   (def ~(O<> 'identity|uninlined|__6|types)
-                     (types-decl>arg-types identity|uninlined|__types 6))
                    (def ~(tag (cstr `float>float) 'identity|uninlined|__6)
                      (reify* [float>float]     (~(F 'invoke) [~'_6__ ~(F 'x)] ~'x)))
-                   (def ~(O<> 'identity|uninlined|__7|types)
-                     (types-decl>arg-types identity|uninlined|__types 7))
                    (def ~(tag (cstr `double>double) 'identity|uninlined|__7)
                      (reify* [double>double]   (~(D 'invoke) [~'_7__ ~(D 'x)] ~'x)))
-                   (def ~(O<> 'identity|uninlined|__8|types)
-                     (types-decl>arg-types identity|uninlined|__types 8))
                    (def ~(tag (cstr `Object>Object) 'identity|uninlined|__8)
                      (reify* [Object>Object]   (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
 
-                   (defn ~'identity|uninlined
-                     {:quantum.core.type/type (types-decl>ftype identity|uninlined|__types t/any?)}
-              ([~'x00__]
-                (ifs
-                   ((Array/get identity|uninlined|__0|types 0) ~'x00__)
-                     (. identity|uninlined|__0 ~'invoke ~'x00__)
-                   ((Array/get identity|uninlined|__1|types 0) ~'x00__)
-                     (. identity|uninlined|__1 ~'invoke ~'x00__)
-                   ((Array/get identity|uninlined|__2|types 0) ~'x00__)
-                     (. identity|uninlined|__2 ~'invoke ~'x00__)
-                   ((Array/get identity|uninlined|__3|types 0) ~'x00__)
-                     (. identity|uninlined|__3 ~'invoke ~'x00__)
-                   ((Array/get identity|uninlined|__4|types 0) ~'x00__)
-                     (. identity|uninlined|__4 ~'invoke ~'x00__)
-                   ((Array/get identity|uninlined|__5|types 0) ~'x00__)
-                     (. identity|uninlined|__5 ~'invoke ~'x00__)
-                   ((Array/get identity|uninlined|__6|types 0) ~'x00__)
-                     (. identity|uninlined|__6 ~'invoke ~'x00__)
-                   ((Array/get identity|uninlined|__7|types 0) ~'x00__)
-                     (. identity|uninlined|__7 ~'invoke ~'x00__)
-                   ((Array/get identity|uninlined|__8|types 0) ~'x00__)
-                     (. identity|uninlined|__8 ~'invoke ~'x00__)
-                     ;; TODO no need for `unsupported!` because it will always get a valid branch
-                     (unsupported! `identity|uninlined [~'x00__] 0))))))
+                   [{:id 0 :index 0 :arg-types [(t/isa? Boolean)]   :output-type (t/isa? Boolean)}
+                    {:id 1 :index 1 :arg-types [(t/isa? Byte)]      :output-type (t/isa? Byte)}
+                    {:id 2 :index 2 :arg-types [(t/isa? Short)]     :output-type (t/isa? Short)}
+                    {:id 3 :index 3 :arg-types [(t/isa? Character)] :output-type (t/isa? Character)}
+                    {:id 4 :index 4 :arg-types [(t/isa? Integer)]   :output-type (t/isa? Integer)}
+                    {:id 5 :index 5 :arg-types [(t/isa? Long)]      :output-type (t/isa? Long)}
+                    {:id 6 :index 6 :arg-types [(t/isa? Float)]     :output-type (t/isa? Float)}
+                    {:id 7 :index 7 :arg-types [(t/isa? Double)]    :output-type (t/isa? Double)}
+                    {:id 8 :index 8 :arg-types [t/any?]             :output-type t/any?}]
+                   (def ~'identity|uninlined
+                    (with-meta
+                      (fn* ([~'x00__]
+                        (ifs
+                           ((Array/get identity|uninlined|__0|types 0) ~'x00__)
+                             (. identity|uninlined|__0 ~'invoke ~'x00__)
+                           ((Array/get identity|uninlined|__1|types 0) ~'x00__)
+                             (. identity|uninlined|__1 ~'invoke ~'x00__)
+                           ((Array/get identity|uninlined|__2|types 0) ~'x00__)
+                             (. identity|uninlined|__2 ~'invoke ~'x00__)
+                           ((Array/get identity|uninlined|__3|types 0) ~'x00__)
+                             (. identity|uninlined|__3 ~'invoke ~'x00__)
+                           ((Array/get identity|uninlined|__4|types 0) ~'x00__)
+                             (. identity|uninlined|__4 ~'invoke ~'x00__)
+                           ((Array/get identity|uninlined|__5|types 0) ~'x00__)
+                             (. identity|uninlined|__5 ~'invoke ~'x00__)
+                           ((Array/get identity|uninlined|__6|types 0) ~'x00__)
+                             (. identity|uninlined|__6 ~'invoke ~'x00__)
+                           ((Array/get identity|uninlined|__7|types 0) ~'x00__)
+                             (. identity|uninlined|__7 ~'invoke ~'x00__)
+                           ((Array/get identity|uninlined|__8|types 0) ~'x00__)
+                             (. identity|uninlined|__8 ~'invoke ~'x00__)
+                             ;; TODO no need for `unsupported!` because it will always get a valid
+                             ;; branch
+                             (unsupported! `identity|uninlined [~'x00__] 0))))
+                      {:quantum.core.type/type identity|uninlined|__type}))))
             :cljs
             ;; Direct dispatch will be simple functions, not `reify`s
             ($ (do (defn ~'identity|uninlined [~'x] ~'x))))]
