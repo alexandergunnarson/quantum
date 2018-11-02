@@ -102,6 +102,7 @@
   ([ret f] (f ret))
   ([ret k f] (f ret)))
 
+;; Note that `interceptors` are all deref-capturing
 (udt/deftype Reference [^:! state meta validator ^:! watches ^:! interceptors]
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-ref a w opts "Reference:"))
@@ -153,6 +154,7 @@
 
 (declare flush! run-reaction! update-watching!)
 
+;; Note that `interceptors` are all deref-capturing
 (udt/deftype Reaction
   [^:! ^boolean ^:get       alwaysRecompute
    ^:!          ^:get ^:set caught
