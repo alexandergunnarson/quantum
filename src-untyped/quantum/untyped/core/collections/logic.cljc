@@ -9,6 +9,8 @@
       :refer [>sentinel]]
     [quantum.untyped.core.fn
       :refer [rcomp]]
+    [quantum.untyped.core.loops
+      :refer [reduce-2]]
     [quantum.untyped.core.reducers
       :refer [educe]]
     [quantum.untyped.core.vars
@@ -34,6 +36,12 @@
 (defalias some|rf seq-or|rf)
 
 (defalias some seq-or)
+
+(defn seq-or-2
+  "Like `seq-or` but for 2 seqables."
+  [pred xs0 xs1]
+  (reduce-2 (fn [_ x0 x1] (and (pred x0 x1) (reduced true)))
+            (fn [_ _] false) false xs0 xs1))
 
 ;; ----- `seq-nor` ----- ;;
 
@@ -63,6 +71,12 @@
 (defalias every?|rf seq-and|rf)
 
 (defalias every? seq-and)
+
+(defn seq-and-2
+  "Like `seq-and` but for 2 seqables."
+  [pred xs0 xs1]
+  (reduce-2 (fn [_ x0 x1] (or (pred x0 x1) (reduced false)))
+            (fn [_ _] false) true xs0 xs1))
 
 ;; ----- `seq-and-2` ----- ;;
 
