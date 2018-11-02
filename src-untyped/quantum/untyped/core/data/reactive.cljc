@@ -97,10 +97,11 @@
         (alist-conj! c derefed)
         (.setCaptured r (alist derefed))))))
 
-(defn- call|rf
-  ([ret] ret)
-  ([ret f] (f ret))
-  ([ret k f] (f ret)))
+;; TODO use `loop` with array for interceptors rather than creating a closure every time
+(defn- gen-call|rf [r oldv]
+  (fn ([newv'] newv')
+      ([newv' [k f]] (f r k oldv newv'))
+      ([newv'  k f]  (f r k oldv newv'))))
 
 ;; Note that `interceptors` are all deref-capturing
 (udt/deftype Reference [^:! state meta validator ^:! watches ^:! interceptors]
@@ -113,7 +114,7 @@
                     state)}
    uref/PMutableReference
      {get  ([this] (norx-deref this))
-      set! ([a newv]
+      set! ([this newv]
              (when-not (nil? validator)
                (assert (validator newv) "Validator rejected reference state"))
              (let [oldv state]
@@ -122,8 +123,9 @@
                    (let [oldv state]
                      (set! state (if (nil? interceptors)
                                      newv
-                                     (reduce-kv call|rf newv interceptors)))
-                     (when-not (nil? watches) (notify-w! a oldv newv))
+                                     ;; TODO room for optimization here — e.g. use array for interceptors, with `loop`
+                                     (reduce-kv (gen-call|rf this oldv) newv interceptors)))
+                     (when-not (nil? watches) (notify-w! this oldv newv))
                      newv))))}
    ?Watchable {add-watch!    ([this k f] (add-w!    this k f))
                remove-watch! ([this k]   (remove-w! this k))}
@@ -170,7 +172,7 @@
    ^:!          ^:get ^:set state
    ^:!          ^:get ^:set watching ; i.e. 'dependents'
    ^:!                      watches       ; TODO consider a mutable map for `watches`
-   ^:!                      interceptors] ; TODO consider a mutable map for `interceptors`
+   ^:!          ^:get       interceptors] ; TODO consider a mutable map for `interceptors`
   {;; IPrintWithWriter
    ;;   (-pr-writer [a w opts] (pr-ref a w opts (str "Reaction " (hash a) ":")))
    ?Equals {= ([this that] (identical? this that))}
@@ -184,9 +186,10 @@
                            (if (and non-reactive? alwaysRecompute)
                                (when-not computed
                                  (let [old-state state]
-                                   (set! state (if (nil? interceptors)
-                                                   (f)
-                                                   (reduce-kv call|rf (f) interceptors)))
+                                   (set! state
+                                     (if (nil? interceptors)
+                                         (f)
+                                         (reduce-kv (gen-call|rf this old-state) (f) interceptors)))
                                    (when-not (or (nil? watches) (eq-fn old-state state))
                                      (notify-w! this old-state state))))
                                (do (notify-deref-watcher! this)
@@ -244,12 +247,17 @@
    reaction is also added to the list of watches on each of the references that `f` derefs."
   [f ^Reaction rx]
   (.setCaptured rx nil)
-  (let [res (in-context rx f)
-        c   (.getCaptured rx)]
+  (let [oldv         (.getState rx)
+        newv         (in-context rx f)
+        interceptors (.getInterceptors rx)
+        newv'        (if (nil? interceptors)
+                         newv
+                         (reduce-kv (gen-call|rf rx oldv) newv interceptors))
+        c            (.getCaptured rx)]
     (.setComputed rx true)
     ;; Optimize common case where derefs occur in same order
     (when-not (alist== c (.getWatching rx)) (update-watching! rx c))
-    res))
+    newv))
 
 (defn- try-capture! [^Reaction rx f]
   (uerr/catch-all
