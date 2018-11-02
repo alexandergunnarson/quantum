@@ -1930,7 +1930,7 @@
            (c/map+ (fn [{:keys [arg-types out-type]}]
                      {:arg-types (mapv ?deref arg-types) :out-type (?deref out-type)}))
            expand-types))
-  - overloads>type-decl
+  - overloads>overload-types
     - Shouldn't re-analyze
     - Attaches `:overload` for newly analyzed overloads
   - (defn- overload-queue-interceptor [_ _ oldv newv]
@@ -1951,32 +1951,34 @@
             ;; now; we will optimize later after correctness is achieved
             ;; Needs to maintain previous fully-derefed version so `overloads>type-decl` knows which
             ;; reactive overloads have changed
-            (intern 'ns0 'abcde|__overload-bases ; CLJS compiler needs this to perform analysis
-              (rx/! {:prev nil
+            (intern 'ns0 'abcde|__bases ; CLJS compiler needs this to perform analysis
+              (rx/! {:norx-prev nil
                      :current
-                      [{:ns               'ns0
-                        :args-form        nil
-                        :arg-types        [t/int?]
-                        :output-type      t/long?
-                        :output-type-form nil
-                        :body             [...]
-                        :dependent?       false
-                        :reactive?        false}]}))
-            ;; Will not re-analyze overload if it is identical (`=`?) to the previous version of that
-            ;; overload (when derefing everything)
+                      [{:ns                'ns0
+                        :args-form         nil
+                        :arg-types-basis   [t/int?]
+                        :output-type-form  nil
+                        :output-type-basis t/long?
+                        :body              [...]
+                        :dependent?        false
+                        :reactive?         false}]}))
+            ;; Will not re-analyze overload basis if it is identical (`=`?) to the previous version
+            ;; of that overload (when derefing everything)
             ;; Must include the :body and :defined-in-ns of each one in order to analyze and create
             ;; new overloads when putting on the overload queue
             ;; Internally rx-derefs reactive overloads
             ;; CLJS compiler needs this to perform analysis
-            (intern 'ns0 'abcde|__types (!rx (overload-bases>type-decl @ns0/abcde|__overload-bases)))
-            (uref/add-interceptor! ns0/abcde|__types :overload-queue overload-queue-interceptor)
+            (intern 'ns0 'abcde|__types
+              (doto (!rx (overload-bases>type-decl @ns0/abcde|__bases))
+                    (uref/add-interceptor! :overload-queue overload-queue-interceptor)
+                    urx/norx-deref))
             (intern 'ns0 'abcde|__type
               (let [out-type t/any?]
                 (t/rx (type-data>ftype @ns0/abcde|__types (?deref out-type)))))
             ;; Each of these types should be completely unreactive.
             (when (= lang :clj)
               (intern 'ns0 'abcde|__types|0
-                (types-decl>arg-types (rx/norx-deref ns0/abcde|__types) 0))))
+                (overload-types>arg-types (rx/norx-deref ns0/abcde|__types) 0))))
     - Resulting in `abcde`'s runtime-emission code in CLJ as:
       - (do (def abcde|__0 (reify* [int>long] (invoke ([x00__ a] ...))))
             (defn abcde [x00__]
@@ -1994,42 +1996,46 @@
       ([b t/string? > (t/type b)] ...)
       ([c (t/input-type ns0/abcde :?) > (t/output-type ns0/abcde (t/type c))] ...))
     - Resulting in `fghij`'s compile-time-emission code (assuming no :test mode) as:
-      - (do (intern 'ns1 'fghij|__overload-bases
-              (rx/! {:prev nil
+      - (do (intern 'ns1 'fghij|__bases
+              (rx/! {:norx-prev nil
                      :current
                        [(let [t0 t/string?]
-                          {:ns               'ns1
-                           :args-form        nil
-                           :arg-types        [t0]
-                           :output-type-form nil
-                           :output-type      (t/type* t0)
-                           :body             [...]
-                           :dependent?       false
-                           :reactive?        false})
+                          {:ns                'ns1
+                           :args-form         nil
+                           :arg-types-basis   [t0]
+                           :output-type|form  nil
+                           :output-type|basis t0
+                           ;; used for inline, and reactive, but could be nil'ed out once it's used
+                           ;; by `overload-bases>type-decl`
+                           :body-codelist     [...]
+                           :dependent?        true
+                           :reactive?         false})
                         (let [t0 (t/rx (t/input-type* @ns0/abcde|__type :?))]
-                          {:ns               'ns1
+                          {:ns                'ns1
                            ;; This is only present when there is at least one dependent type in the
                            ;; arglist / output
-                           :args-form        '{c (t/input-type ns0/abcde :?)}
-                           :arg-types        [t0]
+                           :args-form         (om 'c '(t/input-type ns0/abcde :?))
+                           :arg-types-basis   [t0]
                            ;; This is only present when there is at least one dependent type in the
                            ;; arglist / output
-                           :output-type-form '(t/output-type ns0/abcde (t/type c))
-                           :output-type      (t/rx (t/output-type* @ns0/abcde|__type @t0))
-                           :body             [...]
-                           :dependent?       true
-                           :reactive?        true})]}))
-            (intern 'ns1 'fghij|__types (!rx (overload-bases>type-decl @ns1/fghij|__overload-bases)))
-            (uref/add-interceptor! ns1/fghij|__types :overload-queue overload-queue-interceptor)
+                           :output-type|form  '(t/output-type ns0/abcde (t/type c))
+                           :output-type|basis (t/rx (t/output-type* @ns0/abcde|__type @t0))
+                           :body-codelist     [...]
+                           :dependent?        true
+                           :reactive?         true})]}))
+            (intern 'ns1 'fghij|__types
+              (doto (!rx (overload-bases>type-decl @ns1/fghij|__bases))
+                    (uref/add-interceptor! :overload-queue overload-queue-interceptor)
+                    urx/norx-deref))
             (intern 'ns1 'fghij|__type
               (let [out-type t/any?]
                 (t/rx (type-data>ftype @ns1/fghij|__types (?deref out-type)))))
+            ;; Consuming the overload queue in `direct-dispatch`
             (when (= lang :clj)
               (intern 'ns1 'fghij|__types|0
-                (types-decl>arg-types (rx/norx-deref ns1/fghij|__types) 0))))
+                (overload-types>arg-types (rx/norx-deref ns1/fghij|__types) 0))))
     - Resulting in `fghij`'s runtime-emission code in CLJ as:
-      - (do (def fghij|__types|0 (types-decl>arg-types ns0/fghij|__types 0))
-            (def fghij|__0 (reify* [int>long]      (invoke ([x00__ b] ...))))
+      - (do (def fghij|__0 (reify* [int>long]      (invoke ([x00__ b] ...))))
             (def fghij|__1 (reify* [Object>Object] (invoke ([x00__ c] ...))))
             (defn fghij [x00__]
               (ifs ((Array/get ns0/fghij|__types|0 0) x00__) (. ns0/fghij|__0 invoke x00__)
@@ -2046,19 +2052,20 @@
                    (unsupported! ...))))
   - (t/extend-defn! abcde [d t/byte? > t/char?] ...) ; in `ns2`
     - Resulting in `abcde`'s compile-time-emission code (assuming no :test mode) as:
-      - (do (uref/update! ns0/abcde|__overload-bases
+      - (do (uref/update! ns0/abcde|__bases
               (fn [overloads]
-                {:prev overloads
+                {:norx-prev overloads
                  :current
                    (join overloads
-                     [{:ns          'ns2
-                       :arg-types   [t/byte?]
-                       :output-type t/char?
-                       :body        [...]
-                       :reactive?   false}])}))
+                     [{:ns            ns2
+                       :arg-types     [t/byte?]
+                       :output-type   t/char?
+                       :body-codelist [...]
+                       :dependent?    false
+                       :reactive?     false}])}))
             ;; Not explicitly executed, but this is what happens reactively as
-            ;; `abcde|__overload-bases` is `update!`ed:
-            ;; Reactively due to `abcde|__overload-bases` changing
+            ;; `abcde|__bases` is `update!`ed:
+            ;; Reactively due to `abcde|__bases` changing
             (rx-set! ns0/abcde|__types
               [{:id 1 :ns 'ns2 :arg-types [t/byte?] :output-type t/char? :body [...]}
                {:id 0 :ns 'ns0 :arg-types [t/int?]  :output-type t/long? :body [...]}])
@@ -2080,9 +2087,9 @@
             ;; Consuming the `defnt/overload-queue` (iterate then clear, not incremental pop)
             (when (= lang :clj)
               (intern 'ns2 'abcde|__types|1
-                (types-decl>arg-types (rx/norx-deref ns0/abcde|__types) 1))
+                (overload-types>arg-types (rx/norx-deref ns0/abcde|__types) 1))
               (intern 'ns2 'fghij|__types|2
-                (types-decl>arg-types (rx/norx-deref ns1/fghij|__types) 2))))
+                (overload-types>arg-types (rx/norx-deref ns1/fghij|__types) 2))))
     - Resulting in `abcde`'s runtime-emission code in CLJ as (easy to adapt for CLJS):
       - (do ;; Consuming the `defnt/overload-queue` (iterate then clear, not incremental pop)
             (intern 'ns2 'abcde|__1 (reify* [...] (invoke ([x00__ d] ...))))
