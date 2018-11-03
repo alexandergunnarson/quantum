@@ -130,21 +130,18 @@
 
 ;; ----- EmptySet ----- ;;
 
-(defns- compare|empty+not [t0 type?, t1 not-type? > comparison?]
-  (let [t1|inner (utr/not-type>inner-type t1)]
-    (if (= t1|inner universal-set) =ident <ident)))
-
-(def- compare|empty+or       fn<)
-(def- compare|empty+and      fn<)
+(def- compare|empty+not      fn<>)
+(def- compare|empty+or       fn<>)
+(def- compare|empty+and      fn<>)
 (def- compare|empty+expr     compare|todo)
-(def- compare|empty+protocol fn<)
-(def- compare|empty+class    fn<)
-(def- compare|empty+value    fn<)
+(def- compare|empty+protocol fn<>)
+(def- compare|empty+class    fn<>)
+(def- compare|empty+value    fn<>)
 
 ;; ----- NotType ----- ;;
 
 (defns- compare|not+not [t0 not-type?, t1 not-type? > comparison?]
-  (let [c (compare (utr/not-type>inner-type t0) (utr/not-type>inner-type t1))]
+  (let [c (int (compare (utr/not-type>inner-type t0) (utr/not-type>inner-type t1)))]
     (case c
       0 =ident
      -1 >ident
@@ -164,7 +161,7 @@
   (let [t0|inner (utr/not-type>inner-type t0)]
     (if (= t0|inner empty-set)
         >ident
-        (case (compare t0|inner t1)
+        (case (int (compare t0|inner t1))
           ( 1 0) <>ident
           (-1 2) ><ident
           3      >ident))))
@@ -174,7 +171,7 @@
     (if (= t0|inner empty-set)
         >ident
         ;; nothing is ever < ValueType (and therefore never ><)
-        (case (compare t0|inner t1)
+        (case (int (compare t0|inner t1))
           (1 0) <>ident
           3     >ident))))
 
