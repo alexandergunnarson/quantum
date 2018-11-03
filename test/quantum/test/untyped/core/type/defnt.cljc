@@ -165,31 +165,31 @@
         (case (env-lang)
           :clj
           ($ (do (declare ~'name)
-                 (def ~'name|__types
-                  (atom [{:id 0 :arg-types [(t/isa? String)] :output-type (t/isa? String)}
-                         {:id 1 :arg-types [(t/isa? Named)]  :output-type (t/* (t/isa? String))}]))
 
                  ;; [x t/string?]
 
-                 (def ~(O<> 'name|__0|types) (types-decl>arg-types name|__types 0))
                  (def ~(tag (cstr `Object>Object) 'name|__0)
                    (reify* [Object>Object] (~(O 'invoke) [~'_0__ ~(O 'x)] ~(ST 'x))))
 
                  ;; [x (t/isa? Named)] > (t/* t/string?)
 
-                 (def ~(O<> 'name|__1|types) (types-decl>arg-types name|__types 1))
                  (def ~(tag (cstr `Object>Object) 'name|__1)
                    (reify* [Object>Object]
                      (~(O 'invoke) [~'_1__ ~(O 'x)]
                        (t/validate ~(ST (list '. (tag "clojure.lang.Named" 'x) 'getName))
                                    ~'(t/* t/string?)))))
 
-                 (defn ~'name
-                   {:quantum.core.type/type (types-decl>ftype name|__types (t/isa? String))}
-                   ([~'x00__]
-                     (ifs ((Array/get name|__0|types 0) ~'x00__) (. name|__0 ~'invoke ~'x00__)
-                          ((Array/get name|__1|types 0) ~'x00__) (. name|__1 ~'invoke ~'x00__)
-                          (unsupported! `name [~'x00__] 0))))))
+                 [{:id 0 :index 0 :arg-types [(t/isa? String)] :output-type (t/isa? String)}
+                  {:id 1 :index 1 :arg-types [(t/isa? Named)]  :output-type (t/* (t/isa? String))}]
+
+                 (def ~'name
+                   (with-meta
+                     (fn*
+                       ([~'x00__]
+                         (ifs ((Array/get name|__0|types 0) ~'x00__) (. name|__0 ~'invoke ~'x00__)
+                              ((Array/get name|__1|types 0) ~'x00__) (. name|__1 ~'invoke ~'x00__)
+                              (unsupported! `name [~'x00__] 0))))
+                     {:quantum.core.type/type name|__type}))))
           :cljs
           ($ (do (defn ~'name [~'x00__]
                  (ifs (t/string? x)         x
