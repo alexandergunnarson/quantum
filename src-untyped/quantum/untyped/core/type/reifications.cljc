@@ -416,10 +416,10 @@
 
 ;; ----- ReactiveType ----- ;;
 
-(declare reactive-type?)
+(declare rx-type?)
 
 (defn- validate-type [x]
-  (or (and (type? x) (not (reactive-type? x)))
+  (or (and (type? x) (not (rx-type? x)))
       (err! "Found invalid value when derefing `ReactiveType`"
             {:kind (core/type x)})))
 
@@ -444,4 +444,4 @@
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] (list `reactive-type {:value (urx/norx-deref this)}))}})
 
-(defn reactive-type? [x] (instance? ReactiveType x))
+(defn rx-type? [x] (instance? ReactiveType x))

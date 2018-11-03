@@ -415,8 +415,8 @@
               (t/value (t/isa? Character))]]))))
 
 (defn- rx=* [a b]
-  (if (and (utr/reactive-type? a)
-           (utr/reactive-type? b))
+  (if (and (utr/rx-type? a)
+           (utr/rx-type? b))
       (= (urx/norx-deref a) (urx/norx-deref b))
       (= a b)))
 
