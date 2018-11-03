@@ -929,89 +929,88 @@
 
 (deftest test|>long*
   (let [actual
-          (macroexpand '
-            (self/defn #_:inline >long*
-              {:source "clojure.lang.RT.uncheckedLongCast"}
-              > tt/long?
-              ([x (t/- tt/primitive? tt/boolean?)] (Primitive/uncheckedLongCast x))
-              ([x (t/ref (t/isa? Number))] (.longValue x))))
+          (binding [self/*compilation-mode* :test]
+            (macroexpand '
+              (self/defn #_:inline >long*
+                {:source "clojure.lang.RT.uncheckedLongCast"}
+                > tt/long?
+                ([x (t/- tt/primitive? tt/boolean?)] (Primitive/uncheckedLongCast x))
+                ([x (t/ref (t/isa? Number))] (.longValue x)))))
         expected
           (case (env-lang)
             :clj ($ (do (declare ~'>long*)
 
                         ;; [x (t/- tt/primitive? tt/boolean?)]
 
-                        (def ~(O<> '>long*|__0|input0|types)
-                          (*<> (t/isa? java.lang.Byte)
-                               (t/isa? java.lang.Short)
-                               (t/isa? java.lang.Character)
-                               (t/isa? java.lang.Integer)
-                               (t/isa? java.lang.Long)
-                               (t/isa? java.lang.Float)
-                               (t/isa? java.lang.Double)))
-                        (def ~'>long*|__0|0
+                        (def ~(tag (cstr `byte>long) '>long*|__0)
                           (reify* [byte>long]
                             (~(L 'invoke) [~'_0__ ~(Y             'x)]
                               ~'(. Primitive uncheckedLongCast x))))
-                        (def ~'>long*|__0|1
+                        (def ~(tag (cstr `short>long) '>long*|__1)
                           (reify* [short>long]
                             (~(L 'invoke) [~'_1__ ~(S            'x)]
                               ~'(. Primitive uncheckedLongCast x))))
-                        (def ~'>long*|__0|2
+                        (def ~(tag (cstr `char>long) '>long*|__2)
                           (reify* [char>long]
                             (~(L 'invoke) [~'_2__ ~(C             'x)]
                               ~'(. Primitive uncheckedLongCast x))))
-                        (def ~'>long*|__0|3
+                        (def ~(tag (cstr `int>long) '>long*|__3)
                           (reify* [int>long]
                             (~(L 'invoke) [~'_3__ ~(I              'x)]
                               ~'(. Primitive uncheckedLongCast x))))
-                        (def ~'>long*|__0|4
+                        (def ~(tag (cstr `long>long) '>long*|__4)
                           (reify* [long>long]
                             (~(L 'invoke) [~'_4__ ~(L             'x)]
                               ~'(. Primitive uncheckedLongCast x))))
-                        (def ~'>long*|__0|5
+                        (def ~(tag (cstr `float>long) '>long*|__5)
                           (reify* [float>long]
                             (~(L 'invoke) [~'_5__ ~(F            'x)]
                               ~'(. Primitive uncheckedLongCast x))))
-                        (def ~'>long*|__0|6
+                        (def ~(tag (cstr `double>long) '>long*|__6)
                           (reify* [double>long]
                             (~(L 'invoke) [~'_6__ ~(D           'x)]
                               ~'(. Primitive uncheckedLongCast x))))
 
                         ;; [x (t/ref (t/isa? Number))]
 
-                        (def ~(O<> '>long*|__1|input0|types)
-                          (*<> ~(with-meta `(t/isa? Number) {:quantum.core.type/ref? true})))
-                        (def ~'>long*|__1|0
+                        (def ~(tag (cstr `Object>long) '>long*|__7)
                           (reify* [Object>long]
                             (~(L 'invoke) [~'_7__ ~(O 'x)]
-                              (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(. x longValue)))))
+                              (. ~(tag "java.lang.Number" 'x) ~'longValue))))
 
-                        (defn ~'>long*
-                          {:source "clojure.lang.RT.uncheckedLongCast"
-                           :quantum.core.type/type
-                             (t/fn ~'long?
-                                   ~'[(t/- tt/primitive? tt/boolean?)]
-                                   ~'[(t/ref (t/isa? Number))])}
-                          ([~'x00__]
-                            (ifs
-                              ((Array/get ~'>long*|__0|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (cstr `byte>long)   '>long*|__0|0) ~'x00__)
-                              ((Array/get ~'>long*|__0|input0|types 1) ~'x00__)
-                                (.invoke ~(tag (cstr `short>long)  '>long*|__0|1) ~'x00__)
-                              ((Array/get ~'>long*|__0|input0|types 2) ~'x00__)
-                                (.invoke ~(tag (cstr `char>long)   '>long*|__0|2) ~'x00__)
-                              ((Array/get ~'>long*|__0|input0|types 3) ~'x00__)
-                                (.invoke ~(tag (cstr `int>long)    '>long*|__0|3) ~'x00__)
-                              ((Array/get ~'>long*|__0|input0|types 4) ~'x00__)
-                                (.invoke ~(tag (cstr `long>long)   '>long*|__0|4) ~'x00__)
-                              ((Array/get ~'>long*|__0|input0|types 5) ~'x00__)
-                                (.invoke ~(tag (cstr `float>long)  '>long*|__0|5) ~'x00__)
-                              ((Array/get ~'>long*|__0|input0|types 6) ~'x00__)
-                                (.invoke ~(tag (cstr `double>long) '>long*|__0|6) ~'x00__)
-                              ((Array/get ~'>long*|__1|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (cstr `Object>long) '>long*|__1|0) ~'x00__)
-                              (unsupported! `>long* [~'x00__] 0)))))))]
+                        [{:id 0 :index 0 :arg-types [(t/isa? Byte)]      :output-type (t/isa? Long)}
+                         {:id 1 :index 1 :arg-types [(t/isa? Short)]     :output-type (t/isa? Long)}
+                         {:id 2 :index 2 :arg-types [(t/isa? Character)] :output-type (t/isa? Long)}
+                         {:id 3 :index 3 :arg-types [(t/isa? Integer)]   :output-type (t/isa? Long)}
+                         {:id 4 :index 4 :arg-types [(t/isa? Long)]      :output-type (t/isa? Long)}
+                         {:id 5 :index 5 :arg-types [(t/isa? Float)]     :output-type (t/isa? Long)}
+                         {:id 6 :index 6 :arg-types [(t/isa? Double)]    :output-type (t/isa? Long)}
+                         {:id 7 :index 7 :arg-types [(t/ref (t/isa? Number))]
+                          :output-type (t/isa? Long)}]
+
+                        (def ~'>long*
+                          (with-meta
+                            (fn* ([~'x00__]
+                              (ifs
+                                ((Array/get >long*|__0|types 0) ~'x00__)
+                                  (. >long*|__0 ~'invoke ~'x00__)
+                                ((Array/get >long*|__1|types 0) ~'x00__)
+                                  (. >long*|__1 ~'invoke ~'x00__)
+                                ((Array/get >long*|__2|types 0) ~'x00__)
+                                  (. >long*|__2 ~'invoke ~'x00__)
+                                ((Array/get >long*|__3|types 0) ~'x00__)
+                                  (. >long*|__3 ~'invoke ~'x00__)
+                                ((Array/get >long*|__4|types 0) ~'x00__)
+                                  (. >long*|__4 ~'invoke ~'x00__)
+                                ((Array/get >long*|__5|types 0) ~'x00__)
+                                  (. >long*|__5 ~'invoke ~'x00__)
+                                ((Array/get >long*|__6|types 0) ~'x00__)
+                                  (. >long*|__6 ~'invoke ~'x00__)
+                                ((Array/get >long*|__7|types 0) ~'x00__)
+                                  (. >long*|__7 ~'invoke ~'x00__)
+                                (unsupported! `>long* [~'x00__] 0))))
+                            {:source "clojure.lang.RT.uncheckedLongCast"
+                             :quantum.core.type/type >long*|__type})))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
