@@ -662,13 +662,14 @@
       fn|meta' (merge fn|meta {:quantum.core.type/type (uid/qualify fn|ns-name fn|type-name)})]
     ;; TODO determine whether CLJS needs (update-in m [:jsdoc] conj "@param {...*} var_args")
     (if (= kind :extend-defn!)
-        [`(intern (quote ~fn|ns-name) (quote ~fn|name)
-            (with-meta (fn* ~@overload-forms) ~fn|meta'))]
-        (let [dispatch-form `(def ~fn|name (with-meta (fn* ~@overload-forms) ~fn|meta'))]
+        [`(let* [v# (intern (quote ~fn|ns-name) (quote ~fn|name)
+                      ~(with-meta `(fn* ~@overload-forms) fn|meta'))]
+            (alter-meta! v# merge ~fn|meta'))]
+        (let [dispatch-form `(uvar/defmeta ~fn|name ~fn|meta' (fn* ~@overload-forms))]
           (if (= compilation-mode :test)
               [(->> !overload-types urx/norx-deref >form (uc/map (fn1 dissoc :ns-sym)))
                dispatch-form]
-              dispatch-form)))))
+              [dispatch-form])))))
 
 ;; ===== End dynamic dispatch ===== ;;
 
