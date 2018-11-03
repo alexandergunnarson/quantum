@@ -219,69 +219,61 @@
         (case (env-lang)
           :clj
           ($ (do (declare ~'some?)
-                 (def ~'some?|__types
-                   (atom [{:id 0 :arg-types [(t/value nil)]      :output-type (t/value false)}
-                          {:id 1 :arg-types [(t/isa? Boolean)]   :output-type (t/value true)}
-                          {:id 2 :arg-types [(t/isa? Byte)]      :output-type (t/value true)}
-                          {:id 3 :arg-types [(t/isa? Short)]     :output-type (t/value true)}
-                          {:id 4 :arg-types [(t/isa? Character)] :output-type (t/value true)}
-                          {:id 5 :arg-types [(t/isa? Integer)]   :output-type (t/value true)}
-                          {:id 6 :arg-types [(t/isa? Long)]      :output-type (t/value true)}
-                          {:id 7 :arg-types [(t/isa? Float)]     :output-type (t/value true)}
-                          {:id 8 :arg-types [(t/isa? Double)]    :output-type (t/value true)}
-                          {:id 9 :arg-types [t/any?]             :output-type (t/value true)}]))
 
                  ;; [x t/nil?]
 
-                 (def ~(O<> 'some?|__0|types) (types-decl>arg-types some?|__types 0))
                  (def ~(tag (cstr `Object>boolean) 'some?|__0)
                    (reify* [Object>boolean] (~(B 'invoke) [~'_0__ ~(O 'x)] false)))
 
                  ;; [x t/any?]
 
-                 (def ~(O<> 'some?|__1|types) (types-decl>arg-types some?|__types 1))
                  (def ~(tag (cstr `boolean>boolean) 'some?|__1)
                    (reify* [boolean>boolean] (~(B 'invoke) [~'_1__ ~(B 'x)] true)))
-                 (def ~(O<> 'some?|__2|types) (types-decl>arg-types some?|__types 2))
                  (def ~(tag (cstr `byte>boolean) 'some?|__2)
                    (reify* [byte>boolean]    (~(B 'invoke) [~'_2__ ~(Y 'x)] true)))
-                 (def ~(O<> 'some?|__3|types) (types-decl>arg-types some?|__types 3))
                  (def ~(tag (cstr `short>boolean) 'some?|__3)
                    (reify* [short>boolean]   (~(B 'invoke) [~'_3__ ~(S 'x)] true)))
-                 (def ~(O<> 'some?|__4|types) (types-decl>arg-types some?|__types 4))
                  (def ~(tag (cstr `char>boolean) 'some?|__4)
                    (reify* [char>boolean]    (~(B 'invoke) [~'_4__ ~(C 'x)] true)))
-                 (def ~(O<> 'some?|__5|types) (types-decl>arg-types some?|__types 5))
                  (def ~(tag (cstr `int>boolean) 'some?|__5)
                    (reify* [int>boolean]     (~(B 'invoke) [~'_5__ ~(I 'x)] true)))
-                 (def ~(O<> 'some?|__6|types) (types-decl>arg-types some?|__types 6))
                  (def ~(tag (cstr `long>boolean) 'some?|__6)
                    (reify* [long>boolean]    (~(B 'invoke) [~'_6__ ~(L 'x)] true)))
-                 (def ~(O<> 'some?|__7|types) (types-decl>arg-types some?|__types 7))
                  (def ~(tag (cstr `float>boolean) 'some?|__7)
                    (reify* [float>boolean]   (~(B 'invoke) [~'_7__ ~(F 'x)] true)))
-                 (def ~(O<> 'some?|__8|types) (types-decl>arg-types some?|__types 8))
                  (def ~(tag (cstr `double>boolean) 'some?|__8)
                    (reify* [double>boolean]  (~(B 'invoke) [~'_8__ ~(D 'x)] true)))
-                 (def ~(O<> 'some?|__9|types) (types-decl>arg-types some?|__types 9))
                  (def ~(tag (cstr `Object>boolean) 'some?|__9)
                    (reify* [Object>boolean]  (~(B 'invoke) [~'_9__ ~(O 'x)] true)))
 
-                 (defn ~'some?
-                   {:quantum.core.type/type (types-decl>ftype some?|__types (t/isa? Boolean))}
-                   ([~'x00__]
-                     (ifs ((Array/get some?|__0|types 0) ~'x00__) (. some?|__0 ~'invoke ~'x00__)
-                          ;; TODO eliminate these checks below because they're not needed
-                          ((Array/get some?|__1|types 0) ~'x00__) (. some?|__1 ~'invoke ~'x00__)
-                          ((Array/get some?|__2|types 0) ~'x00__) (. some?|__2 ~'invoke ~'x00__)
-                          ((Array/get some?|__3|types 0) ~'x00__) (. some?|__3 ~'invoke ~'x00__)
-                          ((Array/get some?|__4|types 0) ~'x00__) (. some?|__4 ~'invoke ~'x00__)
-                          ((Array/get some?|__5|types 0) ~'x00__) (. some?|__5 ~'invoke ~'x00__)
-                          ((Array/get some?|__6|types 0) ~'x00__) (. some?|__6 ~'invoke ~'x00__)
-                          ((Array/get some?|__7|types 0) ~'x00__) (. some?|__7 ~'invoke ~'x00__)
-                          ((Array/get some?|__8|types 0) ~'x00__) (. some?|__8 ~'invoke ~'x00__)
-                          ((Array/get some?|__9|types 0) ~'x00__) (. some?|__9 ~'invoke ~'x00__)
-                          (unsupported! `some? [~'x00__] 0))))))
+                 [{:id 0 :index 0 :arg-types [(t/value nil)]      :output-type (t/value false)}
+                  {:id 1 :index 1 :arg-types [(t/isa? Boolean)]   :output-type (t/value true)}
+                  {:id 2 :index 2 :arg-types [(t/isa? Byte)]      :output-type (t/value true)}
+                  {:id 3 :index 3 :arg-types [(t/isa? Short)]     :output-type (t/value true)}
+                  {:id 4 :index 4 :arg-types [(t/isa? Character)] :output-type (t/value true)}
+                  {:id 5 :index 5 :arg-types [(t/isa? Integer)]   :output-type (t/value true)}
+                  {:id 6 :index 6 :arg-types [(t/isa? Long)]      :output-type (t/value true)}
+                  {:id 7 :index 7 :arg-types [(t/isa? Float)]     :output-type (t/value true)}
+                  {:id 8 :index 8 :arg-types [(t/isa? Double)]    :output-type (t/value true)}
+                  {:id 9 :index 9 :arg-types [t/any?]             :output-type (t/value true)}]
+
+                 (def ~'some?
+                   (with-meta
+                     (fn*
+                       ([~'x00__]
+                         (ifs ((Array/get some?|__0|types 0) ~'x00__) (. some?|__0 ~'invoke ~'x00__)
+                              ;; TODO eliminate these checks below because they're not needed
+                              ((Array/get some?|__1|types 0) ~'x00__) (. some?|__1 ~'invoke ~'x00__)
+                              ((Array/get some?|__2|types 0) ~'x00__) (. some?|__2 ~'invoke ~'x00__)
+                              ((Array/get some?|__3|types 0) ~'x00__) (. some?|__3 ~'invoke ~'x00__)
+                              ((Array/get some?|__4|types 0) ~'x00__) (. some?|__4 ~'invoke ~'x00__)
+                              ((Array/get some?|__5|types 0) ~'x00__) (. some?|__5 ~'invoke ~'x00__)
+                              ((Array/get some?|__6|types 0) ~'x00__) (. some?|__6 ~'invoke ~'x00__)
+                              ((Array/get some?|__7|types 0) ~'x00__) (. some?|__7 ~'invoke ~'x00__)
+                              ((Array/get some?|__8|types 0) ~'x00__) (. some?|__8 ~'invoke ~'x00__)
+                              ((Array/get some?|__9|types 0) ~'x00__) (. some?|__9 ~'invoke ~'x00__)
+                              (unsupported! `some? [~'x00__] 0))))
+                     {:quantum.core.type/type some?__type}))))
           :cljs
           ($ (do (defn ~'some?| [~'x]
                    (ifs (nil? x) false
