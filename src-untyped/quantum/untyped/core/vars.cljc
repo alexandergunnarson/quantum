@@ -65,6 +65,12 @@
   [name & decls]
   (list* `defmacro (with-meta name (assoc (meta name) :private true)) decls)))
 
+#?(:clj
+(defmacro defmeta
+  "Like `def`, but applies metadata to the var *and* the bound object."
+  [sym meta-val x]
+  `(def ~(vary-meta sym merge meta-val) ~(vary-meta x merge meta-val))))
+
 ;; ===== Aliases ===== ;;
 
 #?(:clj (ucore/defaliases ucore defalias defaliases defaliases'))
