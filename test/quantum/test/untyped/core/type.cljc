@@ -155,7 +155,7 @@
           (testing "hash(eq) equality"
             (is= (hash a) (hash b)))
   #?(:clj (testing "hash(code) equality"
-            (is= (.hashCode a) (.hashCode b))))
+            (is= (.hashCode ^Object a) (.hashCode ^Object b))))
           (testing "collection equality"
             (is= 1 (count (hash-set a b))))))
 
