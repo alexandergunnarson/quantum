@@ -52,7 +52,6 @@ TODO:
 - t/or should probably order by `t/compare` descending
 
 
-  - TODO `ftype` should accommodate reactive types
   - TODO `or` and `and` should be `=` regardless of order
     - To fix this, sort when it's created?
   - (rx/dispose! <reactions>) when the `t/defn` is redefined (?)

@@ -172,8 +172,6 @@
       #(cond-> % line   (assoc :line   line)
                  column (assoc :column column)))))
 
-(def special-symbols '#{do let* deftype* fn* def . if quote new throw}) ; TODO make more complete
-
 ;; TODO move
 (deftype WatchableMutable
   [^:unsynchronized-mutable v ^:unsynchronized-mutable ^clojure.lang.IFn watch]
@@ -792,18 +790,18 @@
   [env ::env, [caller|form _ & body _ :as form] _ > uast/node?]
   (case caller|form
     .        (analyze-seq|dot   env form)
-    def      (TODO "def")
-    deftype* (TODO "deftype*")
+    def      (TODO "def"      {:form form})
+    deftype* (TODO "deftype*" {:form form})
     do       (analyze-seq|do    env form)
-    fn*      (TODO "fn*")
+    fn*      (TODO "fn*"      {:form form})
     if       (analyze-seq|if    env form)
     let*     (analyze-seq|let*  env form)
     new      (analyze-seq|new   env form)
     quote    (analyze-seq|quote env form)
-    reify*   (TODO "reify") ; NOTE only for CLJ
-    set!     (TODO "set!")
+    reify*   (TODO "reify"    {:form form}) ; NOTE only for CLJ
+    set!     (TODO "set!"     {:form form})
     throw    (analyze-seq|throw env form)
-    try      (TODO "try")
+    try      (TODO "try"      {:form form})
     var      (analyze-seq|var   env form)
     (if (-> env :opts :arglist-context?)
         (if-let [caller-form-dependent-type-call?
@@ -968,15 +966,17 @@
 
 ;; TODO move?
 (defns type>split
-  "Only `t/or`s are splittable for now"
+  "Only `t/or`s are splittable for now.
+   Reactive types are non-reactively derefed in order to make splitting possible."
   [t t/type? > (s/vec-of t/type?)]
-  (if (utr/or-type? t)
-      (utr/or-type>args t)
-      [t]))
+  (let [t' (cond-> t (utr/rx-type? t) urx/norx-deref)]
+    (if (utr/or-type? t')
+        (utr/or-type>args t')
+        [t'])))
 
 (defns type>split+primitivized [t t/type? > (s/vec-of t/type?)]
   (let [primitive-subtypes
-          (->> (t/type>primitive-subtypes t false)
+          (->> (t/type>primitive-subtypes (cond-> t (utr/rx-type? t) urx/norx-deref) false)
                (sort-by sort-guide) ; For cleanliness and reproducibility in tests
                vec)]
     (uc/distinct (join primitive-subtypes (type>split t)))))
