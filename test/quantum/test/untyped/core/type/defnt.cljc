@@ -20,7 +20,9 @@
     [quantum.untyped.core.test              :as utest
       :refer [deftest is is= is-code= testing throws]]
     [quantum.untyped.core.type              :as t]
-    [quantum.untyped.core.type.reifications :as utr])
+    [quantum.untyped.core.type.reifications :as utr]
+    [quantum.untyped.core.vars
+      :refer [defmeta]])
   (:import
     [clojure.lang ASeq ISeq LazySeq Named Reduced Seqable]
     [quantum.core.data Array]
@@ -67,9 +69,9 @@
                                  '(. java.lang.management.ManagementFactory getRuntimeMXBean))
                                'getName)))))
                [{:id 0 :index 0 :arg-types [] :output-type (t/or (t/value nil) (t/isa? String))}]
-               (def ~'pid|test
-                 (with-meta (fn* ([] (. pid|test|__0 ~'invoke)))
-                   {:quantum.core.type/type pid|test|__type}))))]
+               (defmeta ~'pid|test
+                 {:quantum.core.type/type pid|test|__type}
+                 (fn* ([] (. pid|test|__0 ~'invoke))))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
@@ -119,32 +121,31 @@
                     {:id 7 :index 7 :arg-types [(t/isa? Double)]    :output-type (t/isa? Double)}
                     {:id 8 :index 8 :arg-types [t/any?]             :output-type t/any?}]
 
-                   (def ~'identity|uninlined
-                    (with-meta
-                      (fn* ([~'x00__]
-                        (ifs
-                           ((Array/get identity|uninlined|__0|types 0) ~'x00__)
-                             (. identity|uninlined|__0 ~'invoke ~'x00__)
-                           ((Array/get identity|uninlined|__1|types 0) ~'x00__)
-                             (. identity|uninlined|__1 ~'invoke ~'x00__)
-                           ((Array/get identity|uninlined|__2|types 0) ~'x00__)
-                             (. identity|uninlined|__2 ~'invoke ~'x00__)
-                           ((Array/get identity|uninlined|__3|types 0) ~'x00__)
-                             (. identity|uninlined|__3 ~'invoke ~'x00__)
-                           ((Array/get identity|uninlined|__4|types 0) ~'x00__)
-                             (. identity|uninlined|__4 ~'invoke ~'x00__)
-                           ((Array/get identity|uninlined|__5|types 0) ~'x00__)
-                             (. identity|uninlined|__5 ~'invoke ~'x00__)
-                           ((Array/get identity|uninlined|__6|types 0) ~'x00__)
-                             (. identity|uninlined|__6 ~'invoke ~'x00__)
-                           ((Array/get identity|uninlined|__7|types 0) ~'x00__)
-                             (. identity|uninlined|__7 ~'invoke ~'x00__)
-                           ((Array/get identity|uninlined|__8|types 0) ~'x00__)
-                             (. identity|uninlined|__8 ~'invoke ~'x00__)
-                             ;; TODO no need for `unsupported!` because it will always get a valid
-                             ;; branch
-                             (unsupported! `identity|uninlined [~'x00__] 0))))
-                      {:quantum.core.type/type identity|uninlined|__type}))))
+                   (defmeta ~'identity|uninlined
+                     {:quantum.core.type/type identity|uninlined|__type}
+                     (fn* ([~'x00__]
+                            (ifs
+                               ((Array/get identity|uninlined|__0|types 0) ~'x00__)
+                                 (. identity|uninlined|__0 ~'invoke ~'x00__)
+                               ((Array/get identity|uninlined|__1|types 0) ~'x00__)
+                                 (. identity|uninlined|__1 ~'invoke ~'x00__)
+                               ((Array/get identity|uninlined|__2|types 0) ~'x00__)
+                                 (. identity|uninlined|__2 ~'invoke ~'x00__)
+                               ((Array/get identity|uninlined|__3|types 0) ~'x00__)
+                                 (. identity|uninlined|__3 ~'invoke ~'x00__)
+                               ((Array/get identity|uninlined|__4|types 0) ~'x00__)
+                                 (. identity|uninlined|__4 ~'invoke ~'x00__)
+                               ((Array/get identity|uninlined|__5|types 0) ~'x00__)
+                                 (. identity|uninlined|__5 ~'invoke ~'x00__)
+                               ((Array/get identity|uninlined|__6|types 0) ~'x00__)
+                                 (. identity|uninlined|__6 ~'invoke ~'x00__)
+                               ((Array/get identity|uninlined|__7|types 0) ~'x00__)
+                                 (. identity|uninlined|__7 ~'invoke ~'x00__)
+                               ((Array/get identity|uninlined|__8|types 0) ~'x00__)
+                                 (. identity|uninlined|__8 ~'invoke ~'x00__)
+                                 ;; TODO no need for `unsupported!` because it will always get a valid
+                                 ;; branch
+                                 (unsupported! `identity|uninlined [~'x00__] 0)))))))
             :cljs
             ;; Direct dispatch will be simple functions, not `reify`s
             ($ (do (defn ~'identity|uninlined [~'x] ~'x))))]
@@ -183,14 +184,12 @@
                  [{:id 0 :index 0 :arg-types [(t/isa? String)] :output-type (t/isa? String)}
                   {:id 1 :index 1 :arg-types [(t/isa? Named)]  :output-type (t/* (t/isa? String))}]
 
-                 (def ~'name
-                   (with-meta
-                     (fn*
-                       ([~'x00__]
-                         (ifs ((Array/get name|__0|types 0) ~'x00__) (. name|__0 ~'invoke ~'x00__)
-                              ((Array/get name|__1|types 0) ~'x00__) (. name|__1 ~'invoke ~'x00__)
-                              (unsupported! `name [~'x00__] 0))))
-                     {:quantum.core.type/type name|__type}))))
+                 (defmeta ~'name
+                   {:quantum.core.type/type name|__type}
+                   (fn* ([~'x00__]
+                          (ifs ((Array/get name|__0|types 0) ~'x00__) (. name|__0 ~'invoke ~'x00__)
+                               ((Array/get name|__1|types 0) ~'x00__) (. name|__1 ~'invoke ~'x00__)
+                               (unsupported! `name [~'x00__] 0)))))))
           :cljs
           ($ (do (defn ~'name [~'x00__]
                  (ifs (t/string? x)         x
@@ -258,23 +257,22 @@
                   {:id 8 :index 8 :arg-types [(t/isa? Double)]    :output-type (t/value true)}
                   {:id 9 :index 9 :arg-types [t/any?]             :output-type (t/value true)}]
 
-                 (def ~'some?
-                   (with-meta
-                     (fn*
-                       ([~'x00__]
-                         (ifs ((Array/get some?|__0|types 0) ~'x00__) (. some?|__0 ~'invoke ~'x00__)
-                              ;; TODO eliminate these checks below because they're not needed
-                              ((Array/get some?|__1|types 0) ~'x00__) (. some?|__1 ~'invoke ~'x00__)
-                              ((Array/get some?|__2|types 0) ~'x00__) (. some?|__2 ~'invoke ~'x00__)
-                              ((Array/get some?|__3|types 0) ~'x00__) (. some?|__3 ~'invoke ~'x00__)
-                              ((Array/get some?|__4|types 0) ~'x00__) (. some?|__4 ~'invoke ~'x00__)
-                              ((Array/get some?|__5|types 0) ~'x00__) (. some?|__5 ~'invoke ~'x00__)
-                              ((Array/get some?|__6|types 0) ~'x00__) (. some?|__6 ~'invoke ~'x00__)
-                              ((Array/get some?|__7|types 0) ~'x00__) (. some?|__7 ~'invoke ~'x00__)
-                              ((Array/get some?|__8|types 0) ~'x00__) (. some?|__8 ~'invoke ~'x00__)
-                              ((Array/get some?|__9|types 0) ~'x00__) (. some?|__9 ~'invoke ~'x00__)
-                              (unsupported! `some? [~'x00__] 0))))
-                     {:quantum.core.type/type some?|__type}))))
+                 (defmeta ~'some?
+                   {:quantum.core.type/type some?|__type}
+                   (fn*
+                     ([~'x00__]
+                       (ifs ((Array/get some?|__0|types 0) ~'x00__) (. some?|__0 ~'invoke ~'x00__)
+                            ;; TODO eliminate these checks below because they're not needed
+                            ((Array/get some?|__1|types 0) ~'x00__) (. some?|__1 ~'invoke ~'x00__)
+                            ((Array/get some?|__2|types 0) ~'x00__) (. some?|__2 ~'invoke ~'x00__)
+                            ((Array/get some?|__3|types 0) ~'x00__) (. some?|__3 ~'invoke ~'x00__)
+                            ((Array/get some?|__4|types 0) ~'x00__) (. some?|__4 ~'invoke ~'x00__)
+                            ((Array/get some?|__5|types 0) ~'x00__) (. some?|__5 ~'invoke ~'x00__)
+                            ((Array/get some?|__6|types 0) ~'x00__) (. some?|__6 ~'invoke ~'x00__)
+                            ((Array/get some?|__7|types 0) ~'x00__) (. some?|__7 ~'invoke ~'x00__)
+                            ((Array/get some?|__8|types 0) ~'x00__) (. some?|__8 ~'invoke ~'x00__)
+                            ((Array/get some?|__9|types 0) ~'x00__) (. some?|__9 ~'invoke ~'x00__)
+                            (unsupported! `some? [~'x00__] 0)))))))
           :cljs
           ($ (do (defn ~'some?| [~'x]
                    (ifs (nil? x) false
@@ -321,18 +319,18 @@
                          (~(B 'invoke) [~'_8__ ~(F 'x)] false)
                          (~(B 'invoke) [~'_9__ ~(D 'x)] false)))
 
-                     (def ~'reduced?|test
-                       (with-meta (fn* ([~'x00__]
+                     (defmeta ~'reduced?|test
+                       {:quantum.core.type/type
+                         (t/fn t/any?
+                               ~'[(t/isa? Reduced)]
+                               ~'[t/any?])}
+                       (fn* ([~'x00__]
                          (ifs ((Array/get ~'reduced?|test|__0|input0|types 0) ~'x00__)
                                 (.invoke reduced?|test|__0|0 ~'x00__)
                               ;; TODO eliminate this check because it's not needed (`t/any?`)
                               ((Array/get ~'reduced?|test|__1|input0|types 0) ~'x00__)
                                 (.invoke reduced?|test|__1|0 ~'x00__)
-                              (unsupported! `reduced?|test [~'x00__] 0))))
-                         {:quantum.core.type/type
-                           (t/fn t/any?
-                                 ~'[(t/isa? Reduced)]
-                                 ~'[t/any?])}))))
+                              (unsupported! `reduced?|test [~'x00__] 0)))))))
             :cljs
               ($ (do (defn ~'reduced?|test [~'x]
                        (ifs (instance? Reduced x) true false)))))]
@@ -620,131 +618,130 @@
        :output-type (t/isa? Boolean)}]))
 
 (def >|dynamic-dispatch-form
-  ($ (def ~'>
-       (with-meta
-         (fn* ([~'x00__ ~'x10__]
-                (ifs
-                  ((Array/get >|__0|types 0) ~'x00__)
-                    (ifs
-                      ((Array/get >|__0|types  1) ~'x10__)
-                        (. >|__0  ~'invoke  ~'x00__ ~'x10__)
-                      ((Array/get >|__1|types  1) ~'x10__)
-                        (. >|__1  ~'invoke  ~'x00__ ~'x10__)
-                      ((Array/get >|__2|types  1) ~'x10__)
-                        (. >|__2  ~'invoke  ~'x00__ ~'x10__)
-                      ((Array/get >|__3|types  1) ~'x10__)
-                        (. >|__3  ~'invoke  ~'x00__ ~'x10__)
-                      ((Array/get >|__4|types  1) ~'x10__)
-                        (. >|__4  ~'invoke  ~'x00__ ~'x10__)
-                      ((Array/get >|__5|types  1) ~'x10__)
-                        (. >|__5  ~'invoke  ~'x00__ ~'x10__)
-                      ((Array/get >|__6|types  1) ~'x10__)
-                        (. >|__6  ~'invoke  ~'x00__ ~'x10__)
-                      (unsupported! `> [~'x00__ ~'x10__] 1))
-                  ((Array/get >|__7|types 0) ~'x00__)
-                    (ifs
-                      ((Array/get >|__7|types  1) ~'x10__)
-                        (. >|__7  ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__8|types  1) ~'x10__)
-                        (. >|__8  ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__9|types  1) ~'x10__)
-                        (. >|__9  ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__10|types 1) ~'x10__)
-                        (. >|__10 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__11|types 1) ~'x10__)
-                        (. >|__11 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__12|types 1) ~'x10__)
-                        (. >|__12 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__13|types 1) ~'x10__)
-                        (. >|__13 ~'invoke ~'x00__ ~'x10__)
-                      (unsupported! `> [~'x00__ ~'x10__] 1))
-                  ((Array/get >|__14|types 0) ~'x00__)
-                    (ifs
-                      ((Array/get >|__14|types 1) ~'x10__)
-                        (. >|__14 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__15|types 1) ~'x10__)
-                        (. >|__15 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__16|types 1) ~'x10__)
-                        (. >|__16 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__17|types 1) ~'x10__)
-                        (. >|__17 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__18|types 1) ~'x10__)
-                        (. >|__18 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__19|types 1) ~'x10__)
-                        (. >|__19 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__20|types 1) ~'x10__)
-                        (. >|__20 ~'invoke ~'x00__ ~'x10__)
-                      (unsupported! `> [~'x00__ ~'x10__] 1))
-                  ((Array/get >|__21|types 0) ~'x00__)
-                    (ifs
-                      ((Array/get >|__21|types 1) ~'x10__)
-                        (. >|__21 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__22|types 1) ~'x10__)
-                        (. >|__22 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__23|types 1) ~'x10__)
-                        (. >|__23 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__24|types 1) ~'x10__)
-                        (. >|__24 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__25|types 1) ~'x10__)
-                        (. >|__25 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__26|types 1) ~'x10__)
-                        (. >|__26 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__27|types 1) ~'x10__)
-                        (. >|__27 ~'invoke ~'x00__ ~'x10__)
-                      (unsupported! `> [~'x00__ ~'x10__] 1))
-                  ((Array/get >|__28|types 0) ~'x00__)
-                    (ifs
-                      ((Array/get >|__28|types 1) ~'x10__)
-                        (. >|__28 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__29|types 1) ~'x10__)
-                        (. >|__29 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__30|types 1) ~'x10__)
-                        (. >|__30 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__31|types 1) ~'x10__)
-                        (. >|__31 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__32|types 1) ~'x10__)
-                        (. >|__32 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__33|types 1) ~'x10__)
-                        (. >|__33 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__34|types 1) ~'x10__)
-                        (. >|__34 ~'invoke ~'x00__ ~'x10__)
-                      (unsupported! `> [~'x00__ ~'x10__] 1))
-                  ((Array/get >|__35|types 0) ~'x00__)
-                    (ifs
-                      ((Array/get >|__35|types 1) ~'x10__)
-                        (. >|__35 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__36|types 1) ~'x10__)
-                        (. >|__36 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__37|types 1) ~'x10__)
-                        (. >|__37 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__38|types 1) ~'x10__)
-                        (. >|__38 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__39|types 1) ~'x10__)
-                        (. >|__39 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__40|types 1) ~'x10__)
-                        (. >|__40 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__41|types 1) ~'x10__)
-                        (. >|__41 ~'invoke ~'x00__ ~'x10__)
-                      (unsupported! `> [~'x00__ ~'x10__] 1))
-                  ((Array/get >|__42|types 0) ~'x00__)
-                    (ifs
-                      ((Array/get >|__42|types 1) ~'x10__)
-                        (. >|__42 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__43|types 1) ~'x10__)
-                        (. >|__43 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__44|types 1) ~'x10__)
-                        (. >|__44 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__45|types 1) ~'x10__)
-                        (. >|__45 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__46|types 1) ~'x10__)
-                        (. >|__46 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__47|types 1) ~'x10__)
-                        (. >|__47 ~'invoke ~'x00__ ~'x10__)
-                      ((Array/get >|__48|types 1) ~'x10__)
-                        (. >|__48 ~'invoke ~'x00__ ~'x10__)
-                      (unsupported! `> [~'x00__ ~'x10__] 1))
-                  (unsupported! `> [~'x00__ ~'x10__] 0))))
-         {:quantum.core.type/type >|__type}))))
+  ($ (defmeta ~'>
+       {:quantum.core.type/type >|__type}
+       (fn* ([~'x00__ ~'x10__]
+              (ifs
+                ((Array/get >|__0|types 0) ~'x00__)
+                  (ifs
+                    ((Array/get >|__0|types  1) ~'x10__)
+                      (. >|__0  ~'invoke  ~'x00__ ~'x10__)
+                    ((Array/get >|__1|types  1) ~'x10__)
+                      (. >|__1  ~'invoke  ~'x00__ ~'x10__)
+                    ((Array/get >|__2|types  1) ~'x10__)
+                      (. >|__2  ~'invoke  ~'x00__ ~'x10__)
+                    ((Array/get >|__3|types  1) ~'x10__)
+                      (. >|__3  ~'invoke  ~'x00__ ~'x10__)
+                    ((Array/get >|__4|types  1) ~'x10__)
+                      (. >|__4  ~'invoke  ~'x00__ ~'x10__)
+                    ((Array/get >|__5|types  1) ~'x10__)
+                      (. >|__5  ~'invoke  ~'x00__ ~'x10__)
+                    ((Array/get >|__6|types  1) ~'x10__)
+                      (. >|__6  ~'invoke  ~'x00__ ~'x10__)
+                    (unsupported! `> [~'x00__ ~'x10__] 1))
+                ((Array/get >|__7|types 0) ~'x00__)
+                  (ifs
+                    ((Array/get >|__7|types  1) ~'x10__)
+                      (. >|__7  ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__8|types  1) ~'x10__)
+                      (. >|__8  ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__9|types  1) ~'x10__)
+                      (. >|__9  ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__10|types 1) ~'x10__)
+                      (. >|__10 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__11|types 1) ~'x10__)
+                      (. >|__11 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__12|types 1) ~'x10__)
+                      (. >|__12 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__13|types 1) ~'x10__)
+                      (. >|__13 ~'invoke ~'x00__ ~'x10__)
+                    (unsupported! `> [~'x00__ ~'x10__] 1))
+                ((Array/get >|__14|types 0) ~'x00__)
+                  (ifs
+                    ((Array/get >|__14|types 1) ~'x10__)
+                      (. >|__14 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__15|types 1) ~'x10__)
+                      (. >|__15 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__16|types 1) ~'x10__)
+                      (. >|__16 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__17|types 1) ~'x10__)
+                      (. >|__17 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__18|types 1) ~'x10__)
+                      (. >|__18 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__19|types 1) ~'x10__)
+                      (. >|__19 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__20|types 1) ~'x10__)
+                      (. >|__20 ~'invoke ~'x00__ ~'x10__)
+                    (unsupported! `> [~'x00__ ~'x10__] 1))
+                ((Array/get >|__21|types 0) ~'x00__)
+                  (ifs
+                    ((Array/get >|__21|types 1) ~'x10__)
+                      (. >|__21 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__22|types 1) ~'x10__)
+                      (. >|__22 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__23|types 1) ~'x10__)
+                      (. >|__23 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__24|types 1) ~'x10__)
+                      (. >|__24 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__25|types 1) ~'x10__)
+                      (. >|__25 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__26|types 1) ~'x10__)
+                      (. >|__26 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__27|types 1) ~'x10__)
+                      (. >|__27 ~'invoke ~'x00__ ~'x10__)
+                    (unsupported! `> [~'x00__ ~'x10__] 1))
+                ((Array/get >|__28|types 0) ~'x00__)
+                  (ifs
+                    ((Array/get >|__28|types 1) ~'x10__)
+                      (. >|__28 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__29|types 1) ~'x10__)
+                      (. >|__29 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__30|types 1) ~'x10__)
+                      (. >|__30 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__31|types 1) ~'x10__)
+                      (. >|__31 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__32|types 1) ~'x10__)
+                      (. >|__32 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__33|types 1) ~'x10__)
+                      (. >|__33 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__34|types 1) ~'x10__)
+                      (. >|__34 ~'invoke ~'x00__ ~'x10__)
+                    (unsupported! `> [~'x00__ ~'x10__] 1))
+                ((Array/get >|__35|types 0) ~'x00__)
+                  (ifs
+                    ((Array/get >|__35|types 1) ~'x10__)
+                      (. >|__35 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__36|types 1) ~'x10__)
+                      (. >|__36 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__37|types 1) ~'x10__)
+                      (. >|__37 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__38|types 1) ~'x10__)
+                      (. >|__38 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__39|types 1) ~'x10__)
+                      (. >|__39 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__40|types 1) ~'x10__)
+                      (. >|__40 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__41|types 1) ~'x10__)
+                      (. >|__41 ~'invoke ~'x00__ ~'x10__)
+                    (unsupported! `> [~'x00__ ~'x10__] 1))
+                ((Array/get >|__42|types 0) ~'x00__)
+                  (ifs
+                    ((Array/get >|__42|types 1) ~'x10__)
+                      (. >|__42 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__43|types 1) ~'x10__)
+                      (. >|__43 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__44|types 1) ~'x10__)
+                      (. >|__44 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__45|types 1) ~'x10__)
+                      (. >|__45 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__46|types 1) ~'x10__)
+                      (. >|__46 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__47|types 1) ~'x10__)
+                      (. >|__47 ~'invoke ~'x00__ ~'x10__)
+                    ((Array/get >|__48|types 1) ~'x10__)
+                      (. >|__48 ~'invoke ~'x00__ ~'x10__)
+                    (unsupported! `> [~'x00__ ~'x10__] 1))
+                (unsupported! `> [~'x00__ ~'x10__] 0)))))))
 
 (deftest test|>
   (let [actual
@@ -988,29 +985,28 @@
                          {:id 7 :index 7 :arg-types [(t/ref (t/isa? Number))]
                           :output-type (t/isa? Long)}]
 
-                        (def ~'>long*
-                          (with-meta
-                            (fn* ([~'x00__]
-                              (ifs
-                                ((Array/get >long*|__0|types 0) ~'x00__)
-                                  (. >long*|__0 ~'invoke ~'x00__)
-                                ((Array/get >long*|__1|types 0) ~'x00__)
-                                  (. >long*|__1 ~'invoke ~'x00__)
-                                ((Array/get >long*|__2|types 0) ~'x00__)
-                                  (. >long*|__2 ~'invoke ~'x00__)
-                                ((Array/get >long*|__3|types 0) ~'x00__)
-                                  (. >long*|__3 ~'invoke ~'x00__)
-                                ((Array/get >long*|__4|types 0) ~'x00__)
-                                  (. >long*|__4 ~'invoke ~'x00__)
-                                ((Array/get >long*|__5|types 0) ~'x00__)
-                                  (. >long*|__5 ~'invoke ~'x00__)
-                                ((Array/get >long*|__6|types 0) ~'x00__)
-                                  (. >long*|__6 ~'invoke ~'x00__)
-                                ((Array/get >long*|__7|types 0) ~'x00__)
-                                  (. >long*|__7 ~'invoke ~'x00__)
-                                (unsupported! `>long* [~'x00__] 0))))
-                            {:source "clojure.lang.RT.uncheckedLongCast"
-                             :quantum.core.type/type >long*|__type})))))]
+                        (defmeta ~'>long*
+                          {:source "clojure.lang.RT.uncheckedLongCast"
+                           :quantum.core.type/type >long*|__type}
+                          (fn* ([~'x00__]
+                            (ifs
+                              ((Array/get >long*|__0|types 0) ~'x00__)
+                                (. >long*|__0 ~'invoke ~'x00__)
+                              ((Array/get >long*|__1|types 0) ~'x00__)
+                                (. >long*|__1 ~'invoke ~'x00__)
+                              ((Array/get >long*|__2|types 0) ~'x00__)
+                                (. >long*|__2 ~'invoke ~'x00__)
+                              ((Array/get >long*|__3|types 0) ~'x00__)
+                                (. >long*|__3 ~'invoke ~'x00__)
+                              ((Array/get >long*|__4|types 0) ~'x00__)
+                                (. >long*|__4 ~'invoke ~'x00__)
+                              ((Array/get >long*|__5|types 0) ~'x00__)
+                                (. >long*|__5 ~'invoke ~'x00__)
+                              ((Array/get >long*|__6|types 0) ~'x00__)
+                                (. >long*|__6 ~'invoke ~'x00__)
+                              ((Array/get >long*|__7|types 0) ~'x00__)
+                                (. >long*|__7 ~'invoke ~'x00__)
+                              (unsupported! `>long* [~'x00__] 0))))))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
@@ -1053,18 +1049,17 @@
                   {:id 1 :index 1 :arg-types [(t/isa? Byte)]
                    :output-type (t/ref (t/isa? Byte))}]
 
-                 (def ~'ref-output-type
-                   (with-meta
-                     (fn*
-                       ([~'x00__]
-                         (ifs
-                           ((Array/get ref-output-type|__0|types 0) ~'x00__)
-                             (. ref-output-type|__0 ~'invoke ~'x00__)
-                           ((Array/get ref-output-type|__1|types 0) ~'x00__)
-                             (. ref-output-type|__1 ~'invoke ~'x00__)
-                           (unsupported! `ref-output-type [~'x00__] 0))))
-                     {:quantum.core.type/type ref-output-type|__type}))))]
-    (testing "code equivalence" (is-code= actual expected)))))
+                 (defmeta ~'ref-output-type
+                   {:quantum.core.type/type ref-output-type|__type}
+                   (fn* ([~'x00__]
+                          (ifs
+                            ((Array/get ref-output-type|__0|types 0) ~'x00__)
+                              (. ref-output-type|__0 ~'invoke ~'x00__)
+                            ((Array/get ref-output-type|__1|types 0) ~'x00__)
+                              (. ref-output-type|__1 ~'invoke ~'x00__)
+                            (unsupported! `ref-output-type [~'x00__] 0)))))))]
+    (testing "code equivalence" (is-code= actual expected))
+    (testing "functionality" (eval actual)))))
 
 (self/defn >big-integer > (t/isa? java.math.BigInteger)
   ([x tt/ratio? > (t/* (t/isa? java.math.BigInteger))] (.bigIntegerValue x)))
@@ -1072,29 +1067,32 @@
 ;; NOTE would use `>long` but that's already an interface
 (deftest test|>long-checked
   (let [actual
-          (macroexpand '
-            (self/defn >long-checked
-              {:source "clojure.lang.RT.longCast"}
-              > tt/long?
-              ;; TODO multi-arity `t/-`
-              ([x (t/- tt/primitive? tt/boolean? tt/float? tt/double?)] (>long* x))
-              ([x (t/and (t/or tt/double? tt/float?)
-                         ;; TODO add this back in
-                         #_(t/fn [x (t/or t/double? t/float?)] (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
-                (>long* x))
-              ([x (t/and (t/isa? clojure.lang.BigInt)
-                         ;; TODO add this back in
-                         #_(t/fn [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
-                (.lpart x))
-              ([x (t/and (t/isa? java.math.BigInteger)
-                         ;; TODO add this back in
-                         #_(t/fn [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
-                (.longValue x))
-              ([x tt/ratio?] (-> x >big-integer >long-checked))
-              ([x (t/value true)]  1)
-              ([x (t/value false)] 0)
-              ([x t/string?] (Long/parseLong x))
-              ([x t/string?, radix tt/int?] (Long/parseLong x radix))))
+          (binding [self/*compilation-mode* :test]
+            (macroexpand '
+              (self/defn >long-checked
+                {:source "clojure.lang.RT.longCast"}
+                > tt/long?
+                ;; TODO multi-arity `t/-`
+                ([x (t/- tt/primitive? tt/boolean? tt/float? tt/double?)] (>long* x))
+                ([x (t/and (t/or tt/double? tt/float?)
+                           ;; TODO add this back in
+                           #_(t/fn [x (t/or t/double? t/float?)] (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))]
+                  (>long* x))
+                ([x (t/and (t/isa? clojure.lang.BigInt)
+                           ;; TODO add this back in
+                           #_(t/fn [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
+                  (.lpart x))
+                ([x (t/and (t/isa? java.math.BigInteger)
+                           ;; TODO add this back in
+                           #_(t/fn [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))]
+                  (.longValue x))
+                               ;; FIXME it doesn't know what `>long-checked`'s type is i.e. what it
+                               ;; has defined so far
+                ([x tt/ratio?] (-> x >big-integer >long-checked))
+                ([x (t/value true)]  1)
+                ([x (t/value false)] 0)
+                ([x t/string?] (Long/parseLong x))
+                ([x t/string?, radix tt/int?] (Long/parseLong x radix)))))
         expected
           (case (env-lang)
             :clj ($ (do #_[x (t/- tt/boolean? tt/boolean? float? double?)]
@@ -1286,16 +1284,17 @@
 
 (deftest test|!str
   (let [actual
-          (macroexpand '
-            (self/defn !str > #?(:clj  (t/isa? StringBuilder)
-                                 :cljs (t/isa? StringBuffer))
-                    ([] #?(:clj (StringBuilder.) :cljs (StringBuffer.)))
-                    ;; If we had combined this arity, `t/or`ing the `t/string?` means it wouldn't have been
-                    ;; handled any differently than `t/char-seq?`
-            #?(:clj ([x t/string?] (StringBuilder. x)))
-                    ([x #?(:clj  (t/or tt/char-seq? tt/int?)
-                           :cljs t/val?)]
-                      #?(:clj (StringBuilder. x) :cljs (StringBuffer. x)))))
+          (binding [self/*compilation-mode* :test]
+            (macroexpand '
+              (self/defn !str > #?(:clj  (t/isa? StringBuilder)
+                                   :cljs (t/isa? StringBuffer))
+                      ([] #?(:clj (StringBuilder.) :cljs (StringBuffer.)))
+                      ;; If we had combined this arity, `t/or`ing the `t/string?` means it wouldn't have been
+                      ;; handled any differently than `t/char-seq?`
+              #?(:clj ([x t/string?] (StringBuilder. x)))
+                      ([x #?(:clj  (t/or tt/char-seq? tt/int?)
+                             :cljs t/val?)]
+                        #?(:clj (StringBuilder. x) :cljs (StringBuffer. x))))))
         expected
           (case (env-lang)
             :clj ($ (do (def ~'!str|__0|0
@@ -1359,10 +1358,11 @@
 (deftest defn-reference-test
   (testing "`t/defn` references itself"
     (let [actual
-            (macroexpand '
-              (self/defn defn-self-reference
-                ([] nil)
-                ([x tt/long?] (defn-self-reference))))
+            (binding [self/*compilation-mode* :test]
+              (macroexpand '
+                (self/defn defn-self-reference
+                  ([> tt/double?] 2.0)
+                  ([x tt/long?] (defn-self-reference)))))
           expected
             (case (env-lang)
               :clj ($ (do (declare ~'defn-self-reference)
