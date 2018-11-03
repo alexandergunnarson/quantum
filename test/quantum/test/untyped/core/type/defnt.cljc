@@ -1030,37 +1030,40 @@
 (deftest ref-output-type-test
   "Tests whether refs are output when requested instead of primitives"
   (let [actual
-          (macroexpand '
-            (self/defn ref-output-type
-              ([x tt/boolean? > (t/ref tt/boolean?)] (Boolean. x))
-              ([x tt/byte?    > (t/ref tt/byte?)]    (Byte.    x))))
+          (binding [self/*compilation-mode* :test]
+            (macroexpand '
+              (self/defn ref-output-type
+                ([x tt/boolean? > (t/ref tt/boolean?)] (Boolean. x))
+                ([x tt/byte?    > (t/ref tt/byte?)]    (Byte.    x)))))
         expected
           ($ (do (declare ~'ref-output-type)
 
                  ;; [x tt/boolean? > (t/ref tt/boolean?)]
 
-                 (def ~(O<> 'ref-output-type|__0|types) (*<> (t/isa? java.lang.Boolean)))
-                 (def ~'ref-output-type|__0
+                 (def ~(tag (cstr `boolean>Object) 'ref-output-type|__0)
                    (reify* [boolean>Object] (~(O 'invoke) [~'_0__ ~(B 'x)] (new ~'Boolean ~'x))))
 
                  ;; [x tt/byte? > (t/ref tt/byte?)]
 
-                 (def ~(O<> 'ref-output-type|__1|types) (*<> (t/isa? java.lang.Byte)))
-                 (def ~'ref-output-type|__1
+                 (def ~(tag (cstr `byte>Object) 'ref-output-type|__1)
                    (reify* [byte>Object] (~(O 'invoke) [~'_1__ ~(Y 'x)] (new ~'Byte ~'x))))
 
-                 (defn ~'ref-output-type
-                   {:quantum.core.type/type
-                     (t/ftype t/any?
-                              [(t/isa? Boolean) :> (t/ref (t/isa? Boolean))]
-                              [(t/isa? Byte)    :> (t/ref (t/isa? Byte))])}
-                   ([~'x00__]
-                     (ifs
-                       ((Array/get ~'ref-output-type|__0|types 0) ~'x00__)
-                         (. ~(tag (cstr `boolean>Object) 'ref-output-type|__0) ~'invoke ~'x00__)
-                       ((Array/get ~'ref-output-type|__1|types 0) ~'x00__)
-                         (. ~(tag (cstr `byte>Object)    'ref-output-type|__1) ~'invoke ~'x00__)
-                       (unsupported! `ref-output-type [~'x00__] 0))))))]
+                 [{:id 0 :index 0 :arg-types [(t/isa? Boolean)]
+                   :output-type (t/ref (t/isa? Boolean))}
+                  {:id 1 :index 1 :arg-types [(t/isa? Byte)]
+                   :output-type (t/ref (t/isa? Byte))}]
+
+                 (def ~'ref-output-type
+                   (with-meta
+                     (fn*
+                       ([~'x00__]
+                         (ifs
+                           ((Array/get ref-output-type|__0|types 0) ~'x00__)
+                             (. ref-output-type|__0 ~'invoke ~'x00__)
+                           ((Array/get ref-output-type|__1|types 0) ~'x00__)
+                             (. ref-output-type|__1 ~'invoke ~'x00__)
+                           (unsupported! `ref-output-type [~'x00__] 0))))
+                     {:quantum.core.type/type ref-output-type|__type}))))]
     (testing "code equivalence" (is-code= actual expected)))))
 
 (self/defn >big-integer > (t/isa? java.math.BigInteger)
