@@ -118,6 +118,7 @@
                     {:id 6 :index 6 :arg-types [(t/isa? Float)]     :output-type (t/isa? Float)}
                     {:id 7 :index 7 :arg-types [(t/isa? Double)]    :output-type (t/isa? Double)}
                     {:id 8 :index 8 :arg-types [t/any?]             :output-type t/any?}]
+
                    (def ~'identity|uninlined
                     (with-meta
                       (fn* ([~'x00__]
@@ -273,7 +274,7 @@
                               ((Array/get some?|__8|types 0) ~'x00__) (. some?|__8 ~'invoke ~'x00__)
                               ((Array/get some?|__9|types 0) ~'x00__) (. some?|__9 ~'invoke ~'x00__)
                               (unsupported! `some? [~'x00__] 0))))
-                     {:quantum.core.type/type some?__type}))))
+                     {:quantum.core.type/type some?|__type}))))
           :cljs
           ($ (do (defn ~'some?| [~'x]
                    (ifs (nil? x) false
@@ -300,8 +301,6 @@
             :clj
               ($ (do ;; [x (t/isa? Reduced)]
 
-                     (def ~(O<> 'reduced?|test|__0|input0|types)
-                       (*<> (t/isa? Reduced)))
                      (def ~'reduced?|test|__0|0
                        (reify* [Object>boolean]
                          (~(B 'invoke) [~'_0__ ~(O 'x)]
@@ -309,8 +308,6 @@
 
                      ;; [x t/any?]
 
-                     (def ~(O<> 'reduced?|test|__1|input0|types)
-                       (*<> t/any?))
                      (def ~'reduced?|test|__1|0
                        (reify* [Object>boolean boolean>boolean byte>boolean short>boolean
                                 char>boolean int>boolean long>boolean float>boolean double>boolean]
@@ -324,18 +321,18 @@
                          (~(B 'invoke) [~'_8__ ~(F 'x)] false)
                          (~(B 'invoke) [~'_9__ ~(D 'x)] false)))
 
-                     (defn ~'reduced?|test
-                       {:quantum.core.type/type
-                         (t/fn t/any?
-                               ~'[(t/isa? Reduced)]
-                               ~'[t/any?])}
-                       ([~'x00__]
+                     (def ~'reduced?|test
+                       (with-meta (fn* ([~'x00__]
                          (ifs ((Array/get ~'reduced?|test|__0|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (cstr `Object>boolean) 'reduced?|test|__0|0) ~'x00__)
+                                (.invoke reduced?|test|__0|0 ~'x00__)
                               ;; TODO eliminate this check because it's not needed (`t/any?`)
                               ((Array/get ~'reduced?|test|__1|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (cstr `Object>boolean) 'reduced?|test|__1|0) ~'x00__)
-                              (unsupported! `reduced?|test [~'x00__] 0))))))
+                                (.invoke reduced?|test|__1|0 ~'x00__)
+                              (unsupported! `reduced?|test [~'x00__] 0))))
+                         {:quantum.core.type/type
+                           (t/fn t/any?
+                                 ~'[(t/isa? Reduced)]
+                                 ~'[t/any?])}))))
             :cljs
               ($ (do (defn ~'reduced?|test [~'x]
                        (ifs (instance? Reduced x) true false)))))]
@@ -522,192 +519,242 @@
                  (is (identical? (>int* (byte 1)) (clojure.lang.RT/uncheckedIntCast (byte 1)))))))))
 
 ;; Because "Method code too large" error
-(def >|ftype-form
-  ($ (t/ftype #?(:clj (t/isa? Boolean) :cljs tt/boolean?)
-   #?@(:clj  [[(t/isa? Byte)      (t/isa? Byte)      :> (t/isa? Boolean)]
-              [(t/isa? Byte)      (t/isa? Short)     :> (t/isa? Boolean)]
-              [(t/isa? Byte)      (t/isa? Character) :> (t/isa? Boolean)]
-              [(t/isa? Byte)      (t/isa? Integer)   :> (t/isa? Boolean)]
-              [(t/isa? Byte)      (t/isa? Long)      :> (t/isa? Boolean)]
-              [(t/isa? Byte)      (t/isa? Float)     :> (t/isa? Boolean)]
-              [(t/isa? Byte)      (t/isa? Double)    :> (t/isa? Boolean)]
-              [(t/isa? Short)     (t/isa? Byte)      :> (t/isa? Boolean)]
-              [(t/isa? Short)     (t/isa? Short)     :> (t/isa? Boolean)]
-              [(t/isa? Short)     (t/isa? Character) :> (t/isa? Boolean)]
-              [(t/isa? Short)     (t/isa? Integer)   :> (t/isa? Boolean)]
-              [(t/isa? Short)     (t/isa? Long)      :> (t/isa? Boolean)]
-              [(t/isa? Short)     (t/isa? Float)     :> (t/isa? Boolean)]
-              [(t/isa? Short)     (t/isa? Double)    :> (t/isa? Boolean)]
-              [(t/isa? Character) (t/isa? Byte)      :> (t/isa? Boolean)]
-              [(t/isa? Character) (t/isa? Short)     :> (t/isa? Boolean)]
-              [(t/isa? Character) (t/isa? Character) :> (t/isa? Boolean)]
-              [(t/isa? Character) (t/isa? Integer)   :> (t/isa? Boolean)]
-              [(t/isa? Character) (t/isa? Long)      :> (t/isa? Boolean)]
-              [(t/isa? Character) (t/isa? Float)     :> (t/isa? Boolean)]
-              [(t/isa? Character) (t/isa? Double)    :> (t/isa? Boolean)]
-              [(t/isa? Integer)   (t/isa? Byte)      :> (t/isa? Boolean)]
-              [(t/isa? Integer)   (t/isa? Short)     :> (t/isa? Boolean)]
-              [(t/isa? Integer)   (t/isa? Character) :> (t/isa? Boolean)]
-              [(t/isa? Integer)   (t/isa? Integer)   :> (t/isa? Boolean)]
-              [(t/isa? Integer)   (t/isa? Long)      :> (t/isa? Boolean)]
-              [(t/isa? Integer)   (t/isa? Float)     :> (t/isa? Boolean)]
-              [(t/isa? Integer)   (t/isa? Double)    :> (t/isa? Boolean)]
-              [(t/isa? Long)      (t/isa? Byte)      :> (t/isa? Boolean)]
-              [(t/isa? Long)      (t/isa? Short)     :> (t/isa? Boolean)]
-              [(t/isa? Long)      (t/isa? Character) :> (t/isa? Boolean)]
-              [(t/isa? Long)      (t/isa? Integer)   :> (t/isa? Boolean)]
-              [(t/isa? Long)      (t/isa? Long)      :> (t/isa? Boolean)]
-              [(t/isa? Long)      (t/isa? Float)     :> (t/isa? Boolean)]
-              [(t/isa? Long)      (t/isa? Double)    :> (t/isa? Boolean)]
-              [(t/isa? Float)     (t/isa? Byte)      :> (t/isa? Boolean)]
-              [(t/isa? Float)     (t/isa? Short)     :> (t/isa? Boolean)]
-              [(t/isa? Float)     (t/isa? Character) :> (t/isa? Boolean)]
-              [(t/isa? Float)     (t/isa? Integer)   :> (t/isa? Boolean)]
-              [(t/isa? Float)     (t/isa? Long)      :> (t/isa? Boolean)]
-              [(t/isa? Float)     (t/isa? Float)     :> (t/isa? Boolean)]
-              [(t/isa? Float)     (t/isa? Double)    :> (t/isa? Boolean)]
-              [(t/isa? Double)    (t/isa? Byte)      :> (t/isa? Boolean)]
-              [(t/isa? Double)    (t/isa? Short)     :> (t/isa? Boolean)]
-              [(t/isa? Double)    (t/isa? Character) :> (t/isa? Boolean)]
-              [(t/isa? Double)    (t/isa? Integer)   :> (t/isa? Boolean)]
-              [(t/isa? Double)    (t/isa? Long)      :> (t/isa? Boolean)]
-              [(t/isa? Double)    (t/isa? Float)     :> (t/isa? Boolean)]
-              [(t/isa? Double)    (t/isa? Double)    :> (t/isa? Boolean)]]
-       :cljs [[tt/double? tt/double? :> (t/assume tt/boolean?)]]))))
+(def >|types-form
+  ($ [{:id 0  :index 0  :arg-types [(t/isa? Byte)      (t/isa? Byte)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 1  :index 1  :arg-types [(t/isa? Byte)      (t/isa? Short)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 2  :index 2  :arg-types [(t/isa? Byte)      (t/isa? Character)]
+       :output-type (t/isa? Boolean)}
+      {:id 3  :index 3  :arg-types [(t/isa? Byte)      (t/isa? Integer)  ]
+       :output-type (t/isa? Boolean)}
+      {:id 4  :index 4  :arg-types [(t/isa? Byte)      (t/isa? Long)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 5  :index 5  :arg-types [(t/isa? Byte)      (t/isa? Float)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 6  :index 6  :arg-types [(t/isa? Byte)      (t/isa? Double)   ]
+       :output-type (t/isa? Boolean)}
+      {:id 7  :index 7  :arg-types [(t/isa? Short)     (t/isa? Byte)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 8  :index 8  :arg-types [(t/isa? Short)     (t/isa? Short)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 9  :index 9  :arg-types [(t/isa? Short)     (t/isa? Character)]
+       :output-type (t/isa? Boolean)}
+      {:id 10 :index 10 :arg-types [(t/isa? Short)     (t/isa? Integer)  ]
+       :output-type (t/isa? Boolean)}
+      {:id 11 :index 11 :arg-types [(t/isa? Short)     (t/isa? Long)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 12 :index 12 :arg-types [(t/isa? Short)     (t/isa? Float)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 13 :index 13 :arg-types [(t/isa? Short)     (t/isa? Double)   ]
+       :output-type (t/isa? Boolean)}
+      {:id 14 :index 14 :arg-types [(t/isa? Character) (t/isa? Byte)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 15 :index 15 :arg-types [(t/isa? Character) (t/isa? Short)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 16 :index 16 :arg-types [(t/isa? Character) (t/isa? Character)]
+       :output-type (t/isa? Boolean)}
+      {:id 17 :index 17 :arg-types [(t/isa? Character) (t/isa? Integer)  ]
+       :output-type (t/isa? Boolean)}
+      {:id 18 :index 18 :arg-types [(t/isa? Character) (t/isa? Long)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 19 :index 19 :arg-types [(t/isa? Character) (t/isa? Float)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 20 :index 20 :arg-types [(t/isa? Character) (t/isa? Double)   ]
+       :output-type (t/isa? Boolean)}
+      {:id 21 :index 21 :arg-types [(t/isa? Integer)   (t/isa? Byte)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 22 :index 22 :arg-types [(t/isa? Integer)   (t/isa? Short)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 23 :index 23 :arg-types [(t/isa? Integer)   (t/isa? Character)]
+       :output-type (t/isa? Boolean)}
+      {:id 24 :index 24 :arg-types [(t/isa? Integer)   (t/isa? Integer)  ]
+       :output-type (t/isa? Boolean)}
+      {:id 25 :index 25 :arg-types [(t/isa? Integer)   (t/isa? Long)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 26 :index 26 :arg-types [(t/isa? Integer)   (t/isa? Float)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 27 :index 27 :arg-types [(t/isa? Integer)   (t/isa? Double)   ]
+       :output-type (t/isa? Boolean)}
+      {:id 28 :index 28 :arg-types [(t/isa? Long)      (t/isa? Byte)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 29 :index 29 :arg-types [(t/isa? Long)      (t/isa? Short)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 30 :index 30 :arg-types [(t/isa? Long)      (t/isa? Character)]
+       :output-type (t/isa? Boolean)}
+      {:id 31 :index 31 :arg-types [(t/isa? Long)      (t/isa? Integer)  ]
+       :output-type (t/isa? Boolean)}
+      {:id 32 :index 32 :arg-types [(t/isa? Long)      (t/isa? Long)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 33 :index 33 :arg-types [(t/isa? Long)      (t/isa? Float)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 34 :index 34 :arg-types [(t/isa? Long)      (t/isa? Double)   ]
+       :output-type (t/isa? Boolean)}
+      {:id 35 :index 35 :arg-types [(t/isa? Float)     (t/isa? Byte)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 36 :index 36 :arg-types [(t/isa? Float)     (t/isa? Short)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 37 :index 37 :arg-types [(t/isa? Float)     (t/isa? Character)]
+       :output-type (t/isa? Boolean)}
+      {:id 38 :index 38 :arg-types [(t/isa? Float)     (t/isa? Integer)  ]
+       :output-type (t/isa? Boolean)}
+      {:id 39 :index 39 :arg-types [(t/isa? Float)     (t/isa? Long)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 40 :index 40 :arg-types [(t/isa? Float)     (t/isa? Float)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 41 :index 41 :arg-types [(t/isa? Float)     (t/isa? Double)   ]
+       :output-type (t/isa? Boolean)}
+      {:id 42 :index 42 :arg-types [(t/isa? Double)    (t/isa? Byte)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 43 :index 43 :arg-types [(t/isa? Double)    (t/isa? Short)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 44 :index 44 :arg-types [(t/isa? Double)    (t/isa? Character)]
+       :output-type (t/isa? Boolean)}
+      {:id 45 :index 45 :arg-types [(t/isa? Double)    (t/isa? Integer)  ]
+       :output-type (t/isa? Boolean)}
+      {:id 46 :index 46 :arg-types [(t/isa? Double)    (t/isa? Long)     ]
+       :output-type (t/isa? Boolean)}
+      {:id 47 :index 47 :arg-types [(t/isa? Double)    (t/isa? Float)    ]
+       :output-type (t/isa? Boolean)}
+      {:id 48 :index 48 :arg-types [(t/isa? Double)    (t/isa? Double)   ]
+       :output-type (t/isa? Boolean)}]))
 
 (def >|dynamic-dispatch-form
-  ($ (defn ~'> {:quantum.core.type/type ~>|ftype-form}
-       ([~'x00__ ~'x10__]
-         (ifs
-           ((Array/get ~'>|__0|types 0) ~'x00__)
-             (ifs
-               ((Array/get ~'>|__0|types  1) ~'x10__)
-                 (. ~(tag (cstr `byte+byte>boolean)      '>|__0)  ~'invoke  ~'x00__ ~'x10__)
-               ((Array/get ~'>|__1|types  1) ~'x10__)
-                 (. ~(tag (cstr `byte+short>boolean)     '>|__1)  ~'invoke  ~'x00__ ~'x10__)
-               ((Array/get ~'>|__2|types  1) ~'x10__)
-                 (. ~(tag (cstr `byte+char>boolean)      '>|__2)  ~'invoke  ~'x00__ ~'x10__)
-               ((Array/get ~'>|__3|types  1) ~'x10__)
-                 (. ~(tag (cstr `byte+int>boolean)       '>|__3)  ~'invoke  ~'x00__ ~'x10__)
-               ((Array/get ~'>|__4|types  1) ~'x10__)
-                 (. ~(tag (cstr `byte+long>boolean)      '>|__4)  ~'invoke  ~'x00__ ~'x10__)
-               ((Array/get ~'>|__5|types  1) ~'x10__)
-                 (. ~(tag (cstr `byte+float>boolean)     '>|__5)  ~'invoke  ~'x00__ ~'x10__)
-               ((Array/get ~'>|__6|types  1) ~'x10__)
-                 (. ~(tag (cstr `byte+double>boolean)    '>|__6)  ~'invoke  ~'x00__ ~'x10__)
-               (unsupported! `> [~'x00__ ~'x10__] 1))
-           ((Array/get ~'>|__7|types 0) ~'x00__)
-             (ifs
-               ((Array/get ~'>|__7|types  1) ~'x10__)
-                 (. ~(tag (cstr `short+byte>boolean)     '>|__7)  ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__8|types  1) ~'x10__)
-                 (. ~(tag (cstr `short+short>boolean)    '>|__8)  ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__9|types  1) ~'x10__)
-                 (. ~(tag (cstr `short+char>boolean)     '>|__9)  ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__10|types 1) ~'x10__)
-                 (. ~(tag (cstr `short+int>boolean)      '>|__10) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__11|types 1) ~'x10__)
-                 (. ~(tag (cstr `short+long>boolean)     '>|__11) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__12|types 1) ~'x10__)
-                 (. ~(tag (cstr `short+float>boolean)    '>|__12) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__13|types 1) ~'x10__)
-                 (. ~(tag (cstr `short+double>boolean)   '>|__13) ~'invoke ~'x00__ ~'x10__)
-               (unsupported! `> [~'x00__ ~'x10__] 1))
-           ((Array/get ~'>|__14|types 0) ~'x00__)
-             (ifs
-               ((Array/get ~'>|__14|types 1) ~'x10__)
-                 (. ~(tag (cstr `char+byte>boolean)      '>|__14) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__15|types 1) ~'x10__)
-                 (. ~(tag (cstr `char+short>boolean)     '>|__15) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__16|types 1) ~'x10__)
-                 (. ~(tag (cstr `char+char>boolean)      '>|__16) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__17|types 1) ~'x10__)
-                 (. ~(tag (cstr `char+int>boolean)       '>|__17) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__18|types 1) ~'x10__)
-                 (. ~(tag (cstr `char+long>boolean)      '>|__18) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__19|types 1) ~'x10__)
-                 (. ~(tag (cstr `char+float>boolean)     '>|__19) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__20|types 1) ~'x10__)
-                 (. ~(tag (cstr `char+double>boolean)    '>|__20) ~'invoke ~'x00__ ~'x10__)
-               (unsupported! `> [~'x00__ ~'x10__] 1))
-           ((Array/get ~'>|__21|types 0) ~'x00__)
-             (ifs
-               ((Array/get ~'>|__21|types 1) ~'x10__)
-                 (. ~(tag (cstr `int+byte>boolean)       '>|__21) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__22|types 1) ~'x10__)
-                 (. ~(tag (cstr `int+short>boolean)      '>|__22) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__23|types 1) ~'x10__)
-                 (. ~(tag (cstr `int+char>boolean)       '>|__23) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__24|types 1) ~'x10__)
-                 (. ~(tag (cstr `int+int>boolean)        '>|__24) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__25|types 1) ~'x10__)
-                 (. ~(tag (cstr `int+long>boolean)       '>|__25) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__26|types 1) ~'x10__)
-                 (. ~(tag (cstr `int+float>boolean)      '>|__26) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__27|types 1) ~'x10__)
-                 (. ~(tag (cstr `int+double>boolean)     '>|__27) ~'invoke ~'x00__ ~'x10__)
-               (unsupported! `> [~'x00__ ~'x10__] 1))
-           ((Array/get ~'>|__28|types 0) ~'x00__)
-             (ifs
-               ((Array/get ~'>|__28|types 1) ~'x10__)
-                 (. ~(tag (cstr `long+byte>boolean)      '>|__28) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__29|types 1) ~'x10__)
-                 (. ~(tag (cstr `long+short>boolean)     '>|__29) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__30|types 1) ~'x10__)
-                 (. ~(tag (cstr `long+char>boolean)      '>|__30) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__31|types 1) ~'x10__)
-                 (. ~(tag (cstr `long+int>boolean)       '>|__31) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__32|types 1) ~'x10__)
-                 (. ~(tag (cstr `long+long>boolean)      '>|__32) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__33|types 1) ~'x10__)
-                 (. ~(tag (cstr `long+float>boolean)     '>|__33) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__34|types 1) ~'x10__)
-                 (. ~(tag (cstr `long+double>boolean)    '>|__34) ~'invoke ~'x00__ ~'x10__)
-               (unsupported! `> [~'x00__ ~'x10__] 1))
-           ((Array/get ~'>|__35|types 0) ~'x00__)
-             (ifs
-               ((Array/get ~'>|__35|types 1) ~'x10__)
-                 (. ~(tag (cstr `float+byte>boolean)     '>|__35) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__36|types 1) ~'x10__)
-                 (. ~(tag (cstr `float+short>boolean)    '>|__36) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__37|types 1) ~'x10__)
-                 (. ~(tag (cstr `float+char>boolean)     '>|__37) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__38|types 1) ~'x10__)
-                 (. ~(tag (cstr `float+int>boolean)      '>|__38) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__39|types 1) ~'x10__)
-                 (. ~(tag (cstr `float+long>boolean)     '>|__39) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__40|types 1) ~'x10__)
-                 (. ~(tag (cstr `float+float>boolean)    '>|__40) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__41|types 1) ~'x10__)
-                 (. ~(tag (cstr `float+double>boolean)   '>|__41) ~'invoke ~'x00__ ~'x10__)
-               (unsupported! `> [~'x00__ ~'x10__] 1))
-           ((Array/get ~'>|__42|types 0) ~'x00__)
-             (ifs
-               ((Array/get ~'>|__42|types 1) ~'x10__)
-                 (. ~(tag (cstr `double+byte>boolean)    '>|__42) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__43|types 1) ~'x10__)
-                 (. ~(tag (cstr `double+short>boolean)   '>|__43) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__44|types 1) ~'x10__)
-                 (. ~(tag (cstr `double+char>boolean)    '>|__44) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__45|types 1) ~'x10__)
-                 (. ~(tag (cstr `double+int>boolean)     '>|__45) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__46|types 1) ~'x10__)
-                 (. ~(tag (cstr `double+long>boolean)    '>|__46) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__47|types 1) ~'x10__)
-                 (. ~(tag (cstr `double+float>boolean)   '>|__47) ~'invoke ~'x00__ ~'x10__)
-               ((Array/get ~'>|__48|types 1) ~'x10__)
-                 (. ~(tag (cstr `double+double>boolean)  '>|__48) ~'invoke ~'x00__ ~'x10__)
-               (unsupported! `> [~'x00__ ~'x10__] 1))
-           (unsupported! `> [~'x00__ ~'x10__] 0))))))
+  ($ (def ~'>
+       (with-meta
+         (fn* ([~'x00__ ~'x10__]
+                (ifs
+                  ((Array/get >|__0|types 0) ~'x00__)
+                    (ifs
+                      ((Array/get >|__0|types  1) ~'x10__)
+                        (. >|__0  ~'invoke  ~'x00__ ~'x10__)
+                      ((Array/get >|__1|types  1) ~'x10__)
+                        (. >|__1  ~'invoke  ~'x00__ ~'x10__)
+                      ((Array/get >|__2|types  1) ~'x10__)
+                        (. >|__2  ~'invoke  ~'x00__ ~'x10__)
+                      ((Array/get >|__3|types  1) ~'x10__)
+                        (. >|__3  ~'invoke  ~'x00__ ~'x10__)
+                      ((Array/get >|__4|types  1) ~'x10__)
+                        (. >|__4  ~'invoke  ~'x00__ ~'x10__)
+                      ((Array/get >|__5|types  1) ~'x10__)
+                        (. >|__5  ~'invoke  ~'x00__ ~'x10__)
+                      ((Array/get >|__6|types  1) ~'x10__)
+                        (. >|__6  ~'invoke  ~'x00__ ~'x10__)
+                      (unsupported! `> [~'x00__ ~'x10__] 1))
+                  ((Array/get >|__7|types 0) ~'x00__)
+                    (ifs
+                      ((Array/get >|__7|types  1) ~'x10__)
+                        (. >|__7  ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__8|types  1) ~'x10__)
+                        (. >|__8  ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__9|types  1) ~'x10__)
+                        (. >|__9  ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__10|types 1) ~'x10__)
+                        (. >|__10 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__11|types 1) ~'x10__)
+                        (. >|__11 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__12|types 1) ~'x10__)
+                        (. >|__12 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__13|types 1) ~'x10__)
+                        (. >|__13 ~'invoke ~'x00__ ~'x10__)
+                      (unsupported! `> [~'x00__ ~'x10__] 1))
+                  ((Array/get >|__14|types 0) ~'x00__)
+                    (ifs
+                      ((Array/get >|__14|types 1) ~'x10__)
+                        (. >|__14 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__15|types 1) ~'x10__)
+                        (. >|__15 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__16|types 1) ~'x10__)
+                        (. >|__16 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__17|types 1) ~'x10__)
+                        (. >|__17 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__18|types 1) ~'x10__)
+                        (. >|__18 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__19|types 1) ~'x10__)
+                        (. >|__19 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__20|types 1) ~'x10__)
+                        (. >|__20 ~'invoke ~'x00__ ~'x10__)
+                      (unsupported! `> [~'x00__ ~'x10__] 1))
+                  ((Array/get >|__21|types 0) ~'x00__)
+                    (ifs
+                      ((Array/get >|__21|types 1) ~'x10__)
+                        (. >|__21 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__22|types 1) ~'x10__)
+                        (. >|__22 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__23|types 1) ~'x10__)
+                        (. >|__23 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__24|types 1) ~'x10__)
+                        (. >|__24 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__25|types 1) ~'x10__)
+                        (. >|__25 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__26|types 1) ~'x10__)
+                        (. >|__26 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__27|types 1) ~'x10__)
+                        (. >|__27 ~'invoke ~'x00__ ~'x10__)
+                      (unsupported! `> [~'x00__ ~'x10__] 1))
+                  ((Array/get >|__28|types 0) ~'x00__)
+                    (ifs
+                      ((Array/get >|__28|types 1) ~'x10__)
+                        (. >|__28 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__29|types 1) ~'x10__)
+                        (. >|__29 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__30|types 1) ~'x10__)
+                        (. >|__30 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__31|types 1) ~'x10__)
+                        (. >|__31 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__32|types 1) ~'x10__)
+                        (. >|__32 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__33|types 1) ~'x10__)
+                        (. >|__33 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__34|types 1) ~'x10__)
+                        (. >|__34 ~'invoke ~'x00__ ~'x10__)
+                      (unsupported! `> [~'x00__ ~'x10__] 1))
+                  ((Array/get >|__35|types 0) ~'x00__)
+                    (ifs
+                      ((Array/get >|__35|types 1) ~'x10__)
+                        (. >|__35 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__36|types 1) ~'x10__)
+                        (. >|__36 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__37|types 1) ~'x10__)
+                        (. >|__37 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__38|types 1) ~'x10__)
+                        (. >|__38 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__39|types 1) ~'x10__)
+                        (. >|__39 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__40|types 1) ~'x10__)
+                        (. >|__40 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__41|types 1) ~'x10__)
+                        (. >|__41 ~'invoke ~'x00__ ~'x10__)
+                      (unsupported! `> [~'x00__ ~'x10__] 1))
+                  ((Array/get >|__42|types 0) ~'x00__)
+                    (ifs
+                      ((Array/get >|__42|types 1) ~'x10__)
+                        (. >|__42 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__43|types 1) ~'x10__)
+                        (. >|__43 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__44|types 1) ~'x10__)
+                        (. >|__44 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__45|types 1) ~'x10__)
+                        (. >|__45 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__46|types 1) ~'x10__)
+                        (. >|__46 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__47|types 1) ~'x10__)
+                        (. >|__47 ~'invoke ~'x00__ ~'x10__)
+                      ((Array/get >|__48|types 1) ~'x10__)
+                        (. >|__48 ~'invoke ~'x00__ ~'x10__)
+                      (unsupported! `> [~'x00__ ~'x10__] 1))
+                  (unsupported! `> [~'x00__ ~'x10__] 0))))
+         {:quantum.core.type/type >|__type}))))
 
 (deftest test|>
   (let [actual
-          (macroexpand '
-            (self/defn #_:inline > > tt/boolean?
-         #?(:clj  ([a tt/comparable-primitive? b tt/comparable-primitive? > tt/boolean?]
-                    (Numeric/gt a b))
-            :cljs ([a tt/double?               b tt/double?               > (t/assume tt/boolean?)]
-                    (cljs.core/> a b)))))
+          (binding [self/*compilation-mode* :test]
+            (macroexpand '
+              (self/defn #_:inline > > tt/boolean?
+           #?(:clj  ([a tt/comparable-primitive? b tt/comparable-primitive? > tt/boolean?]
+                      (Numeric/gt a b))
+              :cljs ([a tt/double?               b tt/double?               > (t/assume tt/boolean?)]
+                      (cljs.core/> a b))))))
         expected
         (case (env-lang)
           :clj
@@ -715,203 +762,155 @@
 
                  ;; [a t/comparable-primitive? b t/comparable-primitive? > tt/boolean?]
 
-                 (def ~(O<> '>|__0|types)  (*<> (t/isa? Byte) (t/isa? Byte)))
-                 (def ~'>|__0
+                 (def ~(tag (cstr `byte+byte>boolean) '>|__0)
                    (reify* [byte+byte>boolean]
                      (~(B 'invoke) [~'_0__  ~(Y 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__1|types)  (*<> (t/isa? Byte) (t/isa? Short)))
-                 (def ~'>|__1
+                 (def ~(tag (cstr `byte+short>boolean) '>|__1)
                    (reify* [byte+short>boolean]
                      (~(B 'invoke) [~'_1__  ~(Y 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__2|types)  (*<> (t/isa? Byte) (t/isa? Character)))
-                 (def ~'>|__2
+                 (def ~(tag (cstr `byte+char>boolean) '>|__2)
                    (reify* [byte+char>boolean]
                      (~(B 'invoke) [~'_2__  ~(Y 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__3|types)  (*<> (t/isa? Byte) (t/isa? Integer)))
-                 (def ~'>|__3
+                 (def ~(tag (cstr `byte+int>boolean) '>|__3)
                    (reify* [byte+int>boolean]
                      (~(B 'invoke) [~'_3__  ~(Y 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__4|types)  (*<> (t/isa? Byte) (t/isa? Long)))
-                 (def ~'>|__4
+                 (def ~(tag (cstr `byte+long>boolean) '>|__4)
                    (reify* [byte+long>boolean]
                      (~(B 'invoke) [~'_4__  ~(Y 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__5|types)  (*<> (t/isa? Byte) (t/isa? Float)))
-                 (def ~'>|__5
+                 (def ~(tag (cstr `byte+float>boolean) '>|__5)
                    (reify* [byte+float>boolean]
                      (~(B 'invoke) [~'_5__  ~(Y 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__6|types)  (*<> (t/isa? Byte) (t/isa? Double)))
-                 (def ~'>|__6
+                 (def ~(tag (cstr `byte+double>boolean) '>|__6)
                    (reify* [byte+double>boolean]
                      (~(B 'invoke) [~'_6__  ~(Y 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__7|types)  (*<> (t/isa? Short) (t/isa? Byte)))
-                 (def ~'>|__7
+                 (def ~(tag (cstr `short+byte>boolean) '>|__7)
                    (reify* [short+byte>boolean]
                      (~(B 'invoke) [~'_7__  ~(S 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__8|types)  (*<> (t/isa? Short) (t/isa? Short)))
-                 (def ~'>|__8
+                 (def ~(tag (cstr `short+short>boolean) '>|__8)
                    (reify* [short+short>boolean]
                      (~(B 'invoke) [~'_8__  ~(S 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__9|types)  (*<> (t/isa? Short) (t/isa? Character)))
-                 (def ~'>|__9
+                 (def ~(tag (cstr `short+char>boolean) '>|__9)
                    (reify* [short+char>boolean]
                      (~(B 'invoke) [~'_9__  ~(S 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__10|types) (*<> (t/isa? Short) (t/isa? Integer)))
-                 (def ~'>|__10
+                 (def ~(tag (cstr `short+int>boolean) '>|__10)
                    (reify* [short+int>boolean]
                      (~(B 'invoke) [~'_10__ ~(S 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__11|types) (*<> (t/isa? Short) (t/isa? Long)))
-                 (def ~'>|__11
+                 (def ~(tag (cstr `short+long>boolean) '>|__11)
                    (reify* [short+long>boolean]
                      (~(B 'invoke) [~'_11__ ~(S 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__12|types) (*<> (t/isa? Short) (t/isa? Float)))
-                 (def ~'>|__12
+                 (def ~(tag (cstr `short+float>boolean) '>|__12)
                    (reify* [short+float>boolean]
                      (~(B 'invoke) [~'_12__ ~(S 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__13|types) (*<> (t/isa? Short) (t/isa? Double)))
-                 (def ~'>|__13
+                 (def ~(tag (cstr `short+double>boolean) '>|__13)
                    (reify* [short+double>boolean]
                      (~(B 'invoke) [~'_13__ ~(S 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__14|types) (*<> (t/isa? Character) (t/isa? Byte)))
-                 (def ~'>|__14
+                 (def ~(tag (cstr `char+byte>boolean) '>|__14)
                    (reify* [char+byte>boolean]
                      (~(B 'invoke) [~'_14__ ~(C 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__15|types) (*<> (t/isa? Character) (t/isa? Short)))
-                 (def ~'>|__15
+                 (def ~(tag (cstr `char+short>boolean) '>|__15)
                    (reify* [char+short>boolean]
                      (~(B 'invoke) [~'_15__ ~(C 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__16|types) (*<> (t/isa? Character) (t/isa? Character)))
-                 (def ~'>|__16
+                 (def ~(tag (cstr `char+char>boolean) '>|__16)
                    (reify* [char+char>boolean]
                      (~(B 'invoke) [~'_16__ ~(C 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__17|types) (*<> (t/isa? Character) (t/isa? Integer)))
-                 (def ~'>|__17
+                 (def ~(tag (cstr `char+int>boolean) '>|__17)
                    (reify* [char+int>boolean]
                      (~(B 'invoke) [~'_17__ ~(C 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__18|types) (*<> (t/isa? Character) (t/isa? Long)))
-                 (def ~'>|__18
+                 (def ~(tag (cstr `char+long>boolean) '>|__18)
                    (reify* [char+long>boolean]
                      (~(B 'invoke) [~'_18__ ~(C 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__19|types) (*<> (t/isa? Character) (t/isa? Float)))
-                 (def ~'>|__19
+                 (def ~(tag (cstr `char+float>boolean) '>|__19)
                    (reify* [char+float>boolean]
                      (~(B 'invoke) [~'_19__ ~(C 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__20|types) (*<> (t/isa? Character) (t/isa? Double)))
-                 (def ~'>|__20
+                 (def ~(tag (cstr `char+double>boolean) '>|__20)
                    (reify* [char+double>boolean]
                      (~(B 'invoke) [~'_20__ ~(C 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__21|types) (*<> (t/isa? Integer) (t/isa? Byte)))
-                 (def ~'>|__21
+                 (def ~(tag (cstr `int+byte>boolean) '>|__21)
                    (reify* [int+byte>boolean]
                      (~(B 'invoke) [~'_21__ ~(I 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__22|types) (*<> (t/isa? Integer) (t/isa? Short)))
-                 (def ~'>|__22
+                 (def ~(tag (cstr `int+short>boolean) '>|__22)
                    (reify* [int+short>boolean]
                      (~(B 'invoke) [~'_22__ ~(I 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__23|types) (*<> (t/isa? Integer) (t/isa? Character)))
-                 (def ~'>|__23
+                 (def ~(tag (cstr `int+char>boolean) '>|__23)
                    (reify* [int+char>boolean]
                      (~(B 'invoke) [~'_23__ ~(I 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__24|types) (*<> (t/isa? Integer) (t/isa? Integer)))
-                 (def ~'>|__24
+                 (def ~(tag (cstr `int+int>boolean) '>|__24)
                    (reify* [int+int>boolean]
                      (~(B 'invoke) [~'_24__ ~(I 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__25|types) (*<> (t/isa? Integer) (t/isa? Long)))
-                 (def ~'>|__25
+                 (def ~(tag (cstr `int+long>boolean) '>|__25)
                    (reify* [int+long>boolean]
                      (~(B 'invoke) [~'_25__ ~(I 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__26|types) (*<> (t/isa? Integer) (t/isa? Float)))
-                 (def ~'>|__26
+                 (def ~(tag (cstr `int+float>boolean) '>|__26)
                    (reify* [int+float>boolean]
                      (~(B 'invoke) [~'_26__ ~(I 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__27|types) (*<> (t/isa? Integer) (t/isa? Double)))
-                 (def ~'>|__27
+                 (def ~(tag (cstr `int+double>boolean) '>|__27)
                    (reify* [int+double>boolean]
                      (~(B 'invoke) [~'_27__ ~(I 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__28|types) (*<> (t/isa? Long) (t/isa? Byte)))
-                 (def ~'>|__28
+                 (def ~(tag (cstr `long+byte>boolean) '>|__28)
                    (reify* [long+byte>boolean]
                      (~(B 'invoke) [~'_28__ ~(L 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__29|types) (*<> (t/isa? Long) (t/isa? Short)))
-                 (def ~'>|__29
+                 (def ~(tag (cstr `long+short>boolean) '>|__29)
                    (reify* [long+short>boolean]
                      (~(B 'invoke) [~'_29__ ~(L 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__30|types) (*<> (t/isa? Long) (t/isa? Character)))
-                 (def ~'>|__30
+                 (def ~(tag (cstr `long+char>boolean) '>|__30)
                    (reify* [long+char>boolean]
                      (~(B 'invoke) [~'_30__ ~(L 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__31|types) (*<> (t/isa? Long) (t/isa? Integer)))
-                 (def ~'>|__31
+                 (def ~(tag (cstr `long+int>boolean) '>|__31)
                    (reify* [long+int>boolean]
                      (~(B 'invoke) [~'_31__ ~(L 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__32|types) (*<> (t/isa? Long) (t/isa? Long)))
-                 (def ~'>|__32
+                 (def ~(tag (cstr `long+long>boolean) '>|__32)
                    (reify* [long+long>boolean]
                      (~(B 'invoke) [~'_32__ ~(L 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__33|types) (*<> (t/isa? Long) (t/isa? Float)))
-                 (def ~'>|__33
+                 (def ~(tag (cstr `long+float>boolean) '>|__33)
                    (reify* [long+float>boolean]
                      (~(B 'invoke) [~'_33__ ~(L 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__34|types) (*<> (t/isa? Long) (t/isa? Double)))
-                 (def ~'>|__34
+                 (def ~(tag (cstr `long+double>boolean) '>|__34)
                    (reify* [long+double>boolean]
                      (~(B 'invoke) [~'_34__ ~(L 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__35|types) (*<> (t/isa? Float) (t/isa? Byte)))
-                 (def ~'>|__35
+                 (def ~(tag (cstr `float+byte>boolean) '>|__35)
                    (reify* [float+byte>boolean]
                      (~(B 'invoke) [~'_35__ ~(F 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__36|types) (*<> (t/isa? Float) (t/isa? Short)))
-                 (def ~'>|__36
+                 (def ~(tag (cstr `float+short>boolean) '>|__36)
                    (reify* [float+short>boolean]
                      (~(B 'invoke) [~'_36__ ~(F 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__37|types) (*<> (t/isa? Float) (t/isa? Character)))
-                 (def ~'>|__37
+                 (def ~(tag (cstr `float+char>boolean) '>|__37)
                    (reify* [float+char>boolean]
                      (~(B 'invoke) [~'_37__ ~(F 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__38|types) (*<> (t/isa? Float) (t/isa? Integer)))
-                 (def ~'>|__38
+                 (def ~(tag (cstr `float+int>boolean) '>|__38)
                    (reify* [float+int>boolean]
                      (~(B 'invoke) [~'_38__ ~(F 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__39|types) (*<> (t/isa? Float) (t/isa? Long)))
-                 (def ~'>|__39
+                 (def ~(tag (cstr `float+long>boolean) '>|__39)
                    (reify* [float+long>boolean]
                      (~(B 'invoke) [~'_39__ ~(F 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__40|types) (*<> (t/isa? Float) (t/isa? Float)))
-                 (def ~'>|__40
+                 (def ~(tag (cstr `float+float>boolean) '>|__40)
                    (reify* [float+float>boolean]
                      (~(B 'invoke) [~'_40__ ~(F 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__41|types) (*<> (t/isa? Float) (t/isa? Double)))
-                 (def ~'>|__41
+                 (def ~(tag (cstr `float+double>boolean) '>|__41)
                    (reify* [float+double>boolean]
                      (~(B 'invoke) [~'_41__ ~(F 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__42|types) (*<> (t/isa? Double) (t/isa? Byte)))
-                 (def ~'>|__42
+                 (def ~(tag (cstr `double+byte>boolean) '>|__42)
                    (reify* [double+byte>boolean]
                      (~(B 'invoke) [~'_42__ ~(D 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__43|types) (*<> (t/isa? Double) (t/isa? Short)))
-                 (def ~'>|__43
+                 (def ~(tag (cstr `double+short>boolean) '>|__43)
                    (reify* [double+short>boolean]
                      (~(B 'invoke) [~'_43__ ~(D 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__44|types) (*<> (t/isa? Double) (t/isa? Character)))
-                 (def ~'>|__44
+                 (def ~(tag (cstr `double+char>boolean) '>|__44)
                    (reify* [double+char>boolean]
                      (~(B 'invoke) [~'_44__ ~(D 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__45|types) (*<> (t/isa? Double) (t/isa? Integer)))
-                 (def ~'>|__45
+                 (def ~(tag (cstr `double+int>boolean) '>|__45)
                    (reify* [double+int>boolean]
                      (~(B 'invoke) [~'_45__ ~(D 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__46|types) (*<> (t/isa? Double) (t/isa? Long)))
-                 (def ~'>|__46
+                 (def ~(tag (cstr `double+long>boolean) '>|__46)
                    (reify* [double+long>boolean]
                      (~(B 'invoke) [~'_46__ ~(D 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__47|types) (*<> (t/isa? Double) (t/isa? Float)))
-                 (def ~'>|__47
+                 (def ~(tag (cstr `double+float>boolean) '>|__47)
                    (reify* [double+float>boolean]
                      (~(B 'invoke) [~'_47__ ~(D 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(O<> '>|__48|types) (*<> (t/isa? Double) (t/isa? Double)))
-                 (def ~'>|__48
+                 (def ~(tag (cstr `double+double>boolean) '>|__48)
                    (reify* [double+double>boolean]
                      (~(B 'invoke) [~'_48__ ~(D 'a) ~(D 'b)] ~'(. Numeric gt a b))))
 
+                 ~>|types-form
                  ~>|dynamic-dispatch-form))
         :cljs
         ($ (do (defn ~'>
