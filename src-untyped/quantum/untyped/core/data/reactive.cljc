@@ -231,33 +231,30 @@
             (alist-conj! a f)
             (set! on-dispose-arr (alist f))))}})
 
-(defn- in-context
-  "When f is executed, if (f) derefs any reactive references, they are then added to
-   'obj.captured' (*ref-context*).
-
-   See function notify-deref-watcher! to know how *ref-context* is updated."
-  [^Reaction rx] (binding [*ref-context* rx] ((.-f rx))))
-
 (defn- deref-capture!
-  "Returns `(in-context f r)`. Calls `update-watching!` on `rx` with any `deref`ed reactive
-   references captured during `in-context`, if any differ from the `watching` field of `rx`. Sets
+  "When `f` is executed, if `(f)` and/or `interceptors` deref any reactive references, they are then
+   added to `(.-captured rx)` (i.e. `*ref-context*`). Then calls `update-watching!` on `rx` with any
+   `deref`ed reactive references captured, if any differ from the `watching` field of `rx`. Sets
    the `computed` flag on `rx` to true.
 
-   Inside `update-watching!` along with adding the references in 'rx.watching' of reaction, the
-   reaction is also added to the list of watches on each of the references that `f` derefs."
+   Inside `update-watching!` along with adding the references in `(-.watching rx)` of reaction, the
+   reaction is also added to the list of watches on each of the references that `f`+`interceptors`
+   deref.
+
+   See `notify-deref-watcher!` to know how `*ref-context*` is updated."
   [^Reaction rx]
   (.setCaptured rx nil)
   (let [oldv         (.getState rx)
-        newv         (in-context rx)
         interceptors (.getInterceptors rx)
-        newv'        (if (nil? interceptors)
-                         newv
-                         (reduce-kv (gen-call|rf rx oldv) newv interceptors))
+        newv         (binding [*ref-context* rx]
+                       (if (nil? interceptors)
+                           ((.-f rx))
+                           (reduce-kv (gen-call|rf rx oldv) ((.-f rx)) interceptors)))
         c            (.getCaptured rx)]
     (.setComputed rx true)
     ;; Optimize common case where derefs occur in same order
     (when-not (alist== c (.getWatching rx)) (update-watching! rx c))
-    newv'))
+    newv))
 
 (defn- try-capture! [^Reaction rx]
   (uerr/catch-all
