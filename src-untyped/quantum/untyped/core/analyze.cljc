@@ -12,6 +12,7 @@
       :refer [istr]]
     [quantum.untyped.core.data
       :refer [kw-map]]
+    [quantum.untyped.core.data.reactive     :as urx]
     [quantum.untyped.core.data.set          :as uset]
     [quantum.untyped.core.defnt
       :refer [defns defns- fns]]
@@ -683,7 +684,7 @@
         (uast/call-node
           {:env             env
            :unanalyzed-form form
-           :form            (if (utr/reactive-type? t) form (uform/>form t))
+           :form            (if (utr/rx-type? t) form (uform/>form t))
            :caller          caller|node
            :args            arg-nodes
            :type            (t/value t)}))))
@@ -719,9 +720,17 @@
   [env ::env, [caller|form _ & args-form _ :as form] _ > uast/call-node?]
   (let [caller|node (analyze* env caller|form)
         caller|type (:type caller|node)
+        ;; We just `norx-deref` the `caller|type` primarily for `t/defn`s but it could be unsafe
+        ;; TODO assess what will happen if we reactively derefed. It's currently being derefed in an
+        ;;      interceptor on `!overload-types`. If it were reactively derefed then I believe it
+        ;;      would make it so every time any `t/defn` function was even mentioned in a body, if
+        ;;      any of those `t/defn`s changed whatsoever, the body would be re-analyzed and
+        ;;      overloads would be re-created (though currently it only checks whether the input
+        ;;      or output types have changed... not things in the body).
+        caller|type (cond-> caller|type (utr/rx-type? caller|type) urx/norx-deref)
         inputs-ct   (count args-form)]
-          ;; TODO fix this line of code and extend t/compare so the comparison checks below
-          ;;      will work with t/fn
+          ;; TODO fix this line of code and extend t/compare so the comparison checks below will
+          ;;      work with t/fn
     (case (if (utr/fn-type? caller|type)
               -1
               (t/compare caller|type t/callable?))
