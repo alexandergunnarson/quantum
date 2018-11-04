@@ -771,10 +771,7 @@
    > ::overload-basis]
   (when pre-type|form (TODO "Need to handle pre"))
   (when varargs       (TODO "Need to handle varargs"))
-  (let [arglist-form|unanalyzed (cond-> args varargs          (conj '& varargs)
-                                             pre-type|form    (conj '| pre-type|form)
-                                             output-type|form (conj '> output-type|form))
-        arg-types|form   (->> args (mapv (c/fn [{[kind #_#{:any :spec}, t #_t/form?] :spec}]
+  (let [arg-types|form   (->> args (mapv (c/fn [{[kind #_#{:any :spec}, t #_t/form?] :spec}]
                                            (case kind :any `t/any? :spec t))))
         output-type|form (case output-type|form
                            _   `t/any?
@@ -807,7 +804,10 @@
      :arg-types|basis         arg-types|basis
      ;; TODO Only needed if `dependent?` or if new
      :varargs-form            (when varargs {varargs-binding nil}) ; TODO `nil` isn't right
-     :arglist-form|unanalyzed arglist-form|unanalyzed
+     :arglist-form|unanalyzed (cond-> (uc/cat args-form)
+                                varargs          (conj '& varargs)
+                                pre-type|form    (conj '| pre-type|form)
+                                output-type|form (conj '> output-type|form))
      ;; TODO Only needed if `dependent?` or if new
      :output-type|form        output-type|form
      :output-type|basis       output-type|basis
@@ -841,7 +841,10 @@
                                              (:arglist-form|unanalyzed new-basis))
                                           (= (:body-codelist           existing-basis)
                                              (:body-codelist           new-basis)))]
-                            i
+                            (do (ulog/pr :warn
+                                  "Overwriting existing overload with same arglist and body"
+                                  {:arglist|form (:arglist-form|unanalyzed new-basis)})
+                                i)
                             ;; This only checks for `=` because `t/=` will be deduped later on in
                             ;; overloads, not overload bases
                             ;; TODO this doesn't take into account `|` types
@@ -852,11 +855,14 @@
                                                      (:dependent? new-basis))
                                                 (= (:types|split existing-basis)
                                                    (:types|split new-basis))
-                                                (and (= (:output-type existing-basis)
-                                                        (:output-type new-basis))
-                                                     (= (:arg-types   existing-basis)
-                                                        (:arg-types   new-basis)))))]
-                              i
+                                                (and (= (:output-type|basis existing-basis)
+                                                        (:output-type|basis new-basis))
+                                                     (= (:arg-types|basis   existing-basis)
+                                                        (:arg-types|basis   new-basis)))))]
+                              (do (ulog/pr :warn "Overwriting existing overload with same types"
+                                    {:arglist|form|prev (:arglist-form|unanalyzed existing-basis)
+                                     :arglist|form      (:arglist-form|unanalyzed new-basis)})
+                                  i)
                               ;; TODO enhance this; figure out how to effectively compare reactive
                               ;;      and dependent types, if that's even possible
                               ;; TODO maybe we don't even want this; maybe this should be based on
@@ -869,10 +875,10 @@
                                                   (:dependent?  new-basis))
                                                (= (:types|split existing-basis)
                                                   (:types|split new-basis))
-                                               (= (-> existing-basis :output-type ?norx-deref)
-                                                  (-> new-basis      :output-type ?norx-deref))
-                                               (= (-> existing-basis :arg-types   ?norx-deref)
-                                                  (-> new-basis      :arg-types   ?norx-deref)))]
+                                               (= (-> existing-basis :output-type|basis ?norx-deref)
+                                                  (-> new-basis      :output-type|basis ?norx-deref))
+                                               (= (-> existing-basis :arg-types|basis   ?norx-deref)
+                                                  (-> new-basis      :arg-types|basis   ?norx-deref)))]
                                 (ulog/pr :warn
                                   (str "Assuming that new reactive overload basis is a subsequent "
                                        "version of existing reactive overload basis")

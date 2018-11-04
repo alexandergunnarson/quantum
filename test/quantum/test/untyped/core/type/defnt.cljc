@@ -1848,6 +1848,29 @@
                                      `{:quantum.core.type/type extensible|__type}))
                                 (alter-meta! merge {:quantum.core.type/type extensible|__type})))))]
       (testing "code equivalence" (is-code= actual expected))
+      (eval actual)))
+  (testing "re-extension"
+    ;; TODO figure out whether we just want to have nothing happen, or whether we want to re-evaluate
+    (let [actual
+            (binding [self/*compilation-mode* :test]
+              (macroexpand '
+                (self/extend-defn! extensible ([a t/boolean?]))))
+          expected
+            (case (env-lang)
+              :clj ($ (do [{:id 1 :index 0 :arg-types [(t/isa? Boolean)] :output-type t/any?}
+                           {:id 0 :index 1 :arg-types [(t/isa? Double)]  :output-type t/any?}]
+
+                          (doto (intern '~(ns-name *ns*) '~'extensible
+                                  ~(with-meta
+                                     `(fn* ([~'x00__]
+                                          (ifs ((Array/get extensible|__1|types 0) ~'x00__)
+                                                 (. extensible|__1 ~'invoke ~'x00__)
+                                               ((Array/get extensible|__0|types 0) ~'x00__)
+                                                 (. extensible|__0 ~'invoke ~'x00__)
+                                               (unsupported! `extensible [~'x00__] 0))))
+                                     `{:quantum.core.type/type extensible|__type}))
+                                (alter-meta! merge {:quantum.core.type/type extensible|__type})))))]
+      (testing "code equivalence" (is-code= actual expected))
       (eval actual))
     ))
 
