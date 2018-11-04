@@ -55,7 +55,10 @@ TODO:
   - TODO `or` and `and` should be `=` regardless of order
     - To fix this, sort when it's created?
   - (rx/dispose! <reactions>) when the `t/defn` is redefined (?)
-  - Dependents should not get recompiled if the type has not changed but only the implementation has
+  - Dependents should not get recompiled if the type has not changed but only the implementation has,
+    except if inline
+  - Handle `|` (pre-type)
+  - Should not accept `t/none?` as an input type
 
 #_"
 Note that `;; TODO TYPED` is the annotation we're using for this initiative

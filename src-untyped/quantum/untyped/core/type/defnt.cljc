@@ -16,12 +16,16 @@
       :refer [defns defns- fns]]
     [quantum.untyped.core.collections           :as uc
       :refer [>set >vec]]
-    [quantum.untyped.core.compare               :as ucomp]
+    [quantum.untyped.core.collections.logic
+      :refer [seq-or]]
+    [quantum.untyped.core.compare               :as ucomp
+      :refer [not==]]
     [quantum.untyped.core.data
       :refer [kw-map]]
     [quantum.untyped.core.data.array            :as uarr]
     [quantum.untyped.core.data.map              :as umap]
-    [quantum.untyped.core.data.reactive         :as urx]
+    [quantum.untyped.core.data.reactive         :as urx
+      :refer [?norx-deref norx-deref]]
     [quantum.untyped.core.data.set              :as uset]
     [quantum.untyped.core.data.vector           :as uvec]
     [quantum.untyped.core.error                 :as err
@@ -109,6 +113,20 @@
          :fn|overload-types-name simple-symbol?
          :fn|type-name           simple-symbol?}))
 
+
+(s/def ::overload-basis|types|split
+  (s/vec-of (s/kv {:arg-types (s/vec-of t/type?) :output-type t/type?})))
+
+(s/def ::overload-basis|norx
+  ;; None of these types should be reactive
+  (s/kv {:arg-types|basis   t/type?
+         :output-type|basis t/type?
+         ;; This is non-nil only for arglists with dependent types
+         :types|split       (s/nilable ::overload-basis|types|split)
+         :body-codelist     (s/vec-of t/any?)
+         :dependent?        boolean?
+         :reactive?         boolean?}))
+
 (s/def ::overload-basis
   (s/kv {:ns                      simple-symbol?
          :args-form               map? ; from binding to form
@@ -117,7 +135,15 @@
          :arg-types|basis         (s/vec-of t/type?)
          :output-type|form        t/any?
          :output-type|basis       t/type?
-         :body-codelist           (s/vec-of t/any?)}))
+         ;; This is non-nil only for arglists with dependent types
+         :types|split             (s/nilable ::overload-basis|types|split)
+         :body-codelist           (s/vec-of t/any?)
+         :dependent?              boolean?
+         :reactive?               boolean?}))
+
+(s/def ::overload-bases-data
+  (s/kv {:prev-norx (s/nilable (s/vec-of ::overload-basis|norx))
+         :current   (s/vec-of ::overload-basis)}))
 
  ;; Technically it's partially analyzed — its type definitions are analyzed (with the exception of
  ;; requests for type inference) while its body is not.
@@ -128,7 +154,8 @@
           :arg-types                (s/vec-of t/type?)
           :output-type|form         t/any?
           :output-type              t/type?
-          :body-codelist            t/any?}))
+          :body-codelist            t/any?
+          :i|basis                  index?}))
 
 ;; This is the overload after the input specs are split by their respective `t/or` constituents,
 ;; and after primitivization, but before readiness for incorporation into a `reify`.
@@ -180,11 +207,10 @@
          :output-type t/type?
          :index       index?})) ; overload-index (position in the overall types-decl)
 
-(s/def ::types-decl
-  (s/kv {:name simple-symbol?
-         :form t/any?
-         ;; Sorted by overload-index
-         :data (s/vec-of ::types-decl-datum)}))
+(s/def ::fn|types
+  (s/kv {:fn|output-type-norx t/type?
+         :fn|type-norx        t/type?
+         :overload-types      (s/vec-of ::types-decl-datum)}))
 
 #_(:clj
 (c/defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
@@ -219,14 +245,12 @@
                          (not (-> t meta :quantum.core.type/ref?)))
               t/class>most-primitive-class))))))
 
-(defns- >actual-output-type [declared-output-type t/type?, body-node uast/node? > t/type?]
+(defns- with-validate-output-type [declared-output-type t/type?, body-node uast/node? > t/type?]
   (let [err-info {:form                 (:form body-node)
                   :type                 (:type body-node)
                   :declared-output-type declared-output-type}]
     (case (t/compare (:type body-node) declared-output-type)
-      ;; If the deduced body type is `t/<=` declared output type then we pick the body type
-      (-1 0) (cond-> (:type body-node)
-               (-> declared-output-type meta :quantum.core.type/ref?) t/ref)
+      (-1 0) declared-output-type
       1      (if (or (-> declared-output-type meta :quantum.core.type/runtime?)
                      (-> declared-output-type meta :quantum.core.type/assume?))
                  declared-output-type
@@ -303,10 +327,10 @@
                           lang
                           (uc/count args-form)
                           variadic?)))
-        actual-output-type (>actual-output-type declared-output-type body-node)
+        output-type (with-validate-output-type declared-output-type body-node)
         body-form
           (-> (:form body-node)
-              (cond-> (-> actual-output-type meta :quantum.core.type/runtime?)
+              (cond-> (-> output-type meta :quantum.core.type/runtime?)
                 (>with-runtime-output-type output-type|form)))]
       {:arglist-form|unanalyzed     arglist-form|unanalyzed
        :arg-classes                 arg-classes
@@ -317,33 +341,9 @@
                                       variadic? (conj (-> varargs-form keys first)))
        :body-form                   body-form
        :positional-args-ct          (count args-form)
-       :output-type                 actual-output-type
-       :output-class                (type>class actual-output-type)
+       :output-type                 output-type
+       :output-class                (type>class output-type)
        :variadic?                   variadic?})))
-
-(defns- unanalyzed-overloads>overloads
-  "This is of `O(n•log(n))` time complexity where n is the total number of generated/analyzed
-   overloads.
-   This is because once we must sort (`O(n•log(n))`) the overloads by comparing their arg types and
-   then if we find any duplicates in a linear scan (`O(n)`), we throw an error."
-  [opts ::opts, fn|globals ::fn|globals, fn|type t/type?
-   unanalyzed-overloads (s/vec-of ::unanalyzed-overload)
-   > (s/vec-of ::overload)]
-  (->> unanalyzed-overloads
-       ;; We have to analyze everything in order to figure out all the types (or at least, analyze
-       ;; in order to figure out body-dependent input types) before we can compare them against
-       ;; each other
-       (uc/map #(unanalyzed-overload>overload % opts fn|globals fn|type))
-       (sort-by :arg-types compare-args-types)
-       (dedupe-type-data
-         (c/fn [overloads prev-overload overload]
-           (err! "Duplicate input types for overload"
-                 (umap/om :arglist-form-0 (:arglist-form|unanalyzed prev-overload)
-                          :arg-types-0    (:arg-types prev-overload)
-                          :body-0         (:body-form prev-overload)
-                          :arglist-form-1 (:arglist-form|unanalyzed overload)
-                          :arg-types-1    (:arg-types overload)
-                          :body-1         (:body-form overload)))))))
 
 (defns- class>interface-part-name [c class? > string?]
   (if (= c java.lang.Object)
@@ -421,7 +421,7 @@
 (c/defn overload-types>arg-types
   [!overload-types #_(t/of urx/reactive? (vec-of ::types-decl-datum)), overload-index #_index?
    #_> #_(objects-of type?)]
-  (apply uarr/*<> (:arg-types (get (urx/norx-deref !overload-types) overload-index))))
+  (apply uarr/*<> (:arg-types (get (norx-deref !overload-types) overload-index))))
 
 (c/defn type-data>ftype [type-data #_(vec-of ::type-datum), fn|output-type #_t/type?]
   (->> type-data
@@ -434,7 +434,7 @@
 (c/defn overload-types>ftype
   [!overload-types #_(t/of urx/reactive? (vec-of ::types-decl-datum)), fn|output-type #_t/type?
    #_> #_(vec-of ...)]
-  (type-data>ftype (urx/norx-deref !overload-types) fn|output-type))
+  (type-data>ftype (norx-deref !overload-types) fn|output-type))
 
 (c/defn- dedupe-overload-types-data [fn|ns-name fn|name types-decl-data]
   (->> types-decl-data
@@ -444,7 +444,9 @@
              (str "Overwriting type overload for `" (uid/qualify fn|ns-name fn|name) "`")
              {:arg-types-prev (:arg-types prev-datum) :arg-types (:arg-types datum)})
            (-> data pop
-               (conj (assoc prev-datum :ns-sym (:ns-sym datum) :overload (:overload datum))))))))
+               (conj (assoc prev-datum :ns-sym       (:ns-sym   datum)
+                                       :overload     (:overload datum)
+                                       :replacing-id (:id       datum))))))))
 
 (defns- >overload-types-decl|name
   ([fn|name simple-symbol?, overload|id ::overload|id > simple-symbol?]
@@ -471,98 +473,184 @@
                            ~(uid/qualify fn|ns-name fn|overload-types-name) ~overload-index)))]
     {:form form :name decl-name}))
 
-(defns- norx-deref-overload-basis [overload-basis ::overload-basis]
-  (-> overload-basis
-      (update :arg-types|basis   (uc/map urx/norx-deref))
-      (update :output-type|basis urx/norx-deref)))
-
-(defns- >overload-bases-to-analyze
-  [overload-bases (s/kv {:norx-prev (s/nilable (s/vec-of ::overload-basis))
-                         :current   (s/vec-of ::overload-basis)})
-   > (s/vec-of ::overload-basis)]
-  (let [changed-existing-overload-bases
-          (reduce-2
-            (c/fn [changed derefed-old-basis new-basis]
-              (cond-> changed
-                (not= derefed-old-basis (norx-deref-overload-basis new-basis)) (conj new-basis)))
-            [] (:norx-prev overload-bases) (:current overload-bases))
-        new-overload-bases (subvec (:current overload-bases) (count (:norx-prev overload-bases)))]
-    (ur/join changed-existing-overload-bases new-overload-bases)))
-
-(defns- overload-basis>unanalyzed-overloads+
+(defns- overload-basis-data>types+
   "Split and primitivized; not yet sorted."
-  [{:as overload-basis
-    :keys [args-form _, body-codelist _, output-type|form _]}
-   ::overload-basis
-   {:as fn|globals :keys [fn|output-type _]} ::fn|globals
-   #_> #_(s/+-of ::unanalyzed-overload)]
-  (let [overload-basis-selected
-          (select-keys overload-basis
-            [:arglist-form|unanalyzed :args-form :body-codelist :output-type|form :varargs-form])]
-    (->> (uana/analyze-arg-syms {} args-form output-type|form true)
-         (uc/map+ (c/fn [{:keys [env out-type-node]}]
-                    (let [output-type (:type out-type-node)
-                          arg-env     (->> env :opts :arg-env deref)
-                          arg-types   (->> args-form keys (uc/map #(:type (get arg-env %))))]
-                     (when-not (t/<= output-type fn|output-type)
-                       (err! (str "Overload's declared output type does not satisfy function's"
-                                  "overall declared output type")
-                             (kw-map output-type fn|output-type)))
-                     (kw-map arg-types output-type))))
-         (uc/map+ (c/fn [{:keys [arg-types output-type]}]
-                    (merge overload-basis-selected (kw-map arg-types output-type)))))))
+  [{:keys [fn|output-type _]} ::fn|globals, args-form _, body-codelist _, output-type|form _]
+  (->> (uana/analyze-arg-syms {} args-form output-type|form true)
+       (uc/map+ (c/fn [{:keys [env out-type-node]}]
+                  (let [arg-env     (->> env :opts :arg-env deref)
+                        arg-types   (->> args-form keys (uc/map #(:type (get arg-env %))))
+                        output-type (:type out-type-node)]
+                    (when-not (t/<= output-type fn|output-type)
+                      (err! (str "Overload's declared output type does not satisfy function's"
+                                 "overall declared output type")
+                            (kw-map output-type fn|output-type)))
+                    (kw-map arg-types output-type))))))
 
-(defns- overload-bases>overload-types
-  [overload-bases          (s/kv {:norx-prev (s/nilable (s/vec-of ::overload-basis))
-                                  :current   (s/vec-of ::overload-basis)})
+(defns- overload-basis|changed?
+  [overload-basis ::overload-basis, prev-basis ::overload-basis|norx > boolean?]
+  (or (not= (:body-codelist overload-basis) (:body-codelist prev-basis))
+      (if (:types|split overload-basis)
+          (not= (:types|split overload-basis) (:types|split prev-basis))
+          (or ;; We don't check changedness via `=` when checking type bases because it's possible
+              ;; that a change in a reactive type might result in a change in how types are split,
+              ;; which is hidden by a lack of change in basis type value.
+              (not== (-> overload-basis :output-type|basis deref) (:output-type|basis prev-basis))
+              (->> overload-basis
+                   :arg-types|basis
+                   (uc/map-indexed+
+                     (c/fn [i|t t] (not== (deref t) (-> prev-basis :arg-types|basis (get i|t)))))
+                   (seq-or true?))))))
+
+(defns- establish-dependency-relations-on-new-overload-bases!
+  "This establishes a dependency relation on both the `fn|output-type` and on new reactive types
+   defined in `!overload-bases`.
+
+   Currently only intended to be used by `!overload-types`."
+  [fn|output-type t/type?, {:keys [prev-norx _, current _]} ::overload-bases-data]
+  (?deref fn|output-type)
+  (->> current
+       (uc/drop+ (count prev-norx))
+       (uc/run!  (c/fn [{:keys [arg-types|basis output-type|basis]}]
+                   (->> arg-types|basis (uc/run! ?deref))
+                   (?deref output-type|basis)))))
+
+(defns- >changed-unanalyzed-overloads
+  "A 'changed' overload here means either 1) an overload from an overload basis whose type signature
+   has changed, and after being split, does not have the same type signature as that of an existing
+   overload, 2) an overload from a newly declared overload basis whose type signature is unique for
+   the `t/defn` in question, or 3) an overload from a newly declared overload basis whose type
+   signature is the same as one that already exists for the `t/defn` in question (in which case its
+   implementation will overwrite the existing one).
+
+   'Cheaply' O(m•n) where `m` is the number split types resulting from changed overload bases, and
+   `n` is the size of the existing overload types. 'Cheap' because only a `=` check is performed `n`
+   times for each `m`. All other computations are done only once for each `m`."
+  [fn|globals ::fn|globals
+   {:keys [prev-norx _, current _]} ::overload-bases-data
    existing-overload-types (s/nilable (s/vec-of ::types-decl-datum))
-   opts ::opts
-   {:as fn|globals :keys [fn|overload-types-name _, fn|name _, fn|ns-name _]} ::fn|globals
-   fn|type t/type?
+   > (s/vec-of ::unanalyzed-overload)]
+  (let [first-new-basis-index (count prev-norx)]
+    (->> current
+         (uc/map-indexed+
+           (c/fn [i|basis
+                  {:as   basis
+                   :keys [args-form body-codelist|unanalyzed output-type|form types|split]}]
+             (let [new-overload-basis? (>= i|basis first-new-basis-index)
+                   prev-basis          (get prev-norx i|basis)
+                   changed?            (overload-basis|changed? basis prev-basis)]
+               (when (or new-overload-basis? changed?)
+                 (let [type-signature-equal-to-existing?
+                         (c/fn [{:keys [arg-types output-type]}]
+                           (seq-or #(and (= output-type (:output-type %))
+                                         (= arg-types   (:arg-types   %)))
+                                   existing-overload-types))]
+                   (->> (or types|split (overload-basis-data>types+
+                                          fn|globals args-form body-codelist|unanalyzed output-type|form))
+                        (cond->> (and (not new-overload-basis?)
+                                      (= (:body-codelist basis) (:body-codelist prev-basis)))
+                          (uc/remove+ type-signature-equal-to-existing?))
+                        (uc/map+ (c/fn [type-datum]
+                                   (-> (select-keys basis
+                                         [:arglist-form|unanalyzed :args-form :body-codelist
+                                          :output-type|form :varargs-form])
+                                       (merge type-datum)
+                                       (assoc :i|basis))))))))))
+         (uc/filter+ identity)
+         uc/cat)))
+
+(defns- validate-unique-types-for-unanalyzed-overloads
+  "Prior to validation we must first sort the overloads by comparing their arg types. Then if we
+   find any type signature duplicates in a linear scan, we throw an error."
+  [unanalyzed-overloads (s/vec-of ::unanalyzed-overload)
+   > (s/vec-of ::unanalyzed-overload)]
+  (->> unanalyzed-overloads
+       (dedupe-type-data
+         (c/fn [overloads prev-overload overload]
+           (err! "Duplicate input types for overload"
+                 (umap/om :arglist-form-0 (:arglist-form|unanalyzed prev-overload)
+                          :arg-types-0    (:arg-types prev-overload)
+                          :body-0         (:body-form prev-overload)
+                          :arglist-form-1 (:arglist-form|unanalyzed overload)
+                          :arg-types-1    (:arg-types overload)
+                          :body-1         (:body-form overload)))))))
+
+(defns- overload-bases-data>overload-types
+  "Each overload type is structurally (`=`) unique and if an overload is introduced which is `t/=`
+   but not `=` then that overload will be rejected."
+  [overload-bases-data ::overload-bases-data
+   existing-fn-types   (s/nilable ::fn|types)
+   opts                ::opts
+   {:as   fn|globals
+    :keys [fn|name _, fn|ns-name _, fn|output-type _, fn|overload-types-name _]} ::fn|globals
    > (s/vec-of ::types-decl-datum)]
-  (if-not-let [overload-bases-to-analyze (-> overload-bases >overload-bases-to-analyze seq)]
-    existing-overload-types
-    (let [;; These are created within this fn, then put on a queue below so that direct dispatch can
-          ;; use them later on in the pipeline
-          overloads (->> overload-bases-to-analyze
-                         (uc/mapcat (fn1 overload-basis>unanalyzed-overloads+ fn|globals))
-                         (unanalyzed-overloads>overloads opts fn|globals fn|type))
-          first-current-overload-id (count existing-overload-types)
-          overload-types-current-data ; i.e. being created right now
-            (->> overloads
-                 (uc/map-indexed
-                   (c/fn [i {:keys [arg-types output-type]}]
-                     {:id          (+ i first-current-overload-id)
-                      :ns-sym      (ns-name *ns*)
-                      :arg-types   arg-types
-                      :output-type output-type})))
-          ;; We can't just concat the currently-being-created overloads' type-decl data with the
-          ;; existing type-decl data because we need to maintain the type-decl data's ordering by
-          ;; type-specificity so the dynamic dispatch works correctly.
-          overload-types-data-with-overloads
-            (if (empty? existing-overload-types)
-                (->> overload-types-current-data
-                     (uc/map-indexed
-                       (c/fn [i datum] (assoc datum :index i :overload (get overloads i)))))
-                (->> (ur/join overload-types-current-data existing-overload-types)
-                     (uc/map
-                       (c/fn [{:as datum :keys [id]}]
-                         (assoc datum :overload (get overloads (- id first-current-overload-id)))))
-                     (sort-by identity
-                       (c/fn [datum0 datum1]
-                         (let [c (compare-args-types (:arg-types datum0) (:arg-types datum1))]
-                            ;; In order to make the earlier ID appear
-                           (if (zero? c)
-                               (if (:overload datum0)
-                                   (if (:overload datum1)  c 1)
-                                   (if (:overload datum1) -1 c))
-                               c))))
-                     (dedupe-overload-types-data fn|ns-name fn|name)
-                     (uc/map-indexed (c/fn [i datum] (assoc datum :index i)))))]
-      (->> overload-types-data-with-overloads
-           (uc/map (c/fn [datum]
-                     (uvec/alist-conj! !overload-queue datum)
-                     (dissoc datum :overload)))))))
+  (establish-dependency-relations-on-new-overload-bases! fn|output-type overload-bases-data)
+  (let [fn|output-type-norx|prev (:fn|output-type-norx existing-fn-types)
+        fn|output-type-norx      (?deref fn|output-type)
+        existing-overload-types  (:overload-types existing-fn-types)]
+    (when (and existing-fn-types
+               (t/not= fn|output-type-norx fn|output-type-norx|prev))
+      (TODO "`fn|output-type` changed; not sure what to do at this point"
+            {:fn|output-type|prev fn|output-type-norx|prev
+             :fn|output-type|new  fn|output-type-norx}))
+    (if-not-let [changed-unanalyzed-overloads
+                   (seq (>changed-unanalyzed-overloads
+                          fn|globals overload-bases-data existing-overload-types))]
+      existing-fn-types
+      (let [sorted-changed-unanalyzed-overloads
+              (->> changed-unanalyzed-overloads
+                   (sort-by :arg-types compare-args-types)
+                   validate-unique-types-for-unanalyzed-overloads)
+            first-current-overload-id (count existing-overload-types)
+            new-overload? (c/fn [type-datum] (>= (:id type-datum) first-current-overload-id))
+            sorted-changed-overload-types
+              (->> sorted-changed-unanalyzed-overloads
+                   (uc/map-indexed
+                     (c/fn [i {:keys [arg-types output-type]}]
+                       {:id          (+ i first-current-overload-id)
+                        :ns-sym      (ns-name *ns*)
+                        :arg-types   arg-types
+                        :output-type output-type})))
+            ;; We need to maintain the `overload-types` ordering by type-specificity so the dynamic
+            ;; dispatch and fn-type work correctly.
+            overload-types-with-replacing-ids
+              (if (empty? existing-overload-types)
+                  (->> sorted-changed-overload-types
+                       (uc/map-indexed (c/fn [i datum] (assoc datum :index i))))
+                  ;; (assoc datum :overload
+                  ;;   (get changed-overloads (- id first-current-overload-id)))
+                  (->> (ur/join existing-overload-types sorted-changed-overload-types)
+                       (sort-by identity
+                         (c/fn [datum0 datum1]
+                           (let [c (compare-args-types (:arg-types datum0) (:arg-types datum1))]
+                             ;; In order to make the earlier ID appear
+                             (if (zero? c)
+                                 (if (new-overload? datum0)
+                                     (if (new-overload? datum1)  c 1)
+                                     (if (new-overload? datum1) -1 c))
+                                 c))))
+                       (dedupe-overload-types-data fn|ns-name fn|name)
+                       (uc/map-indexed (c/fn [i datum] (assoc datum :index i)))))
+            ;; For recursive purposes
+            fn|type-norx (type-data>ftype overload-types-with-replacing-ids fn|output-type-norx)
+            ;; We should analyze everything first in order to figure out body-dependent input types
+            ;; before we can compare them against each other, but we're ignoring body-dependent input
+            ;; types for now
+            sorted-changed-overloads
+              (->> sorted-changed-unanalyzed-overloads
+                   (uc/map #(unanalyzed-overload>overload % opts fn|globals fn|type-norx)))
+            overload-types
+              (->> overload-types-with-replacing-ids
+                   (uc/map
+                     (c/fn [datum]
+                       (let [id (or (:replacing-id datum) (:id datum))]
+                         (when (>= id first-current-overload-id)
+                           (let [overload (get sorted-changed-overloads
+                                               (- id first-current-overload-id))]
+                             ;; So that direct dispatch can use them later on in the pipeline
+                             (uvec/alist-conj! !overload-queue (assoc datum :overload overload)))))
+                       (dissoc datum :replacing-id))))]
+        (kw-map fn|output-type-norx fn|type-norx overload-types)))))
 
 ;; ----- Direct dispatch ----- ;;
 
@@ -651,7 +739,7 @@
    !overload-types _]
   (let [overload-forms
          (->> !overload-types
-              urx/norx-deref
+              norx-deref
               (group-by (fn-> :arg-types count))
               (sort-by key) ; for purposes of reproducibility and organization
               (map (c/fn [[arg-ct overload-types-for-arity]]
@@ -667,7 +755,7 @@
             (alter-meta! v# merge ~fn|meta'))]
         (let [dispatch-form `(uvar/defmeta ~fn|name ~fn|meta' (fn* ~@overload-forms))]
           (if (= compilation-mode :test)
-              [(->> !overload-types urx/norx-deref >form (uc/map (fn1 dissoc :ns-sym)))
+              [(->> !overload-types norx-deref >form (uc/map (fn1 dissoc :ns-sym)))
                dispatch-form]
               [dispatch-form])))))
 
@@ -675,7 +763,7 @@
 
 (defns- overload-basis-form>overload-basis
   [opts ::opts
-   {:keys [fn|output-type _, fn|output-type|form _]} ::fn|globals
+   {:as fn|globals :keys [fn|output-type _, fn|output-type|form _]} ::fn|globals
    {:as overload-basis-form
     {args                      [:args    _]
      varargs                   [:varargs _]
@@ -709,25 +797,100 @@
                            (assert (-> varargs :binding-form first (= :sym))))
         args-form        (reduce-2 assoc (umap/om) arg-bindings arg-types|form)
         [arglist-basis]  (uana/analyze-arg-syms {} args-form output-type|form false)
-        binding->arg-type|basis (->> arglist-basis :env :opts :arg-env deref (uc/map-vals' :type))]
-    ;; TODO `dependent?` -> any of the arg-types or output-type use dependent types
-    ;; TODO `reactive?` ->  any of the arg-types or output-type are reactive
+        binding->arg-type|basis (->> arglist-basis :env :opts :arg-env deref (uc/map-vals' :type))
+        arg-types|basis   (->> args-form keys (uc/map binding->arg-type|basis))
+        output-type|basis (-> arglist-basis :out-type-node :type)
+        dependent?        (:dependent? arglist-basis)
+        reactive?         (or (utr/rx-type? output-type|basis)
+                              (seq-or utr/rx-type? arg-types|basis))]
     {:ns                      (>symbol *ns*)
      ;; TODO Only needed if `dependent?` or if new
      :args-form               args-form
-     :arg-types|basis         (->> args-form keys (uc/map binding->arg-type|basis))
+     :arg-types|basis         arg-types|basis
      ;; TODO Only needed if `dependent?` or if new
      :varargs-form            (when varargs {varargs-binding nil}) ; TODO `nil` isn't right
      :arglist-form|unanalyzed arglist-form|unanalyzed
      ;; TODO Only needed if `dependent?` or if new
      :output-type|form        output-type|form
-     :output-type|basis       (-> arglist-basis :out-type-node :type)
+     :output-type|basis       output-type|basis
+     ;; We store this only for arglists with dependent types. If the arglist is reactive, then
+     ;; downstream, if the reactive types change, the new split types can be compared with the
+     ;; previous split types. If non-reactive, then the split types of this overload basis can be
+     ;; compared to existing overload bases.
+     :types|split             (when dependent?
+                                (->> (overload-basis-data>types+ fn|globals args-form
+                                       body-codelist|unanalyzed output-type|form)
+                                     ur/join))
      ;; TODO Only needed if `inline? or `reactive?`, or if new
-     :body-codelist           body-codelist|unanalyzed}))
+     :body-codelist           body-codelist|unanalyzed
+     :dependent?              dependent?
+     :reactive?               reactive?}))
 
 ;; ===== Reactive auxiliary vars ===== ;;
 
+(defns- incorporate-overload-bases
+  "O(m•n) where `m` = # of existing overload bases and `n` = # of new overload bases."
+  [existing-bases (s/vec-of ::overload-basis), new-bases (s/vec-of ::overload-basis)
+   > (s/vec-of ::overload-basis)]
+  (reduce
+    (c/fn [bases new-basis]
+      (if-let [i|existing
+                 (->> existing-bases
+                      (uc/map-indexed+
+                        (c/fn [i existing-basis]
+                          (if-let [same-code?
+                                     (and (= (:arglist-form|unanalyzed existing-basis)
+                                             (:arglist-form|unanalyzed new-basis))
+                                          (= (:body-codelist           existing-basis)
+                                             (:body-codelist           new-basis)))]
+                            i
+                            ;; This only checks for `=` because `t/=` will be deduped later on in
+                            ;; overloads, not overload bases
+                            ;; TODO this doesn't take into account `|` types
+                            (if-let [same-unreactive-type?
+                                       (and (not (:reactive? existing-basis))
+                                            (not (:reactive? new-basis))
+                                            (if (and (:dependent? existing-basis)
+                                                     (:dependent? new-basis))
+                                                (= (:types|split existing-basis)
+                                                   (:types|split new-basis))
+                                                (and (= (:output-type existing-basis)
+                                                        (:output-type new-basis))
+                                                     (= (:arg-types   existing-basis)
+                                                        (:arg-types   new-basis)))))]
+                              i
+                              ;; TODO enhance this; figure out how to effectively compare reactive
+                              ;;      and dependent types, if that's even possible
+                              ;; TODO maybe we don't even want this; maybe this should be based on
+                              ;;      an atom that's configurable. It does override/nullify some
+                              ;;      safety behavior in `overload-basis|changed?`
+                              (when-let [probably-same-reactive-type?
+                                          (and (= (:reactive?   existing-basis)
+                                                  (:reactive?   new-basis))
+                                               (= (:dependent?  existing-basis)
+                                                  (:dependent?  new-basis))
+                                               (= (:types|split existing-basis)
+                                                  (:types|split new-basis))
+                                               (= (-> existing-basis :output-type ?norx-deref)
+                                                  (-> new-basis      :output-type ?norx-deref))
+                                               (= (-> existing-basis :arg-types   ?norx-deref)
+                                                  (-> new-basis      :arg-types   ?norx-deref)))]
+                                (ulog/pr :warn
+                                  (str "Assuming that new reactive overload basis is a subsequent "
+                                       "version of existing reactive overload basis")
+                                  {:new      (:arglist-form|unanalyzed existing-basis)
+                                   :existing (:arglist-form|unanalyzed existing-basis)})
+                                i)))))
+                      (uc/filter+ some?)
+                      uc/first)]
+        (assoc bases i|existing new-basis)
+        (conj bases new-basis))))
+    existing-bases
+    new-bases)
+
 (defns- >!overload-bases
+  "`!overload-bases` is a reactive atom updated by `t/extend-defn!`, which cannot be deleted from
+   but which can be updated and appended to."
   [{:as opts       :keys [kind _]} ::opts
    {:as fn|globals :keys [fn|ns-name _, fn|overload-bases-name _]} ::fn|globals
    overload-bases-form _]
@@ -736,15 +899,29 @@
               (uc/map (c/fn [x] (overload-basis-form>overload-basis opts fn|globals x))))]
     (if (= kind :extend-defn!)
         (-> (uid/qualify fn|ns-name fn|overload-bases-name) resolve var-get
-            (doto (uref/update!
-                    (c/fn [{:keys [current]}]
-                      {:norx-prev (->> current (uc/map norx-deref-overload-basis))
-                       :current   (ur/join current overload-bases)}))))
-        (urx/! {:norx-prev nil :current overload-bases}))))
+            (doto
+              (uref/update!
+                (c/fn [{:keys [current]}]
+                  {:prev-norx
+                    (->> current
+                         (uc/map
+                           (c/fn [basis]
+                             {:arg-types|basis   (->> basis :arg-types|basis (uc/map norx-deref))
+                              :output-type|basis (-> basis :output-type|basis norx-deref)
+                              :types|split       (:types|split   basis)
+                              :body-codelist     (:body-codelist basis)
+                              :dependent?        (:dependent?    basis)
+                              :reactive?         (:reactive?     basis)})))
+                   :current (incorporate-overload-bases current overload-bases)}))))
+        (urx/! {:prev-norx nil :current overload-bases}))))
 
 (defns- >!overload-types
-  "Whatever `opts` and `fn|globals` are passed are what the `t/defn` will always use even when being
-   extended in a different namespace."
+  "`!overload-types` is a reaction which depends on the `!overload-bases` atom and all reactive
+   types declared in any arglist of the `t/defn` in question, as well as the overall output type
+   (if reactive) of the `t/defn`.
+
+   Whatever the values of `opts` and `fn|globals` are at the time of `t/defn` definition, that's
+   what they'll be for the lifetime of the function."
   [{:as opts       :keys [kind _]} ::opts
    {:as fn|globals :keys [fn|ns-name _, fn|overload-types-name _, fn|type-name _]} ::fn|globals
    !overload-bases _]
@@ -752,13 +929,11 @@
       (-> (uid/qualify fn|ns-name fn|overload-types-name) resolve var-get)
       (with-do-let [!overload-types (urx/!rx @!overload-bases)]
         (uref/add-interceptor! !overload-types :the-interceptor
-          (c/fn [_ _ old-overload-types new-overload-bases]
+          (c/fn [_ _ old-overload-types overload-bases-data]
             ;; `opts` and `fn|globals` are closed over
-            (overload-bases>overload-types
-              new-overload-bases old-overload-types opts fn|globals
-              (or (some-> (uid/qualify fn|ns-name fn|type-name) resolve var-get urx/norx-deref)
-                  t/none?))))
-        (urx/norx-deref !overload-types)
+            (overload-bases-data>overload-types
+              overload-bases-data old-overload-types opts fn|globals)))
+        (norx-deref !overload-types)
         (intern fn|ns-name fn|overload-types-name !overload-types))))
 
 (defns- >!fn|types
@@ -767,7 +942,7 @@
    !overload-types _]
   (if (= kind :extend-defn!)
       (-> (uid/qualify fn|ns-name fn|type-name) resolve var-get)
-      (with-do-let [!fn|type (t/rx (type-data>ftype @!overload-types (?deref fn|output-type)))]
+      (with-do-let [!fn|type (t/rx* (urx/>!rx #(:fn|type-norx @!overload-types) {:eq-fn t/=} nil))]
         (intern fn|ns-name fn|type-name !fn|type))))
 
 ;; ===== `opts` + `fn|globals` ===== ;;
@@ -834,7 +1009,7 @@
         !overload-bases (>!overload-bases opts fn|globals overload-bases-form)
         !overload-types (>!overload-types opts fn|globals !overload-bases)
         !fn|type        (>!fn|types       opts fn|globals !overload-types)]
-    (if (empty? (urx/norx-deref !overload-bases))
+    (if (empty? (norx-deref !overload-bases))
         `(declare ~(:fn|name fn|globals))
         (let [direct-dispatch  (>direct-dispatch              opts fn|globals !overload-types)
               dynamic-dispatch (>dynamic-dispatch-fn|codelist opts fn|globals !overload-types)

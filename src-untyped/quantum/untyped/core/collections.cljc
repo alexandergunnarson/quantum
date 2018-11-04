@@ -1,9 +1,9 @@
 (ns quantum.untyped.core.collections
   "Operations on collections."
   (:refer-clojure :exclude
-    [#?(:cljs array?) assoc-in cat conj! contains? count distinct distinct? first get group-by
+    [#?(:cljs array?) assoc-in cat conj! contains? count distinct distinct? drop first get group-by
      filter flatten frequencies last map map-indexed mapcat partition-all pmap remove reverse run!
-     zipmap])
+     take zipmap])
   (:require
     [clojure.core                  :as core]
     [fast-zip.core                 :as zip]
@@ -228,31 +228,6 @@
           (and (val? elem) (index-of x elem))
           :else (uerr/not-supported! `containsv? x))))
 
-(defn subview
-  "Returns a subview of ->`xs`, [->`a` to ->`b`), in O(1) time."
-  ([xs ^long a] (subview xs a (count xs)))
-  ([xs ^long a ^long b]
-    (cond           (vector? xs) (subvec xs a b)
-          #?@(:clj [(string? xs) (.subSequence ^String xs a b)])
-                    :else        (uerr/not-supported! `subview xs))))
-
-(defn slice
-  "Makes a subcopy of ->`x`, [->`a`, ->`b`), in the most efficient way possible.
-   Differs from `subview` in that it does not simply return a view in O(1) time.
-   Some copies are more efficient than others — some might be O(N); others O(log(N))."
-  ([xs ^long a] (slice xs a (count xs)))
-  ([xs ^long a ^long b]
-    (if (string? xs)
-        (.substring ^String xs a b)
-        (->> xs (drop a) (take b)))))
-
-(defn subview-or-slice
-  ([xs a] (subview-or-slice xs a (count xs)))
-  ([xs a b]
-    (if (or (vector? xs) (string? xs)) ; `subviewable?`
-        (subview xs a b)
-        (slice a b))))
-
 ;; NOTE: The below functions, built on transducers, inasmuch as they require a 0- or 1-arity
 ;; reducing function to behave correctly (e.g. `partition-all+`), are unsafe for use with
 ;; core/reduce. Prefer `educe` instead.
@@ -296,6 +271,33 @@
 
 (def-transducer>eager partition-all core/partition-all 1)
 (def-transducer>eager distinct      core/distinct      0)
+(def-transducer>eager take          core/take          1)
+(def-transducer>eager drop          core/drop          1)
+
+(defn subview
+  "Returns a subview of ->`xs`, [->`a` to ->`b`), in O(1) time."
+  ([xs ^long a] (subview xs a (count xs)))
+  ([xs ^long a ^long b]
+    (cond           (vector? xs) (subvec xs a b)
+          #?@(:clj [(string? xs) (.subSequence ^String xs a b)])
+                    :else        (uerr/not-supported! `subview xs))))
+
+(defn slice
+  "Makes a subcopy of ->`x`, [->`a`, ->`b`), in the most efficient way possible.
+   Differs from `subview` in that it does not simply return a view in O(1) time.
+   Some copies are more efficient than others — some might be O(N); others O(log(N))."
+  ([xs ^long a] (slice xs a (count xs)))
+  ([xs ^long a ^long b]
+    (if (string? xs)
+        (.substring ^String xs a b)
+        (->> xs (drop a) (take b)))))
+
+(defn subview-or-slice
+  ([xs a] (subview-or-slice xs a (count xs)))
+  ([xs a b]
+    (if (or (vector? xs) (string? xs)) ; `subviewable?`
+        (subview xs a b)
+        (slice a b))))
 
 ;; ===== COERCIVE ===== ;;
 

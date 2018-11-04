@@ -166,6 +166,10 @@
 
 (defonce !!analyze-depth (>!thread-local 0))
 
+(uvar/defonce !!dependent?
+  "Denotes whether a dependent type was found to be used in the current arglist context."
+  (>!thread-local false))
+
 (defn add-file-context-from [to from]
   (let [{:keys [line column]} (meta from)]
     (update-meta to
@@ -679,6 +683,7 @@
                     (case (name caller|form)
                       "input-type"  (t/rx (t/input-type*  @caller|type args))
                       "output-type" (t/rx (t/output-type* @caller|type args)))))]
+        (uref/set! !!dependent? true)
         (uast/call-node
           {:env             env
            :unanalyzed-form form
@@ -993,7 +998,8 @@
                 split-types?]} (:opts env)]
     (ifs (empty? arglist-syms|unanalyzed)
            [{:env           env
-             :out-type-node (-> (analyze env out-type-form) (update :type t/unvalue))}]
+             :out-type-node (-> (analyze env out-type-form) (update :type t/unvalue))
+             :dependent?    @!!dependent?}]
          (>= (uref/get !!analyze-arg-syms|iter) analyze-arg-syms|max-iter)
            (err! "Max number of iterations reached for `analyze-arg-syms`"
                  {:n (uref/get !!analyze-arg-syms|iter)})
@@ -1035,14 +1041,16 @@
    :split-types?            split-types?})
 
 (defns analyze-arg-syms
-  "Performance characteristics:
+  "`dependent?` denotes whether any of of the arg-types or output-type use dependent types.
+
+   Performance characteristics:
    - While an internally recursive function, the maximum stack depth is the number of arguments in
      the provided arglist.
    - The maximum number of generated arglists is equal to the product of the cardinalities of the
      deduced types of the inputs. In other words, in the worst case scenario each of the arg types
      might be a 'splittable' type like `t/or` (whose cardinality is the number of arguments to it
      when simplified) which would require a Cartesian product of the splits of the arg types."
-  > vector? #_(s/vec-of (s/kv {:env ::env :out-type-node uast/node?}))
+  > vector? #_(s/vec-of (s/kv {:env ::env :out-type-node uast/node? :dependent? boolean?}))
   ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _]
     (analyze-arg-syms {} arg-sym->arg-type-form out-type-form true))
   ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _, split-types? boolean?]
@@ -1051,6 +1059,7 @@
     split-types? boolean?
     > (s/vec-of (s/kv {:env ::env :out-type-node uast/node?}))]
     (uref/set! !!analyze-arg-syms|iter 0)
+    (uref/set! !!dependent?            false)
     (try (analyze-arg-syms*
            {:opts (merge (:opts env)
                     (>analyze-arg-syms|opts env arg-sym->arg-type-form out-type-form split-types?))})

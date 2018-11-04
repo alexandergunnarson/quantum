@@ -46,6 +46,8 @@
     #?(:clj  (.deref ^clojure.lang.IDeref rx)
        :cljs (-deref ^non-native          rx))))
 
+(defn ?norx-deref [x] (if (uref/derefable? x) (norx-deref x) x))
+
 (defprotocol PWatchable
   (getWatches [this])
   (setWatches [this v]))

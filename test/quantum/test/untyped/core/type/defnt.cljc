@@ -1362,7 +1362,7 @@
               (macroexpand '
                 (self/defn defn-self-reference
                   ([> tt/double?] 2.0)
-                  ([x tt/long?] (defn-self-reference)))))
+                  ([x tt/long? > tt/double?] (defn-self-reference)))))
           expected
             (case (env-lang)
               :clj ($ (do (declare ~'defn-self-reference)
