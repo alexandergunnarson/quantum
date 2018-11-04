@@ -1396,17 +1396,21 @@
         (eval '(do (is= (defn-self-reference) 2.0))))))
   (testing "`t/defn` references other `t/defn`"
     (let [actual
-            (macroexpand '
-              (self/defn defn-reference
-                ([] (>long* 1))))
+            (binding [self/*compilation-mode* :test]
+              (macroexpand '
+                (self/defn defn-reference
+                  ([> tt/long?] (>long* 1)))))
           expected
             (case (env-lang)
               :clj ($ (do (declare ~'defn-reference)
-                          (def ~'defn-reference|__0|0
+                          (def ~(tag (cstr `>long) 'defn-reference|__0)
                             (reify* [>long] (~(L 'invoke) [~'_0__] ~'(>long* 1))))
-                          (defn ~'defn-reference
-                            {:quantum.core.type/type (t/fn t/any? [])}
-                            ([] (.invoke ~(tag (cstr `>long) 'defn-reference|__0|0)))))))]
+
+                          [{:id 0 :index 0 :arg-types [] :output-type (t/isa? Long)}]
+
+                          (defmeta ~'defn-reference
+                            {:quantum.core.type/type defn-reference|__type}
+                            (fn* ([] (. defn-reference|__0 ~'invoke)))))))]
       (testing "code equivalence" (is-code= actual expected))
       (testing "functionality"
         (eval actual)

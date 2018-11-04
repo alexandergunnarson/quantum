@@ -25,6 +25,7 @@
   [form t]
   (if (or (not (t/with-metable? form))
           (utr/fn-type? t)
+          (utr/rx-type? t)
           ;; TODO for now
           (uxp/iexpr? t))
       nil
