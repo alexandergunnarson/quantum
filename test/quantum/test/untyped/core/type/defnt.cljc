@@ -246,16 +246,16 @@
                  (def ~(tag (cstr `Object>boolean) 'some?|__9)
                    (reify* [Object>boolean]  (~(B 'invoke) [~'_9__ ~(O 'x)] true)))
 
-                 [{:id 0 :index 0 :arg-types [(t/value nil)]      :output-type (t/value false)}
-                  {:id 1 :index 1 :arg-types [(t/isa? Boolean)]   :output-type (t/value true)}
-                  {:id 2 :index 2 :arg-types [(t/isa? Byte)]      :output-type (t/value true)}
-                  {:id 3 :index 3 :arg-types [(t/isa? Short)]     :output-type (t/value true)}
-                  {:id 4 :index 4 :arg-types [(t/isa? Character)] :output-type (t/value true)}
-                  {:id 5 :index 5 :arg-types [(t/isa? Integer)]   :output-type (t/value true)}
-                  {:id 6 :index 6 :arg-types [(t/isa? Long)]      :output-type (t/value true)}
-                  {:id 7 :index 7 :arg-types [(t/isa? Float)]     :output-type (t/value true)}
-                  {:id 8 :index 8 :arg-types [(t/isa? Double)]    :output-type (t/value true)}
-                  {:id 9 :index 9 :arg-types [t/any?]             :output-type (t/value true)}]
+                 [{:id 0 :index 0 :arg-types [(t/value nil)]      :output-type (t/isa? Boolean)}
+                  {:id 1 :index 1 :arg-types [(t/isa? Boolean)]   :output-type (t/isa? Boolean)}
+                  {:id 2 :index 2 :arg-types [(t/isa? Byte)]      :output-type (t/isa? Boolean)}
+                  {:id 3 :index 3 :arg-types [(t/isa? Short)]     :output-type (t/isa? Boolean)}
+                  {:id 4 :index 4 :arg-types [(t/isa? Character)] :output-type (t/isa? Boolean)}
+                  {:id 5 :index 5 :arg-types [(t/isa? Integer)]   :output-type (t/isa? Boolean)}
+                  {:id 6 :index 6 :arg-types [(t/isa? Long)]      :output-type (t/isa? Boolean)}
+                  {:id 7 :index 7 :arg-types [(t/isa? Float)]     :output-type (t/isa? Boolean)}
+                  {:id 8 :index 8 :arg-types [(t/isa? Double)]    :output-type (t/isa? Boolean)}
+                  {:id 9 :index 9 :arg-types [t/any?]             :output-type (t/isa? Boolean)}]
 
                  (defmeta ~'some?
                    {:quantum.core.type/type some?|__type}
