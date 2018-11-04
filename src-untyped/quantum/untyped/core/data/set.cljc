@@ -85,7 +85,7 @@
 (defn comparison<     [c] (identical? c <ident))
 (defn comparison<=    [c] (or (identical? c <ident) (identical? c =ident)))
 (defn comparison=     [c] (identical? c =ident))
-(defn comparison-not= [c] (not (identical? c =ident)))
+(defn comparison-not= [c] (core/not (identical? c =ident)))
 (defn comparison>=    [c] (or (identical? c >ident) (identical? c =ident)))
 (defn comparison>     [c] (identical? c >ident))
 (defn comparison><    [c] (identical? c ><ident))

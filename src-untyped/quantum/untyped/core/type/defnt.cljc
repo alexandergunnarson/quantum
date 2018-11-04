@@ -28,7 +28,7 @@
       :refer [?norx-deref norx-deref]]
     [quantum.untyped.core.data.set              :as uset]
     [quantum.untyped.core.data.vector           :as uvec]
-    [quantum.untyped.core.error                 :as err
+    [quantum.untyped.core.error                 :as uerr
       :refer [TODO err!]]
     [quantum.untyped.core.fn
       :refer [<- aritoid fn1 fn-> with-do with-do-let]]
@@ -877,9 +877,9 @@
                       (uc/filter+ some?)
                       uc/first)]
         (assoc bases i|existing new-basis)
-        (conj bases new-basis))))
+        (conj bases new-basis)))
     existing-bases
-    new-bases)
+    new-bases))
 
 (defns- >!overload-bases
   "`!overload-bases` is a reactive atom updated by `t/extend-defn!`, which cannot be deleted from
@@ -899,14 +899,15 @@
                     (->> current
                          (uc/map
                            (c/fn [basis]
-                             {:arg-types|basis   (->> basis :arg-types|basis (uc/map norx-deref))
-                              :output-type|basis (-> basis :output-type|basis norx-deref)
+                             {:arg-types|basis   (->> basis :arg-types|basis (uc/map ?norx-deref))
+                              :output-type|basis (-> basis :output-type|basis ?norx-deref)
                               :types|split       (:types|split   basis)
                               :body-codelist     (:body-codelist basis)
                               :dependent?        (:dependent?    basis)
                               :reactive?         (:reactive?     basis)})))
                    :current (incorporate-overload-bases current overload-bases)}))))
-        (urx/! {:prev-norx nil :current overload-bases}))))
+        (with-do-let [!overload-bases (urx/! {:prev-norx nil :current overload-bases})]
+          (intern fn|ns-name fn|overload-bases-name !overload-bases)))))
 
 (defns- >!fn|types
   "`!fn|types` is a reaction which depends on the `!overload-bases` atom and all reactive types
@@ -989,32 +990,38 @@
               fn|output-type         (eval fn|output-type|form)
               fn|overload-bases-name (symbol (str fn|name "|__bases"))
               fn|overload-types-name (symbol (str fn|name "|__types"))
-              fn|type-name           (symbol (str fn|name "|__type"))]
-          {:fn|globals          (kw-map fn|meta fn|name fn|ns-name fn|output-type|form fn|output-type
-                                        fn|overload-bases-name fn|overload-types-name fn|type-name)
-           :overload-bases-form overload-bases-form}))))
+              fn|type-name           (symbol (str fn|name "|__type"))
+              fn|globals
+                (kw-map fn|meta fn|name fn|ns-name fn|output-type|form fn|output-type
+                        fn|overload-bases-name fn|overload-types-name fn|type-name)]
+          (intern fn|ns-name fn|globals-name fn|globals)
+          (kw-map fn|globals overload-bases-form)))))
 
 ;; ===== Whole `t/(de)fn` creation ===== ;;
 
 (defns fn|code [kind ::kind, lang ::lang, compilation-mode ::compilation-mode, args _]
-  (let [opts (>fn|opts kind lang compilation-mode)
-        {:keys [fn|globals overload-bases-form]} (>fn|globals+?overload-bases-form kind args)
-        !overload-bases (>!overload-bases opts fn|globals overload-bases-form)
-        !fn|types       (>!fn|types       opts fn|globals !overload-bases)
-        !fn|type        (>!fn|type        opts fn|globals !fn|types)]
-    (if (empty? (norx-deref !overload-bases))
-        `(declare ~(:fn|name fn|globals))
-        (let [direct-dispatch  (>direct-dispatch              opts fn|globals !fn|types)
-              dynamic-dispatch (>dynamic-dispatch-fn|codelist opts fn|globals !fn|types)
-              fn-codelist
-                (->> `[;; For recursion
-                       ~@(when (not= kind :extend-defn!) [`(declare ~(:fn|name fn|globals))])
-                       ~@(:form direct-dispatch)
-                       ~@dynamic-dispatch]
-                       (remove nil?))]
-          (case kind
-            :fn                   (TODO "Haven't done t/fn yet")
-            (:defn :extend-defn!) `(do ~@fn-codelist))))))
+  (uerr/catch-all
+    (let [opts (>fn|opts kind lang compilation-mode)
+          {:keys [fn|globals overload-bases-form]} (>fn|globals+?overload-bases-form kind args)
+          !overload-bases (>!overload-bases opts fn|globals overload-bases-form)
+          !fn|types       (>!fn|types       opts fn|globals !overload-bases)
+          !fn|type        (>!fn|type        opts fn|globals !fn|types)]
+      (if (empty? (norx-deref !overload-bases))
+          `(declare ~(:fn|name fn|globals))
+          (let [direct-dispatch  (>direct-dispatch              opts fn|globals !fn|types)
+                dynamic-dispatch (>dynamic-dispatch-fn|codelist opts fn|globals !fn|types)
+                fn-codelist
+                  (->> `[;; For recursion
+                         ~@(when (not= kind :extend-defn!) [`(declare ~(:fn|name fn|globals))])
+                         ~@(:form direct-dispatch)
+                         ~@dynamic-dispatch]
+                         (remove nil?))]
+            (case kind
+              :fn                   (TODO "Haven't done t/fn yet")
+              (:defn :extend-defn!) `(do ~@fn-codelist)))))
+    t
+    (do (ulog/pr :error t)
+        (throw t))))
 
 #?(:clj
 (defmacro fn
