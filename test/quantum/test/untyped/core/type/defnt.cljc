@@ -1366,28 +1366,34 @@
           expected
             (case (env-lang)
               :clj ($ (do (declare ~'defn-self-reference)
-                          (def ~'defn-self-reference|__0|0
-                            (reify* [>Object]
-                              (~(O 'invoke) [~'_0__] nil)))
-                          (def ~(O<> 'defn-self-reference|__1|input0|types)
-                            (*<> (t/isa? java.lang.Long)))
-                          (def ~'defn-self-reference|__1|0
-                            (reify* [long>Object]
+
+                          ;; [> tt/double?]
+
+                          (def ~'defn-self-reference|__0
+                            (reify* [>double]
+                              (~(O 'invoke) [~'_0__] 2.0)))
+
+                          ;; [x tt/long? > tt/double?]
+
+                          (def ~'defn-self-reference|__1
+                            (reify* [long>double]
                               (~(O 'invoke) [~'_1__ ~'x] (~'defn-self-reference))))
-                          (defn ~'defn-self-reference
-                            {:quantum.core.type/type
-                              (t/ftype t/any? [] [tt/long?])}
-                            ([] (.invoke ~'defn-self-reference|__0|0))
+
+                          [{:id 0 :index 0 :arg-types []             :output-type (t/isa? Double)}
+                           {:id 1 :index 1 :arg-types [(t/isa? Long) :output-type (t/isa? Double)]}]
+
+                          (defmeta ~'defn-self-reference
+                            {:quantum.core.type/type defn-self-reference|__type}
+                            ([] (. ~'defn-self-reference|__0 invoke))
                             ([~'x00__]
                               (ifs
-                                ((Array/get ~'defn-self-reference|__1|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (cstr `long>Object) 'defn-self-reference|__1|0)
-                                         ~'x00__)
+                                ((Array/get ~'defn-self-reference|__1|types 0) ~'x00__)
+                                  (. defn-self-reference|__1 invoke ~'x00__)
                                 (unsupported! `defn-self-reference [~'x00__] 0)))))))]
       (testing "code equivalence" (is-code= actual expected))
       (testing "functionality"
         (eval actual)
-        (eval '(do (is= (defn-self-reference) nil))))))
+        (eval '(do (is= (defn-self-reference) 2.0))))))
   (testing "`t/defn` references other `t/defn`"
     (let [actual
             (macroexpand '
