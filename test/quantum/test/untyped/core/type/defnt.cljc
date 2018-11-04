@@ -1799,65 +1799,67 @@
 
 ;; ===== `extend-defn!` tests ===== ;;
 
-(binding [self/*compilation-mode* :test]
-  (macroexpand '
-    (self/defn extensible
-      ([a t/double?]))))
+(deftest extend-defn!|test
+  (testing "definition"
+    (let [actual
+            (binding [self/*compilation-mode* :test]
+              (macroexpand '
+                (self/defn extensible
+                  ([a t/double?]))))
+          expected
+            (case (env-lang)
+              :clj ($ (do (declare ~'extensible)
+                          (def ~(tag (cstr `double>Object) 'extensible|__0)
+                            (reify* [double>Object] (~(O 'invoke) [~'_0__ ~(D 'a)] nil)))
 
-;; Code
-(do (declare ~'extensible)
+                          [{:id 0 :index 0 :arg-types [(t/isa? Double)] :output-type t/any?}]
 
-    ;; We could keep a global map of defn-symbol to mapping, but if someone deletes the namespace
-    ;; the `t/defn` is interned in, that mapping should go away too.
-    ;; We only show this types decl because testing/debug is on. Otherwise the macro would just
-    ;; `intern` the var and define it there rather than re-evaluating the types.
-    (def ~'extensible|__types
-      (atom [{:id 0 :arg-types [(t/isa? Double)] :output-type t/any?}]))
+                          (defmeta ~'extensible
+                            {:quantum.core.type/type extensible|__type}
+                            (fn* ([~'x00__]
+                                   (ifs ((Array/get extensible|__0|types 0) ~'x00__)
+                                          (. extensible|__0 ~'invoke ~'x00__)
+                                        (unsupported! `extensible [~'x00__] 0))))))))]
+      (testing "code equivalence" (is-code= actual expected))
+      (eval actual)))
+  (testing "extension"
+    (let [actual
+            (binding [self/*compilation-mode* :test]
+              (macroexpand '
+                (self/extend-defn! extensible
+                  ([a t/boolean?]))))
+          expected
+            (case (env-lang)
+              :clj ($ (do ...)))]
+      (testing "code equivalence" (is-code= actual expected))
+      #_(eval actual))
 
-    (def ~'extensible|__0|types (self/types-decl>arg-types ~'extensible|__types 0))
-    (def ~'extensible|__0 (reify* [double>Object] (invoke [_0__ a] nil)))
+    (do ;; We only show this types decl because testing/debug is on. Otherwise the macro would just
+        ;; `reset!` the types decl outside the code rather than re-evaluating the types.
+        ;; To find where to put the overload, we find the first place where the inputs are `t/<`.
+        ;; TODO test that when testing/debug mode is off, it doesn't emit this code
+        (reset! quantum.test.untyped.core.type.defnt/extensible|__types
+          [{:name ~(tag ... 'extensible|__1) :arg-types [(t/isa? Boolean)] :output-type t/any?}
+           {:name ~(tag ... 'extensible|__0) :arg-types [(t/isa? Double)]  :output-type t/any?}])
 
-    ;; Could have done `intern`+`fn*` but JS needs some special things for it to work that may
-    ;; change over time
-    (defn extensible
-      {:quantum.core.type/type (self/types-decl>ftype extensible|__types t/any?)}
-      ([~'x00__]
-        (ifs ((Array/get ~'extensible|__0|types 0) ~'x00__)
-               (. extensible|__0 invoke x00__)
-             (unsupported! `extensible [~'x00__] 0)))))
-
-(testing "Insertion"
-  (binding [self/*compilation-mode* :test]
-    (macroexpand '
-      (self/extend-defn! extensible
-        ([a t/boolean?]))))
-
-  (do ;; We only show this types decl because testing/debug is on. Otherwise the macro would just
-      ;; `reset!` the types decl outside the code rather than re-evaluating the types.
-      ;; To find where to put the overload, we find the first place where the inputs are `t/<`.
-      ;; TODO test that when testing/debug mode is off, it doesn't emit this code
-      (reset! quantum.test.untyped.core.type.defnt/extensible|__types
-        [{:name ~(tag ... 'extensible|__1) :arg-types [(t/isa? Boolean)] :output-type t/any?}
-         {:name ~(tag ... 'extensible|__0) :arg-types [(t/isa? Double)]  :output-type t/any?}])
-
-      ;; It's labeled as `extensible|__1` but internally that's not how it's ordered; it's just
-      ;; incrementing based on the size of the types-decl
-      ;; Currently we can't undefine overloads which I think is fine
-      (def ~'extensible|__1|types
-        (self/types-decl>arg-types quantum.test.untyped.core.type.defnt/extensible|__types 0))
-      (def ~'extensible|__1 (reify* [boolean>Object] (invoke [_0__ a] nil)))
-      ;; The dynamic dispatch is currently redefined with every `extend-defn!`
-      ;; We expect that `t/defn` extension will take place in only one thread
-      (intern 'quantum.test.untyped.core.type.defnt
-        (with-meta 'extensible
-          (assoc (meta (var quantum.test.untyped.core.type.defnt/extensible))
-                 :quantum.core.type/type (self/types-decl>ftype extensible|__types t/any?)))
-        (fn* ([~'x00__]
-               (ifs ((Array/get ~'extensible|__1|types 0) ~'x00__)
-                      (. extensible|__1 invoke x00__)
-                    ((Array/get ~'extensible|__0|types 0) ~'x00__)
-                      (. extensible|__0 invoke x00__)
-                    (unsupported! `extensible [~'x00__] 0)))))))
+        ;; It's labeled as `extensible|__1` but internally that's not how it's ordered; it's just
+        ;; incrementing based on the size of the types-decl
+        ;; Currently we can't undefine overloads which I think is fine
+        (def ~'extensible|__1|types
+          (self/types-decl>arg-types quantum.test.untyped.core.type.defnt/extensible|__types 0))
+        (def ~'extensible|__1 (reify* [boolean>Object] (invoke [_0__ a] nil)))
+        ;; The dynamic dispatch is currently redefined with every `extend-defn!`
+        ;; We expect that `t/defn` extension will take place in only one thread
+        (intern 'quantum.test.untyped.core.type.defnt
+          (with-meta 'extensible
+            (assoc (meta (var quantum.test.untyped.core.type.defnt/extensible))
+                   :quantum.core.type/type (self/types-decl>ftype extensible|__types t/any?)))
+          (fn* ([~'x00__]
+                 (ifs ((Array/get ~'extensible|__1|types 0) ~'x00__)
+                        (. extensible|__1 invoke x00__)
+                      ((Array/get ~'extensible|__0|types 0) ~'x00__)
+                        (. extensible|__0 invoke x00__)
+                      (unsupported! `extensible [~'x00__] 0))))))))
 
 ;; ===== Reactive types ===== ;;
 
