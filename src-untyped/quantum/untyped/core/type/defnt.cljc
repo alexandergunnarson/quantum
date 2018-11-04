@@ -490,11 +490,13 @@
           (or ;; We don't check changedness via `=` when checking type bases because it's possible
               ;; that a change in a reactive type might result in a change in how types are split,
               ;; which is hidden by a lack of change in basis type value.
-              (not== (-> overload-basis :output-type|basis deref) (:output-type|basis prev-basis))
+              (not== (-> overload-basis :output-type|basis ?norx-deref)
+                     (:output-type|basis prev-basis))
               (->> overload-basis
                    :arg-types|basis
                    (uc/map-indexed+
-                     (c/fn [i|t t] (not== (deref t) (-> prev-basis :arg-types|basis (get i|t)))))
+                     (c/fn [i|t t] (not== (?norx-deref t)
+                                          (-> prev-basis :arg-types|basis (get i|t)))))
                    (seq-or true?))))))
 
 (defns- establish-dependency-relations-on-new-overload-bases!
@@ -740,16 +742,19 @@
                            body    (>dynamic-dispatch|body-for-arity
                                      fn|globals overload-types-for-arity arglist)]
                        (list arglist body)))))
-      fn|meta' (merge fn|meta {:quantum.core.type/type (uid/qualify fn|ns-name fn|type-name)})]
+      fn|meta' (merge fn|meta {:quantum.core.type/type (uid/qualify fn|ns-name fn|type-name)})
+      overload-types|form
+        (when (= compilation-mode :test)
+          (->> !fn|types norx-deref :overload-types >form (uc/map (fn1 dissoc :ns-sym))))]
     ;; TODO determine whether CLJS needs (update-in m [:jsdoc] conj "@param {...*} var_args")
     (if (= kind :extend-defn!)
-        [`(let* [v# (intern (quote ~fn|ns-name) (quote ~fn|name)
-                      ~(with-meta `(fn* ~@overload-forms) fn|meta'))]
-            (alter-meta! v# merge ~fn|meta'))]
+        [overload-types|form
+         `(doto (intern (quote ~fn|ns-name) (quote ~fn|name)
+                  ~(with-meta `(fn* ~@overload-forms) fn|meta'))
+            (alter-meta! merge ~fn|meta'))]
         (let [dispatch-form `(uvar/defmeta ~fn|name ~fn|meta' (fn* ~@overload-forms))]
           (if (= compilation-mode :test)
-              [(->> !fn|types norx-deref :overload-types >form (uc/map (fn1 dissoc :ns-sym)))
-               dispatch-form]
+              [overload-types|form dispatch-form]
               [dispatch-form])))))
 
 ;; ===== End dynamic dispatch ===== ;;
@@ -975,7 +980,7 @@
         fn|globals-name (symbol (str fn|name "|__globals"))]
       (if (= kind :extend-defn!)
           {:fn|globals          (-> (uid/qualify fn|ns-name fn|globals-name) resolve var-get)
-           :overload-bases-form nil}
+           :overload-bases-form overload-bases-form}
         (let [inline?                (-> (if (= kind :extend-defn!)
                                              (-> fn|var meta :inline)
                                              (:inline fn|meta))
@@ -1078,4 +1083,5 @@
 
 #?(:clj
 (defmacro extend-defn!
+  "Currently undefining overloads is not possible."
   [& args] (fn|code :extend-defn! (ufeval/env-lang) *compilation-mode* args)))
