@@ -20,7 +20,7 @@
 ;; Simulates a typed fn
 (defn- >long-checked {:quantum.core.type/type (t/rx (t/ftype nil [t/string? :> tt/long?]))} [])
 
-(defn- dummy {:quantum.core.type/type (t/rx (t/or tt/short? tt/char?))} [])
+(defn- dummy {:quantum.core.type/type (t/rx (t/ftype nil [(t/or tt/short? tt/char?)]))} [])
 
 (defn- transform-ana [ana]
   (->> ana

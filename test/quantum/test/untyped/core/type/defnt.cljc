@@ -1426,30 +1426,7 @@
                nil)))
 
 (deftest dependent-type-test
-  (testing "t/type"
-    (let [actual
-            (macroexpand '
-              (self/defn type-test
-                #_"1. Analyze `a` = `(t/type (>long-checked \"23\"))`
-                      1. Analyze `(>long-checked \"23\")`
-                         -> `(t/value 23)`
-                      -> Put `out` in env as `(t/value 23)`"
-                [out (t/type (>long-checked "23"))]
-                (self/fn type-test-inner
-                  ([a (t/or tt/boolean? (t/type b))
-                    b (t/or tt/byte? (t/type d))
-                    c (t/or tt/short? tt/char?)
-                    d (let [b (t/- tt/char? tt/long?)]
-                        (t/or tt/char? (t/type b) (t/type c)))
-                    > (t/or (t/type b) (t/type d))] b))))
-          expected
-            (case (env-lang)
-              :clj
-                ($ (do ...)))]
-      (testing "code equivalence" (is-code= actual expected))
-      (testing "functionality"
-        (eval actual)
-        (eval '(do ...)))))
+  (testing "t/type") ;; tested in `extend-defn!` test
   (testing "t/input-type"
     (let [actual
             (macroexpand '
@@ -1799,90 +1776,381 @@
 
 ;; ===== `extend-defn!` tests ===== ;;
 
+(def dependent-extensible|direct-dispatch|codelist
+ `[(def ~(tag (cstr `boolean+byte+short+short>Object)     'dependent-extensible|__0)
+      (reify* [boolean+byte+short+short>Object]
+        (~(O 'invoke) [~'_0__  ~(B 'a) ~(Y 'b) ~(S 'c) ~(S 'd)] 1)))
+   (def ~(tag (cstr `boolean+byte+short+char>Object)      'dependent-extensible|__1)
+     (reify* [boolean+byte+short+char>Object]
+       (~(O 'invoke) [~'_1__  ~(B 'a) ~(Y 'b) ~(S 'c) ~(C 'd)] 1)))
+   (def ~(tag (cstr `boolean+byte+short+Object>Object)    'dependent-extensible|__2)
+     (reify* [boolean+byte+short+Object>Object]
+       (~(O 'invoke) [~'_2__  ~(B 'a) ~(Y 'b) ~(S 'c) ~(O 'd)] 1)))
+   (def ~(tag (cstr `boolean+byte+Object+char>Object)     'dependent-extensible|__3)
+     (reify* [boolean+byte+Object+char>Object]
+       (~(O 'invoke) [~'_3__  ~(B 'a) ~(Y 'b) ~(O 'c) ~(C 'd)] 1)))
+   (def ~(tag (cstr `boolean+byte+Object+Object>Object)   'dependent-extensible|__4)
+     (reify* [boolean+byte+Object+Object>Object]
+       (~(O 'invoke) [~'_4__  ~(B 'a) ~(Y 'b) ~(O 'c) ~(O 'd)] 1)))
+   (def ~(tag (cstr `boolean+byte+Object+Object>Object)   'dependent-extensible|__5)
+     (reify* [boolean+byte+Object+Object>Object]
+       (~(O 'invoke) [~'_5__  ~(B 'a) ~(Y 'b) ~(O 'c) ~(O 'd)] 1)))
+   (def ~(tag (cstr `boolean+short+short+short>Object)    'dependent-extensible|__6)
+     (reify* [boolean+short+short+short>Object]
+       (~(O 'invoke) [~'_6__  ~(B 'a) ~(S 'b) ~(S 'c) ~(S 'd)] 1)))
+   (def ~(tag (cstr `boolean+char+short+char>Object)      'dependent-extensible|__7)
+     (reify* [boolean+char+short+char>Object]
+       (~(O 'invoke) [~'_7__  ~(B 'a) ~(C 'b) ~(S 'c) ~(C 'd)] 1)))
+   (def ~(tag (cstr `boolean+char+Object+char>Object)     'dependent-extensible|__8)
+     (reify* [boolean+char+Object+char>Object]
+       (~(O 'invoke) [~'_8__  ~(B 'a) ~(C 'b) ~(O 'c) ~(C 'd)] 1)))
+   (def ~(tag (cstr `boolean+Object+short+Object>Object)  'dependent-extensible|__9)
+     (reify* [boolean+Object+short+Object>Object]
+       (~(O 'invoke) [~'_9__ ~(B 'a) ~(O 'b) ~(S 'c) ~(O 'd)] 1)))
+   (def ~(tag (cstr `boolean+Object+Object+Object>Object) 'dependent-extensible|__10)
+     (reify* [boolean+Object+Object+Object>Object]
+       (~(O 'invoke) [~'_10__ ~(B 'a) ~(O 'b) ~(O 'c) ~(O 'd)] 1)))
+   (def ~(tag (cstr `boolean+Object+Object+Object>Object) 'dependent-extensible|__11)
+     (reify* [boolean+Object+Object+Object>Object]
+       (~(O 'invoke) [~'_11__ ~(B 'a) ~(O 'b) ~(O 'c) ~(O 'd)] 1)))
+   (def ~(tag (cstr `byte+byte+short+short>Object)        'dependent-extensible|__12)
+     (reify* [byte+byte+short+short>Object]
+       (~(O 'invoke) [~'_12__ ~(Y 'a) ~(Y 'b) ~(S 'c) ~(S 'd)] 1)))
+   (def ~(tag (cstr `byte+byte+short+char>Object)         'dependent-extensible|__13)
+     (reify* [byte+byte+short+char>Object]
+       (~(O 'invoke) [~'_13__ ~(Y 'a) ~(Y 'b) ~(S 'c) ~(C 'd)] 1)))
+   (def ~(tag (cstr `byte+byte+short+Object>Object)       'dependent-extensible|__14)
+     (reify* [byte+byte+short+Object>Object]
+       (~(O 'invoke) [~'_14__ ~(Y 'a) ~(Y 'b) ~(S 'c) ~(O 'd)] 1)))
+   (def ~(tag (cstr `byte+byte+Object+char>Object)        'dependent-extensible|__15)
+     (reify* [byte+byte+Object+char>Object]
+       (~(O 'invoke) [~'_15__ ~(Y 'a) ~(Y 'b) ~(O 'c) ~(C 'd)] 1)))
+   (def ~(tag (cstr `byte+byte+Object+Object>Object)      'dependent-extensible|__16)
+     (reify* [byte+byte+Object+Object>Object]
+       (~(O 'invoke) [~'_16__ ~(Y 'a) ~(Y 'b) ~(O 'c) ~(O 'd)] 1)))
+   (def ~(tag (cstr `byte+byte+Object+Object>Object)      'dependent-extensible|__17)
+     (reify* [byte+byte+Object+Object>Object]
+       (~(O 'invoke) [~'_17__ ~(Y 'a) ~(Y 'b) ~(O 'c) ~(O 'd)] 1)))
+   (def ~(tag (cstr `short+short+short+short>Object)      'dependent-extensible|__18)
+     (reify* [short+short+short+short>Object]
+       (~(O 'invoke) [~'_18__ ~(S 'a) ~(S 'b) ~(S 'c) ~(S 'd)] 1)))
+   (def ~(tag (cstr `char+char+short+char>Object)         'dependent-extensible|__19)
+     (reify* [char+char+short+char>Object]
+       (~(O 'invoke) [~'_19__ ~(C 'a) ~(C 'b) ~(S 'c) ~(C 'd)] 1)))
+   (def ~(tag (cstr `char+char+Object+char>Object)        'dependent-extensible|__20)
+     (reify* [char+char+Object+char>Object]
+       (~(O 'invoke) [~'_20__ ~(C 'a) ~(C 'b) ~(O 'c) ~(C 'd)] 1)))
+   (def ~(tag (cstr `Object+Object+short+Object>Object)   'dependent-extensible|__21)
+     (reify* [Object+Object+short+Object>Object]
+       (~(O 'invoke) [~'_21__ ~(O 'a) ~(O 'b) ~(S 'c) ~(O 'd)] 1)))
+   (def ~(tag (cstr `Object+Object+Object+Object>Object)  'dependent-extensible|__22)
+     (reify* [Object+Object+Object+Object>Object]
+       (~(O 'invoke) [~'_22__ ~(O 'a) ~(O 'b) ~(O 'c) ~(O 'd)] 1)))
+   (def ~(tag (cstr `Object+Object+Object+Object>Object)  'dependent-extensible|__23)
+     (reify* [Object+Object+Object+Object>Object]
+       (~(O 'invoke) [~'_23__ ~(O 'a) ~(O 'b) ~(O 'c) ~(O 'd)] 1)))])
+
 (deftest extend-defn!|test
-  (testing "definition"
-    (let [actual
-            (binding [self/*compilation-mode* :test]
-              (macroexpand '
-                (self/defn extensible
-                  ([a t/double?]))))
-          expected
-            (case (env-lang)
-              :clj ($ (do (declare ~'extensible)
-                          (def ~(tag (cstr `double>Object) 'extensible|__0)
-                            (reify* [double>Object] (~(O 'invoke) [~'_0__ ~(D 'a)] nil)))
+  (testing "simple test"
+    (testing "definition"
+      (let [actual
+              (binding [self/*compilation-mode* :test]
+                (macroexpand '
+                  (self/defn extensible
+                    ([a t/double?]))))
+            expected
+              (case (env-lang)
+                :clj ($ (do (declare ~'extensible)
+                            (def ~(tag (cstr `double>Object) 'extensible|__0)
+                              (reify* [double>Object] (~(O 'invoke) [~'_0__ ~(D 'a)] nil)))
 
-                          [{:id 0 :index 0 :arg-types [(t/isa? Double)] :output-type t/any?}]
+                            [{:id 0 :index 0 :arg-types [(t/isa? Double)] :output-type t/any?}]
 
-                          (defmeta ~'extensible
-                            {:quantum.core.type/type extensible|__type}
-                            (fn* ([~'x00__]
-                                   (ifs ((Array/get extensible|__0|types 0) ~'x00__)
-                                          (. extensible|__0 ~'invoke ~'x00__)
-                                        (unsupported! `extensible [~'x00__] 0))))))))]
-      (testing "code equivalence" (is-code= actual expected))
-      (eval actual)))
-  (testing "extension"
-    (let [actual
-            (binding [self/*compilation-mode* :test]
-              (macroexpand '
-                (self/extend-defn! extensible
-                  ([a t/boolean?]))))
-          expected
-            (case (env-lang)
-              :clj ($ (do (def ~(tag (cstr `boolean>Object) 'extensible|__1)
-                            (reify* [boolean>Object]
-                              (~(O 'invoke) [~'_0__ ~(B 'a)] nil)))
+                            (defmeta ~'extensible
+                              {:quantum.core.type/type extensible|__type}
+                              (fn* ([~'x00__]
+                                     (ifs ((Array/get extensible|__0|types 0) ~'x00__)
+                                            (. extensible|__0 ~'invoke ~'x00__)
+                                          (unsupported! `extensible [~'x00__] 0))))))))]
+        (testing "code equivalence" (is-code= actual expected))
+        (eval actual)))
+    (testing "extension"
+      (let [actual
+              (binding [self/*compilation-mode* :test]
+                (macroexpand '
+                  (self/extend-defn! extensible
+                    ([a t/boolean?]))))
+            expected
+              (case (env-lang)
+                :clj ($ (do (def ~(tag (cstr `boolean>Object) 'extensible|__1)
+                              (reify* [boolean>Object]
+                                (~(O 'invoke) [~'_0__ ~(B 'a)] nil)))
 
-                          [{:id 1 :index 0 :arg-types [(t/isa? Boolean)] :output-type t/any?}
-                           {:id 0 :index 1 :arg-types [(t/isa? Double)]  :output-type t/any?}]
+                            [{:id 1 :index 0 :arg-types [(t/isa? Boolean)] :output-type t/any?}
+                             {:id 0 :index 1 :arg-types [(t/isa? Double)]  :output-type t/any?}]
 
-                          (doto (intern '~(ns-name *ns*) '~'extensible
-                                  ~(with-meta
-                                     `(fn* ([~'x00__]
-                                          (ifs ((Array/get extensible|__1|types 0) ~'x00__)
-                                                 (. extensible|__1 ~'invoke ~'x00__)
-                                               ((Array/get extensible|__0|types 0) ~'x00__)
-                                                 (. extensible|__0 ~'invoke ~'x00__)
-                                               (unsupported! `extensible [~'x00__] 0))))
-                                     `{:quantum.core.type/type extensible|__type}))
-                                (alter-meta! merge {:quantum.core.type/type extensible|__type})))))]
-      (testing "code equivalence" (is-code= actual expected))
-      (eval actual)))
-  (testing "re-extension"
-    ;; TODO figure out whether we just want to have nothing happen, or whether we want to re-evaluate
-    (let [actual
-            (binding [self/*compilation-mode* :test]
-              (macroexpand '
-                (self/extend-defn! extensible ([a t/boolean?]))))
-          expected
-            (case (env-lang)
-              :clj ($ (do [{:id 1 :index 0 :arg-types [(t/isa? Boolean)] :output-type t/any?}
-                           {:id 0 :index 1 :arg-types [(t/isa? Double)]  :output-type t/any?}]
+                            (doto (intern '~(ns-name *ns*) '~'extensible
+                                    ~(with-meta
+                                       `(fn* ([~'x00__]
+                                            (ifs ((Array/get extensible|__1|types 0) ~'x00__)
+                                                   (. extensible|__1 ~'invoke ~'x00__)
+                                                 ((Array/get extensible|__0|types 0) ~'x00__)
+                                                   (. extensible|__0 ~'invoke ~'x00__)
+                                                 (unsupported! `extensible [~'x00__] 0))))
+                                       `{:quantum.core.type/type extensible|__type}))
+                                  (alter-meta! merge
+                                    {:quantum.core.type/type extensible|__type})))))]
+        (testing "code equivalence" (is-code= actual expected))
+        (eval actual)))
+    (testing "re-extension"
+      ;; TODO figure out whether we just want to have nothing happen, or whether we want to
+      ;;      re-evaluate
+      (let [actual
+              (binding [self/*compilation-mode* :test]
+                (macroexpand '
+                  (self/extend-defn! extensible ([a t/boolean?]))))
+            expected
+              (case (env-lang)
+                :clj ($ (do [{:id 1 :index 0 :arg-types [(t/isa? Boolean)] :output-type t/any?}
+                             {:id 0 :index 1 :arg-types [(t/isa? Double)]  :output-type t/any?}]
 
-                          (doto (intern '~(ns-name *ns*) '~'extensible
-                                  ~(with-meta
-                                     `(fn* ([~'x00__]
-                                          (ifs ((Array/get extensible|__1|types 0) ~'x00__)
-                                                 (. extensible|__1 ~'invoke ~'x00__)
-                                               ((Array/get extensible|__0|types 0) ~'x00__)
-                                                 (. extensible|__0 ~'invoke ~'x00__)
-                                               (unsupported! `extensible [~'x00__] 0))))
-                                     `{:quantum.core.type/type extensible|__type}))
-                                (alter-meta! merge {:quantum.core.type/type extensible|__type})))))]
-      (testing "code equivalence" (is-code= actual expected))
-      (eval actual))
-    ))
+                            (doto (intern '~(ns-name *ns*) '~'extensible
+                                    ~(with-meta
+                                       `(fn* ([~'x00__]
+                                            (ifs ((Array/get extensible|__1|types 0) ~'x00__)
+                                                   (. extensible|__1 ~'invoke ~'x00__)
+                                                 ((Array/get extensible|__0|types 0) ~'x00__)
+                                                   (. extensible|__0 ~'invoke ~'x00__)
+                                                 (unsupported! `extensible [~'x00__] 0))))
+                                       `{:quantum.core.type/type extensible|__type}))
+                                  (alter-meta! merge
+                                    {:quantum.core.type/type extensible|__type})))))]
+        (testing "code equivalence" (is-code= actual expected))
+        (eval actual))))
+  (testing "dependent type"
+    (testing "definition"
+      (let [actual
+              (binding [self/*compilation-mode* :test]
+                (macroexpand '
+                  (self/defn dependent-extensible
+                    [a (t/or tt/boolean? (t/type b))
+                     b (t/or tt/byte? (t/type d))
+                     c (t/or tt/short? tt/string?)
+                     d (let [b (t/- tt/int? tt/long?)]
+                         (t/or tt/char? (t/type b) (t/type c)))
+                     > (t/or (t/type b) (t/type d) tt/long?)] 1)))
+            expected
+              (case (env-lang)
+                :clj
+                ($ (do (declare ~'dependent-extensible)
+                       ~@dependent-extensible|direct-dispatch|codelist
+                 [{:id 0 :index 0
+                   :arg-types   [(t/isa? Boolean) (t/isa? Byte) (t/isa? Short) (t/isa? Short)]
+                   :output-type (t/or (t/isa? Byte) (t/isa? Short) (t/isa? Long))}
+                  {:id 1 :index 1
+                   :arg-types   [(t/isa? Boolean) (t/isa? Byte) (t/isa? Short) (t/isa? Character)]
+                   :output-type (t/or (t/isa? Byte) (t/isa? Character) (t/isa? Long))}
+                  {:id 2 :index 2
+                   :arg-types   [(t/isa? Boolean) (t/isa? Byte) (t/isa? Short)
+                                 (t/value (t/isa? Integer))]
+                   :output-type (t/or (t/isa? Byte) (t/value (t/isa? Integer)) (t/isa? Long))}
+                  {:id 3 :index 3
+                   :output-type (t/or (t/isa? Byte) (t/isa? Character) (t/isa? Long))
+                   :arg-types   [(t/isa? Boolean) (t/isa? Byte) (t/isa? String) (t/isa? Character)]}
+                  {:id 4 :index 4
+                   :arg-types   [(t/isa? Boolean) (t/isa? Byte) (t/isa? String)
+                                 (t/value (t/isa? Integer))]
+                   :output-type (t/or (t/isa? Byte) (t/value (t/isa? Integer)) (t/isa? Long))}
+                  {:id 5 :index 5
+                   :arg-types   [(t/isa? Boolean) (t/isa? Byte) (t/isa? String) (t/isa? String)]
+                   :output-type (t/or (t/isa? Byte) (t/isa? String) (t/isa? Long))}
+                  {:id 6 :index 6
+                   :arg-types   [(t/isa? Boolean) (t/isa? Short) (t/isa? Short) (t/isa? Short)]
+                   :output-type (t/or (t/isa? Short) (t/isa? Long))}
+                  {:id 7 :index 7
+                   :arg-types   [(t/isa? Boolean) (t/isa? Character) (t/isa? Short)
+                                 (t/isa? Character)]
+                   :output-type (t/or (t/isa? Character) (t/isa? Long))}
+                  {:id 8 :index 8
+                   :arg-types   [(t/isa? Boolean) (t/isa? Character) (t/isa? String)
+                                 (t/isa? Character)]
+                   :output-type (t/or (t/isa? Character) (t/isa? Long))}
+                  {:id 9 :index 9
+                   :arg-types   [(t/isa? Boolean) (t/value (t/isa? Integer)) (t/isa? Short)
+                                 (t/value (t/isa? Integer))]
+                   :output-type (t/or (t/value (t/isa? Integer)) (t/isa? Long))}
+                  {:id 10 :index 10
+                   :arg-types   [(t/isa? Boolean) (t/value (t/isa? Integer)) (t/isa? String)
+                                  (t/value (t/isa? Integer))]
+                   :output-type (t/or (t/value (t/isa? Integer)) (t/isa? Long))}
+                  {:id 11 :index 11
+                   :arg-types   [(t/isa? Boolean) (t/isa? String) (t/isa? String) (t/isa? String)]
+                   :output-type (t/or (t/isa? String) (t/isa? Long))}
+                  {:id 12 :index 12
+                   :arg-types   [(t/isa? Byte) (t/isa? Byte) (t/isa? Short) (t/isa? Short)]
+                   :output-type (t/or (t/isa? Byte) (t/isa? Short) (t/isa? Long))}
+                  {:id 13 :index 13
+                   :arg-types   [(t/isa? Byte) (t/isa? Byte) (t/isa? Short) (t/isa? Character)]
+                   :output-type (t/or (t/isa? Byte) (t/isa? Character) (t/isa? Long))}
+                  {:id 14 :index 14
+                   :arg-types   [(t/isa? Byte) (t/isa? Byte) (t/isa? Short)
+                                 (t/value (t/isa? Integer))]
+                   :output-type (t/or (t/isa? Byte) (t/value (t/isa? Integer)) (t/isa? Long))}
+                  {:id 15 :index 15
+                   :arg-types   [(t/isa? Byte) (t/isa? Byte) (t/isa? String) (t/isa? Character)]
+                   :output-type (t/or (t/isa? Byte) (t/isa? Character) (t/isa? Long))}
+                  {:id 16 :index 16
+                   :arg-types   [(t/isa? Byte) (t/isa? Byte) (t/isa? String)
+                                 (t/value (t/isa? Integer))]
+                   :output-type (t/or (t/isa? Byte) (t/value (t/isa? Integer)) (t/isa? Long))}
+                  {:id 17 :index 17
+                   :arg-types   [(t/isa? Byte) (t/isa? Byte) (t/isa? String) (t/isa? String)]
+                   :output-type (t/or (t/isa? Byte) (t/isa? String) (t/isa? Long))}
+                  {:id 18 :index 18
+                   :arg-types   [(t/isa? Short) (t/isa? Short) (t/isa? Short) (t/isa? Short)]
+                   :output-type (t/or (t/isa? Short) (t/isa? Long))}
+                  {:id 19 :index 19
+                   :arg-types   [(t/isa? Character) (t/isa? Character) (t/isa? Short)
+                                 (t/isa? Character)]
+                   :output-type (t/or (t/isa? Character) (t/isa? Long))}
+                  {:id 20 :index 20
+                   :arg-types   [(t/isa? Character) (t/isa? Character) (t/isa? String)
+                                 (t/isa? Character)]
+                   :output-type (t/or (t/isa? Character) (t/isa? Long))}
+                  {:id 21 :index 21
+                   :arg-types   [(t/value (t/isa? Integer)) (t/value (t/isa? Integer))
+                                 (t/isa? Short) (t/value (t/isa? Integer))]
+                   :output-type (t/or (t/value (t/isa? Integer)) (t/isa? Long))}
+                  {:id 22 :index 22
+                   :arg-types   [(t/value (t/isa? Integer)) (t/value (t/isa? Integer))
+                                 (t/isa? String) (t/value (t/isa? Integer))]
+                   :output-type (t/or (t/value (t/isa? Integer)) (t/isa? Long))}
+                  {:id 23 :index 23
+                   :arg-types   [(t/isa? String) (t/isa? String) (t/isa? String) (t/isa? String)]
+                   :output-type (t/or (t/isa? String) (t/isa? Long))}]
+                 (defmeta ~'dependent-extensible
+                   {:quantum.core.type/type dependent-extensible|__type}
+      (fn* ([~'x00__ ~'x10__ ~'x20__ ~'x30__]
+        (ifs ((Array/get dependent-extensible|__0|types 0) ~'x00__)
+             (ifs ((Array/get dependent-extensible|__0|types 1) ~'x10__)
+                 (ifs ((Array/get dependent-extensible|__0|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__0|types 3) ~'x30__)
+                           (. dependent-extensible|__0 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           ((Array/get dependent-extensible|__1|types 3) ~'x30__)
+                           (. dependent-extensible|__1 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           ((Array/get dependent-extensible|__2|types 3) ~'x30__)
+                           (. dependent-extensible|__2 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      ((Array/get dependent-extensible|__3|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__3|types 3) ~'x30__)
+                           (. dependent-extensible|__3 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           ((Array/get dependent-extensible|__4|types 3) ~'x30__)
+                           (. dependent-extensible|__4 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           ((Array/get dependent-extensible|__5|types 3) ~'x30__)
+                           (. dependent-extensible|__5 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 2))
+                 ((Array/get dependent-extensible|__6|types 1) ~'x10__)
+                 (ifs ((Array/get dependent-extensible|__6|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__6|types 3) ~'x30__)
+                           (. dependent-extensible|__6 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 2))
+                 ((Array/get dependent-extensible|__7|types 1) ~'x10__)
+                 (ifs ((Array/get dependent-extensible|__7|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__7|types 3) ~'x30__)
+                           (. dependent-extensible|__7 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      ((Array/get dependent-extensible|__8|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__8|types 3) ~'x30__)
+                           (. dependent-extensible|__8 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 2))
+                 ((Array/get dependent-extensible|__9|types 1) ~'x10__)
+                 (ifs ((Array/get dependent-extensible|__9|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__9|types 3) ~'x30__)
+                           (. dependent-extensible|__9 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      ((Array/get dependent-extensible|__10|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__10|types 3) ~'x30__)
+                           (. dependent-extensible|__10 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 2))
+                 ((Array/get dependent-extensible|__11|types 1) ~'x10__)
+                 (ifs ((Array/get dependent-extensible|__11|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__11|types 3) ~'x30__)
+                           (. dependent-extensible|__11 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 2))
+                 (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 1))
+            ((Array/get dependent-extensible|__12|types 0) ~'x00__)
+            (ifs ((Array/get dependent-extensible|__12|types 1) ~'x10__)
+                 (ifs ((Array/get dependent-extensible|__12|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__12|types 3) ~'x30__)
+                           (. dependent-extensible|__12 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           ((Array/get dependent-extensible|__13|types 3) ~'x30__)
+                           (. dependent-extensible|__13 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           ((Array/get dependent-extensible|__14|types 3) ~'x30__)
+                           (. dependent-extensible|__14 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      ((Array/get dependent-extensible|__15|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__15|types 3) ~'x30__)
+                           (. dependent-extensible|__15 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           ((Array/get dependent-extensible|__16|types 3) ~'x30__)
+                           (. dependent-extensible|__16 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           ((Array/get dependent-extensible|__17|types 3) ~'x30__)
+                           (. dependent-extensible|__17 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 2))
+                 (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 1))
+            ((Array/get dependent-extensible|__18|types 0) ~'x00__)
+            (ifs ((Array/get dependent-extensible|__18|types 1) ~'x10__)
+                 (ifs ((Array/get dependent-extensible|__18|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__18|types 3) ~'x30__)
+                           (. dependent-extensible|__18 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 2))
+                 (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 1))
+            ((Array/get dependent-extensible|__19|types 0) ~'x00__)
+            (ifs ((Array/get dependent-extensible|__19|types 1) ~'x10__)
+                 (ifs ((Array/get dependent-extensible|__19|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__19|types 3) ~'x30__)
+                           (. dependent-extensible|__19 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      ((Array/get dependent-extensible|__20|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__20|types 3) ~'x30__)
+                           (. dependent-extensible|__20 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 2))
+             (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 1))
+            ((Array/get dependent-extensible|__21|types 0) ~'x00__)
+            (ifs ((Array/get dependent-extensible|__21|types 1) ~'x10__)
+                 (ifs ((Array/get dependent-extensible|__21|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__21|types 3) ~'x30__)
+                           (. dependent-extensible|__21 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      ((Array/get dependent-extensible|__22|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__22|types 3) ~'x30__)
+                           (. dependent-extensible|__22 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 2))
+                 (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 1))
+            ((Array/get dependent-extensible|__23|types 0) ~'x00__)
+            (ifs ((Array/get dependent-extensible|__23|types 1) ~'x10__)
+                 (ifs ((Array/get dependent-extensible|__23|types 2) ~'x20__)
+                      (ifs ((Array/get dependent-extensible|__23|types 3) ~'x30__)
+                           (. dependent-extensible|__23 ~'invoke ~'x00__ ~'x10__ ~'x20__ ~'x30__)
+                           (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 3))
+                      (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 2))
+                 (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 1))
+            (unsupported! `dependent-extensible [~'x00__ ~'x10__ ~'x20__ ~'x30__] 0))))))))]
+        (testing "code equivalence" (is-code= actual expected))
+        (eval actual)))))
+
+(self/extend-defn! dependent-extensible
+  ([] 5))
 
 ;; ===== Reactive types ===== ;;
-
-- We need to store the forms of the overloads that are reactive and re-split the whole overload
-  every time to get dependent types right without messing up existing logic too much
-  - Also this is easier anyway. We'll have to see about performance
-- `t/fn`s should either disallow reactive types or norx-deref them (at least for now)
-- Redefining should empty the `watching` (so no reactivity happens) but keep the reference
-
-
 
 ([a (t/or tt/boolean? (t/type b))
   b (t/or tt/byte? (t/type d))
