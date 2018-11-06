@@ -272,10 +272,7 @@
         (reduce-2
           (c/fn [^long c t0 t1]
             (let [c' (long (compare-arg-types t0 t1))]
-              (case c'
-                -1 (case c  1 (reduced 0) c')
-                 0 c
-                 1 (case c -1 (reduced 0) c'))))
+              (if (zero? c') c' (reduced c'))))
           0
           arg-types0 arg-types1)
         ct-comparison)))
