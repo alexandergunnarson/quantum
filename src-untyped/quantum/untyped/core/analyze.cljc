@@ -1015,7 +1015,8 @@
                            [(:type analyzed)])]
            (if (-> t-split count (= 1))
                (recur (-> env-analyzed
-                          (update-in [:opts :arg-env] #(doto % (swap! assoc arg-sym analyzed)))
+                          (update-in [:opts :arg-env]
+                            #(doto % (swap! assoc arg-sym (assoc analyzed :type (first t-split)))))
                           enqueue-first-unanalyzed-if-queue-empty))
                (->> t-split
                     (uc/mapcat+
