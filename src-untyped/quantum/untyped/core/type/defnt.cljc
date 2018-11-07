@@ -1035,7 +1035,7 @@
               :fn                   (TODO "Haven't done t/fn yet")
               (:defn :extend-defn!) `(do ~@fn-codelist)))))
     t
-    (do (ulog/pr :error t)
+    (do (ulog/ppr :error t)
         (throw t))))
 
 #?(:clj
