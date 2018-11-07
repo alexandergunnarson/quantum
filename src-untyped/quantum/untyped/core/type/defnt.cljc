@@ -104,7 +104,8 @@
 
 ;; "global" because they apply to the whole `t/fn`
 (s/def ::fn|globals
-  (s/kv {:fn|meta                (s/nilable :quantum.core.specs/meta)
+  (s/kv {:fn|globals-name        simple-symbol?
+         :fn|meta                (s/nilable :quantum.core.specs/meta)
          :fn|ns-name             simple-symbol?
          :fn|name                ::uss/fn|name
          :fn|output-type         t/type?
@@ -112,7 +113,6 @@
          :fn|overload-bases-name simple-symbol?
          :fn|overload-types-name simple-symbol?
          :fn|type-name           simple-symbol?}))
-
 
 (s/def ::overload-basis|types|split
   (s/vec-of (s/kv {:arg-types (s/vec-of t/type?) :output-type t/type?})))
@@ -217,8 +217,6 @@
   (cond (not= k :spec) java.lang.Object; default class
         (symbol? spec) (pred->class lang spec))))
 
-;; TODO optimize such that `post-type|form` doesn't create a new type-validator wholesale every
-;; time the function gets run; e.g. extern it
 (c/defn >with-runtime-output-type [body output-type|form] `(t/validate ~body ~output-type|form))
 
 ;; TODO simplify this class computation
@@ -296,14 +294,16 @@
 (defns- unanalyzed-overload>overload
   "Given an `::unanalyzed-overload`, performs type analysis on the body and computes a resulting
    `t/fn` overload, which is the foundation for one `reify`."
-  [{:as unanalyzed-overload
-    :keys [arglist-form|unanalyzed _, args-form _, varargs-form _, arg-types _,
-           output-type|form _, body-codelist _]
-    declared-output-type [:output-type _]}
-   ::unanalyzed-overload
-   {:as opts       :keys [lang _, kind _]} ::opts
-   {:as fn|globals :keys [fn|name _, fn|output-type _]} ::fn|globals
-   fn|type t/type?
+  [{:as opts       :keys [lang _, kind _]} ::opts
+   {:as fn|globals :keys [fn|globals-name _, fn|name _, fn|ns-name _, fn|output-type _
+                          fn|overload-types-name _]} ::fn|globals
+   {:as unanalyzed-overload
+     :keys [arglist-form|unanalyzed _, args-form _, varargs-form _, arg-types _,
+            output-type|form _, body-codelist _]
+     declared-output-type [:output-type _]}
+    ::unanalyzed-overload
+   overload|id index?
+   fn|type     t/type?
    > ::overload]
   (let [;; Not sure if `nil` is the right approach for the value
         recursive-ast-node-reference
@@ -326,9 +326,15 @@
                           variadic?)))
         output-type (with-validate-output-type declared-output-type body-node)
         body-form
-          (-> (:form body-node)
-              (cond-> (-> output-type meta :quantum.core.type/runtime?)
-                (>with-runtime-output-type output-type|form)))]
+        (-> (:form body-node)
+            (cond-> (-> output-type meta :quantum.core.type/runtime?)
+              ;; TODO here the output type is being re-created each time (unless the fn's overall
+              ;;      output type is being preferred) because it could reference inputs, but we
+              ;;      should probably analyze to determine whether it references inputs so we can,
+              ;;      in the 90% case, extern the output type
+              (>with-runtime-output-type
+                (or output-type|form
+                    `(?norx-deref (:fn|output-type ~(uid/qualify fn|ns-name fn|globals-name)))))))]
       {:arglist-form|unanalyzed     arglist-form|unanalyzed
        :arg-classes                 arg-classes
        :arg-types                   arg-types
@@ -466,8 +472,8 @@
 
 (defns- overload-basis-data>types+
   "Split and primitivized; not yet sorted."
-  [{:keys [fn|output-type _]} ::fn|globals, args-form _, body-codelist _, output-type|form _]
-  (->> (uana/analyze-arg-syms {} args-form output-type|form true)
+  [{:keys [fn|output-type _]} ::fn|globals, args-form _, output-type|form _, body-codelist _]
+  (->> (uana/analyze-arg-syms {} args-form (or output-type|form fn|output-type) true)
        (uc/map+ (c/fn [{:keys [env out-type-node]}]
                   (let [arg-env     (->> env :opts :arg-env deref)
                         arg-types   (->> args-form keys (uc/map #(:type (get arg-env %))))
@@ -539,7 +545,8 @@
                                          (= arg-types   (:arg-types   %)))
                                    existing-overload-types))]
                    (->> (or types|split (overload-basis-data>types+
-                                          fn|globals args-form body-codelist|unanalyzed output-type|form))
+                                          fn|globals args-form output-type|form
+                                          body-codelist|unanalyzed))
                         (cond->> (and (not new-overload-basis?)
                                       (= (:body-codelist basis) (:body-codelist prev-basis)))
                           (uc/remove+ type-signature-equal-to-existing?))
@@ -613,8 +620,6 @@
               (if (empty? existing-overload-types)
                   (->> sorted-changed-overload-types
                        (uc/map-indexed (c/fn [i datum] (assoc datum :index i))))
-                  ;; (assoc datum :overload
-                  ;;   (get changed-overloads (- id first-current-overload-id)))
                   (->> (ur/join existing-overload-types sorted-changed-overload-types)
                        (sort-by identity
                          (c/fn [datum0 datum1]
@@ -634,7 +639,10 @@
             ;; types for now
             sorted-changed-overloads
               (->> sorted-changed-unanalyzed-overloads
-                   (uc/map #(unanalyzed-overload>overload % opts fn|globals fn|type-norx)))
+                   (uc/map-indexed
+                     (c/fn [i x]
+                       (let [id (+ i first-current-overload-id)]
+                         (unanalyzed-overload>overload opts fn|globals x id fn|type-norx)))))
             overload-types
               (->> overload-types-with-replacing-ids
                    (uc/map
@@ -761,7 +769,7 @@
 
 (defns- overload-basis-form>overload-basis
   [opts ::opts
-   {:as fn|globals :keys [fn|output-type _, fn|output-type|form _]} ::fn|globals
+   {:as fn|globals :keys [fn|output-type _, fn|output-type _, fn|output-type|form _]} ::fn|globals
    {:as overload-basis-form
     {args                      [:args    _]
      varargs                   [:varargs _]
@@ -773,12 +781,7 @@
   (when varargs       (TODO "Need to handle varargs"))
   (let [arg-types|form   (->> args (mapv (c/fn [{[kind #_#{:any :spec}, t #_t/form?] :spec}]
                                            (case kind :any `t/any? :spec t))))
-        output-type|form (case output-type|form
-                           _   `t/any?
-                           ;; TODO if the output-type|form is nil then we should default to `?`;
-                           ;; otherwise the `fn|output-type|form` gets analyzed over and over
-                           nil fn|output-type|form
-                           output-type|form)
+        output-type|form (case output-type|form _ `t/any?, nil nil, output-type|form)
         arg-bindings     (->> args
                               (mapv (c/fn [{[kind binding-] :binding-form}]
                                       ;; TODO this assertion is purely temporary until destructuring
@@ -791,7 +794,8 @@
                            ;; supported
                            (assert (-> varargs :binding-form first (= :sym))))
         args-form        (reduce-2 assoc (umap/om) arg-bindings arg-types|form)
-        [arglist-basis]  (uana/analyze-arg-syms {} args-form output-type|form false)
+        [arglist-basis]  (uana/analyze-arg-syms {} args-form
+                           (or output-type|form fn|output-type) false)
         binding->arg-type|basis (->> arglist-basis :env :opts :arg-env deref (uc/map-vals' :type))
         arg-types|basis   (->> args-form keys (uc/map binding->arg-type|basis))
         output-type|basis (-> arglist-basis :out-type-node :type)
@@ -817,7 +821,7 @@
      ;; compared to existing overload bases.
      :types|split             (when dependent?
                                 (->> (overload-basis-data>types+ fn|globals args-form
-                                       body-codelist|unanalyzed output-type|form)
+                                       output-type|form body-codelist|unanalyzed)
                                      ur/join))
      ;; TODO Only needed if `inline? or `reactive?`, or if new
      :body-codelist           body-codelist|unanalyzed
@@ -1003,8 +1007,8 @@
               fn|overload-types-name (symbol (str fn|name "|__types"))
               fn|type-name           (symbol (str fn|name "|__type"))
               fn|globals
-                (kw-map fn|meta fn|name fn|ns-name fn|output-type|form fn|output-type
-                        fn|overload-bases-name fn|overload-types-name fn|type-name)]
+                (kw-map fn|globals-name fn|meta fn|name fn|ns-name fn|output-type|form
+                        fn|output-type fn|overload-bases-name fn|overload-types-name fn|type-name)]
           (intern fn|ns-name fn|globals-name fn|globals)
           (kw-map fn|globals overload-bases-form)))))
 
