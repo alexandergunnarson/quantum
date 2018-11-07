@@ -302,42 +302,43 @@
 )
 
 (t/extend-defn! c?/compare
-        ([a false?                 , b false?]   0)
-        ([a false?                 , b true?]   -1)
-        ([a true?                  , b false?]   1)
-        ([a true?                  , b true?]    0)
-        ([a numeric?               , b numeric?] (ifs (c?/< a b) -1 (c?/> a b) 1 0))
+        ([a false?                 , b false?] (int  0))
+        ([a false?                 , b true?]  (int -1))
+        ([a true?                  , b false?] (int  1))
+        ([a true?                  , b true?]  (int  0))
+        ([a numeric?               , b numeric?]
+          (ifs (c?/< a b) (int -1) (c?/> a b) (int 1) (int 0)))
 #?(:clj ([a (t/ref c?/icomparable?), b primitive?]              (.compareTo a       b)))
 #?(:clj ([a primitive?             , b (t/ref c?/icomparable?)] (.compareTo (box a) b))))
 
 (t/extend-defn! c?/comp<
-  ([a (t/input-type c?/compare [:? :_]), b (t/input-type c?/compare [:_ :?])]
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
     (c?/<  (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp<=
-  ([a (t/input-type c?/compare [:? :_]), b (t/input-type c?/compare [:_ :?])]
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
     (c?/<= (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp=
-  ([a (t/input-type c?/compare [:? :_]), b (t/input-type c?/compare [:_ :?])]
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
     (c?/=  (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp>=
-  ([a (t/input-type c?/compare [:? :_]), b (t/input-type c?/compare [:_ :?])]
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
     (c?/>= (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp>
-  ([a (t/input-type c?/compare [:? :_]), b (t/input-type c?/compare [:_ :?])]
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
     (c?/>  (c?/compare a b) 0)))
 
 (t/defn promote-type [a nil?, b nil?])
 
 (t/defn narrowest
   > t/type?
-  ([t0 (t/and (t/input-type >min-safe-integer-value [:?])
-              (t/input-type >max-safe-integer-value [:?]))
-    t1 (t/and (t/input-type >min-safe-integer-value [:?])
-              (t/input-type >max-safe-integer-value [:?]))]
+  ([t0 (t/and (t/input-type >min-safe-integer-value :?)
+              (t/input-type >max-safe-integer-value :?))
+    t1 (t/and (t/input-type >min-safe-integer-value :?)
+              (t/input-type >max-safe-integer-value :?))]
     (let [t0-min (>min-safe-integer-value t0)
           t1-min (>min-safe-integer-value t1)
           t0-max (>max-safe-integer-value t0)
@@ -355,8 +356,9 @@
                 t1)))))
 
 (t/extend-defn! c?/min
-#?(:clj  (     [a (t/- numeric? int?), b numeric?]            (Numeric/min a b)))
-#?(:clj  (     [a numeric?           , b (t/- numeric? int?)] (Numeric/min a b)))
+#?(:clj  (     [a int?               , b (t/- numeric? int?)] (Numeric/min a b)))
+#?(:clj  (     [a (t/- numeric? int?), b int?]                (Numeric/min a b)))
+#?(:clj  (     [a (t/- numeric? int?), b (t/- numeric? int?)] (Numeric/min a b)))
 #?(:clj  (^:in [a int?               , b int?]                (Math/min    a b)))
 #?(:cljs (     [a double?            , b double? > (t/assume double?)] (js/Math.min a b))))
 

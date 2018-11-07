@@ -1049,9 +1049,16 @@
    internal forms are analyzed, type-consistency is checked, and type-dispatch is resolved at
    compile time inasmuch as possible, and at runtime only when necessary.
 
-   Within the type system, primitives are always preferred to boxed values. All values that can be
-   primitives (i.e. ones that are `t/<=` w.r.t. a `(t/isa? <boxed-primitive-class>)`) are treated
-   as primitives unless specifically marked otherwise with the `t/ref` metadata-adding directive.
+   Recommendations for the type system:
+   - Primitives are always preferred to boxed values. All values that can be primitives (i.e. ones
+     that are `t/<=` w.r.t. a `(t/isa? <boxed-primitive-class>)`) are treated as primitives unless
+     specifically marked otherwise with the `t/ref` metadata-adding directive.
+   - One could imagine a dynamic set of types corresponding to a given predicate, e.g. `decimal?`.
+     Say someone comes up with a new `decimal?`-like class and wants to redefine `decimal?` to
+     accommodate. One could define `decimal?` as a reactive/extensible type to do this. However, it
+     is preferable to instead define a marker protocol called `PDecimal` or some such and put that
+     on the defined `deftype` itself, and incorporate `PDecimal` into `decimal?` from the start. In
+     this way fewer reactive changes have to happen and less compilation occurs.
 
    Compile-Time (Direct) Dispatch characteristics
    - Any input, if its type is `t/<=` a non-nil primitive (boxed or not) class, it will be marked

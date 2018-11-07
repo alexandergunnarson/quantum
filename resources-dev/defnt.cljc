@@ -70,28 +70,13 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
 - No typed namespace should refer to any untyped namespace
 
 - TODO implement the following:
-  [1] - Reactive recompilation
-        - Non-constant types should trigger a chain-reaction of recompilations for its
-          dependents/watchers when they change:
-          - t/input-type
-            - changed via `t/extend-defn!`
-          - t/output-type
-            - changed via `t/extend-defn!`
-          - `t/defn` that gets extended via `t/extend-defn!` (if the input-types and output-types have
-            changed)
-          - We can `defonce` a `urx/atom` per `t/defn` and `reset!` on each `t/extend-defn!`
-            - reactive ftype in ::type meta
-          - Probably should disallow recursive type references, including:
-            (t/defn f [x (t/input-type f ...)])
-        - Examples
-          - One could imagine a dynamic set of types corresponding to a given predicate, e.g.
-            `decimal?`. Say someone comes up with a new `decimal?`-like class and wants to redefine
-            `decimal?` to accommodate. We could define `decimal?` as a reactive/extensible type to
-            do this. However, it seems preferable to instead define a marker protocol called
-            `PDecimal` or some such and put that on the defined `deftype` itself, and incorporate
-            `PDecimal` into `decimal?` from the start.
-  [2] - Direct dispatch needs to actually work correctly in typed contexts
-  [3] - t/numerically : e.g. a double representing exactly what a float is able to represent
+  [1] - `t/input-type` should cause a split (unique by `t/=`) rather than just doing `t/or` since
+        otherwise you end up with e.g. `t/any?` as a type instead of
+        `[t/boolean? ... t/double? t/nil? t/val?]` being handled separately
+        - (t/extend-defn! c?/comp<
+            ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+              (c?/< (c?/compare a b) 0)))
+  [2] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.
         - t/numerically-integer?
         - Primitive conversions not requiring checks can go in data.primitive
@@ -99,16 +84,19 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
             - numeric definitions
             - numeric ranges
             - numeric characteristics
-  [4] - No trailing `>` means `> ?`f
-      - ? : type inference
-        - use logic programming and variable unification e.g. `?1` `?2` ?
-        - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
-          ([n dn/std-integer?, xs dc/counted?] (count xs))
-          ([n dn/std-integer?, xs ?] ...)
+  [3] - Direct dispatch needs to actually work correctly in typed contexts
+  [ ] - Probably should disallow recursive type references, including:
+        `(t/defn f [x (t/input-type f ...)])`
   [ ] - t/value-of
         - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
   [ ] - (comp/t== x)
          - dependent type such that the passed input must be identical to x
+  [ ] - `?` : type inference
+        - use logic programming and variable unification e.g. `?1` `?2` ?
+        - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
+          ([n dn/std-integer?, xs dc/counted?] (count xs))
+          ([n dn/std-integer?, xs ?] ...)
+        - [ ] No trailing `>` means `> ?`f
   [ ] - Non-boxed `def`s: `(var/def- min-float  (Numeric/negate Float/MAX_VALUE))`
   - `(t/validate x (t/* t/string?))` for `(t/* t/string?)` needs to be more performant
     - Don't re-create type on each call

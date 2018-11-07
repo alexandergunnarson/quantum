@@ -681,8 +681,8 @@
                   caller|type
                   (let [args (->> arg-nodes rest (map :type) (map t/unvalue))]
                     (case (name caller|form)
-                      "input-type"  (t/rx (t/input-type*  @caller|type args))
-                      "output-type" (t/rx (t/output-type* @caller|type args)))))]
+                      "input-type"  (t/input-type*  caller|type args)
+                      "output-type" (t/output-type* caller|type args))))]
         (uref/set! !!dependent? true)
         (uast/call-node
           {:env             env
@@ -1001,7 +1001,7 @@
     (ifs (empty? arglist-syms|unanalyzed)
            [{:env           env
              :out-type-node (if (t/type? out-type-or-form)
-                                (ast/literal env nil out-type-or-form) ; a simulated AST node
+                                (uast/literal env nil out-type-or-form) ; a simulated AST node
                                 (-> (analyze env out-type-or-form) (update :type t/unvalue)))
              :dependent?    (uref/get !!dependent?)}]
          (>= (uref/get !!analyze-arg-syms|iter) analyze-arg-syms|max-iter)
