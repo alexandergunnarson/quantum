@@ -67,9 +67,12 @@
 
 #?(:clj
 (defmacro defmeta
-  "Like `def`, but applies metadata to the var *and* the bound object."
+  "Like `def`, but applies metadata to the var *and* the bound object (if `metable?`)."
   [sym meta-val x]
-  `(def ~(vary-meta sym merge meta-val) ~(vary-meta x merge meta-val))))
+  `(def ~(vary-meta sym merge meta-val)
+        ~(if (with-metable? x)
+             (vary-meta x merge meta-val)
+             x))))
 
 ;; ===== Aliases ===== ;;
 

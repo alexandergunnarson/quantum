@@ -2189,7 +2189,8 @@
                   (self/defn reactive-extensible
                     ([a (t/input-type dependent-extensible :?)]))))])))
   ;; TODO make this into an actual test
-  (self/extend-defn! dependent-extensible ([] 5)))
+  (doto (macroexpand '(self/extend-defn! dependent-extensible ([] 5)))
+        eval))
 
 ;; ===== Reactive types ===== ;;
 

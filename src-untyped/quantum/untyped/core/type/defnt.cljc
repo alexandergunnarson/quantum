@@ -590,7 +590,10 @@
     (if-not-let [changed-unanalyzed-overloads
                    (seq (>changed-unanalyzed-overloads
                           fn|globals overload-bases-data existing-overload-types))]
-      existing-fn-types
+      (or existing-fn-types
+          {:fn|output-type-norx t/none?
+           :fn|type-norx (t/ftype fn|output-type-norx)
+           :overload-types []})
       (let [sorted-changed-unanalyzed-overloads
               (->> changed-unanalyzed-overloads
                    (sort-by :arg-types compare-args-types)
@@ -749,7 +752,8 @@
          `(doto (intern (quote ~fn|ns-name) (quote ~fn|name)
                   ~(with-meta `(fn* ~@overload-forms) fn|meta'))
             (alter-meta! merge ~fn|meta'))]
-        (let [dispatch-form `(uvar/defmeta ~fn|name ~fn|meta' (fn* ~@overload-forms))]
+        (let [dispatch-form `(uvar/defmeta ~fn|name ~fn|meta'
+                               ~(when-not (empty? overload-forms) `(fn* ~@overload-forms)))]
           (if (= compilation-mode :test)
               [overload-types|form dispatch-form]
               [dispatch-form])))))
