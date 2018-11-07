@@ -59,6 +59,10 @@ TODO:
     except if inline
   - Handle `|` (pre-type)
   - Should not accept `t/none?` as an input type
+  - This subsumes it into the `ref` portion which is not right
+    (t/or (t/value nil) (t/isa? Long) (t/ref (t/isa? java.lang.Comparable)))
+    -> (t/or (t/value nil) (t/ref (t/isa? java.lang.Comparable)))
+  - TODO all `intern`s/effects in `t/defn` should be atomic (all or nothing). This means that the interns should probably be put on a queue too.
 
 #_"
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
