@@ -829,7 +829,8 @@
   (let [expanded-form (ufeval/macroexpand form)]
     (if-let [no-expansion? (ucomp/== form expanded-form)]
       (analyze-seq* env expanded-form)
-      (let [expanded-form' (some-> expanded-form (update-meta merge (meta form)))
+      (let [expanded-form' (cond-> expanded-form
+                             (uvar/with-metable? expanded-form) (update-meta merge (meta form)))
             expanded (analyze* env expanded-form')]
         (uast/macro-call
           {:env             env
@@ -995,11 +996,13 @@
 
 (defn- analyze-arg-syms* [env #_::env]
   (uref/update! !!analyze-arg-syms|iter inc)
-  (let [{:keys [arg-sym->arg-type-form arglist-syms|queue arglist-syms|unanalyzed out-type-form
+  (let [{:keys [arg-sym->arg-type-form arglist-syms|queue arglist-syms|unanalyzed out-type-or-form
                 split-types?]} (:opts env)]
     (ifs (empty? arglist-syms|unanalyzed)
            [{:env           env
-             :out-type-node (-> (analyze env out-type-form) (update :type t/unvalue))
+             :out-type-node (if (t/type? out-type-or-form)
+                                (ast/literal env nil out-type-or-form) ; a simulated AST node
+                                (-> (analyze env out-type-or-form) (update :type t/unvalue)))
              :dependent?    (uref/get !!dependent?)}]
          (>= (uref/get !!analyze-arg-syms|iter) analyze-arg-syms|max-iter)
            (err! "Max number of iterations reached for `analyze-arg-syms`"
@@ -1032,14 +1035,14 @@
                     ur/join))))))
 
 (defns- >analyze-arg-syms|opts
-  [env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _
+  [env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-or-form _
    split-types? boolean?]
   {:arglist-context?        true
    :arglist-syms|queue      (uset/ordered-set (-> arg-sym->arg-type-form keys first))
    :arglist-syms|unanalyzed (-> arg-sym->arg-type-form keys set)
    :arg-env                 (atom env) ; Mutable so it can cache
    :arg-sym->arg-type-form  arg-sym->arg-type-form
-   :out-type-form           out-type-form
+   :out-type-or-form        out-type-or-form
    :split-types?            split-types?})
 
 (defns analyze-arg-syms
@@ -1053,18 +1056,19 @@
      might be a 'splittable' type like `t/or` (whose cardinality is the number of arguments to it
      when simplified) which would require a Cartesian product of the splits of the arg types."
   > vector? #_(s/vec-of (s/kv {:env ::env :out-type-node uast/node? :dependent? boolean?}))
-  ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _]
-    (analyze-arg-syms {} arg-sym->arg-type-form out-type-form true))
-  ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _, split-types? boolean?]
-    (analyze-arg-syms {} arg-sym->arg-type-form out-type-form split-types?))
-  ([env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-form _
+  ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-or-form _]
+    (analyze-arg-syms {} arg-sym->arg-type-form out-type-or-form true))
+  ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-or-form _, split-types? boolean?]
+    (analyze-arg-syms {} arg-sym->arg-type-form out-type-or-form split-types?))
+  ([env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-or-form _
     split-types? boolean?
     > (s/vec-of (s/kv {:env ::env :out-type-node uast/node?}))]
     (uref/set! !!analyze-arg-syms|iter 0)
     (uref/set! !!dependent?            false)
     (try (analyze-arg-syms*
            {:opts (merge (:opts env)
-                    (>analyze-arg-syms|opts env arg-sym->arg-type-form out-type-form split-types?))})
+                    (>analyze-arg-syms|opts env arg-sym->arg-type-form out-type-or-form
+                      split-types?))})
       (catch Throwable t
         (if (and (uerr/error-map? t) (-> t :ident (= ::arg-syms-analyzed)))
             (-> t :data :result)
