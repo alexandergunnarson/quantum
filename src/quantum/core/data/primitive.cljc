@@ -189,13 +189,13 @@
 ;; ===== Primitive type properties ===== ;;
 
 (t/defn ^:inline signed?
-          ([x (t/or char?    (t/value Character)             (t/value char?))]   false)
-#?@(:clj [([x (t/or byte?    (t/value Byte)                  (t/value byte?)
-                    short?   (t/value Short)                 (t/value short?)
-                    int?     (t/value Integer)               (t/value int?)
-                    long?    (t/value Long)                  (t/value long?)
-                    float?   (t/value Float)                 (t/value float?)
-                    double?  #?(:clj Double :cljs js/Number) (t/value double?))] true)]))
+          ([x (t/or char?    (t/value Character)                       (t/value char?))]   false)
+#?@(:clj [([x (t/or byte?    (t/value Byte)                            (t/value byte?)
+                    short?   (t/value Short)                           (t/value short?)
+                    int?     (t/value Integer)                         (t/value int?)
+                    long?    (t/value Long)                            (t/value long?)
+                    float?   (t/value Float)                           (t/value float?)
+                    double?  (t/value #?(:clj Double :cljs js/Number)) (t/value double?))] true)]))
 
 ;; TODO TYPED `t/numerically-integer?`
 (t/defn ^:inline >bit-size ; > t/numerically-integer?
@@ -207,7 +207,7 @@
           ([x (t/or int?     (t/value Integer)   (t/value int?))]          int-bits)
           ([x (t/or long?    (t/value Long)      (t/value long?))]         long-bits)
           ([x (t/or float?   (t/value Float)     (t/value float?))]        float-bits)])
-          ([x (t/or double?  #?(:clj Double :cljs js/Number) (t/value double?))]
+          ([x (t/or double?  (t/value #?(:clj Double :cljs js/Number)) (t/value double?))]
             double-bits))
 
 ;; ===== Conversion ===== ;;
@@ -236,7 +236,7 @@
   (     [a boolean?                    , b (t/- primitive? boolean?)]    false)
   (     [a (t/- primitive? boolean?)   , b boolean?]                     false)
   (^:in [a long?                       , b long?]                        (Numbers/equiv a b))
-  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/eq    a b))
+  (     [a long?                       , b (t/- numeric? double? long?)] (Numeric/eq    a b))
   (     [a (t/- numeric? long?)        , b long?]                        (Numeric/eq    a b))
   (^:in [a double?                     , b double?]                      (Numbers/equiv a b))
   (     [a double?                     , b (t/- numeric? double? long?)] (Numeric/eq    a b))
@@ -259,7 +259,7 @@
 
 (t/extend-defn! c?/<
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/lt a b)))
-#?(:clj  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/lt a b)))
+#?(:clj  (     [a long?                       , b (t/- numeric? double? long?)] (Numeric/lt a b)))
 #?(:clj  (     [a (t/- numeric? long?)        , b long?]                        (Numeric/lt a b)))
 #?(:clj  (^:in [a double?                     , b double?]                      (Numbers/lt a b)))
 #?(:clj  (     [a double?                     , b (t/- numeric? double? long?)] (Numeric/lt a b)))
@@ -270,7 +270,7 @@
 
 (t/extend-defn! c?/<=
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/lte  a b)))
-#?(:clj  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/lte  a b)))
+#?(:clj  (     [a long?                       , b (t/- numeric? double? long?)] (Numeric/lte  a b)))
 #?(:clj  (     [a (t/- numeric? long?)        , b long?]                        (Numeric/lte  a b)))
 #?(:clj  (^:in [a double?                     , b double?]                      (Numbers/lte  a b)))
 #?(:clj  (     [a double?                     , b (t/- numeric? double? long?)] (Numeric/lte  a b)))
@@ -281,7 +281,7 @@
 
 (t/extend-defn! c?/>
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/gt  a b)))
-#?(:clj  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/gt  a b)))
+#?(:clj  (     [a long?                       , b (t/- numeric? double? long?)] (Numeric/gt  a b)))
 #?(:clj  (     [a (t/- numeric? long?)        , b long?]                        (Numeric/gt  a b)))
 #?(:clj  (^:in [a double?                     , b double?]                      (Numbers/gt  a b)))
 #?(:clj  (     [a double?                     , b (t/- numeric? double? long?)] (Numeric/gt  a b)))
@@ -292,7 +292,7 @@
 
 (t/extend-defn! c?/>=
 #?(:clj  (^:in [a long?                       , b long?]                        (Numbers/gte  a b)))
-#?(:clj  (     [a long?                       , b (t/- numeric? long?)]         (Numeric/gte  a b)))
+#?(:clj  (     [a long?                       , b (t/- numeric? double? long?)] (Numeric/gte  a b)))
 #?(:clj  (     [a (t/- numeric? long?)        , b long?]                        (Numeric/gte  a b)))
 #?(:clj  (^:in [a double?                     , b double?]                      (Numbers/gte  a b)))
 #?(:clj  (     [a double?                     , b (t/- numeric? double? long?)] (Numeric/gte  a b)))
