@@ -385,9 +385,9 @@
 (defn- logical-compare
   "This is so `t/empty-set` doesn't get left in `t/or`s or `t/and`s."
   [t0 #_utr/type?, t1 #_utr/type? #_> #_uset/comparison?]
-  (if (c/= t0 empty-set)
-      (if (c/= t1 empty-set) =ident <ident)
-      (if (c/= t1 empty-set) >ident (compare t0 t1))))
+  (if (== t0 empty-set)
+      (if (== t1 empty-set) =ident <ident)
+      (if (== t1 empty-set) >ident (compare t0 t1))))
 
 (defns- create-logical-type|inner|or
   [{:as accum :keys [t' utr/type?]} _, t* utr/type?, c* uset/comparison?]
