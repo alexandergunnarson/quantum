@@ -202,7 +202,7 @@
 
 (s/def ::types-decl-datum
   (s/kv {:id          ::overload|id
-         :ns-sym      simple-symbol?
+         :ns-name     simple-symbol?
          :arg-types   (s/vec-of t/type?)
          :output-type t/type?
          :index       index?})) ; overload-index (position in the overall types-decl)
@@ -436,7 +436,7 @@
              (str "Overwriting type overload for `" (uid/qualify fn|ns-name fn|name) "`")
              {:arg-types-prev (:arg-types prev-datum) :arg-types (:arg-types datum)})
            (-> data pop
-               (conj (assoc prev-datum :ns-sym       (:ns-sym   datum)
+               (conj (assoc prev-datum :ns-name      (:ns-name  datum)
                                        :overload     (:overload datum)
                                        :replacing-id (:id       datum))))))))
 
@@ -452,17 +452,16 @@
    dynamic dispatch uses to dispatch off input types."
   [{:as opts :keys [compilation-mode _, lang _]} ::opts
    {:as fn|globals :keys [fn|ns-name _, fn|name _, fn|overload-types-name _]} ::fn|globals
-   arg-types (s/vec-of t/type?), overload|id ::overload|id, overload-index index?, !fn|types _
+   {:as types-decl-datum :keys [id _, index _] ns-name- [:ns-name _]} ::types-decl-datum, !fn|types _
    > ::overload-types-decl]
-  (let [decl-name (-> (>overload-types-decl|name fn|name overload|id)
+  (let [decl-name (-> (>overload-types-decl|name fn|name id)
                       (ufth/with-type-hint "[Ljava.lang.Object;"))
         form      (if (or (not= compilation-mode :test) (= lang :clj))
-                      (do (intern fn|ns-name decl-name
-                            (overload-types>arg-types !fn|types overload-index))
+                      (do (intern ns-name- decl-name (overload-types>arg-types !fn|types index))
                           nil)
                       `(def ~decl-name
                          (overload-types>arg-types
-                           ~(uid/qualify fn|ns-name fn|overload-types-name) ~overload-index)))]
+                           ~(uid/qualify fn|ns-name fn|overload-types-name) ~index)))]
     {:form form :name decl-name}))
 
 (defns- overload-basis-data>types+
@@ -605,7 +604,7 @@
                    (uc/map-indexed
                      (c/fn [i {:keys [arg-types output-type]}]
                        {:id          (+ i first-current-overload-id)
-                        :ns-sym      (ns-name *ns*)
+                        :ns-name     (ns-name *ns*)
                         :arg-types   arg-types
                         :output-type output-type})))
             ;; We need to maintain the `overload-types` ordering by type-specificity so the dynamic
@@ -657,9 +656,9 @@
     :clj  (let [direct-dispatch-data-seq
                   (->> !overload-queue
                        (uc/map
-                         (c/fn [{:as indexed-type-decl-datum :keys [arg-types id index overload]}]
+                         (c/fn [{:as type-decl-datum :keys [arg-types id index overload]}]
                            {:overload-types-decl
-                              (>overload-types-decl opts fn|globals arg-types id index !fn|types)
+                              (>overload-types-decl opts fn|globals type-decl-datum !fn|types)
                             :reify (overload>reify overload opts fn|globals id)})))
                 _ (uvec/alist-empty! !overload-queue)
                 form (->> direct-dispatch-data-seq
@@ -687,9 +686,9 @@
    arglist (s/vec-of simple-symbol?)]
   (->> overload-types-for-arity
        (uc/map+
-         (c/fn [{:as types-decl-datum :keys [arg-types ns-sym] overload|id :id}]
-          (let [overload-types-decl|name (>overload-types-decl|name ns-sym fn|name overload|id)
-                reify|name|qualified     (>reify-name-unhinted      ns-sym fn|name overload|id)]
+         (c/fn [{:as types-decl-datum :keys [arg-types] overload|id :id ns-name- :ns-name}]
+          (let [overload-types-decl|name (>overload-types-decl|name ns-name- fn|name overload|id)
+                reify|name|qualified     (>reify-name-unhinted      ns-name- fn|name overload|id)]
             [(>dynamic-dispatch|reify-call reify|name|qualified arglist)
              (->> arg-types
                   (uc/map-indexed
@@ -745,7 +744,7 @@
       fn|meta' (merge fn|meta {:quantum.core.type/type (uid/qualify fn|ns-name fn|type-name)})
       overload-types|form
         (when (= compilation-mode :test)
-          (->> !fn|types norx-deref :overload-types >form (uc/map (fn1 dissoc :ns-sym))))]
+          (->> !fn|types norx-deref :overload-types >form (uc/map (fn1 dissoc :ns-name))))]
     ;; TODO determine whether CLJS needs (update-in m [:jsdoc] conj "@param {...*} var_args")
     (if (= kind :extend-defn!)
         [overload-types|form
