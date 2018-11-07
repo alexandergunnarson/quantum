@@ -252,9 +252,9 @@
 
 ;; ----- ValueType ----- ;;
 
-(defns value
+(defn value
   "Creates a type whose extension is the singleton set containing only the value `v`."
-  [v _] (ValueType. uhash/default uhash/default nil v))
+  [v] (ValueType. uhash/default uhash/default nil v))
 
 (defns unvalue
   [t utr/type?]
@@ -337,32 +337,32 @@
 
 ;; ===== Type metadata (not for reactive types) ===== ;;
 
-(defns assume
+(defn assume
   "Denotes that, whatever the declared output type (to which `assume` is applied) of a function may
    be, it is assumed that the output satisfies that type."
-  [t utr/type? > utr/type?]
+  [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (update-meta t assoc :quantum.core.type/assume? true))
 
-(defns unassume [t utr/type? > utr/type?]
+(defn unassume [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (update-meta t dissoc :quantum.core.type/assume?))
 
-(defns *
+(defn *
   "Denote on a type that it must be enforced at runtime.
    For use with `defnt`."
-  [t utr/type? > utr/type?]
+  [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (update-meta t assoc :quantum.core.type/runtime? true))
 
-(defns ref
+(defn ref
   "Denote on a type that it must not be expanded to use primitive values.
    For use with `defnt`."
-  [t utr/type? > utr/type?]
+  [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (update-meta t assoc :quantum.core.type/ref? true))
 
-(defns unref [t utr/type? > utr/type?]
+(defn unref [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (update-meta t dissoc :quantum.core.type/ref?))
 
@@ -635,9 +635,9 @@
 
 (defns deducible [x type? > deducible-type?] (DeducibleType. (atom x))))
 
-(defns ?
+(defn ?
   "Computes a type denoting a nilable value satisfying `t`."
-  ([t utr/type? > utr/type?] (or nil? t)))
+  ([t #_utr/type? #_> #_utr/type?] (or nil? t)))
 
 ;; ===== Etc. ===== ;;
 

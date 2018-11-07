@@ -706,6 +706,7 @@
 (defns- handle-type-combinators
   [caller|node uast/node?, input-nodes _, out-type t/type? > t/type?]
   (condp = (:type caller|node)
+    ;; TODO this relies on spec instrumentation not happening for these fns
     (t/value t/isa?)     (apply-arg-type-combine t/isa?     input-nodes)
     (t/value t/value)    (apply-arg-type-combine t/value    input-nodes)
     (t/value t/or)       (apply-arg-type-combine t/or       input-nodes)
