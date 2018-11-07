@@ -590,8 +590,8 @@
                    (seq (>changed-unanalyzed-overloads
                           fn|globals overload-bases-data existing-overload-types))]
       (or existing-fn-types
-          {:fn|output-type-norx t/none?
-           :fn|type-norx (t/ftype fn|output-type-norx)
+          {:fn|output-type-norx fn|output-type-norx
+           :fn|type-norx        (t/ftype fn|output-type-norx)
            :overload-types []})
       (let [sorted-changed-unanalyzed-overloads
               (->> changed-unanalyzed-overloads
