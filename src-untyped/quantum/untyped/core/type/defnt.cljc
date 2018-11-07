@@ -119,7 +119,7 @@
 
 (s/def ::overload-basis|norx
   ;; None of these types should be reactive
-  (s/kv {:arg-types|basis   t/type?
+  (s/kv {:arg-types|basis   (s/vec-of t/type?)
          :output-type|basis t/type?
          ;; This is non-nil only for arglists with dependent types
          :types|split       (s/nilable ::overload-basis|types|split)
