@@ -37,7 +37,7 @@
            [quantum.untyped.core.error                 :as uerr
              :refer [err! TODO catch-all]]
            [quantum.untyped.core.fn                    :as ufn
-             :refer [fn1 rcomp <- fn->]]
+             :refer [fn1 rcomp <- fn-> fn->>]]
            [quantum.untyped.core.form
              :refer [$]]
            [quantum.untyped.core.form.generate.deftype :as udt]
@@ -83,7 +83,7 @@
 ;; ===== TODOS ===== ;;
 
 (declare
-  - create-logical-type nil? val?
+  - create-logical-type meta-or with-expand-meta-ors nil? val?
   and or val|by-class?)
 
 (defonce *type-registry (atom {}))
@@ -498,18 +498,10 @@
 (defns- create-logical-type
   [kind #{:or :and}, construct-fn _, type-pred _, type>args _
    comparison-denotes-supersession? c/fn?, type-args (fn-> count (c/>= 1)) > utr/type?]
-  (let [meta-ors     (->> type-args (uc/filter utr/meta-or-type?))
-        non-meta-ors (->> type-args (uc/remove utr/meta-or-type?))]
-    (if (empty? meta-ors)
-        (create-logical-type|non-meta-ors
-          kind construct-fn type-pred type>args comparison-denotes-supersession? non-meta-ors)
-        (->> meta-ors
-             (uc/map utr/meta-or-type>types)
-             (apply ucombo/cartesian-product)
-             (uc/map (fn [types]
-                       (create-logical-type|non-meta-ors kind construct-fn type-pred type>args
-                         comparison-denotes-supersession? (concat types non-meta-ors))))
-             meta-or))))
+  (with-expand-meta-ors type-args
+    (fn [types']
+      (create-logical-type|non-meta-ors
+        kind construct-fn type-pred type>args comparison-denotes-supersession? types'))))
 
 ;; ===== `t/ftype` ===== ;;
 
@@ -578,14 +570,14 @@
           (rx (f t (map utr/deref-when-reactive args)))
           (f t args))))
 
-(defn- input-type-seq|norx [t args]
+(defn- input-type-meta-or|norx [t args]
   (let [i|? (->> args (reducei (c/fn [_ t i] (when (c/= t :?) (reduced i))) nil))]
-    (->> (match-spec>type-data-seq t args)
-         (uc/map (c/fn [{:keys [input-types]}] (get input-types i|?))))))
-
-(defn- input-type-meta-or|norx [t args] (meta-or (input-type-seq|norx t args)))
-
-(defn- input-type*|norx [t args] (apply or (input-type-seq|norx t args)))
+    (with-expand-meta-ors args
+      (fn [args']
+        (->> args'
+             (match-spec>type-data-seq t)
+             (uc/map (c/fn [{:keys [input-types]}] (get input-types i|?)))
+             meta-or)))))
 
 (defns input-type-meta-or
   [t (us/or* utr/fn-type? utr/rx-type?) args _ #_(us/seq-of (us/or* #{:_ :?} type?))
@@ -593,12 +585,16 @@
    > type?]
   (input-or-output-type-handle-reactive input-type-meta-or|norx t args))
 
-(defns input-type*
+(defn- input-type-or|norx [t args]
+  (let [t' (input-type-meta-or|norx t args)]
+    (cond-> t' (utr/meta-or-type? t') (->> utr/meta-or-type>types (apply or)))))
+
+(defns input-type-or
   "Outputs the type of a specified input to a typed fn."
   [t (us/or* utr/fn-type? utr/rx-type?) args _ #_(us/seq-of (us/or* #{:_ :?} type?))
    | (->> args (filter #(c/= % :?)) count (c/= 1))
    > type?]
-  (input-or-output-type-handle-reactive input-type*|norx t args))
+  (input-or-output-type-handle-reactive input-type-or|norx t args))
 
 (defn input-type
   "Usage in arglist contexts:
@@ -613,22 +609,24 @@
        `reduce` when the third input satisfies `string?`."
   ([t & args] (err! "Can't use `input-type` outside of arglist contexts")))
 
-(defn- output-type-seq|norx [t args]
-  (->> (match-spec>type-data-seq t args)
-       (uc/map :output-type)))
-
-(defn- output-type-meta-or|norx [t args] (meta-or (output-type-seq|norx t args)))
-
-(defn- output-type*|norx [t args] (apply or (output-type-seq|norx t args)))
+(defn- output-type-meta-or|norx [t args]
+  (with-expand-meta-ors args
+    (fn->> (match-spec>type-data-seq t)
+           (uc/map :output-type)
+           meta-or)))
 
 (defns output-type-meta-or
   [t (us/or* utr/fn-type? utr/rx-type?) args (us/seq-of (us/or* #{:_} type?)) > type?]
   (input-or-output-type-handle-reactive output-type-meta-or|norx t args))
 
-(defns output-type*
+(defn- output-type-or|norx [t args]
+  (let [t' (output-type-meta-or|norx t args)]
+    (cond-> t' (utr/meta-or-type? t') (->> utr/meta-or-type>types (apply or)))))
+
+(defns output-type-or
   "Outputs the output type of a typed fn."
   [t (us/or* utr/fn-type? utr/rx-type?) args (us/seq-of (us/or* #{:_} type?)) > type?]
-  (input-or-output-type-handle-reactive output-type*|norx t args))
+  (input-or-output-type-handle-reactive output-type-or|norx t args))
 
 (defn output-type
   "Usage in arglist contexts:
@@ -666,6 +664,25 @@
 
 ;; ===== Etc. ===== ;;
 
+(defns- with-expand-meta-ors [type-args (us/seq-of type?), f c/fn?]
+  (if-not (seq-or utr/meta-or-type? type-args)
+    (f type-args)
+    (->> type-args
+         (uc/map (fn [t] (if (utr/meta-or-type? t)
+                             (utr/meta-or-type>types t)
+                             [t])))
+         (apply ucombo/cartesian-product)
+         (uc/map f)
+         meta-or)))
+
+(defns- meta-or|norx
+  > utr/type?
+  [types (us/seq-of utr/type?)]
+  (let [types' (->> types uc/distinct (sort-by identity utcomp/compare) (uc/dedupe-by utcomp/=))]
+    (ifs (empty? types')           empty-set
+         (-> types' count (c/= 1)) (first types')
+         (MetaOrType. uhash/default uhash/default nil types'))))
+
 (defns meta-or
   "Essentially a combinatorial combinator:
 
@@ -674,13 +691,13 @@
                   (t/or short? string?)
                   (t/or char?  string?)]))
 
-   Dedupes inputs that are `t/=`."
-  > utr/type?
-  [types (us/seq-of utr/type?)]
-  (let [types' (->> types (sort-by identity utcomp/compare) (uc/dedupe-by utcomp/=))]
-    (if (empty? types')
-        empty-set
-        (MetaOrType. uhash/default uhash/default nil types'))))
+   - Commutative.
+   - Dedupes inputs that are either structurally `=` or `t/=`.
+   - Does not handle nested `meta-or`s."
+   > utr/type?
+   [types (us/seq-of utr/type?)]
+   (quantum.untyped.core.analyze/pr! ["types" types])
+   (separate-rx-and-apply meta-or|norx types))
 
 ;; TODO figure out the best place to put this
 #?(:clj

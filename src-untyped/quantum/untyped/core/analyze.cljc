@@ -676,15 +676,17 @@
             {:form form :args-ct (count args-form)})
       (let [arg-nodes   (->> args-form (mapv #(analyze* env %)))
             caller|node (analyze* env caller|form)
-            caller|t     (-> arg-nodes first :type)
+            caller|t    (-> arg-nodes first :type)
+            arg-types   (->> arg-nodes rest (map :type) (map t/unvalue))
             _           (uref/set! !!dependent? true)
             t (case (name caller|form)
-                "input-type"
-                  (t/input-type-meta-or  caller|t (->> arg-nodes rest (map :type) (map t/unvalue)))
-                "output-type"
-                  (t/output-type-meta-or caller|t (->> arg-nodes rest (map :type) (map t/unvalue)))
-                "type"
-                  caller|t)]
+                "input-type"  (if (-> env :opts :split-types?)
+                                  (t/input-type-meta-or  caller|t arg-types)
+                                  (t/input-type-or       caller|t arg-types))
+                "output-type" (if (-> env :opts :split-types?)
+                                  (t/output-type-meta-or caller|t arg-types)
+                                  (t/output-type-or      caller|t arg-types))
+                "type"        caller|t)]
         (uast/call-node
           {:env             env
            :unanalyzed-form form

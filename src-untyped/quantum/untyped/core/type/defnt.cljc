@@ -274,16 +274,22 @@
           arg-types0 arg-types1)
         ct-comparison)))
 
-(c/defn- dedupe-type-data [on-dupe #_fn?, type-data #_(vec-of ::types-decl-datum)]
-  (reduce (let [*prev-datum (volatile! nil)]
+(c/defn- dedupe-type-data
+  "Performs both structural and `t/compare` deduplication."
+  [on-dupe #_fn?, type-data #_(vec-of ::types-decl-datum)]
+  (reduce (let [!prev-datum  (volatile! nil)
+                !unique-data (transient #{})]
             (c/fn [data {:as datum :keys [arg-types]}]
               (with-do
-                (ifs (nil? @*prev-datum)
+                (ifs (nil? @!prev-datum)
                        (conj data datum)
-                     (= uset/=ident (utcomp/compare-inputs (:arg-types @*prev-datum) arg-types))
-                       (on-dupe data @*prev-datum datum)
+                     (or (contains? !unique-data datum)
+                         (= uset/=ident
+                            (utcomp/compare-inputs (:arg-types @!prev-datum) arg-types)))
+                       (on-dupe data @!prev-datum datum)
                      (conj data datum))
-                (vreset! *prev-datum datum))))
+                (conj! !unique-data datum)
+                (vreset! !prev-datum datum))))
           []
           type-data))
 
