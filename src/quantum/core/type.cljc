@@ -19,7 +19,9 @@
   ;; Generators
   ? *, isa? isa?|direct
   ; fn ; TODO TYPED rename
-  ftype input-type output-type
+  ftype
+  input-type  input-type|meta-or  input-type|or
+  output-type output-type|meta-or output-type|or
   value unvalue
   ;; Combinators
   and or - if not

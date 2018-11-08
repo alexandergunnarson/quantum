@@ -674,18 +674,18 @@
            (-> args-form count (not= 1)))
       (err! "Incorrect number of args passed to dependent type call"
             {:form form :args-ct (count args-form)})
-      (let [arg-nodes   (->> args-form (mapv #(analyze* env %)))
-            caller|node (analyze* env caller|form)
-            caller|t    (-> arg-nodes first :type)
-            arg-types   (->> arg-nodes rest (map :type) (map t/unvalue))
+      (let [arg-nodes          (->> args-form (mapv #(analyze* env %)))
+            caller|node        (analyze* env caller|form)
+            caller|t           (-> arg-nodes first :type)
+            unvalued-arg-types (->> arg-nodes rest (map :type) (map t/unvalue))
             _           (uref/set! !!dependent? true)
             t (case (name caller|form)
                 "input-type"  (if (-> env :opts :split-types?)
-                                  (t/input-type-meta-or  caller|t arg-types)
-                                  (t/input-type-or       caller|t arg-types))
+                                  (t/input-type|meta-or  caller|t unvalued-arg-types)
+                                  (t/input-type|or       caller|t unvalued-arg-types))
                 "output-type" (if (-> env :opts :split-types?)
-                                  (t/output-type-meta-or caller|t arg-types)
-                                  (t/output-type-or      caller|t arg-types))
+                                  (t/output-type|meta-or caller|t unvalued-arg-types)
+                                  (t/output-type|or      caller|t unvalued-arg-types))
                 "type"        caller|t)]
         (uast/call-node
           {:env             env

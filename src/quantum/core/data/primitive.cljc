@@ -312,23 +312,23 @@
 #?(:clj ([a primitive?             , b (t/ref c?/icomparable?)] (.compareTo (box a) b))))
 
 (t/extend-defn! c?/comp<
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare (t/type a) :?)]
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]
     (c?/<  (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp<=
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]
     (c?/<= (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp=
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]
     (c?/=  (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp>=
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]
     (c?/>= (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp>
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
+  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]
     (c?/>  (c?/compare a b) 0)))
 
 (t/defn promote-type [a nil?, b nil?])

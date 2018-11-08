@@ -546,20 +546,28 @@
 (defns compare|out [x0 utr/fn-type?, x1 utr/fn-type? > uset/comparison?]
   (utcomp/compare (fn-type>output-type x0) (fn-type>output-type x1)))
 
-(defn- match-spec>type-data-seq [t args]
-  (let [type-data-seq (-> t utr/fn-type>arities (get (count args)))]
-    (->> args
+(defn- match-spec>type-data-seq
+  "Returns the type data of overloads that support the specified arg types."
+  [t match-spec]
+  (let [type-data-seq (-> t utr/fn-type>arities (get (count match-spec)))]
+    (->> match-spec
          (uc/map-indexed+ vector)
          (uc/remove (fn-> second #{:_ :?}))
          (educe
            (c/fn ([] type-data-seq)
                  ([type-data-seq'] type-data-seq')
-                 ([type-data-seq' [i|arg arg-type]]
-                   (c/or (->> type-data-seq'
-                              (uc/lfilter (c/fn [{:keys [input-types]}]
-                                            (utcomp/<= (get input-types i|arg) arg-type)))
-                              seq)
-                         (reduced nil))))))))
+                 ([type-data-seq' [i|arg arg-type-or-vec]]
+                   (let [compf    (if (sequential? arg-type-or-vec)
+                                      (first arg-type-or-vec)
+                                      utcomp/<=)
+                         arg-type (if (sequential? arg-type-or-vec)
+                                      (second arg-type-or-vec)
+                                      arg-type-or-vec)]
+                     (c/or (->> type-data-seq'
+                                (uc/lfilter (c/fn [{:keys [input-types]}]
+                                              (compf arg-type (get input-types i|arg))))
+                                seq)
+                           (reduced nil)))))))))
 
 (defn- input-or-output-type-handle-reactive [f t args]
   (if (utr/rx-type? t)
@@ -570,31 +578,33 @@
           (rx (f t (map utr/deref-when-reactive args)))
           (f t args))))
 
-(defn- input-type-meta-or|norx [t args]
-  (let [i|? (->> args (reducei (c/fn [_ t i] (when (c/= t :?) (reduced i))) nil))]
-    (with-expand-meta-ors args
-      (fn [args']
-        (->> args'
+(defn- input-type|meta-or|norx [t match-spec]
+  (let [i|? (->> match-spec (reducei (c/fn [_ t i] (when (c/= t :?) (reduced i))) nil))]
+    (with-expand-meta-ors match-spec
+      (fn [match-spec']
+        (->> match-spec'
              (match-spec>type-data-seq t)
              (uc/map (c/fn [{:keys [input-types]}] (get input-types i|?)))
              meta-or)))))
 
-(defns input-type-meta-or
-  [t (us/or* utr/fn-type? utr/rx-type?) args _ #_(us/seq-of (us/or* #{:_ :?} type?))
-   | (->> args (filter #(c/= % :?)) count (c/= 1))
+(defns input-type|meta-or
+  [t (us/or* utr/fn-type? utr/rx-type?)
+   match-spec _ #_(us/seq-of (us/or* #{:_ :?} (us/or* type? (us/tuple ifn? type?))))
+   | (->> match-spec (filter #(c/= % :?)) count (c/= 1))
    > type?]
-  (input-or-output-type-handle-reactive input-type-meta-or|norx t args))
+  (input-or-output-type-handle-reactive input-type|meta-or|norx t match-spec))
 
-(defn- input-type-or|norx [t args]
-  (let [t' (input-type-meta-or|norx t args)]
+(defn- input-type|or|norx [t match-spec]
+  (let [t' (input-type|meta-or|norx t match-spec)]
     (cond-> t' (utr/meta-or-type? t') (->> utr/meta-or-type>types (apply or)))))
 
-(defns input-type-or
+(defns input-type|or
   "Outputs the type of a specified input to a typed fn."
-  [t (us/or* utr/fn-type? utr/rx-type?) args _ #_(us/seq-of (us/or* #{:_ :?} type?))
-   | (->> args (filter #(c/= % :?)) count (c/= 1))
+  [t (us/or* utr/fn-type? utr/rx-type?)
+   match-spec _ #_(us/seq-of (us/or* #{:_ :?} (us/or* type? (us/tuple ifn? type?))))
+   | (->> match-spec (filter #(c/= % :?)) count (c/= 1))
    > type?]
-  (input-or-output-type-handle-reactive input-type-or|norx t args))
+  (input-or-output-type-handle-reactive input-type|or|norx t match-spec))
 
 (defn input-type
   "Usage in arglist contexts:
@@ -609,24 +619,24 @@
        `reduce` when the third input satisfies `string?`."
   ([t & args] (err! "Can't use `input-type` outside of arglist contexts")))
 
-(defn- output-type-meta-or|norx [t args]
+(defn- output-type|meta-or|norx [t args]
   (with-expand-meta-ors args
     (fn->> (match-spec>type-data-seq t)
            (uc/map :output-type)
            meta-or)))
 
-(defns output-type-meta-or
+(defns output-type|meta-or
   [t (us/or* utr/fn-type? utr/rx-type?) args (us/seq-of (us/or* #{:_} type?)) > type?]
-  (input-or-output-type-handle-reactive output-type-meta-or|norx t args))
+  (input-or-output-type-handle-reactive output-type|meta-or|norx t args))
 
-(defn- output-type-or|norx [t args]
-  (let [t' (output-type-meta-or|norx t args)]
+(defn- output-type|or|norx [t args]
+  (let [t' (output-type|meta-or|norx t args)]
     (cond-> t' (utr/meta-or-type? t') (->> utr/meta-or-type>types (apply or)))))
 
-(defns output-type-or
+(defns output-type|or
   "Outputs the output type of a typed fn."
   [t (us/or* utr/fn-type? utr/rx-type?) args (us/seq-of (us/or* #{:_} type?)) > type?]
-  (input-or-output-type-handle-reactive output-type-or|norx t args))
+  (input-or-output-type-handle-reactive output-type|or|norx t args))
 
 (defn output-type
   "Usage in arglist contexts:
@@ -693,10 +703,9 @@
 
    - Commutative.
    - Dedupes inputs that are either structurally `=` or `t/=`.
-   - Does not handle nested `meta-or`s."
+   - Does not currently handle nested `meta-or`s."
    > utr/type?
    [types (us/seq-of utr/type?)]
-   (quantum.untyped.core.analyze/pr! ["types" types])
    (separate-rx-and-apply meta-or|norx types))
 
 ;; TODO figure out the best place to put this

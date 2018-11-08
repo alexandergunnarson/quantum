@@ -49,6 +49,16 @@
 #?(:clj (def comparable? (t/isa? Comparable)))
 #?(:clj (def java-set?   (t/isa? java.util.Set)))
 
+;; ----- Simulated typed fns ----- ;;
+
+(defn fake-compare
+  {:quantum.core.type/type
+    (t/rx (t/ftype t/int? [t/nil?         t/nil?]
+                          [t/nil?         (t/ref t/val?)]
+                          [(t/ref t/val?) t/nil?]
+                          [t/long?        t/long?]))}
+  [])
+
 ;; ----- Example interface hierarchy ----- ;;
 
 (do
@@ -532,15 +542,34 @@
 (def reduce|type (t/ftype t/any? [fn?  t/any? string?   :> char-seq?]
                                  [ifn? t/any? java-set? :> comparable?]))
 
-(deftest test|input-type*
-  (is= (t/or string? symbol?)   (t/input-type* >namespace|type [:?]))
-  (is= (t/or string? java-set?) (t/input-type* reduce|type     [:_ :_ :?])))
-  (is= fn?                      (t/input-type* reduce|type     [:? :_ string?]))
+(deftest test|input-type|meta-or
+  (is= (t/input-type|meta-or
+         (-> #'fake-compare meta :quantum.core.type/type deref)
+         [(t/not (t/value nil)) :?])
+       ;; i.e., not `long?`
+       (t/meta-or [(t/value nil)]))
+  (is= (t/input-type|meta-or
+         (-> #'fake-compare meta :quantum.core.type/type deref)
+         [long? :?])
+       (t/meta-or
+          ;; Because arg0 is `long?`, is `t/<=` `(t/ref t/val?)`, and so this is from
+          ;; `[(t/ref t/val?) t/nil?]`
+         [(t/value nil)
+          long?]))
+  (is= (t/input-type|meta-or
+         (-> #'fake-compare meta :quantum.core.type/type deref)
+         [[= long?] :?])
+       (t/meta-or [long?])))
 
-(deftest test|output-type*
-  (is= string?                      (t/output-type* >namespace|type))
-  (is= (t/or char-seq? comparable?) (t/output-type* reduce|type))
-  (is= char-seq?                    (t/output-type* reduce|type [:_ :_ string?])))
+(deftest test|input-type|or
+  (is= (t/or string? symbol?)   (t/input-type|or >namespace|type [:?]))
+  (is= (t/or string? java-set?) (t/input-type|or reduce|type     [:_ :_ :?])))
+  (is= fn?                      (t/input-type|or reduce|type     [:? :_ string?]))
+
+(deftest test|output-type|or
+  (is= string?                      (t/output-type|or >namespace|type))
+  (is= (t/or char-seq? comparable?) (t/output-type|or reduce|type))
+  (is= char-seq?                    (t/output-type|or reduce|type [:_ :_ string?])))
 
 (deftest test|rx
   (testing "="

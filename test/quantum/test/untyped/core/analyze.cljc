@@ -31,14 +31,6 @@
                        [(t/ref t/val?) tt/char?]))}
   [])
 
-(defn- fake-compare
-  {:quantum.core.type/type
-    (t/rx (t/ftype t/int? [t/nil?         t/nil?]
-                          [t/nil?         (t/ref t/val?)]
-                          [(t/ref t/val?) t/nil?]
-                          [t/long?        t/long?]))}
-  [])
-
 (defn- transform-ana [ana]
   (->> ana
        (mapv #(vector (->> % :env :opts :arg-env deref (uc/map-vals' :type))
@@ -483,15 +475,26 @@
    (testing "input to `t/input-type` depends on another `t/input-type`; `t/output-type` depends on
              other `t/input-type`s"
      (is= (-> (self/analyze-arg-syms
-                '{a (t/input-type fake-compare :?         :_)
-                  b (t/input-type fake-compare (t/type a) :?)}
-                '(t/output-type fake-compare (type a) (type b)))
+                '{a (t/input-type tt/fake-compare :?         :_)
+                  b (t/input-type tt/fake-compare (t/type a) :?)}
+                '(t/output-type tt/fake-compare (t/type a) (t/type b)))
               transform-ana)
-          [[{'a (t/isa? Long)                 'b (t/isa? Long)}                 (t/isa? Integer)]
+          [;; Directly from `[t/long? t/long?]`
+           [{'a (t/isa? Long)                 'b (t/isa? Long)}                 (t/isa? Integer)]
+           ;; Because arg0 is `t/long?`, is `t/<=` `(t/ref t/val?)`, and so this is from
+           ;; `[(t/ref t/val?) t/nil?]`
+           [{'a (t/isa? Long)                 'b (t/value nil)}                 (t/isa? Integer)]
+           ;; Directly from `[t/nil? t/nil?]`
            [{'a (t/value nil)                 'b (t/value nil)}                 (t/isa? Integer)]
+           ;; Directly from `[t/nil? (t/ref t/val?)]`
            [{'a (t/value nil)                 'b (t/ref (t/not (t/value nil)))} (t/isa? Integer)]
-           [{'a (t/ref (t/not (t/value nil))) 'b (t/isa? Long)}                 (t/isa? Integer)]
-           [{'a (t/ref (t/not (t/value nil))) 'b (t/value nil)}                 (t/isa? Integer)]]))))
+           ;; Directly from `[(t/ref t/val?) t/nil?]`
+           [{'a (t/ref (t/not (t/value nil))) 'b (t/value nil)}                 (t/isa? Integer)]])
+     (is= (-> (self/analyze-arg-syms
+                '{a (t/input-type tt/fake-compare :?             :_)
+                  b (t/input-type tt/fake-compare [= (t/type a)] :?)}
+                '(t/output-type tt/fake-compare (t/type a) (t/type b)))
+              transform-ana)))))
 
 (defn- rx=* [a b]
   (if (and (utr/rx-type? a)
