@@ -46,6 +46,7 @@
            [quantum.untyped.core.logic
              :refer [fn-and ifs whenp->]]
            [quantum.untyped.core.numeric               :as unum]
+           [quantum.untyped.core.numeric.combinatorics :as ucombo]
            [quantum.untyped.core.print                 :as upr]
            [quantum.untyped.core.reducers              :as ur
              :refer [educe join reducei]]
@@ -74,6 +75,7 @@
               ProtocolType ClassType UnorderedType OrderedType
               ValueType
               FnType
+              MetaOrType
               ReactiveType])))
 
 (ucore/log-this-ns)
@@ -116,11 +118,6 @@
 
    The only macro in all of the core type predicates."
   [& body] `(rx* (urx/!rx ~@body) ($ ~(vec body)))))
-
-(defn- deref-when-reactive [x]
-  (if (utr/rx-type? x)
-      @x
-      x))
 
 (defns- separate-rx-and-apply
   "Only works for commutative functions."
@@ -228,7 +225,7 @@
            (err! "Not every element of finite type data is a type")
          (seq-or utr/rx-type? data)
            (rx (UnorderedType. uhash/default uhash/default nil
-                 (->> data (uc/map+ deref-when-reactive) uc/frequencies) nil))
+                 (->> data (uc/map+ utr/deref-when-reactive) uc/frequencies) nil))
          (UnorderedType. uhash/default uhash/default nil (frequencies data) nil)))
   ([datum _ & data _ > utr/unordered-type?] (unordered (cons datum data))))
 
@@ -246,7 +243,7 @@
            (err! "Not every element of finite type data is a type")
          (seq-or utr/rx-type? data)
            (rx (OrderedType. uhash/default uhash/default nil
-                 (->> data (uc/map deref-when-reactive)) nil))
+                 (->> data (uc/map utr/deref-when-reactive)) nil))
          (OrderedType. uhash/default uhash/default nil data nil)))
   ([datum _ & data _ > utr/ordered-type?] (ordered (cons datum data))))
 
@@ -485,7 +482,7 @@
     []
     type-args))
 
-(defns- create-logical-type
+(defns- create-logical-type|non-meta-ors
   [kind #{:or :and}, construct-fn _, type-pred _, type>args _
    comparison-denotes-supersession? c/fn?, type-args (fn-> count (c/>= 1)) > utr/type?]
   (let [simplified
@@ -497,6 +494,22 @@
     (if (-> simplified count (c/= 1))
         (first simplified)
         (construct-fn uhash/default uhash/default nil simplified (atom nil)))))
+
+(defns- create-logical-type
+  [kind #{:or :and}, construct-fn _, type-pred _, type>args _
+   comparison-denotes-supersession? c/fn?, type-args (fn-> count (c/>= 1)) > utr/type?]
+  (let [meta-ors     (->> type-args (uc/filter utr/meta-or-type?))
+        non-meta-ors (->> type-args (uc/remove utr/meta-or-type?))]
+    (if (empty? meta-ors)
+        (create-logical-type|non-meta-ors
+          kind construct-fn type-pred type>args comparison-denotes-supersession? non-meta-ors)
+        (->> meta-ors
+             (uc/map utr/meta-or-type>types)
+             (apply ucombo/cartesian-product)
+             (uc/map (fn [types]
+                       (create-logical-type|non-meta-ors kind construct-fn type-pred type>args
+                         comparison-denotes-supersession? (concat types non-meta-ors))))
+             meta-or))))
 
 ;; ===== `t/ftype` ===== ;;
 
@@ -552,24 +565,33 @@
                  ([type-data-seq' [i|arg arg-type]]
                    (c/or (->> type-data-seq'
                               (uc/lfilter (c/fn [{:keys [input-types]}]
-                                            (utcomp/<= arg-type (get input-types i|arg))))
+                                            (utcomp/<= (get input-types i|arg) arg-type)))
                               seq)
                          (reduced nil))))))))
 
 (defn- input-or-output-type-handle-reactive [f t args]
   (if (utr/rx-type? t)
       (if (seq-or utr/rx-type? args)
-          (rx (f @t (map deref-when-reactive args)))
+          (rx (f @t (map utr/deref-when-reactive args)))
           (rx (f @t args)))
       (if (seq-or utr/rx-type? args)
-          (rx (f t (map deref-when-reactive args)))
+          (rx (f t (map utr/deref-when-reactive args)))
           (f t args))))
 
-(defn- input-type*|norx [t args]
+(defn- input-type-seq|norx [t args]
   (let [i|? (->> args (reducei (c/fn [_ t i] (when (c/= t :?) (reduced i))) nil))]
     (->> (match-spec>type-data-seq t args)
-         (uc/lmap (c/fn [{:keys [input-types]}] (get input-types i|?)))
-         (apply or))))
+         (uc/map (c/fn [{:keys [input-types]}] (get input-types i|?))))))
+
+(defn- input-type-meta-or|norx [t args] (meta-or (input-type-seq|norx t args)))
+
+(defn- input-type*|norx [t args] (apply or (input-type-seq|norx t args)))
+
+(defns input-type-meta-or
+  [t (us/or* utr/fn-type? utr/rx-type?) args _ #_(us/seq-of (us/or* #{:_ :?} type?))
+   | (->> args (filter #(c/= % :?)) count (c/= 1))
+   > type?]
+  (input-or-output-type-handle-reactive input-type-meta-or|norx t args))
 
 (defns input-type*
   "Outputs the type of a specified input to a typed fn."
@@ -580,40 +602,43 @@
 
 (defn input-type
   "Usage in arglist contexts:
-   - `(t/input-type >namespace [:?])`
+   - `(t/input-type >namespace :?)`
      - Outputs a reactive type embodying the union of the possible types of the first input to
        `>namespace`.
-   - `(t/input-type reduce [:_ :_ :?])`
+   - `(t/input-type reduce :_ :_ :?)`
      - Outputs a reactive type embodying the union of the possible types of the third input to
        `reduce`.
-   - `(t/input-type reduce [:? :_ string?])`
+   - `(t/input-type reduce :? :_ string?)`
      - Outputs a reactive type embodying the union of the possible types of the first input to
        `reduce` when the third input satisfies `string?`."
-  ([t] (err! "Can't use `input-type` outside of arglist contexts"))
-  ([t args] (err! "Can't use `input-type` outside of arglist contexts")))
+  ([t & args] (err! "Can't use `input-type` outside of arglist contexts")))
 
-(defn- output-type*|norx [t args]
+(defn- output-type-seq|norx [t args]
   (->> (match-spec>type-data-seq t args)
-       (uc/lmap :output-type)
-       (apply or)))
+       (uc/map :output-type)))
+
+(defn- output-type-meta-or|norx [t args] (meta-or (output-type-seq|norx t args)))
+
+(defn- output-type*|norx [t args] (apply or (output-type-seq|norx t args)))
+
+(defns output-type-meta-or
+  [t (us/or* utr/fn-type? utr/rx-type?) args (us/seq-of (us/or* #{:_} type?)) > type?]
+  (input-or-output-type-handle-reactive output-type-meta-or|norx t args))
 
 (defns output-type*
   "Outputs the output type of a typed fn."
-  ([t (us/or* utr/fn-type? utr/rx-type?)]
-    (->> t utr/fn-type>arities (uc/mapcat+ val) (uc/map :output-type) (apply or)))
-  ([t (us/or* utr/fn-type? utr/rx-type?) args (us/seq-of (us/or* #{:_} type?)) > type?]
-    (input-or-output-type-handle-reactive output-type*|norx t args)))
+  [t (us/or* utr/fn-type? utr/rx-type?) args (us/seq-of (us/or* #{:_} type?)) > type?]
+  (input-or-output-type-handle-reactive output-type*|norx t args))
 
 (defn output-type
   "Usage in arglist contexts:
-   - `(t/output-type >namespace)`
-     - Outputs a reactive type embodying the union of the possible output types of `>namespace`
-       given any valid inputs at all
+   - `(t/output-type >namespace :any)`
+     - (TODO) Outputs a reactive type embodying the union of the possible output types of
+       `>namespace` given any valid inputs at all
    - `(t/output-type reduce [:_ :_ string?])`
      - Outputs a reactive type embodying the union of the possible output types of `reduce` when
        the third input satisfies `string?`."
-  ([t] (err! "Can't use `output-type` outside of arglist contexts"))
-  ([t args] (err! "Can't use `output-type` outside of arglist contexts")))
+  ([t & args] (err! "Can't use `output-type` outside of arglist contexts")))
 
 ;; ===== Dependent types ===== ;;
 
@@ -640,6 +665,22 @@
   ([t #_utr/type? #_> #_utr/type?] (or nil? t)))
 
 ;; ===== Etc. ===== ;;
+
+(defns meta-or
+  "Essentially a combinatorial combinator:
+
+   (t/or (t/meta-or [byte? short? char?]) string?)
+   -> (t/meta-or [(t/or byte?  string?)
+                  (t/or short? string?)
+                  (t/or char?  string?)]))
+
+   Dedupes inputs that are `t/=`."
+  > utr/type?
+  [types (us/seq-of utr/type?)]
+  (let [types' (->> types (sort-by identity utcomp/compare) (uc/dedupe-by utcomp/=))]
+    (if (empty? types')
+        empty-set
+        (MetaOrType. uhash/default uhash/default nil types'))))
 
 ;; TODO figure out the best place to put this
 #?(:clj
@@ -691,7 +732,7 @@
         (utr/or-type? t)
           (reduce (c/fn [classes' t'] (-type>classes t' include-classes-of-value-type? classes'))
             classes (utr/or-type>args t))
-        (c/= val?)
+        (c/= t val?)
           (-type>classes val|by-class? include-classes-of-value-type? classes)
         :else
           (err! "Not sure how to handle type" t)))
