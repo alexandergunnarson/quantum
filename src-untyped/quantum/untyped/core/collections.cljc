@@ -388,6 +388,30 @@
                       (conj! distincts x)))))
        boolean))
 
+(defn dedupe-by|tf
+  "Like `dedupe`'s transducer but is able to dedupe by comparing two inputs by `eq-f` rather than
+   only `=`."
+  [eq-f]
+  (fn [rf]
+    (let [pv (volatile! ::none)]
+      (fn ([] (rf))
+          ([result] (rf result))
+          ([result input]
+             (let [prior @pv]
+               (vreset! pv input)
+               (if (and (not (identical? prior ::none))
+                        (eq-f prior input))
+                   result
+                   (rf result input))))))))
+
+(def-transducer>eager dedupe-by dedupe-by|tf 1)
+
+(def dedupe|tf
+  (let [gen-rf (dedupe-by|tf =)]
+    (fn [] gen-rf)))
+
+(def-transducer>eager dedupe dedupe|tf 0)
+
 ;; ===== ZIPPER ===== ;;
 
 (defn default-zipper [coll]
