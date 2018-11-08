@@ -91,7 +91,12 @@
 
 (defn literal? [x] (instance? Literal x))
 
-(defrecord VectorNode [env #_::env, unanalyzed-form #_::t/form, form #_::t/form, type #_t/type?]
+(defrecord VectorNode
+  [env             #_::env
+   unanalyzed-form #_::t/form
+   form            #_::t/form
+   nodes           #_(s/seq-of node?)
+   type            #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -99,7 +104,14 @@
 
 (defn vector-node [m] (map->VectorNode m))
 
-(defrecord MapNode [env #_::env, unanalyzed-form #_::t/form, form #_::t/form, type #_t/type?]
+(defn vector-node? [x] (instance? VectorNode x))
+
+(defrecord MapNode
+  [env             #_::env
+   unanalyzed-form #_::t/form
+   form            #_::t/form
+   nodes           #_(s/seq-of (s/tuple node? node?))
+   type            #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -107,13 +119,22 @@
 
 (defn map-node [m] (map->MapNode m))
 
-(defrecord SetNode [env #_::env, unanalyzed-form #_::t/form, form #_::t/form, type #_t/type?]
+(defn map-node? [x] (instance? MapNode x))
+
+(defrecord SetNode
+  [env             #_::env
+   unanalyzed-form #_::t/form
+   form            #_::t/form
+   nodes           #_(s/seq-of node?)
+   type            #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (list `set-node (std-print-structure this))))
 
 (defn set-node [m] (map->SetNode m))
+
+(defn set-node? [x] (instance? SetNode x))
 
 (defrecord ClassValue [env #_::env, form #_simple-symbol?, value #_t/class?, type #_(t/value value)]
   INode

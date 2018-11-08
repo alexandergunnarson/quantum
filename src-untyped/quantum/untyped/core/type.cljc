@@ -896,18 +896,26 @@
       (isa? #?(:clj clojure.lang.PersistentList           :cljs cljs.core/List))))
 
 ;; Used by `quantum.untyped.core.analyze`
-(def +vector|built-in? (isa? #?(:clj  clojure.lang.PersistentVector
-                                :cljs cljs.core/PersistentVector)))
+(def +vector|built-in?
+  (isa? #?(:clj clojure.lang.PersistentVector :cljs cljs.core/PersistentVector)))
+
+;; Used by `quantum.untyped.core.analyze`
+(def +unordered-map|built-in?
+  (or (isa? #?(:clj clojure.lang.PersistentHashMap  :cljs cljs.core/PersistentHashMap))
+      (isa? #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core/PersistentArrayMap))))
 
 ;; Used by `quantum.untyped.core.analyze`
 (def +map|built-in?
-     (or (isa? #?(:clj clojure.lang.PersistentHashMap  :cljs cljs.core/PersistentHashMap))
-         (isa? #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core/PersistentArrayMap))
-         (isa? #?(:clj clojure.lang.PersistentTreeMap  :cljs cljs.core/PersistentTreeMap))))
+     (or +unordered-map|built-in?
+         (isa? #?(:clj clojure.lang.PersistentTreeMap :cljs cljs.core/PersistentTreeMap))))
+
+;; Used by `quantum.untyped.core.analyze`
+(def +unordered-set|built-in?
+  (isa? #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet)))
 
 ;; Used by `quantum.untyped.core.analyze`
 (def +set|built-in?
-  (or (isa? #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet))
+  (or +unordered-set|built-in?
       (isa? #?(:clj clojure.lang.PersistentTreeSet :cljs cljs.core/PersistentTreeSet))))
 
 ;; ===== Functions ===== ;;

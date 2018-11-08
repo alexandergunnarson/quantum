@@ -205,6 +205,7 @@
 
 (declare analyze* analyze-arg-syms*)
 
+;; TODO maybe just roll this into `analyze-seq|do`? Not sure yet
 (defns- analyze-non-map-seqable
   "Analyzes a non-map seqable."
   {:params-doc
@@ -220,32 +221,72 @@
       (update :form (fn-> persistent! (add-file-context-from form)))
       (update :body persistent!)))
 
+;; TODO abstract `analyze-unkeyed` and `analyze-map`
+(defns- analyze-unkeyed
+  [env ::env, form _, empty-v _, built-in-type t/type?, ordered-or-unordered fn?, >ast fn?
+   > uast/node?]
+  (let [{:keys [all-values? nodes]}
+          (->> form
+               (uc/map+ (fn [form-v] (analyze* env form-v)))
+               (educe (fn ([ret] ret)
+                          ([{:as ret :keys [all-values?]} v]
+                            (-> ret
+                                (cond-> (and all-values? (-> v :type utr/value-type?))
+                                  (assoc :all-values? true))
+                                (update :nodes conj v))))
+                      {:all-values? true :nodes []}))
+        t (if all-values?
+              (->> nodes
+                   (uc/map+ (fn-> :type t/unvalue))
+                   (join empty-v)
+                   t/value)
+              (t/and built-in-type (->> nodes (uc/map :type) ordered-or-unordered)))]
+    (>ast {:env             env
+           :unanalyzed-form form
+           :form            (->> nodes (uc/map+ :form) (join empty-v)
+                                 (<- (add-file-context-from form)))
+           :nodes           nodes
+           :type            t})))
+
+(defns- analyze-vector [env ::env, form _ > uast/vector-node?]
+  (analyze-unkeyed env form [] t/+vector|built-in? t/ordered uast/vector-node))
+
+(defns- analyze-set [env ::env, form _ > uast/set-node?]
+  (analyze-unkeyed env form #{} t/+unordered-set|built-in? t/unordered uast/set-node))
+
 (defns- analyze-map
   {:todo #{"Should we differentiate between array map and hash map here depen. on ct of inputs?"}}
   [env ::env, form _]
-  (let [{:keys [all-values? m]}
+  (let [{:keys [all-values? nodes]}
           (->> form
                (uc/map+ (fn [[form-k form-v]] [(analyze* env form-k) (analyze* env form-v)]))
                (educe (fn ([ret] ret)
-                          ([{:as ret :keys [all-values? m]} [k v]]
+                          ([{:as ret :keys [all-values?]} [k v :as kv]]
                             (-> ret
                                 (cond-> (and all-values?
                                              (-> k :type utr/value-type?)
                                              (-> v :type utr/value-type?))
                                   (assoc :all-values? true))
-                                (update :m assoc k v))))
-                      {:all-values? true :m {}}))
+                                (update :nodes conj kv))))
+                      {:all-values? true :nodes []}))
         t (if all-values?
-              (->> m (uc/map+ (fn [[k v]] [(-> k :type t/unvalue) (-> v :type t/unvalue)]))
-                     (join {})
-                     t/value)
-              (t/and t/+map|built-in? (->> m (uc/map (fn [[k v]] (t/ordered k v))) t/unordered)))]
-    (uast/map-node {:env             env
-                    :unanalyzed-form form
-                    :form            (->> m (uc/map+ (fn [[k v]] [(:form k) (:form v)]))
-                                            (join {})
-                                            (<- (add-file-context-from form)))
-                    :type            t})))
+              (->> nodes
+                   (uc/map+ (fn [[k v]] [(-> k :type t/unvalue) (-> v :type t/unvalue)]))
+                   (join {})
+                   t/value)
+              (t/and t/+map|built-in?
+                     (->> nodes
+                          (uc/map (fn [[k v]] (t/ordered (:type k) (:type v))))
+                          t/unordered)))]
+    (uast/map-node
+      {:env             env
+       :unanalyzed-form form
+       :form            (->> nodes
+                             (uc/map+ (fn [[k v]] [(:form k) (:form v)]))
+                             (join {})
+                             (<- (add-file-context-from form)))
+       :nodes           nodes
+       :type            t})))
 
 (defns- analyze-seq|do [env ::env, [_ _ & body|form _ :as form] _ > uast/do?]
   (if (empty? body|form)
@@ -904,18 +945,12 @@
 (defns- analyze* [env ::env, form _ > uast/node?]
   (when (> (uref/get (uref/update! !!analyze-depth inc)) 200)
     (throw (ex-info "Stack too deep" {:form form})))
-  (ifs (symbol? form)
-         (analyze-symbol env form)
-       (t/literal? form)
-         (uast/literal env form (t/value form))
-       (or (vector? form)
-           (set?    form))
-         ;; TODO use `uast/vector-node` and `uast/set-node`
-         (analyze-non-map-seqable env form (empty form) (fn stop [& [a b :as args]] (prl! args) (err! "STOP")))
-       (map? form)
-         (analyze-map env form)
-       (seq? form)
-         (analyze-seq env form)
+  (ifs (symbol?    form) (analyze-symbol env form)
+       (t/literal? form) (uast/literal   env form (t/value form))
+       (vector?    form) (analyze-vector env form)
+       (set?       form) (analyze-set    env form)
+       (map?       form) (analyze-map    env form)
+       (seq?       form) (analyze-seq    env form)
        (throw (ex-info "Unrecognized form" {:form form}))))
 
 (defns analyze

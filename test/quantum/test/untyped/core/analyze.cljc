@@ -494,7 +494,15 @@
                 '{a (t/input-type tt/fake-compare :?             :_)
                   b (t/input-type tt/fake-compare [= (t/type a)] :?)}
                 '(t/output-type tt/fake-compare (t/type a) (t/type b)))
-              transform-ana)))))
+              transform-ana)
+          [;; Directly from `[t/long? t/long?]`
+           [{'a (t/isa? Long)                 'b (t/isa? Long)}                 (t/isa? Integer)]
+           ;; Directly from `[t/nil? t/nil?]`
+           [{'a (t/value nil)                 'b (t/value nil)}                 (t/isa? Integer)]
+           ;; Directly from `[t/nil? (t/ref t/val?)]`
+           [{'a (t/value nil)                 'b (t/ref (t/not (t/value nil)))} (t/isa? Integer)]
+           ;; Directly from `[(t/ref t/val?) t/nil?]`
+           [{'a (t/ref (t/not (t/value nil))) 'b (t/value nil)}                 (t/isa? Integer)]]))))
 
 (defn- rx=* [a b]
   (if (and (utr/rx-type? a)

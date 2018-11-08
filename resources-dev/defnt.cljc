@@ -169,8 +169,6 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         -> the only one that can be < 0 is the -1
         -> (< a b)
     - Better analysis of compound literals
-      - Literal vectors need to be analyzed — (t/finite-of t/built-in-vector? a-type b-type ...)
-      - Literal sets need to be analyzed — (t/finite-of t/built-in-set? a-type b-type ...)
       - Literal seqs need to be better analyzed — (t/finite-of t/built-in-list? [ak-type av-type] ...)
     - Peformance analysis (this comes very much later)
       - We should be able to do complexity analysis. Similarly to how we can combine and manipulate
