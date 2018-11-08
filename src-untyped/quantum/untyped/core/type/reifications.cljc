@@ -414,6 +414,29 @@
                     (update :input-types vec)
                     (set/rename-keys {:output-type-pair :output-type}))))))
 
+;; ----- MetaOrType ----- ;;
+
+(udt/deftype MetaOrType
+  [#?(:clj ^int ^:! hash      :cljs ^number ^:! hash)
+   #?(:clj ^int ^:! hash-code :cljs ^number ^:! hash-code)
+   meta  #_(t/? ::meta)
+   types #_(t/seq-of form?)]
+  {PType          nil
+   ?Meta          {meta      ([this] meta)
+                   with-meta ([this meta'] (MetaOrType. hash hash-code meta' types))}
+   ?Hash          {hash      ([this] (uhash/caching-set-ordered! hash      MetaOrType types))
+                   hash-code ([this] (uhash/caching-set-code!    hash-code MetaOrType types))}
+   ?Equals        {=         ([this that #_any?]
+                               (or (== this that)
+                                   (and (instance? MetaOrType that)
+                                        (= types (.-types ^MetaOrType that)))))}
+   fedn/IOverride nil
+   fedn/IEdn      {-edn      ([this] (list 'quantum.untyped.core.type/meta-or types))}})
+
+(defn meta-or-type? [x] (instance? MetaOrType x))
+
+(defns meta-or-type>types [^MetaOrType t meta-or-type?] (.-types t))
+
 ;; ----- ReactiveType ----- ;;
 
 (declare rx-type?)
@@ -445,3 +468,5 @@
    fedn/IEdn      {-edn      ([this] (list `reactive-type {:value (urx/norx-deref this)}))}})
 
 (defn rx-type? [x] (instance? ReactiveType x))
+
+(defn deref-when-reactive [x] (if (rx-type? x) @x x))

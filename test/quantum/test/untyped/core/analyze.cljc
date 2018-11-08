@@ -22,6 +22,15 @@
 
 (defn- dummy {:quantum.core.type/type (t/rx (t/ftype nil [(t/or tt/short? tt/char?)]))} [])
 
+;; For this fn, the input types combine when applying `t/or` (`(t/or t/nil? t/val?)`)
+(defn- input-types-combine
+  {:quantum.core.type/type
+    (t/rx (t/ftype nil [t/nil?         tt/byte?]
+                       [t/nil?         tt/char?]
+                       [(t/ref t/val?) tt/byte?]
+                       [(t/ref t/val?) tt/char?]))}
+  [])
+
 (defn- transform-ana [ana]
   (->> ana
        (mapv #(vector (->> % :env :opts :arg-env deref (uc/map-vals' :type))
@@ -181,7 +190,7 @@
                   -> ERROR `a` not in environment and `a` already in queue; circular
                            dependency detected"
       (throws (self/analyze-arg-syms '{a (t/type b) b (t/type c) c (t/type a)} 't/any?)))
-    (testing "Combination/integration test"
+    (testing "Complex test for `t/type` and simple test for `t/input-type`"
       ;; This test overview was put up in ~30 minutes on 9/30/2018 during a seemingly random walk of
       ;; thoughts without any testing or research whatsoever that happened to actually coalesce
       ;; into a working, clear, simple algorithm for handling dependent types. Not sure if
@@ -415,14 +424,54 @@
                   transform-ana)
               ret)
          (is= (-> (self/analyze-arg-syms
-                     '{a (t/or tt/boolean? (t/type b))
-                       b (t/or tt/byte? (t/type d))
-                       c (t/input-type dummy :?)
-                       d (let [b (t/- tt/char? tt/long?)]
-                           (t/or tt/char? (t/type b) (t/type c)))}
-                     '(t/or (t/type b) (t/type d)))
+                    '{a (t/or tt/boolean? (t/type b))
+                      b (t/or tt/byte? (t/type d))
+                      c (t/input-type dummy :?)
+                      d (let [b (t/- tt/char? tt/long?)]
+                          (t/or tt/char? (t/type b) (t/type c)))}
+                    '(t/or (t/type b) (t/type d)))
                   transform-ana)
-              ret)))))
+              ret)))
+    ;; TODO add multiple tests for this (`input-types-combine`)
+    (testing "`t/input-type` + `t/type`"
+      (is= (-> (self/analyze-arg-syms
+                 '{a (t/or  (t/input-type input-types-combine :? (t/type c)) tt/string?)
+                   b (t/and (t/input-type input-types-combine :? (t/type c)) tt/long?)
+                   c (t/or tt/byte? tt/char?)}
+                 'tt/int?)
+               transform-ana)
+           [[{'a (t/or (t/value nil) (t/isa? String))
+              'b (t/isa? Long)
+              'c (t/isa? Byte)}
+             (t/isa? Integer)]
+            [{'a (t/or (t/value nil) (t/isa? String))
+              'b t/none?
+              'c (t/isa? Byte)}
+             (t/isa? Integer)]
+            [{'a (t/ref (t/not (t/value nil)))
+              'b (t/isa? Long)
+              'c (t/isa? Byte)}
+             (t/isa? Integer)]
+            [{'a (t/ref (t/not (t/value nil)))
+              'b t/none?
+              'c (t/isa? Byte)}
+             (t/isa? Integer)]
+            [{'a (t/or (t/value nil) (t/isa? String))
+              'b (t/isa? Long)
+              'c (t/isa? Character)}
+             (t/isa? Integer)]
+            [{'a (t/or (t/value nil) (t/isa? String))
+              'b t/none?
+              'c (t/isa? Character)}
+             (t/isa? Integer)]
+            [{'a (t/ref (t/not (t/value nil)))
+              'b (t/isa? Long)
+              'c (t/isa? Character)}
+             (t/isa? Integer)]
+            [{'a (t/ref (t/not (t/value nil)))
+              'b t/none?
+              'c (t/isa? Character)}
+             (t/isa? Integer)]]))))
 
 (defn- rx=* [a b]
   (if (and (utr/rx-type? a)

@@ -676,14 +676,15 @@
             {:form form :args-ct (count args-form)})
       (let [arg-nodes   (->> args-form (mapv #(analyze* env %)))
             caller|node (analyze* env caller|form)
-            caller|type (-> arg-nodes first :type)
-            t (if (= (name caller|form) "type")
-                  caller|type
-                  (let [args (->> arg-nodes rest (map :type) (map t/unvalue))]
-                    (case (name caller|form)
-                      "input-type"  (t/input-type*  caller|type args)
-                      "output-type" (t/output-type* caller|type args))))]
-        (uref/set! !!dependent? true)
+            caller|t     (-> arg-nodes first :type)
+            _           (uref/set! !!dependent? true)
+            t (case (name caller|form)
+                "input-type"
+                  (t/input-type-meta-or  caller|t (->> arg-nodes rest (map :type) (map t/unvalue)))
+                "output-type"
+                  (t/output-type-meta-or caller|t (->> arg-nodes rest (map :type) (map t/unvalue)))
+                "type"
+                  caller|t)]
         (uast/call-node
           {:env             env
            :unanalyzed-form form
@@ -973,20 +974,23 @@
 
 ;; TODO move?
 (defns type>split
-  "Only `t/or`s are splittable for now.
+  "Only `t/or`s and `t/meta-or`s are splittable for now.
    Reactive types are non-reactively derefed in order to make splitting possible."
   [t t/type? > (s/vec-of t/type?)]
   (let [t' (cond-> t (utr/rx-type? t) urx/norx-deref)]
-    (if (utr/or-type? t')
-        (utr/or-type>args t')
-        [t'])))
+    (ifs (utr/or-type?      t') (utr/or-type>args       t')
+         (utr/meta-or-type? t') (utr/meta-or-type>types t')
+         [t'])))
 
 (defns type>split+primitivized [t t/type? > (s/vec-of t/type?)]
-  (let [primitive-subtypes
-          (->> (t/type>primitive-subtypes (cond-> t (utr/rx-type? t) urx/norx-deref) false)
-               (sort-by sort-guide) ; For cleanliness and reproducibility in tests
-               vec)]
-    (uc/distinct (join primitive-subtypes (type>split t)))))
+  (let [t|norx  (cond-> t (utr/rx-type? t) urx/norx-deref)
+        t|split (type>split t|norx)
+        primitive-subtypes
+          (->> t|split
+               (uc/map+  #(t/type>primitive-subtypes % false))
+               (ur/educe uset/union)
+               (sort-by  sort-guide))] ; For cleanliness and reproducibility in tests
+    (uc/distinct (concat primitive-subtypes t|split))))
 
 (defn- enqueue-first-unanalyzed-if-queue-empty [env #_::env #_> #_::env]
   (cond-> env
@@ -1007,16 +1011,16 @@
          (>= (uref/get !!analyze-arg-syms|iter) analyze-arg-syms|max-iter)
            (err! "Max number of iterations reached for `analyze-arg-syms`"
                  {:n (uref/get !!analyze-arg-syms|iter)})
-         (let [_ (assert (not (empty? arglist-syms|queue)))
-               arg-sym (uc/last arglist-syms|queue)
+         (let [_             (assert (not (empty? arglist-syms|queue)))
+               arg-sym       (uc/last arglist-syms|queue)
                arg-type-form (arg-sym->arg-type-form arg-sym)
-               analyzed (-> (analyze env arg-type-form) (update :type t/unvalue))
-               env-analyzed (-> analyzed :env
-                                (update-in [:opts :arglist-syms|queue]      disj arg-sym)
-                                (update-in [:opts :arglist-syms|unanalyzed] disj arg-sym))
-               t-split (if split-types?
-                           (-> analyzed :type type>split+primitivized)
-                           [(:type analyzed)])]
+               analyzed      (-> (analyze env arg-type-form) (update :type t/unvalue))
+               env-analyzed  (-> analyzed :env
+                                 (update-in [:opts :arglist-syms|queue]      disj arg-sym)
+                                 (update-in [:opts :arglist-syms|unanalyzed] disj arg-sym))
+               t-split       (if split-types?
+                                 (-> analyzed :type type>split+primitivized)
+                                 [(:type analyzed)])]
            (if (-> t-split count (= 1))
                (recur (-> env-analyzed
                           (update-in [:opts :arg-env]

@@ -551,4 +551,21 @@
                    #(t/value 1)
                    #(t/value "abc")
                    #(t/or (t/isa? #?(:clj Double :cljs js/Number)) (t/value "abc"))]]
-      (= (t/rx (gen-t)) (t/rx (gen-t))))))
+      (is= @(t/rx (gen-t)) @(t/rx (gen-t))))))
+
+(deftest test|meta-or
+  (is= (t/meta-or [string? string?])
+       (t/meta-or [string?]))
+  (is= (t/or (t/meta-or [byte? short? char?]) string?)
+       (t/meta-or [(t/or byte?  string?)
+                   (t/or short? string?)
+                   (t/or char?  string?)]))
+  (is= (t/or (t/meta-or [long? t/any?])
+             (t/meta-or [byte? short? char?]))
+       (t/meta-or [(t/or long?  byte?)
+                   (t/or long?  short?)
+                   (t/or long?  char?)
+                   t/any?]))
+  (is= (t/and (t/meta-or [long? t/any?])
+              (t/meta-or [byte? short? char?]))
+       (t/meta-or [t/none? byte? short? char?])))

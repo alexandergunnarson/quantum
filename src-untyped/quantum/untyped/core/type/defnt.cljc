@@ -44,7 +44,6 @@
       :refer [fn-or fn= if-not-let ifs]]
     [quantum.untyped.core.loops
       :refer [reduce-2]]
-    [quantum.untyped.core.numeric.combinatorics :as ucombo]
     [quantum.untyped.core.reducers              :as ur
       :refer [educe educei reducei]]
     [quantum.untyped.core.refs                  :as uref
