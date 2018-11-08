@@ -1006,7 +1006,8 @@
            [{:env           env
              :out-type-node (if (t/type? out-type-or-form)
                                 (uast/literal env nil out-type-or-form) ; a simulated AST node
-                                (-> (analyze env out-type-or-form) (update :type t/unvalue)))
+                                (-> (analyze env out-type-or-form)
+                                    (update :type (fn-> t/unvalue urx/?norx-deref))))
              :dependent?    (uref/get !!dependent?)}]
          (>= (uref/get !!analyze-arg-syms|iter) analyze-arg-syms|max-iter)
            (err! "Max number of iterations reached for `analyze-arg-syms`"

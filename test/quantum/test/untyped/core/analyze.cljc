@@ -31,6 +31,14 @@
                        [(t/ref t/val?) tt/char?]))}
   [])
 
+(defn- fake-compare
+  {:quantum.core.type/type
+    (t/rx (t/ftype t/int? [t/nil?         t/nil?]
+                          [t/nil?         (t/ref t/val?)]
+                          [(t/ref t/val?) t/nil?]
+                          [t/long?        t/long?]))}
+  [])
+
 (defn- transform-ana [ana]
   (->> ana
        (mapv #(vector (->> % :env :opts :arg-env deref (uc/map-vals' :type))
@@ -440,11 +448,11 @@
                    c (t/or tt/byte? tt/char?)}
                  'tt/int?)
                transform-ana)
-           [[{'a (t/or (t/value nil) (t/isa? String))
+           [[{'a (t/or (t/isa? String) (t/value nil))
               'b (t/isa? Long)
               'c (t/isa? Byte)}
              (t/isa? Integer)]
-            [{'a (t/or (t/value nil) (t/isa? String))
+            [{'a (t/or (t/isa? String) (t/value nil))
               'b t/none?
               'c (t/isa? Byte)}
              (t/isa? Integer)]
@@ -456,11 +464,11 @@
               'b t/none?
               'c (t/isa? Byte)}
              (t/isa? Integer)]
-            [{'a (t/or (t/value nil) (t/isa? String))
+            [{'a (t/or (t/isa? String) (t/value nil))
               'b (t/isa? Long)
               'c (t/isa? Character)}
              (t/isa? Integer)]
-            [{'a (t/or (t/value nil) (t/isa? String))
+            [{'a (t/or (t/isa? String) (t/value nil))
               'b t/none?
               'c (t/isa? Character)}
              (t/isa? Integer)]
@@ -471,7 +479,19 @@
             [{'a (t/ref (t/not (t/value nil)))
               'b t/none?
               'c (t/isa? Character)}
-             (t/isa? Integer)]]))))
+             (t/isa? Integer)]]))
+   (testing "input to `t/input-type` depends on another `t/input-type`; `t/output-type` depends on
+             other `t/input-type`s"
+     (is= (-> (self/analyze-arg-syms
+                '{a (t/input-type fake-compare :?         :_)
+                  b (t/input-type fake-compare (t/type a) :?)}
+                '(t/output-type fake-compare (type a) (type b)))
+              transform-ana)
+          [[{'a (t/isa? Long)                 'b (t/isa? Long)}                 (t/isa? Integer)]
+           [{'a (t/value nil)                 'b (t/value nil)}                 (t/isa? Integer)]
+           [{'a (t/value nil)                 'b (t/ref (t/not (t/value nil)))} (t/isa? Integer)]
+           [{'a (t/ref (t/not (t/value nil))) 'b (t/isa? Long)}                 (t/isa? Integer)]
+           [{'a (t/ref (t/not (t/value nil))) 'b (t/value nil)}                 (t/isa? Integer)]]))))
 
 (defn- rx=* [a b]
   (if (and (utr/rx-type? a)
