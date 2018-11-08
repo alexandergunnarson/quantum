@@ -87,6 +87,10 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   [3] - Direct dispatch needs to actually work correctly in typed contexts
   [ ] - Probably should disallow recursive type references, including:
         `(t/defn f [x (t/input-type f ...)])`
+  [ ] - `t/ref` and `t/assume` need to be combined correctly. E.g. (t/and (t/ref ...) ...) means the
+        whole thing should be `t/ref`, while `(t/or (t/ref ...) (...))` does not mean the metadata
+        is transferred. Probably `t/assume` should be combined in the same way.
+        - What about `(t/and (t/or t/long? (t/ref t/byte?)) pos?)` ?
   [ ] - t/value-of
         - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
   [ ] - (comp/t== x)
