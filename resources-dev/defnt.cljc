@@ -157,6 +157,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - (t/seq vector? [   [0 (t/value :a)]    [1 (t/value :b)]     [2 (t/value :c)]])
           - (t/kv  vector? { 0 [0 (t/value :a)]  1 [1 (t/value :b)]   2 [2 (t/value :c)]})
         - and so on ad infinitum. Therefore we reserve `t/kv` for `(t/and t/lookup? (t/not indexed?))`.
+  - Probably comparing a protocol with something else should be a matter for reactivity since
+    protocols can be extended
+    - TODO CLJS needs to implement it better
   - Analysis/Optimization
     - `(p/nil? ...)` should probably be inlined to `(?/== ... nil)` rather than using the overhead of the
       deftype

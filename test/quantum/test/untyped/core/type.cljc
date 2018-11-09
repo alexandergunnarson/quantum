@@ -127,6 +127,11 @@
   nil    (a-protocol-all [this])
   Object (a-protocol-all [this]))
 
+(defprotocol AProtocolCharSeq (a-protocol-char-seq [this]))
+
+(extend-protocol AProtocolCharSeq
+  java.lang.CharSequence (a-protocol-char-seq [this]))
+
 (defprotocol AProtocolString (a-protocol-string [this]))
 
 (extend-protocol AProtocolString

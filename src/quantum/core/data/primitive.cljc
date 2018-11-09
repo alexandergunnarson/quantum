@@ -339,7 +339,8 @@
               (t/input-type >max-safe-integer-value :?))
     t1 (t/and (t/input-type >min-safe-integer-value :?)
               (t/input-type >max-safe-integer-value :?))]
-    (let [t0-min (>min-safe-integer-value t0)
+    t0
+    #_(let [t0-min (>min-safe-integer-value t0)
           t1-min (>min-safe-integer-value t1)
           t0-max (>max-safe-integer-value t0)
           t1-max (>max-safe-integer-value t1)]

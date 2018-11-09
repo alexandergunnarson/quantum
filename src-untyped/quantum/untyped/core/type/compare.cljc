@@ -10,6 +10,7 @@
               :refer [seq-and seq-or]]
             ;; TODO remove this dependency
             [quantum.untyped.core.classes           :as uclass]
+            [quantum.untyped.core.collections       :as uc]
             [quantum.untyped.core.compare           :as ucomp
               :refer [==]]
             [quantum.untyped.core.core              :as ucore]
@@ -24,6 +25,7 @@
               :refer [fn' fn1]]
             [quantum.untyped.core.logic
               :refer [ifs]]
+            [quantum.untyped.core.spec              :as us]
             ;; TODO remove this dependency
             [quantum.untyped.core.type.core         :as utcore]
             [quantum.untyped.core.type.reifications :as utr
@@ -177,18 +179,22 @@
 
 ;; ----- OrType ----- ;;
 
-;; TODO performance can be improved here by doing fewer comparisons
-;; Possibly look at `quantum.untyped.core.type.defnt/compare-args-types` for reference?
-(defns- compare|or+or [^OrType t0 or-type?, ^OrType t1 or-type? > comparison?]
-  (let [l (->> t0 .-args (seq-and (fn1 < t1)))
-        r (->> t1 .-args (seq-and (fn1 < t0)))]
+(defns- compare|or+or-like
+  [ts0 (us/seq-of type?), ts1 (us/seq-of type?), <ts0 fn?, <ts1 fn?, <>ts1 fn? > comparison?]
+  (let [l (->> ts0 (seq-and <ts1))
+        r (->> ts1 (seq-and <ts0))]
     (if l
         (if r =ident <ident)
         (if r
             >ident
-            (if (->> t0 .-args (seq-and (fn1 <> t1)))
+            (if (->> ts0 (seq-and <>ts1))
                 <>ident
                 ><ident)))))
+
+;; TODO performance can be improved here by doing fewer comparisons
+;; Possibly look at `quantum.untyped.core.type.defnt/compare-args-types` for reference?
+(defns- compare|or+or [^OrType t0 or-type?, ^OrType t1 or-type? > comparison?]
+  (compare|or+or-like (.-args t0) (.-args t1) (fn1 < t0) (fn1 < t1) (fn1 <> t1)))
 
 (defns- compare|or+and [^OrType t0 or-type?, ^AndType t1 and-type? > comparison?]
   (let [r (->> t1 .-args (seq-and (fn1 < t0)))]
@@ -213,10 +219,62 @@
 
 ;; ----- ProtocolType ----- ;;
 
-(defns- compare|protocol+protocol [t0 protocol-type?, t1 protocol-type? > comparison?]
-  (if (== (utr/protocol-type>protocol t0) (utr/protocol-type>protocol t1))
-      =ident
-      <>ident))
+(declare compare|class+class*)
+
+(defn- compare|protocol+protocol|full-scan [p0 #_protocol?, p1 #_protocol? #_> #_comparison?]
+  ;; We treat `extenders` as `t/or` without actually creating a `t/or`
+  (let [ts0 (extenders p0)
+        ts1 (extenders p1)
+        gen-compare (fn [t ident ts] (->> ts (uc/map+ (fn [t*] (compare|class+class* t t*)))
+                                             (seq-or (fn1 c/= ident))))
+        <ts0  (fn [t] (gen-compare t  <ident ts0))
+        <ts1  (fn [t] (gen-compare t  <ident ts1))
+        <>ts1 (fn [t] (gen-compare t <>ident ts1))]
+    (compare|or+or-like ts0 ts1 <ts0 <ts1 <>ts1)))
+
+(defns- compare|protocol+protocol
+  "Protocols cannot extend protocols."
+  [t0 protocol-type?, t1 protocol-type? > comparison?]
+  (let [p0 (utr/protocol-type>protocol t0)
+        p1 (utr/protocol-type>protocol t1)]
+    (if (== p0 p1)
+        =ident
+        ;; TODO use clojure.logic / match
+        #?(:clj  (ifs (-> p0 :impls empty?)
+                        (if (-> p1 :impls empty?) =ident <>ident)
+                      (-> p1 :impls empty?)
+                        <>ident
+                      (-> p0 :impls (contains? Object))
+                        (if (-> p1 :impls (contains? Object))
+                            (if (-> p0 :impls (contains? nil))
+                                (if (-> p1 :impls (contains? nil)) =ident >ident)
+                                (if (-> p1 :impls (contains? nil)) <ident =ident))
+                            (if (-> p0 :impls (contains? nil))
+                                >ident
+                                (if (-> p1 :impls (contains? nil))
+                                    (if (-> p1 :impls count (c/> 1)) ><ident <>ident)
+                                    >ident)))
+                      (-> p1 :impls (contains? Object))
+                        (if (-> p0 :impls (contains? nil))
+                            (if (-> p1 :impls (contains? nil))
+                                <ident
+                                (if (-> p0 :impls count (c/> 1)) ><ident <>ident))
+                            <ident)
+                      (-> p0 :impls (contains? nil))
+                        (if (-> p0 :impls count (c/> 1))
+                            (compare|protocol+protocol|full-scan p0 p1)
+                            <>ident)
+                      (-> p1 :impls (contains? nil))
+                        (if (-> p1 :impls count (c/> 1))
+                            (compare|protocol+protocol|full-scan p0 p1)
+                            <>ident)
+                      (compare|protocol+protocol|full-scan p0 p1))
+           ;; TODO CLJS — also incorporate `default` etc.
+           ;; Simplistic but we don't have safe insight into what has been extended vs. not
+           :cljs <>ident))))
+
+(defns- compare|protocol+class [t0 protocol-type?, t1 class-type? > comparison?]
+  )
 
 ;; TODO transition to `compare|protocol+value` when stable
 (defns- compare|value+protocol [t0 value-type?, t1 protocol-type? > comparison?]
@@ -291,100 +349,99 @@
 
 ;; ===== Dispatch ===== ;;
 
-;; TODO take away var indirection once done
 (def- compare|dispatch
   (let [inverted (fn [f] (fn [t0 t1] (uset/invert-comparison (f t1 t0))))]
     {UniversalSetType
-       {UniversalSetType #'fn=
-        EmptySetType     #'compare|universal+empty
-        NotType          #'compare|universal+not
-        OrType           #'compare|universal+or
-        AndType          #'compare|universal+and
-        Expression       #'compare|universal+expr
-        ProtocolType     #'compare|universal+protocol
-        ClassType        #'compare|universal+class
-        ValueType        #'compare|universal+value}
+       {UniversalSetType fn=
+        EmptySetType     compare|universal+empty
+        NotType          compare|universal+not
+        OrType           compare|universal+or
+        AndType          compare|universal+and
+        Expression       compare|universal+expr
+        ProtocolType     compare|universal+protocol
+        ClassType        compare|universal+class
+        ValueType        compare|universal+value}
      EmptySetType
-       {UniversalSetType (inverted #'compare|universal+empty)
-        EmptySetType     #'fn=
-        NotType          #'compare|empty+not
-        OrType           #'compare|empty+or
-        AndType          #'compare|empty+and
-        Expression       #'compare|empty+expr
-        ProtocolType     #'compare|empty+protocol
-        ClassType        #'compare|empty+class
-        ValueType        #'compare|empty+value}
+       {UniversalSetType (inverted compare|universal+empty)
+        EmptySetType     fn=
+        NotType          compare|empty+not
+        OrType           compare|empty+or
+        AndType          compare|empty+and
+        Expression       compare|empty+expr
+        ProtocolType     compare|empty+protocol
+        ClassType        compare|empty+class
+        ValueType        compare|empty+value}
      NotType
-       {UniversalSetType (inverted #'compare|universal+not)
-        EmptySetType     (inverted #'compare|empty+not)
-        NotType          #'compare|not+not
-        OrType           #'compare|not+or
-        AndType          #'compare|not+and
-        Expression       #'fn>< ; TODO not entirely true
-        ProtocolType     #'compare|not+protocol
-        ClassType        #'compare|not+class
-        ValueType        #'compare|not+value}
+       {UniversalSetType (inverted compare|universal+not)
+        EmptySetType     (inverted compare|empty+not)
+        NotType          compare|not+not
+        OrType           compare|not+or
+        AndType          compare|not+and
+        Expression       fn>< ; TODO not entirely true
+        ProtocolType     compare|not+protocol
+        ClassType        compare|not+class
+        ValueType        compare|not+value}
      OrType
-       {UniversalSetType (inverted #'compare|universal+or)
-        EmptySetType     (inverted #'compare|empty+or)
-        NotType          (inverted #'compare|not+or)
-        OrType           #'compare|or+or
-        AndType          #'compare|or+and
-        Expression       #'fn>< ; TODO not entirely true
-        ProtocolType     #'compare|todo
-        ClassType        (inverted #'compare|class+or)
-        ValueType        (inverted #'compare|value+or)}
+       {UniversalSetType (inverted compare|universal+or)
+        EmptySetType     (inverted compare|empty+or)
+        NotType          (inverted compare|not+or)
+        OrType           compare|or+or
+        AndType          compare|or+and
+        Expression       fn>< ; TODO not entirely true
+        ProtocolType     compare|todo
+        ClassType        (inverted compare|class+or)
+        ValueType        (inverted compare|value+or)}
      AndType
-       {UniversalSetType (inverted #'compare|universal+and)
-        EmptySetType     (inverted #'compare|empty+and)
-        NotType          #'compare|todo
-        OrType           (inverted #'compare|or+and)
-        AndType          #'compare|and+and
-        Expression       #'fn>< ; TODO not entirely true
-        ProtocolType     #'compare|todo
-        ClassType        (inverted #'compare|class+and)
-        ValueType        (inverted #'compare|value+and)}
+       {UniversalSetType (inverted compare|universal+and)
+        EmptySetType     (inverted compare|empty+and)
+        NotType          compare|todo
+        OrType           (inverted compare|or+and)
+        AndType          compare|and+and
+        Expression       fn>< ; TODO not entirely true
+        ProtocolType     compare|todo
+        ClassType        (inverted compare|class+and)
+        ValueType        (inverted compare|value+and)}
      ;; TODO review this
      Expression
-       {UniversalSetType (inverted #'compare|universal+expr)
-        EmptySetType     (inverted #'compare|empty+expr)
-        NotType          #'fn>< ; TODO not entirely true
-        OrType           #'fn>< ; TODO not entirely true
-        AndType          #'fn>< ; TODO not entirely true
-        Expression       #'compare|expr+expr
-        ProtocolType     #'fn>< ; TODO not entirely true
-        ClassType        #'fn>< ; TODO not entirely true
-        ValueType        #'compare|expr+value}
+       {UniversalSetType (inverted compare|universal+expr)
+        EmptySetType     (inverted compare|empty+expr)
+        NotType          fn>< ; TODO not entirely true
+        OrType           fn>< ; TODO not entirely true
+        AndType          fn>< ; TODO not entirely true
+        Expression       compare|expr+expr
+        ProtocolType     fn>< ; TODO not entirely true
+        ClassType        fn>< ; TODO not entirely true
+        ValueType        compare|expr+value}
      ProtocolType
-       {UniversalSetType (inverted #'compare|universal+protocol)
-        EmptySetType     (inverted #'compare|empty+protocol)
-        NotType          (inverted #'compare|not+protocol)
-        OrType           #'compare|todo
-        AndType          #'compare|todo
-        Expression       #'fn>< ; TODO not entirely true
-        ProtocolType     #'compare|protocol+protocol
-        ClassType        #'compare|todo
-        ValueType        (inverted #'compare|value+protocol)}
+       {UniversalSetType (inverted compare|universal+protocol)
+        EmptySetType     (inverted compare|empty+protocol)
+        NotType          (inverted compare|not+protocol)
+        OrType           compare|todo
+        AndType          compare|todo
+        Expression       fn>< ; TODO not entirely true
+        ProtocolType     compare|protocol+protocol
+        ClassType        compare|protocol+class
+        ValueType        (inverted compare|value+protocol)}
      ClassType
-       {UniversalSetType (inverted #'compare|universal+class)
-        EmptySetType     (inverted #'compare|empty+class)
-        NotType          (inverted #'compare|not+class)
-        OrType           #'compare|class+or
-        AndType          #'compare|class+and
-        Expression       #'fn>< ; TODO not entirely true
-        ProtocolType     #'compare|todo
-        ClassType        #'compare|class+class
-        ValueType        #'compare|class+value}
+       {UniversalSetType (inverted compare|universal+class)
+        EmptySetType     (inverted compare|empty+class)
+        NotType          (inverted compare|not+class)
+        OrType           compare|class+or
+        AndType          compare|class+and
+        Expression       fn>< ; TODO not entirely true
+        ProtocolType     (inverted compare|protocol+class)
+        ClassType        compare|class+class
+        ValueType        compare|class+value}
      ValueType
-       {UniversalSetType (inverted #'compare|universal+value)
-        EmptySetType     (inverted #'compare|empty+value)
-        NotType          (inverted #'compare|not+value)
-        OrType           #'compare|value+or
-        AndType          #'compare|value+and
-        Expression       (inverted #'compare|expr+value)
-        ProtocolType     #'compare|value+protocol
-        ClassType        (inverted #'compare|class+value)
-        ValueType        #'compare|value+value}}))
+       {UniversalSetType (inverted compare|universal+value)
+        EmptySetType     (inverted compare|empty+value)
+        NotType          (inverted compare|not+value)
+        OrType           compare|value+or
+        AndType          compare|value+and
+        Expression       (inverted compare|expr+value)
+        ProtocolType     compare|value+protocol
+        ClassType        (inverted compare|class+value)
+        ValueType        compare|value+value}}))
 
 ;; ===== Operators ===== ;;
 
