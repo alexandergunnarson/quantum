@@ -12,7 +12,8 @@
               <a0 <a1 <b0 <b1
               ><0 ><1 ><2
 
-              AProtocolAll AProtocolNone AProtocolString AProtocolNonNil AProtocolOnlyNil
+              AProtocolAll AProtocolCharSeq AProtocolString AProtocolNonNil AProtocolOnlyNil
+              AProtocolNone
               protocol-types
 
               Uc C A I P]]
@@ -616,20 +617,45 @@
       (test-comparison  =ident (t/isa? AProtocolAll)     (t/isa? AProtocolAll))
       (test-comparison  <ident (t/isa? AProtocolNonNil)  (t/isa? AProtocolAll))
       (test-comparison  <ident (t/isa? AProtocolOnlyNil) (t/isa? AProtocolAll))
+      (test-comparison  <ident (t/isa? AProtocolCharSeq) (t/isa? AProtocolAll))
       (test-comparison  <ident (t/isa? AProtocolString)  (t/isa? AProtocolAll))
       (test-comparison <>ident (t/isa? AProtocolNone)    (t/isa? AProtocolAll))
       (test-comparison  =ident (t/isa? AProtocolNonNil)  (t/isa? AProtocolNonNil))
       (test-comparison <>ident (t/isa? AProtocolOnlyNil) (t/isa? AProtocolNonNil))
+      (test-comparison  <ident (t/isa? AProtocolCharSeq) (t/isa? AProtocolNonNil))
       (test-comparison  <ident (t/isa? AProtocolString)  (t/isa? AProtocolNonNil))
       (test-comparison <>ident (t/isa? AProtocolNone)    (t/isa? AProtocolNonNil))
       (test-comparison  =ident (t/isa? AProtocolOnlyNil) (t/isa? AProtocolOnlyNil))
+      (test-comparison <>ident (t/isa? AProtocolCharSeq) (t/isa? AProtocolOnlyNil))
       (test-comparison <>ident (t/isa? AProtocolString)  (t/isa? AProtocolOnlyNil))
       (test-comparison <>ident (t/isa? AProtocolNone)    (t/isa? AProtocolOnlyNil))
-      (test-comparison =ident  (t/isa? AProtocolString)  (t/isa? AProtocolString))
+      (test-comparison  =ident (t/isa? AProtocolCharSeq) (t/isa? AProtocolCharSeq))
+      (test-comparison  <ident (t/isa? AProtocolString)  (t/isa? AProtocolCharSeq))
+      (test-comparison <>ident (t/isa? AProtocolNone)    (t/isa? AProtocolCharSeq))
+      (test-comparison  =ident (t/isa? AProtocolString)  (t/isa? AProtocolString))
       (test-comparison <>ident (t/isa? AProtocolNone)    (t/isa? AProtocolString)))
     (testing "+ ClassType"
-      (extends? AProtocolString AProtocolAll)
-      (test-comparison =ident ()))
+      (testing "universal class"
+        (test-comparison  <ident (t/isa? Object) (t/isa? AProtocolAll))
+        (test-comparison  =ident (t/isa? Object) (t/isa? AProtocolNonNil))
+        (test-comparison <>ident (t/isa? Object) (t/isa? AProtocolOnlyNil))
+        (test-comparison  >ident (t/isa? Object) (t/isa? AProtocolCharSeq))
+        (test-comparison  >ident (t/isa? Object) (t/isa? AProtocolString))
+        (test-comparison <>ident (t/isa? Object) (t/isa? AProtocolNone)))
+      (testing "interface"
+        (test-comparison  <ident (t/isa? CharSequence) (t/isa? AProtocolAll))
+        (test-comparison  <ident (t/isa? CharSequence) (t/isa? AProtocolNonNil))
+        (test-comparison <>ident (t/isa? CharSequence) (t/isa? AProtocolOnlyNil))
+        (test-comparison  =ident (t/isa? CharSequence) (t/isa? AProtocolCharSeq))
+        (test-comparison  >ident (t/isa? CharSequence) (t/isa? AProtocolString))
+        (test-comparison <>ident (t/isa? CharSequence) (t/isa? AProtocolNone)))
+      (testing "concrete class"
+        (test-comparison  <ident (t/isa? String) (t/isa? AProtocolAll))
+        (test-comparison  <ident (t/isa? String) (t/isa? AProtocolNonNil))
+        (test-comparison <>ident (t/isa? String) (t/isa? AProtocolOnlyNil))
+        (test-comparison  <ident (t/isa? String) (t/isa? AProtocolCharSeq))
+        (test-comparison  =ident (t/isa? String) (t/isa? AProtocolString))
+        (test-comparison <>ident (t/isa? String) (t/isa? AProtocolNone))))
     (testing "+ ValueType"
       (let [values #{t/universal-set t/empty-set nil {} 1 "" AProtocolAll
                      quantum.test.untyped.core.type.AProtocolAll}]

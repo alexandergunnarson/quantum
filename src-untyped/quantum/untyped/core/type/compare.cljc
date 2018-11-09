@@ -70,24 +70,21 @@
 ;; ----- Multiple ----- ;;
 
 (defns- compare|atomic+or [t0 type?, ^OrType t1 or-type? > comparison?]
-  (let [ts (.-args t1)]
-    (first
-      (reduce
-        (fn [[ret found] t]
-          (let [c      (compare t0 t)
-                found' (-> found (ubit/conj c) long)]
-            (ifs (or (ubit/contains? found' <ident)
-                     (ubit/contains? found' =ident))
+  (first
+    (reduce
+      (fn [[ret found] t]
+        (let [c      (compare t0 t)
+              found' (-> found (ubit/conj c) long)]
+          (ifs (or (ubit/contains? found' <ident)
+                   (ubit/contains? found' =ident))
                  (reduced [<ident found'])
-
-                 (or (ubit/contains? found' ><ident)
-                     (and (ubit/contains? found' >ident)
-                          (ubit/contains? found' <>ident)))
+               (or (ubit/contains? found' ><ident)
+                   (and (ubit/contains? found' >ident)
+                        (ubit/contains? found' <>ident)))
                  [><ident found']
-
-                 [c found'])))
-        [<>ident ubit/empty]
-        ts))))
+               [c found'])))
+      [<>ident ubit/empty]
+      (.-args t1))))
 
 (defns- compare|atomic+and [t0 type?, ^AndType t1 and-type? > comparison?]
   (let [ts (.-args t1)]
@@ -180,7 +177,7 @@
 ;; ----- OrType ----- ;;
 
 (defns- compare|or+or-like
-  [ts0 (us/seq-of type?), ts1 (us/seq-of type?), <ts0 fn?, <ts1 fn?, <>ts1 fn? > comparison?]
+  [ts0 _, ts1 _, <ts0 fn?, <ts1 fn?, <>ts1 fn? > comparison?]
   (let [l (->> ts0 (seq-and <ts1))
         r (->> ts1 (seq-and <ts0))]
     (if l
@@ -218,22 +215,25 @@
 (def- compare|expr+value fn><) ; TODO not entirely true
 
 ;; ----- ProtocolType ----- ;;
+;; Protocols cannot extend protocols.
+;; A protocol may be seen as `(->> p extenders (map >type) (apply t/or))`."
 
 (declare compare|class+class*)
 
-(defn- compare|protocol+protocol|full-scan [p0 #_protocol?, p1 #_protocol? #_> #_comparison?]
-  ;; We treat `extenders` as `t/or` without actually creating a `t/or`
-  (let [ts0 (extenders p0)
-        ts1 (extenders p1)
-        gen-compare (fn [t ident ts] (->> ts (uc/map+ (fn [t*] (compare|class+class* t t*)))
-                                             (seq-or (fn1 c/= ident))))
-        <ts0  (fn [t] (gen-compare t  <ident ts0))
-        <ts1  (fn [t] (gen-compare t  <ident ts1))
-        <>ts1 (fn [t] (gen-compare t <>ident ts1))]
-    (compare|or+or-like ts0 ts1 <ts0 <ts1 <>ts1)))
+(defns- compare|or+or-via-class [cs0 _, cs1 _ > comparison?]
+  (if (empty? cs0)
+      (if (empty? cs1) =ident <>ident)
+      (if (empty? cs1)
+          <>ident
+          (let [gen-compare (fn [compare-comparison c cs]
+                              (->> cs (uc/map+ (fn [c*] (compare|class+class* c c*)))
+                                      (seq-or compare-comparison)))
+                <cs0  (fn [c] (gen-compare uset/comparison<= c cs0))
+                <cs1  (fn [c] (gen-compare uset/comparison<= c cs1))
+                <>cs1 (fn [c] (gen-compare uset/comparison<> c cs1))]
+            (compare|or+or-like cs0 cs1 <cs0 <cs1 <>cs1)))))
 
 (defns- compare|protocol+protocol
-  "Protocols cannot extend protocols."
   [t0 protocol-type?, t1 protocol-type? > comparison?]
   (let [p0 (utr/protocol-type>protocol t0)
         p1 (utr/protocol-type>protocol t1)]
@@ -262,19 +262,24 @@
                             <ident)
                       (-> p0 :impls (contains? nil))
                         (if (-> p0 :impls count (c/> 1))
-                            (compare|protocol+protocol|full-scan p0 p1)
+                            (compare|or+or-via-class (extenders p0) (extenders p1))
                             <>ident)
                       (-> p1 :impls (contains? nil))
                         (if (-> p1 :impls count (c/> 1))
-                            (compare|protocol+protocol|full-scan p0 p1)
+                            (compare|or+or-via-class (extenders p0) (extenders p1))
                             <>ident)
-                      (compare|protocol+protocol|full-scan p0 p1))
+                      (compare|or+or-via-class (extenders p0) (extenders p1)))
            ;; TODO CLJS — also incorporate `default` etc.
            ;; Simplistic but we don't have safe insight into what has been extended vs. not
            :cljs <>ident))))
 
 (defns- compare|protocol+class [t0 protocol-type?, t1 class-type? > comparison?]
-  )
+  (let [p0 (utr/protocol-type>protocol t0)
+        c1 (utr/class-type>class       t1)]
+    #?(:clj  (if (-> p0 :on-interface (== c1))
+                 =ident
+                 (compare|or+or-via-class (extenders p0) [c1]))
+       :cljs (TODO))))
 
 ;; TODO transition to `compare|protocol+value` when stable
 (defns- compare|value+protocol [t0 value-type?, t1 protocol-type? > comparison?]
@@ -300,8 +305,9 @@
    `3`  means their generality/specificity is incomparable:
      - ✓ `(t/<> c0 c1)`   : the extension of ->`c0` is disjoint w.r.t. to that of ->`c1`.
    Unboxed primitives are considered to be less general (more specific) than boxed primitives."
-  [^Class c0 class? ^Class c1 class? > comparison?]
+  [^Class c0 (us/nilable class?) ^Class c1 (us/nilable class?) > comparison?]
   (ifs (== c0 c1)                              =ident
+       (or (nil? c0) (nil? c1))                <>ident
        (== c0 Object)                          >ident
        (== c1 Object)                          <ident
        (== (utcore/boxed->unboxed c0) c1)      >ident
