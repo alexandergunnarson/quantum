@@ -70,12 +70,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
 - No typed namespace should refer to any untyped namespace
 
 - TODO implement the following:
-  [1] - `t/input-type` should cause a split (unique by `t/=`) rather than just doing `t/or` since
-        otherwise you end up with e.g. `t/any?` as a type instead of
-        `[t/boolean? ... t/double? t/nil? t/val?]` being handled separately
-        - (t/extend-defn! c?/comp<
-            ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare :_ :?)]
-              (c?/< (c?/compare a b) 0)))
+  [1] - Perhaps it's the case that we can't actually have type bases but rather reactive splits.
+        In the case of `narrowest`, it expects a split and fails without it:
+        `[a (t/- integer? int?), b integer? > (narrowest (t/type a) (t/type b))]`
   [2] - t/numerically : e.g. a double representing exactly what a float is able to represent
         - and variants thereof: `numerically-long?` etc.
         - t/numerically-integer?

@@ -120,6 +120,16 @@
   (^:intrinsic [x (t/ref float?)   > (t/unref (t/type x))] (.floatValue   x))
   (^:intrinsic [x (t/ref double?)  > (t/unref (t/type x))] (.doubleValue  x))))
 
+(t/defn ^:inline >type > t/type?
+  ([x (t/or boolean? (t/value boolean?))] boolean?)
+  ([x (t/or byte?    (t/value byte?))]    byte?)
+  ([x (t/or char?    (t/value char?))]    char?)
+  ([x (t/or short?   (t/value short?))]   short?)
+  ([x (t/or int?     (t/value int?))]     int?)
+  ([x (t/or long?    (t/value long?))]    long?)
+  ([x (t/or float?   (t/value float?))]   float?)
+  ([x (t/or double?  (t/value double?))]  double?))
+
 ;; ===== Bit lengths ===== ;;
 
 (var/def boolean-bits "Implementationally might not be bit-manipulable but logically 1 bit" 1)
@@ -339,22 +349,21 @@
               (t/input-type >max-safe-integer-value :?))
     t1 (t/and (t/input-type >min-safe-integer-value :?)
               (t/input-type >max-safe-integer-value :?))]
-    t0
-    #_(let [t0-min (>min-safe-integer-value t0)
-          t1-min (>min-safe-integer-value t1)
-          t0-max (>max-safe-integer-value t0)
-          t1-max (>max-safe-integer-value t1)]
-      (ifs (c?/= t0-min t1-min)
-             (ifs (c?/= t0-max t1-max) t0
-                  (c?/< t0-max t1-max) t1
-                  t0)
-           (c?/< t0-min t1-min)
-             (ifs (c?/< t0-max t1-max) (promote-type t0 t1)
-                  (c?/= t0-max t1-max) t0
-                  t0)
-           (ifs (c?/> t0-max t1-max) (promote-type t0 t1)
-                (c?/= t0-max t1-max) t1
-                t1)))))
+    (>type (let [t0-min (>min-safe-integer-value t0)
+                 t1-min (>min-safe-integer-value t1)
+                 t0-max (>max-safe-integer-value t0)
+                 t1-max (>max-safe-integer-value t1)]
+             (ifs (c?/= t0-min t1-min)
+                    (ifs (c?/= t0-max t1-max) t0
+                         (c?/< t0-max t1-max) t1
+                         t0)
+                  (c?/< t0-min t1-min)
+                    (ifs (c?/< t0-max t1-max) (promote-type t0 t1)
+                         (c?/= t0-max t1-max) t0
+                         t0)
+                  (ifs (c?/> t0-max t1-max) (promote-type t0 t1)
+                       (c?/= t0-max t1-max) t1
+                       t1))))))
 
 (t/extend-defn! c?/min
 #?(:clj  (     [a int?               , b (t/- numeric? int?)] (Numeric/min a b)))
@@ -364,7 +373,7 @@
 #?(:cljs (     [a double?            , b double? > (t/assume double?)] (js/Math.min a b))))
 
 (t/extend-defn! c?/max
-#?(:clj  (     [a (t/- integer? int?), b integer? > (t/narrowest (t/type a) (t/type b))]
+#?(:clj  (     [a (t/- integer? int?), b integer? > (narrowest (t/type a) (t/type b))]
            (if (c?/> a b) a b)))
 #?(:clj  (     [a integer?           , b (t/- integer? int?)]
            (if (c?/> a b) a b)))
