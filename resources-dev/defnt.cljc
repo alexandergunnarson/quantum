@@ -2,13 +2,10 @@ Note that for anything built-in js/<whatever>, the `t/isa?` predicates might nee
 
 ;; TO MOVE
 
-#?(:clj  (def thread?       (isa? java.lang.Thread)))
-
+#?(:clj  (def thread?          (isa? java.lang.Thread)))
 #?(:clj  (def class?           (isa? java.lang.Class)))
-
 ;; TODO for CLJS based on untyped impl
 #?(:clj  (def protocol?        (>expr (ufn/fn-> :on-interface class?))))
-
 
 ;; ===== quantum.core.system
 
@@ -39,7 +36,7 @@ Note that for anything built-in js/<whatever>, the `t/isa?` predicates might nee
 
 >boolean is different than `truthy?`
 
-Sometimes you want (byte <whatever-double>) to fail at runtime rather than fail at runtime when you can't know everything about the input's range
+Sometimes you want (byte <whatever-double>) to fail at runtime rather than fail at compile time when you can't know everything about the input's range
 
 
 
@@ -76,6 +73,8 @@ Legend:
           ([x p/nil?] true)
           ([xs dc/counted?] (-> xs count num/zero?))
           ([xs (t/input-type educe :_ :_ :?)] (educe empty?|rf x)))
+      - Should we allow something like `^:analyze-impl` or something to mimic inline optimizations
+        but avoid actual inlining?
   [2] t/numerically : e.g. a double representing exactly what a float is able to represent
       - and variants thereof: `numerically-long?` etc.
       - t/numerically-integer?
@@ -110,11 +109,13 @@ Legend:
   [ ] replace `deref` with `ref/deref` in typed contexts? So we can do `@` still
   - Type Logic and Predicates
     - expressions (`quantum.untyped.core.analyze.expr`)
-    - comparison of `t/fn`s is probably possible?
+    - comparison of `t/fn`s is probably possible
     - It is possible to check satisfaction of arities to an `t/ftype` at runtime even if the type
       meta is not stripped (well, at least the arity counts can be checked and primitive types in
       CLJ):
-      - In CLJ via e.g. `(clojure.reflect/reflect (class (fn ([]) ([^long a]))))`
+      - In CLJ  via e.g.:
+        - `(clojure.reflect/reflect (fn ([]) ([^long a])))`
+          -> {:members #{{:parameter-types [] ...} {:parameter-types [long] ...} ...}}
       - In CLJS via e.g.:
         - `(js/Object.getOwnPropertyNames (fn ([]) ([a])))`
           -> `#js [... \"cljs$core$IFn$_invoke$arity$0\" \"cljs$core$IFn$_invoke$arity$1\"]`
