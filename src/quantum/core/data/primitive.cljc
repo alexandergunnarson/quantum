@@ -341,44 +341,73 @@
   ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]
     (c?/>  (c?/compare a b) 0)))
 
-(t/defn promote-type [a nil?, b nil?])
+;; TODO come back to this
+;; Use interval tree?
+#_(t/defn promote-type
+  "Based on max/min safe integer value."
+  ;; TODO Write it all out and compress later
+  ([t|<min (t/value byte?), t|>max (t/value byte?)]   t|<min)
+  ([t|<min (t/value byte?), t|>max (t/value short?)]  t|>max)
+  ([t|<min (t/value byte?), t|>max (t/value char?)]   int?)
+  ([t|<min (t/value byte?), t|>max (t/value int?)]    t|>max)
+  ([t|<min (t/value byte?), t|>max (t/value long?)]   t|>max)
+  ([t|<min (t/value byte?), t|>max (t/value float?)]  t|>max)
+  ([t|<min (t/value byte?), t|>max (t/value double?)] t|>max))
 
-(t/defn narrowest
+;; TODO come back to this
+#_(t/defn narrowest
+  "Based on max/min safe integer value."
   > t/type?
-  ([t0 (t/and (t/input-type >min-safe-integer-value :?)
-              (t/input-type >max-safe-integer-value :?))
-    t1 (t/and (t/input-type >min-safe-integer-value :?)
-              (t/input-type >max-safe-integer-value :?))]
-    (>type (let [t0-min (>min-safe-integer-value t0)
-                 t1-min (>min-safe-integer-value t1)
-                 t0-max (>max-safe-integer-value t0)
-                 t1-max (>max-safe-integer-value t1)]
-             (ifs (c?/= t0-min t1-min)
-                    (ifs (c?/= t0-max t1-max) t0
-                         (c?/< t0-max t1-max) t1
-                         t0)
-                  (c?/< t0-min t1-min)
-                    (ifs (c?/< t0-max t1-max) (promote-type t0 t1)
-                         (c?/= t0-max t1-max) t0
-                         t0)
-                  (ifs (c?/> t0-max t1-max) (promote-type t0 t1)
-                       (c?/= t0-max t1-max) t1
-                       t1))))))
+  ([t0 (t/and (t/input-type >min-safe-integer-value [:? t/>= t/type?])
+              (t/input-type >max-safe-integer-value [:? t/>= t/type?]))
+    t1 (t/and (t/input-type >min-safe-integer-value [:? t/>= t/type?])
+              (t/input-type >max-safe-integer-value [:? t/>= t/type?]))]
+    (let [t0-min (>min-safe-integer-value t0)
+          t1-min (>min-safe-integer-value t1)
+          t0-max (>max-safe-integer-value t0)
+          t1-max (>max-safe-integer-value t1)]
+      ;; TODO this provides great room for auto-optimization
+      (ifs (c?/= t0-min t1-min)
+             (ifs (c?/= t0-max t1-max) t0
+                  (c?/< t0-max t1-max) t1
+                  t0)
+           (c?/< t0-min t1-min)
+             (ifs (c?/< t0-max t1-max) (promote-type t0 t1)
+                  (c?/= t0-max t1-max) t0
+                  t0)
+           (ifs (c?/> t0-max t1-max) (promote-type t1 t0)
+                (c?/= t0-max t1-max) t1
+                t1)))))
 
+;; TODO maybe use `> (narrowest (t/type a) (t/type b))` for `min` and `max`
 (t/extend-defn! c?/min
-#?(:clj  (     [a int?               , b (t/- numeric? int?)] (Numeric/min a b)))
-#?(:clj  (     [a (t/- numeric? int?), b int?]                (Numeric/min a b)))
-#?(:clj  (     [a (t/- numeric? int?), b (t/- numeric? int?)] (Numeric/min a b)))
-#?(:clj  (^:in [a int?               , b int?]                (Math/min    a b)))
-#?(:cljs (     [a double?            , b double? > (t/assume double?)] (js/Math.min a b))))
+#?(:clj  (     [a (t/- numeric? int? float? double?)
+                b (t/- numeric? int? float? double?)]                         (if (c?/< a b) a b)))
+#?(:clj  (     [a int?                      , b (t/- numeric? int?)]          (if (c?/< a b) a b)))
+#?(:clj  (     [a (t/- numeric? int?)       , b int?]                         (if (c?/< a b) a b)))
+#?(:clj  (^:in [a int?                      , b int?]                         (Math/min      a b)))
+#?(:clj  (     [a float?                    , b (t/- numeric? int? float?)]   (if (c?/< a b) a b)))
+#?(:clj  (     [a (t/- numeric? int? float?), b float?]                       (if (c?/< a b) a b)))
+#?(:clj  (     [a float?                    , b float?]                       (Math/min      a b)))
+#?(:clj  (     [a double?
+                b (t/- numeric? int? float? double?)]                         (if (c?/< a b) a b)))
+#?(:clj  (     [a (t/- numeric? int? float? double?)
+                b double?]                                                    (if (c?/< a b) a b)))
+#?(:clj  (     [a double?                   , b double?]                      (Math/min      a b)))
+#?(:cljs (     [a double?                   , b double? > (t/assume double?)] (js/Math.min   a b))))
 
 (t/extend-defn! c?/max
-#?(:clj  (     [a (t/- integer? int?), b integer? > (narrowest (t/type a) (t/type b))]
-           (if (c?/> a b) a b)))
-#?(:clj  (     [a integer?           , b (t/- integer? int?)]
-           (if (c?/> a b) a b)))
-#?(:clj  (^:in [a int?               , b int?] (Math/max a b)))
-#?(:clj  (     [a float?             , b float?]                       (Math/max    a b)))
-#?(:clj  (     [a float?             , b float?]                       (Math/max    a b)))
-#?(:clj  (     [a double?            , b double?]                      (Math/max    a b)))
-#?(:cljs (     [a double?            , b double? > (t/assume double?)] (js/Math.max a b))))
+#?(:clj  (     [a (t/- numeric? int? float? double?)
+                b (t/- numeric? int? float? double?)]                         (if (c?/> a b) a b)))
+#?(:clj  (     [a int?                      , b (t/- numeric? int?)]          (if (c?/> a b) a b)))
+#?(:clj  (     [a (t/- numeric? int?)       , b int?]                         (if (c?/> a b) a b)))
+#?(:clj  (^:in [a int?                      , b int?]                         (Math/max      a b)))
+#?(:clj  (     [a float?                    , b (t/- numeric? int? float?)]   (if (c?/> a b) a b)))
+#?(:clj  (     [a (t/- numeric? int? float?), b float?]                       (if (c?/> a b) a b)))
+#?(:clj  (     [a float?                    , b float?]                       (Math/max      a b)))
+#?(:clj  (     [a double?
+                b (t/- numeric? int? float? double?)]                         (if (c?/> a b) a b)))
+#?(:clj  (     [a (t/- numeric? int? float? double?)
+                b double?]                                                    (if (c?/> a b) a b)))
+#?(:clj  (     [a double?                   , b double?]                      (Math/max      a b)))
+#?(:cljs (     [a double?                   , b double? > (t/assume double?)] (js/Math.max   a b))))
