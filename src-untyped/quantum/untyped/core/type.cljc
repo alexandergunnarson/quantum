@@ -744,6 +744,9 @@
    > (us/set-of (us/nilable #?(:clj c/class? :cljs c/fn?)))]
   (cond (utr/class-type? t)
           (conj classes (utr/class-type>class t))
+        (utr/protocol-type? t)
+          ;; probably better than specifying *all* implementing classes
+          (conj classes (-> t utr/protocol-type>protocol :on-interface) Object)
         (utr/value-type? t)
           (cond-> classes
             include-classes-of-value-type? (conj (-> t utr/value-type>value c/type)))
