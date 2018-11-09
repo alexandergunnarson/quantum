@@ -546,23 +546,36 @@
 (defns compare|out [x0 utr/fn-type?, x1 utr/fn-type? > uset/comparison?]
   (utcomp/compare (fn-type>output-type x0) (fn-type>output-type x1)))
 
+(us/def ::match-spec
+  (us/seq-of (us/or* #{:_ :?} type?
+                     (us/tuple #{:?}      type?)
+                     (us/tuple       ifn? type?)
+                     (us/tuple #{:?} ifn? type?))))
+
+(defn- find-spec? [match-spec-element]
+  (c/or (c/= match-spec-element :?)
+        (c/and (sequential? match-spec-element)
+               (-> match-spec-element first (c/= :?)))))
+
 (defn- match-spec>type-data-seq
   "Returns the type data of overloads that support the specified arg types."
   [t match-spec]
   (let [type-data-seq (-> t utr/fn-type>arities (get (count match-spec)))]
     (->> match-spec
          (uc/map-indexed+ vector)
-         (uc/remove (fn-> second #{:_ :?}))
+         (uc/remove #(c/or (-> % second (c/= :_)) (-> % second (c/= :?))))
          (educe
            (c/fn ([] type-data-seq)
                  ([type-data-seq'] type-data-seq')
                  ([type-data-seq' [i|arg arg-type-or-vec]]
-                   (let [compf    (if (sequential? arg-type-or-vec)
-                                      (first arg-type-or-vec)
-                                      utcomp/<=)
-                         arg-type (if (sequential? arg-type-or-vec)
-                                      (second arg-type-or-vec)
-                                      arg-type-or-vec)]
+                   (let [[compf arg-type]
+                           (if (sequential? arg-type-or-vec)
+                               (if (-> arg-type-or-vec first (c/= :?))
+                                   (if (-> arg-type-or-vec count (c/= 3))
+                                       [(nth arg-type-or-vec 1) (nth arg-type-or-vec 2)]
+                                       [utcomp/<=               (nth arg-type-or-vec 1)])
+                                   [(nth arg-type-or-vec 0) (nth arg-type-or-vec 1)])
+                               [utcomp/<= arg-type-or-vec])]
                      (c/or (->> type-data-seq'
                                 (uc/lfilter (c/fn [{:keys [input-types]}]
                                               (compf arg-type (get input-types i|arg))))
@@ -578,8 +591,8 @@
           (rx (f t (map utr/deref-when-reactive args)))
           (f t args))))
 
-(defn- input-type|meta-or|norx [t match-spec]
-  (let [i|? (->> match-spec (reducei (c/fn [_ t i] (when (c/= t :?) (reduced i))) nil))]
+(defn- input-type|meta-or|norx [t match-spec #_::match-spec]
+  (let [i|? (->> match-spec (reducei (c/fn [_ t i] (when (find-spec? t) (reduced i))) nil))]
     (with-expand-meta-ors match-spec
       (fn [match-spec']
         (->> match-spec'
@@ -588,9 +601,8 @@
              meta-or)))))
 
 (defns input-type|meta-or
-  [t (us/or* utr/fn-type? utr/rx-type?)
-   match-spec _ #_(us/seq-of (us/or* #{:_ :?} (us/or* type? (us/tuple ifn? type?))))
-   | (->> match-spec (filter #(c/= % :?)) count (c/= 1))
+  [t (us/or* utr/fn-type? utr/rx-type?), match-spec _ #_::match-spec
+   | (->> match-spec (filter find-spec?) count (c/= 1))
    > type?]
   (input-or-output-type-handle-reactive input-type|meta-or|norx t match-spec))
 
@@ -600,9 +612,8 @@
 
 (defns input-type|or
   "Outputs the type of a specified input to a typed fn."
-  [t (us/or* utr/fn-type? utr/rx-type?)
-   match-spec _ #_(us/seq-of (us/or* #{:_ :?} (us/or* type? (us/tuple ifn? type?))))
-   | (->> match-spec (filter #(c/= % :?)) count (c/= 1))
+  [t (us/or* utr/fn-type? utr/rx-type?), match-spec _ #_::match-spec
+   | (->> match-spec (filter find-spec?) count (c/= 1))
    > type?]
   (input-or-output-type-handle-reactive input-type|or|norx t match-spec))
 
