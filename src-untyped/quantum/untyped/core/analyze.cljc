@@ -19,7 +19,7 @@
     [quantum.untyped.core.error             :as uerr
       :refer [TODO err!]]
     [quantum.untyped.core.fn
-      :refer [<- fn-> fn->>]]
+      :refer [<- fn-> fn->> fn1]]
     [quantum.untyped.core.form              :as uform]
     [quantum.untyped.core.form.evaluate     :as ufeval]
     [quantum.untyped.core.form.type-hint    :as ufth]
@@ -642,7 +642,7 @@
             {:input|analyzed input|analyzed})))
 
 (defn- filter-direct-dispatchable-overloads
-  [{:as ret :keys [dispatchable-overloads-seq]} input|analyzed i caller|node body]
+  [{:as ret :keys [dispatchable-overloads-seq]} input|analyzed i caller|node args-form]
   (if-let [dispatchable-overloads-seq'
             (->> dispatchable-overloads-seq
                  (uc/lfilter
@@ -651,11 +651,11 @@
                  seq)]
     (assoc ret :dispatchable-overloads-seq dispatchable-overloads-seq')
     (if (-> caller|node :unanalyzed-form meta :dyn)
-        (filter-dynamic-dispatchable-overloads ret input|analyzed i caller|node body)
+        (filter-dynamic-dispatchable-overloads ret input|analyzed i caller|node args-form)
         (err! (str "No overloads satisfy the inputs via direct dispatch; "
                    "dynamic dispatch not requested")
-              {:caller caller|node
-               :inputs body
+              {:caller             (select-keys caller|node [:unanalyzed-form :form :type])
+               :inputs             args-form
                :failing-input-form (:form input|analyzed)
                :failing-input-type (:type input|analyzed)}))))
 
@@ -669,7 +669,7 @@
                   (apply t/or))))
 
 (defns- call>input-nodes+out-type
-  [env ::env, caller|node _, caller|type _, caller-kind _, inputs-ct _, body _
+  [env ::env, caller|node _, caller|type _, caller-kind _, inputs-ct _, args-form _
    > (s/kv {:input-nodes t/any? #_(s/seq-of ast/node?)
             :out-type  t/type?})]
   (dissoc
@@ -680,7 +680,7 @@
                (-> caller|type utr/fn-type>arities (get inputs-ct) first :output-type)
                ;; We could do a little smarter analysis here but we'll keep it simple for now
                t/any?)}
-        (->> body
+        (->> args-form
              (uc/map+ #(analyze* env %))
              (reducei
                (fn [{:as ret :keys [dispatch-type]} input|analyzed i]
@@ -688,9 +688,9 @@
                      (let [{:as ret' :keys [dispatchable-overloads-seq]}
                              (case dispatch-type
                                :direct  (filter-direct-dispatchable-overloads
-                                          ret input|analyzed i caller|node body)
+                                          ret input|analyzed i caller|node args-form)
                                :dynamic (filter-dynamic-dispatchable-overloads
-                                          ret input|analyzed i caller|node body))]
+                                          ret input|analyzed i caller|node args-form))]
                        (-> ret'
                            (update :input-nodes conj input|analyzed)
                            (assoc  :out-type
@@ -721,10 +721,10 @@
             unvalued-arg-types (->> arg-nodes rest (map :type) (map t/unvalue))
             _           (uref/set! !!dependent? true)
             t (case (name caller|form)
-                "input-type"  (if (-> env :opts :split-types?)
+                "input-type"  (if (-> env :opts :quantum.untyped.core.analyze-types?)
                                   (t/input-type|meta-or  caller|t unvalued-arg-types)
                                   (t/input-type|or       caller|t unvalued-arg-types))
-                "output-type" (if (-> env :opts :split-types?)
+                "output-type" (if (-> env :opts :analyze-arg-syms-types?)
                                   (t/output-type|meta-or caller|t unvalued-arg-types)
                                   (t/output-type|or      caller|t unvalued-arg-types))
                 "type"        caller|t)]
@@ -1016,7 +1016,8 @@
   [t t/type? > (s/vec-of t/type?)]
   (let [t' (cond-> t (utr/rx-type? t) urx/norx-deref)]
     (ifs (utr/or-type?      t') (utr/or-type>args       t')
-         (utr/meta-or-type? t') (utr/meta-or-type>types t')
+         ;; TODO determine if this is the appropriate place to deal with `t/none?`
+         (utr/meta-or-type? t') (->> t' utr/meta-or-type>types (uc/remove (fn1 t/= t/none?)))
          [t'])))
 
 (defns type>split+primitivized [t t/type? > (s/vec-of t/type?)]
