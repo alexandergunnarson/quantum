@@ -45,65 +45,58 @@ These two should be defined in the (whatever) data namespace:
 - `>(whatever)`
 - `(whatever)>`
 
-TODO:
-- `(or (and pred then) (and (not pred) else))` (which is not correct)
-- needs to equal `(t/and (t/or (t/not a) b) (t/or a c))` (which is correct)
-- `(- (or ?!+vector? !vector? #?(:clj !!vector?)) (isa? clojure.lang.Counted))` is not right
-- t/or should probably order by `t/compare` descending
-
-
-  - TODO `or` and `and` should be `=` regardless of order
-    - To fix this, sort when it's created?
-  - (rx/dispose! <reactions>) when the `t/defn` is redefined (?)
-  - Dependents should not get recompiled if the type has not changed but only the implementation has,
-    except if inline
-  - Handle `|` (pre-type)
-  - Should not accept `t/none?` as an input type
-  - This subsumes it into the `ref` portion which is not right
-    (t/or (t/value nil) (t/isa? Long) (t/ref (t/isa? java.lang.Comparable)))
-    -> (t/or (t/value nil) (t/ref (t/isa? java.lang.Comparable)))
-  - TODO all `intern`s/effects in `t/defn` should be atomic (all or nothing). This means that the interns should probably be put on a queue too.
-
 #_"
 Note that `;; TODO TYPED` is the annotation we're using for this initiative
 - There will be some code duplication with untyped code for now and that's okay.
 - No typed namespace should refer to any untyped namespace
 
 - TODO implement the following:
-  [1] - Perhaps it's the case that we can't actually have type bases but rather reactive splits.
-        In the case of `narrowest`, it expects a split and fails without it:
-        `[a (t/- integer? int?), b integer? > (narrowest (t/type a) (t/type b))]`
-  [2] - t/numerically : e.g. a double representing exactly what a float is able to represent
-        - and variants thereof: `numerically-long?` etc.
-        - t/numerically-integer?
-        - Primitive conversions not requiring checks can go in data.primitive
-          - core.data.numeric (requires data.primitive)
-            - numeric definitions
-            - numeric ranges
-            - numeric characteristics
-  [3] - Direct dispatch needs to actually work correctly in typed contexts
-  [ ] - Probably should disallow recursive type references, including:
-        `(t/defn f [x (t/input-type f ...)])`
-  [ ] - `t/ref` and `t/assume` need to be combined correctly. E.g. (t/and (t/ref ...) ...) means the
-        whole thing should be `t/ref`, while `(t/or (t/ref ...) (...))` does not mean the metadata
-        is transferred. Probably `t/assume` should be combined in the same way.
-        - What about `(t/and (t/or t/long? (t/ref t/byte?)) pos?)` ?
-  [ ] - t/value-of
-        - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
-  [ ] - (comp/t== x)
-         - dependent type such that the passed input must be identical to x
-  [ ] - `?` : type inference
-        - use logic programming and variable unification e.g. `?1` `?2` ?
-        - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
-          ([n dn/std-integer?, xs dc/counted?] (count xs))
-          ([n dn/std-integer?, xs ?] ...)
-        - [ ] No trailing `>` means `> ?`f
-  [ ] - Non-boxed `def`s: `(var/def- min-float  (Numeric/negate Float/MAX_VALUE))`
-  - `(t/validate x (t/* t/string?))` for `(t/* t/string?)` needs to be more performant
-    - Don't re-create type on each call
-  - replace `deref` with `ref/deref` in typed contexts? So we can do `@` still
+  [2] t/numerically : e.g. a double representing exactly what a float is able to represent
+      - and variants thereof: `numerically-long?` etc.
+      - t/numerically-integer?
+      - Primitive conversions not requiring checks can go in data.primitive
+        - core.data.numeric (requires data.primitive)
+          - numeric definitions
+          - numeric ranges
+          - numeric characteristics
+  [3] Direct dispatch needs to actually work correctly in typed contexts
+  [ ] Probably should disallow recursive type references, including:
+      `(t/defn f [x (t/input-type f ...)])`
+  [ ] Perhaps it's the case that we can't actually have type bases but rather reactive splits.
+      In the case of `narrowest`, it expects a split and fails without it:
+      `[a (t/- integer? int?), b integer? > (narrowest (t/type a) (t/type b))]`
+  [ ] `t/ref` and `t/assume` need to be combined correctly. E.g. (t/and (t/ref ...) ...) means the
+      whole thing should be `t/ref`, while `(t/or (t/ref ...) (...))` does not mean the metadata
+      is transferred. Probably `t/assume` should be combined in the same way.
+      - What about `(t/and (t/or t/long? (t/ref t/byte?)) pos?)` ?
+  [ ] t/value-of
+      - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
+  [ ] (comp/t== x)
+       - dependent type such that the passed input must be identical to x
+  [ ] `?` : type inference
+      - use logic programming and variable unification e.g. `?1` `?2` ?
+      - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
+        ([n dn/std-integer?, xs dc/counted?] (count xs))
+        ([n dn/std-integer?, xs ?] ...)
+      - [ ] No trailing `>` means `> ?`f
+  [ ] Non-boxed `def`s: `(var/def- min-float  (Numeric/negate Float/MAX_VALUE))`
+  [ ] `(t/validate x (t/* t/string?))` for `(t/* t/string?)` needs to be more performant
+      - Don't re-create type on each call (see `defnt/unanalyzed-overload>overload`)
+  [ ] replace `deref` with `ref/deref` in typed contexts? So we can do `@` still
   - Type Logic and Predicates
+    - It is possible to check satisfaction of arities to an `t/ftype` at runtime even if the type
+      meta is not stripped (well, at least the arity counts can be checked and primitive types in
+      CLJ):
+      - In CLJ via e.g. `(clojure.reflect/reflect (class (fn ([]) ([^long a]))))`
+      - In CLJS via e.g.:
+        - `(js/Object.getOwnPropertyNames (fn ([]) ([a])))`
+          -> `#js [... \"cljs$core$IFn$_invoke$arity$0\" \"cljs$core$IFn$_invoke$arity$1\"]`
     - We should probably have a 'normal form' so we can correctly hash if we do spec lookup
+      - `or` and `and` should be `=` regardless of order
+        - To fix this, sort when it's created? (order by `t/compare` descending)
+    - `(or (and pred then) (and (not pred) else))` (which is not correct)
+      - needs to equal `(t/and (t/or (t/not a) b) (t/or a c))` (which is correct)
+      - `(- (or ?!+vector? !vector? #?(:clj !!vector?)) (isa? clojure.lang.Counted))` is not right
     - t/- : fix
       - (t/- (t/isa? java.util.Queue) (t/or ?!+queue? !!queue?))
       - (t/- t/any? p/float? p/double?); (t/- number? p/primitive?)
@@ -158,8 +151,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
     protocols can be extended
     - TODO CLJS needs to implement it better
   - Analysis/Optimization
-    - `(p/nil? ...)` should probably be inlined to `(?/== ... nil)` rather than using the overhead of the
-      deftype
+    - `(p/nil? ...)` should probably be inlined to `(?/== ... nil)` rather than using the overhead
+      of the deftype
     - This should realize that we're negating a `<` and change the operator to `<=`
       - `(t/def nneg? (fn/comp ?/not neg?))`
     - For numbers:
@@ -201,8 +194,9 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
         (#?(:clj  clojure.core.protocols/coll-reduce
             :cljs cljs.core/-reduce) xs rf init))
     - (if (A) ...) should be (if ^boolean (A) ...) if A returns a `p/boolean?`
-  - We'll should make a special class or *something* like that to ensure that typed bindings are only
-    bound within typed contexts.
+  - t/binding
+    - We should make a special class or *something* like that to ensure that typed bindings are only
+      bound within typed contexts.
   - t/defrecord
   - t/def-concrete-type (i.e. `t/deftype`)
   - expressions (`quantum.untyped.core.analyze.expr`)
@@ -219,17 +213,20 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       we annotate like `(name ^:dyn (read ...))`, meaning figure out at runtime what the out-type of
       the call to `(read ...)` is, not, call `name` dynamically.
   - `t/defn`
+    - Should not accept `t/none?` as an input type
+      - Arity elision: if any type in an arity is `t/none?` then elide it and emit a warning
+        - `([x bigint?] x)`
+    - All `intern`s/effects in `t/defn` should be atomic (all or nothing). This means that the
+      interns should probably be put on a queue too.
     - `declare` but for `t/defn`
       - Currently we can declare that there is an fn, and what its output type is, and its metadata,
         but we cannot currently declare type-overloads. Experience will make clearer what to do in
         these cases.
     - `|` (pre-types)
-    - Arity elision: if any type in an arity is `t/none?` then elide it and emit a warning
-      - `([x bigint?] x)`
     - t/defn-
       - Not just a private var for the dynamic dispatch, but needs to be private for purposes of the
         analyzer when doing direct dispatch. Should emit a warning, not just fail.
-    - (t/and (t/or a b) c) should -> (t/or (t/and a c) (t/and b c)) for purposes of separating dispatches
+    - (t/and (t/or a b) c) should -> (t/or (t/and a c) (t/and b c)) for purposes of type-splitting
     - ^:inline
       - should be able to mark either ^:unline or ^{:inline false} on arities of an inline function
       - if you do (Numeric/bitAnd a b) inline then bitAnd needs to know the primitive type so maybe
@@ -258,7 +255,7 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - t/extend-defn!
     [ ] Ability to add output type restriction after the fact?
   - lazy compilation especially around `t/input-type`
-  - equivalence of typed predicates (i.e. that which is `t/<=` `(t/fn [x t/any? :> p/boolean?])`)
+  - equivalence of typed predicates (i.e. that which is `t/<=` `(t/ftype [x t/any? :> p/boolean?])`)
     to types:
     - [xs (t/fn [x (t/isa? clojure.lang.Range)] ...)]
 - NOTE on namespace organization:
