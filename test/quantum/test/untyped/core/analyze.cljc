@@ -18,17 +18,17 @@
     [quantum.untyped.core.type.reifications :as utr]))
 
 ;; Simulates a typed fn
-(defn- >long-checked {:quantum.core.type/type (t/rx (t/ftype nil [t/string? :> tt/long?]))} [])
+(defn- >long-checked {:quantum.core.type/type (t/rx (t/ftype [t/string? :> tt/long?]))} [])
 
-(defn- dummy {:quantum.core.type/type (t/rx (t/ftype nil [(t/or tt/short? tt/char?)]))} [])
+(defn- dummy {:quantum.core.type/type (t/rx (t/ftype [(t/or tt/short? tt/char?)]))} [])
 
 ;; For this fn, the input types combine when applying `t/or` (`(t/or t/nil? t/val?)`)
 (defn- input-types-combine
   {:quantum.core.type/type
-    (t/rx (t/ftype nil [t/nil?         tt/byte?]
-                       [t/nil?         tt/char?]
-                       [(t/ref t/val?) tt/byte?]
-                       [(t/ref t/val?) tt/char?]))}
+    (t/rx (t/ftype [t/nil?         tt/byte?]
+                   [t/nil?         tt/char?]
+                   [(t/ref t/val?) tt/byte?]
+                   [(t/ref t/val?) tt/char?]))}
   [])
 
 (defn- transform-ana [ana]

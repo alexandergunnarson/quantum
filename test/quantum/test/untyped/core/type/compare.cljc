@@ -779,7 +779,7 @@
      to compare the extension of their inputs and the extension of their outputs separately.
 
      That said, it's not clear how useful this sort of comparison is.
-     Furthermore, is it the case that `(t/< [[] t/any?] (t/ftype t/any? []))`? Intuitively it
+     Furthermore, is it the case that `(t/< [[] t/any?] (t/ftype []))`? Intuitively it
      doesn't seem like it should be, but under the WHK model it nevertheless seems to be the case.
 
      So we opt to make `t/ftype`s `t/compare`-able only with what its underlying function object is
@@ -825,39 +825,39 @@
     (testing "same-arity input types <"
       (testing "output <"
         (test-comparison|fn [ <ident  <ident]
-          (t/ftype t/any?                 [t/boolean? :> t/boolean?])
-          (t/ftype t/any? []              [t/any?     :> t/long?])))
+          (t/ftype                 [t/boolean? :> t/boolean?])
+          (t/ftype []              [t/any?     :> t/long?])))
       (testing "output =")
       (testing "output >"
         (test-comparison|fn [ <ident  >ident]
-          (t/ftype t/any?                 [t/boolean?])
-          (t/ftype t/any? [:> t/boolean?] [t/any? :> t/boolean?])))
+          (t/ftype                 [t/boolean?])
+          (t/ftype [:> t/boolean?] [t/any? :> t/boolean?])))
       (testing "output ><")
       (testing "output <>"))
     (testing "same-arity input types ="
       (testing "output <"
         (test-comparison|fn [ <ident  <ident]
-          (t/ftype t/any? [:> t/boolean?])
-          (t/ftype t/any? []              [t/any?])))
+          (t/ftype [:> t/boolean?])
+          (t/ftype []              [t/any?])))
       (testing "output ="
         (test-comparison|fn [ <ident  =ident]
-          (t/ftype t/any? [])
-          (t/ftype t/any? []              [t/any?])))
+          (t/ftype [])
+          (t/ftype []              [t/any?])))
       (testing "output >"
         (test-comparison|fn [ <ident  >ident]
-          (t/ftype t/any? [])
-          (t/ftype t/any? [:> t/boolean?] [t/any? :> t/long?])))
+          (t/ftype [])
+          (t/ftype [:> t/boolean?] [t/any? :> t/long?])))
       (testing "output ><")
       (testing "output <>"))
     (testing "same-arity input types >"
       (testing "output <"
         (test-comparison|fn [><ident  <ident]
-          (t/ftype t/any?                 [t/any? :> t/boolean?])
-          (t/ftype t/any? []              [t/boolean?])))
+          (t/ftype                 [t/any? :> t/boolean?])
+          (t/ftype []              [t/boolean?])))
       (testing "output ="
         (test-comparison|fn [><ident  =ident]
-          (t/ftype t/any?                 [t/any?])
-          (t/ftype t/any? []              [t/boolean?])))
+          (t/ftype                 [t/any?])
+          (t/ftype []              [t/boolean?])))
       (testing "output >")
       (testing "output ><")
       (testing "output <>"))
@@ -877,33 +877,33 @@
     (testing "same-arity input types <"
       (testing "output <"
         (test-comparison|fn [ <ident  <ident]
-          (t/ftype t/any? [t/boolean? :> t/boolean?])
-          (t/ftype t/any? [t/any?])))
+          (t/ftype [t/boolean? :> t/boolean?])
+          (t/ftype [t/any?])))
       (testing "output ="
         (test-comparison|fn [ <ident  =ident]
-          (t/ftype t/any? [t/boolean?])
-          (t/ftype t/any? [t/any?])))
+          (t/ftype [t/boolean?])
+          (t/ftype [t/any?])))
       (testing "output >"
         (test-comparison|fn [ <ident  >ident]
-          (t/ftype t/any? [t/boolean?])
-          (t/ftype t/any? [t/any?     :> t/boolean?])))
+          (t/ftype [t/boolean?])
+          (t/ftype [t/any?     :> t/boolean?])))
       (testing "output ><"
         (test-comparison|fn [ <ident ><ident]
-          (t/ftype t/any? [t/boolean? :> i|><0])
-          (t/ftype t/any? [t/any?     :> i|><1])))
+          (t/ftype [t/boolean? :> i|><0])
+          (t/ftype [t/any?     :> i|><1])))
       (testing "output <>"
         (test-comparison|fn [ <ident <>ident]
-          (t/ftype t/any? [t/boolean? :> ><0])
-          (t/ftype t/any? [t/any?     :> ><1]))))
+          (t/ftype [t/boolean? :> ><0])
+          (t/ftype [t/any?     :> ><1]))))
     (testing "same-arity input types ="
       (testing "output <"
         (test-comparison|fn [ =ident  >ident]
-          (t/ftype t/any? [])
-          (t/ftype t/any? [:> t/boolean?])))
+          (t/ftype [])
+          (t/ftype [:> t/boolean?])))
       (testing "output ="
         (test-comparison|fn [ =ident  =ident]
-          (t/ftype t/any? [])
-          (t/ftype t/any? [])))
+          (t/ftype [])
+          (t/ftype [])))
       (testing "output >")
       (testing "output ><")
       (testing "output <>"))
