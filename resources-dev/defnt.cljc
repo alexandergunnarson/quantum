@@ -41,16 +41,41 @@ Note that for anything built-in js/<whatever>, the `t/isa?` predicates might nee
 
 Sometimes you want (byte <whatever-double>) to fail at runtime rather than fail at runtime when you can't know everything about the input's range
 
-These two should be defined in the (whatever) data namespace:
-- `>(whatever)`
-- `(whatever)>`
+
 
 #_"
-Note that `;; TODO TYPED` is the annotation we're using for this initiative
+Pinned:
+- `;; TODO TYPED` is the annotation we're using for this initiative
 - There will be some code duplication with untyped code for now and that's okay.
-- No typed namespace should refer to any untyped namespace
+- No typed namespace should refer to any untyped namespace.
+- The initial definition of conversion functions belongs in the namespace that their destination
+  type belongs in, and it may be extended in every namespace in which there is a source type.
+- These two should be defined in the `whatever` data namespace:
+  - `>(whatever)`
+  - `(whatever)>`
+Legend:
+- [.] : in progress
+- [-] : done as far as possible but not truly complete
+- [x] : actually done
+- [|] : not possible / N/A
+- [!] : refused
 
 - TODO implement the following:
+  [1] ^:inline
+      - should be able to mark either ^:unline or ^{:inline false} on arities of an inline function
+      - if you do (Numeric/bitAnd a b) inline then bitAnd needs to know the primitive type so maybe
+        we do the `let*`-binding approach to typing vars?
+      - A good example of inlining:
+        (t/def empty?|rf
+          (fn/aritoid
+            (t/fn [] true)
+            fn/identity
+            (t/fn [ret _, x _]      (dc/reduced false))
+            (t/fn [ret _, k _, v _] (dc/reduced false))))
+        (t/defn empty? > p/boolean?
+          ([x p/nil?] true)
+          ([xs dc/counted?] (-> xs count num/zero?))
+          ([xs (t/input-type educe :_ :_ :?)] (educe empty?|rf x)))
   [2] t/numerically : e.g. a double representing exactly what a float is able to represent
       - and variants thereof: `numerically-long?` etc.
       - t/numerically-integer?
@@ -84,6 +109,8 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
       - Don't re-create type on each call (see `defnt/unanalyzed-overload>overload`)
   [ ] replace `deref` with `ref/deref` in typed contexts? So we can do `@` still
   - Type Logic and Predicates
+    - expressions (`quantum.untyped.core.analyze.expr`)
+    - comparison of `t/fn`s is probably possible?
     - It is possible to check satisfaction of arities to an `t/ftype` at runtime even if the type
       meta is not stripped (well, at least the arity counts can be checked and primitive types in
       CLJ):
@@ -150,125 +177,101 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
   - Probably comparing a protocol with something else should be a matter for reactivity since
     protocols can be extended
     - TODO CLJS needs to implement it better
-  - Analysis/Optimization
-    - `(p/nil? ...)` should probably be inlined to `(?/== ... nil)` rather than using the overhead
-      of the deftype
-    - This should realize that we're negating a `<` and change the operator to `<=`
-      - `(t/def nneg? (fn/comp ?/not neg?))`
-    - For numbers:
-      - (< (compare a b) 0)
-        ->
-        (< (ifs (< a b) -1 (> a b) 1 0) 0)
-        -> the only one that can be < 0 is the -1
-        -> (< a b)
-    - Better analysis of compound literals
-      - Literal seqs need to be better analyzed — (t/finite-of t/built-in-list? [ak-type av-type] ...)
-    - Peformance analysis (this comes very much later)
-      - We should be able to do complexity analysis. Similarly to how we can combine and manipulate
-        types, we could do like `(cplex/assume (cplex/o :n))` or `(cplex/assume (cplex/o :n2))` etc.
-        - For `reduce` we'd always know it's up to N operations, so O(n * <complexity of `rf`>)
-      - Record performance for each relevant part and cache?
-    - (if (dcoll/reduced? ret)
-          ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`
-          (ref/deref ret)
-          ...)
-    - (let [ct (count arr)]
-        (loop [i 0 v init]
-          (if (comp/< i ct)
-              (let [ret (f v (get arr i))]
-                (if (reduced? ret)
-                    @ret
-                    ;; TODO TYPED automatically figure out that `inc` will never go out of bounds here
-                    (recur (inc* i) ret)))
-              v)))
-    - (let [xs' (seq xs)]
-        (if (dcomp/== (class xs') (class xs))
-            (reduce-seq rf ret xs')
-            ;; TODO TYPED automatically figure out that:
-            ;; - `(not (dcomp/== (class xs') (class xs)))`
-            ;; - What the possible types of xs' are as a result
-            (reduce rf init xs')))
-    - ([rf rf?, init t/any?, xs #?(:clj  (t/isa? clojure.core.protocols/CollReduce)
-                                   :cljs (t/isa?|direct cljs.core/IReduce))]
-        ;; TODO add `^not-native` to `xs` for CLJS
-        (#?(:clj  clojure.core.protocols/coll-reduce
-            :cljs cljs.core/-reduce) xs rf init))
-    - (if (A) ...) should be (if ^boolean (A) ...) if A returns a `p/boolean?`
-  - t/binding
-    - We should make a special class or *something* like that to ensure that typed bindings are only
-      bound within typed contexts.
-  - t/defrecord
-  - t/def-concrete-type (i.e. `t/deftype`)
-  - expressions (`quantum.untyped.core.analyze.expr`)
-  - comparison of `t/fn`s is probably possible?
-  - t/def
-    - TODO what would this even look like? I guess it would just declare the sym, meta, and type
-    - It would also have the benefit of creating a typed context
-    - Without an argument, it would work like `declare`
-  - t/fn
-  - t/ftype
-    - conditionally optional arities etc.
-  - ^:dyn
-    - `(name (read ...))` fails at compile-time; we want it to at least try at runtime. So instead
-      we annotate like `(name ^:dyn (read ...))`, meaning figure out at runtime what the out-type of
-      the call to `(read ...)` is, not, call `name` dynamically.
-  - `t/defn`
-    - Should not accept `t/none?` as an input type
-      - Arity elision: if any type in an arity is `t/none?` then elide it and emit a warning
-        - `([x bigint?] x)`
-    - All `intern`s/effects in `t/defn` should be atomic (all or nothing). This means that the
-      interns should probably be put on a queue too.
-    - `declare` but for `t/defn`
-      - Currently we can declare that there is an fn, and what its output type is, and its metadata,
-        but we cannot currently declare type-overloads. Experience will make clearer what to do in
-        these cases.
-    - `|` (pre-types)
-    - t/defn-
-      - Not just a private var for the dynamic dispatch, but needs to be private for purposes of the
-        analyzer when doing direct dispatch. Should emit a warning, not just fail.
-    - (t/and (t/or a b) c) should -> (t/or (t/and a c) (t/and b c)) for purposes of type-splitting
-    - ^:inline
-      - should be able to mark either ^:unline or ^{:inline false} on arities of an inline function
-      - if you do (Numeric/bitAnd a b) inline then bitAnd needs to know the primitive type so maybe
-        we do the `let*`-binding approach to typing vars?
-      - A good example of inlining:
-        (t/def empty?|rf
-          (fn/aritoid
-            (t/fn [] true)
-            fn/identity
-            (t/fn [ret _, x _]      (dc/reduced false))
-            (t/fn [ret _, k _, v _] (dc/reduced false))))
-        (t/defn empty? > p/boolean?
-          ([x p/nil?] true)
-          ([xs dc/counted?] (-> xs count num/zero?))
-          ([xs (t/input-type educe :_ :_ :?)] (educe empty?|rf x)))
-    - handle varargs / variadic arity
-      - [& args _] shouldn't result in `t/any?` but rather like `t/reducible?` or whatever
-      - should configurably auto-generate arities and/or perform variadic proxying
-    - do the defnt-equivalences / `t/defn` test namespace
-    - a linting warning that you can narrow the type to whatever the deduced type is from whatever
-      wider declared type there is
-    - the option of creating a `t/defn` that isn't extensible? Or at least in which the input types are limited in the same way per-overload output types are limited by the per-fn output type?
-  - t/defmacro
-  - t/deftype
-  - t/dotyped
-  - t/extend-defn!
-    [ ] Ability to add output type restriction after the fact?
-  - lazy compilation especially around `t/input-type`
-  - equivalence of typed predicates (i.e. that which is `t/<=` `(t/ftype [x t/any? :> p/boolean?])`)
-    to types:
-    - [xs (t/fn [x (t/isa? clojure.lang.Range)] ...)]
-- NOTE on namespace organization:
-  - The initial definition of conversion functions belongs in the namespace that their destination
-    type belongs in, and it may be extended in every namespace in which there is a source type.
+  [-] Analysis/Optimization
+      - `(p/nil? ...)` should probably be inlined to `(?/== ... nil)` rather than using the overhead
+        of the deftype
+      - This should realize that we're negating a `<` and change the operator to `<=`
+        - `(t/def nneg? (fn/comp ?/not neg?))`
+      - For numbers:
+        - (< (compare a b) 0)
+          ->
+          (< (ifs (< a b) -1 (> a b) 1 0) 0)
+          -> the only one that can be < 0 is the -1
+          -> (< a b)
+      - Better analysis of compound literals
+        - Literal seqs need to be better analyzed — (t/finite-of t/built-in-list? [ak-type av-type] ...)
+      - Peformance analysis (this comes very much later)
+        - We should be able to do complexity analysis. Similarly to how we can combine and manipulate
+          types, we could do like `(cplex/assume (cplex/o :n))` or `(cplex/assume (cplex/o :n2))` etc.
+          - For `reduce` we'd always know it's up to N operations, so O(n * <complexity of `rf`>)
+        - Record performance for each relevant part and cache?
+      - (if (dcoll/reduced? ret)
+            ;; TODO TYPED `(ref/deref ret)` should realize it's dealing with a `reduced?`
+            (ref/deref ret)
+            ...)
+      - (let [ct (count arr)]
+          (loop [i 0 v init]
+            (if (comp/< i ct)
+                (let [ret (f v (get arr i))]
+                  (if (reduced? ret)
+                      @ret
+                      ;; TODO TYPED automatically figure out that `inc` will never go out of bounds here
+                      (recur (inc* i) ret)))
+                v)))
+      - (let [xs' (seq xs)]
+          (if (dcomp/== (class xs') (class xs))
+              (reduce-seq rf ret xs')
+              ;; TODO TYPED automatically figure out that:
+              ;; - `(not (dcomp/== (class xs') (class xs)))`
+              ;; - What the possible types of xs' are as a result
+              (reduce rf init xs')))
+      - ([rf rf?, init t/any?, xs #?(:clj  (t/isa? clojure.core.protocols/CollReduce)
+                                     :cljs (t/isa?|direct cljs.core/IReduce))]
+          ;; TODO add `^not-native` to `xs` for CLJS
+          (#?(:clj  clojure.core.protocols/coll-reduce
+              :cljs cljs.core/-reduce) xs rf init))
+      - (if (A) ...) should be (if ^boolean (A) ...) if A returns a `p/boolean?`
+  [ ] t/binding
+      - We should make a special class or *something* like that to ensure that typed bindings are
+        only bound within typed contexts.
+  [ ] t/defrecord
+  [ ] t/def-concrete-type (i.e. `t/deftype`)
+  [ ] t/def
+      - TODO what would this even look like? I guess it would just declare the sym, meta, and type
+      - It would also have the benefit of creating a typed context
+      - Without an argument, it would work like `declare`
+  [-] t/fn
+  [-] t/ftype
+      [ ] conditionally optional arities etc.
+  [ ] ^:dyn
+      - `(name (read ...))` fails at compile-time; we want it to at least try at runtime. So instead
+        we annotate like `(name ^:dyn (read ...))`, meaning figure out at runtime what the out-type of
+        the call to `(read ...)` is, not, call `name` dynamically.
+  [-] `t/defn`
+      [ ] Should not accept `t/none?` as an input type
+          - Arity elision: if any type in an arity is `t/none?` then elide it and emit a warning
+            - `([x bigint?] x)`
+      [ ] All `intern`s/effects in `t/defn` should be atomic (all or nothing). This means that the
+          interns should probably be put on a queue too.
+      [ ] `declare` but for `t/defn`
+          - Currently we can declare that there is an fn, and what its output type is, and its
+            metadata, but we cannot currently declare type-overloads. Experience will make clearer
+            what to do in these cases.
+      [ ] `|` (pre-types)
+      [ ] t/defn-
+          - Not just a private var for the dynamic dispatch, but needs to be private for purposes of
+            the analyzer when doing direct dispatch. Should emit a warning, not just fail.
+      [ ] (t/and (t/or a b) c) should -> (t/or (t/and a c) (t/and b c)) for purposes of type-splitting
+      [ ] handle varargs / variadic arity
+          - [& args _] shouldn't result in `t/any?` but rather like `t/reducible?` or whatever
+          - should configurably auto-generate arities and/or perform variadic proxying
+      [ ] do the defnt-equivalences / `t/defn` test namespace
+      [ ] a linting warning that you can narrow the type to whatever the deduced type is from whatever
+          wider declared type there is
+      [ ] the option of creating a `t/defn` that isn't extensible? Or at least in which the input
+          types are limited in the same way per-overload output types are limited by the per-fn output
+          type?
+  [ ] t/defmacro
+  [ ] t/deftype
+  [ ] t/dotyped
+  [-] t/extend-defn!
+      [ ] Ability to add output type restriction after the fact?
+  [ ] lazy compilation especially around `t/input-type`
+  [ ] equivalence of typed predicates (i.e. that which is t/<= `(t/ftype [x t/any? :> p/boolean?])`)
+      to types:
+      - [xs (t/fn [x (t/isa? clojure.lang.Range)] ...)]
 - TODO transition the quantum.core.* namespaces:
   ->>>>>> TODO need to add *all* quantum namespaces in here
-  - Legend:
-    [.] : in progress
-    [-] : done as far as possible but not truly complete
-    [x] : actually done
-    [|] : not possible / N/A
-    [!] : refused
   - List of semi-approximately topologically ordered namespaces to make typed:
     - [.] clojure.core / cljs.core (note that many things unexpectedly have associated macros)
           - [! !] ..
@@ -1434,22 +1437,22 @@ Note that `;; TODO TYPED` is the annotation we're using for this initiative
           - [ ] java.lang.invoke.MethodHandle.linkToInterface(*)
           - [ ] >=9 : java.lang.invoke.MethodHandleImpl.profileBoolean(boolean, ints) > boolean
           - [ ] >=9 : java.lang.invoke.MethodHandleImpl.isCompileConstant(object) > boolean
-          - [x] <Boolean>  .booleanValue() > boolean
-          - [x] <Byte>     .byteValue   () > byte
-          - [x] <Short>    .shortValue  () > short
-          - [x] <Character>.charValue   () > char
-          - [x] <Integer>  .intValue    () > int
-          - [x] <Long>     .longValue   () > long
-          - [x] <Float>    .floatValue  () > float
-          - [x] <Double>   .doubleValue () > double
-          - [x] Boolean  .valueOf(boolean) > Boolean
-          - [x] Byte     .valueOf(byte   ) > Byte
-          - [x] Short    .valueOf(short  ) > Short
-          - [x] Character.valueOf(char   ) > Character
-          - [x] Integer  .valueOf(int    ) > Integer
-          - [x] Long     .valueOf(long   ) > Long
-          - [x] Float    .valueOf(float  ) > Float
-          - [x] Double   .valueOf(double ) > Double
+          - [x] <Boolean>  .booleanValue()        > boolean
+          - [x] <Byte>     .byteValue   ()        > byte
+          - [x] <Short>    .shortValue  ()        > short
+          - [x] <Character>.charValue   ()        > char
+          - [x] <Integer>  .intValue    ()        > int
+          - [x] <Long>     .longValue   ()        > long
+          - [x] <Float>    .floatValue  ()        > float
+          - [x] <Double>   .doubleValue ()        > double
+          - [x] Boolean    .valueOf     (boolean) > Boolean
+          - [x] Byte       .valueOf     (byte   ) > Byte
+          - [x] Short      .valueOf     (short  ) > Short
+          - [x] Character  .valueOf     (char   ) > Character
+          - [x] Integer    .valueOf     (int    ) > Integer
+          - [x] Long       .valueOf     (long   ) > Long
+          - [x] Float      .valueOf     (float  ) > Float
+          - [x] Double     .valueOf     (double ) > Double
           - [ ] >=9 : <java.util.stream.StreamsRangeIntSpliterator>.forEachRemaining(java.util.function.IntConsumer)
     - [.] clojure.lang.RT
           https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/RT.java
