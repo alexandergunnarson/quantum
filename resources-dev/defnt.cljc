@@ -179,6 +179,9 @@ Legend:
     protocols can be extended
     - TODO CLJS needs to implement it better
   [-] Analysis/Optimization
+      - dead code elimination
+        - in `let*`, we should elide variables that are unused and that have no side effects (or at
+          least warn)
       - `(p/nil? ...)` should probably be inlined to `(?/== ... nil)` rather than using the overhead
         of the deftype
       - This should realize that we're negating a `<` and change the operator to `<=`
@@ -259,7 +262,6 @@ Legend:
           type?
   [ ] t/defmacro
   [ ] t/deftype
-  [ ] t/dotyped
   [-] t/extend-defn!
       [ ] Ability to add output type restriction after the fact?
   [ ] lazy compilation especially around `t/input-type`
