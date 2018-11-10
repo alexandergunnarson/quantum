@@ -159,7 +159,7 @@
           :clj
            `[~(?Collection lang)
                ~@(p-arity 'empty   (get    impls 'empty))
-               ~@(p-arity 'equiv   (get-in impls ['?Equals '=])) ; TBD
+               ~@(p-arity 'equiv   (get-in methods-spec ['?Equals '=])) ; TBD
                ~@(p-arity 'cons    (get    impls 'conj))
              ~(implement-map-or-collection methods-spec)
                ~@(p-arity 'isEmpty (get impls 'empty?))
