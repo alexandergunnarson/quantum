@@ -727,24 +727,23 @@
              (fn [{:as ret :keys [dispatch-type]} input|analyzed i]
                (if (= :fnt caller-kind)
                    (let [{:as ret' :keys [dispatchable-overload-types-seq input-nodes]}
-                           (case dispatch-type
-                             :direct  (filter-direct-dispatchable-overload-types
-                                        ret input|analyzed i caller|node args-form)
-                             :dynamic (filter-dynamic-dispatchable-overload-types
-                                        ret input|analyzed i caller|node args-form))
+                           (-> (case dispatch-type
+                                 :direct  (filter-direct-dispatchable-overload-types
+                                            ret input|analyzed i caller|node args-form)
+                                 :dynamic (filter-dynamic-dispatchable-overload-types
+                                            ret input|analyzed i caller|node args-form))
+                               (update :input-nodes conj input|analyzed))
                          last-input? (= i (dec inputs-ct))]
-                     (-> ret'
-                         (update :input-nodes conj input|analyzed)
-                         (cond-> last-input?
-                           (assoc
-                             :output-type
-                               (>dispatch|output-type dispatch-type dispatchable-overload-types-seq)
-                             :form
-                               (if (= dispatch-type :direct)
-                                   (>direct-dispatch|reify-call caller|node caller|type
-                                     (first dispatchable-overload-types-seq)
-                                     (uc/lmap :form input-nodes))
-                                   (list* (:form caller|node) (uc/lmap :form input-nodes)))))))
+                     (cond-> ret' last-input?
+                       (assoc
+                         :output-type
+                           (>dispatch|output-type dispatch-type dispatchable-overload-types-seq)
+                         :form
+                           (if (= dispatch-type :direct)
+                               (>direct-dispatch|reify-call caller|node caller|type
+                                 (first dispatchable-overload-types-seq)
+                                 (uc/lmap :form input-nodes))
+                               (list* (:form caller|node) (uc/lmap :form input-nodes))))))
                    (update ret :input-nodes conj input|analyzed)))
                {:input-nodes   []
                 ;; We could do a little smarter analysis here but we'll keep it simple for now
