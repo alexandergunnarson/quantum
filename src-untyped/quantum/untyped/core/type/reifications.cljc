@@ -381,28 +381,34 @@
 ;; ----- FnType ----- ;;
 
 (udt/deftype FnType
-  [meta #_(t/? ::meta)
-   name
-   out-type #_t/type?
+  [meta         #_(t/? ::meta)
+   name         #_(t/? qualified-symbol?)
+   output-type  #_t/type?
    arities-form
-   arities #_(s/map-of nneg-int? (s/seq-of (s/kv {:input-types (s/vec-of type?)
-                                                  :output-type type?})))]
+   arities      #_(s/map-of nneg-int? (s/seq-of (s/kv {:input-types (s/vec-of type?)
+                                                       :output-type type?})))]
   {PType          nil
    ;; Outputs whether the args match any input spec
    ?Fn            {invoke    ([this args] (TODO))}
    ?Meta          {meta      ([this] meta)
-                   with-meta ([this meta'] (FnType. meta' name out-type arities-form arities))}
-   uform/PGenForm {>form     ([this] (-> (list* 'quantum.untyped.core.type/ftype
-                                           (>form out-type) (>form arities-form))
-                                         (accounting-for-meta meta)))}
+                   with-meta ([this meta'] (FnType. meta' name output-type arities-form arities))}
+   uform/PGenForm {>form     ([this]
+                               (-> (if (nil? name)
+                                       (list* 'quantum.untyped.core.type/ftype
+                                              (>form output-type) (>form arities-form))
+                                       (list* 'quantum.untyped.core.type/ftype
+                                              name (>form output-type) (>form arities-form)))
+                                   (accounting-for-meta meta)))}
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] (>form this))}})
 
 (defns fn-type? [x _ > boolean?] (instance? FnType x))
 
+(defns fn-type>name [^FnType x fn-type?] (.-name x))
+
 (defns fn-type>arities [^FnType x fn-type?] (.-arities x))
 
-(defns fn-type>out-type [^FnType x fn-type?] (.-out-type x))
+(defns fn-type>output-type [^FnType x fn-type?] (.-output-type x))
 
 (us/def :quantum.untyped.core.type/fn-type|arity
   (us/and

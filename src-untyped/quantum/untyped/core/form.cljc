@@ -63,7 +63,8 @@
       :cljs cljs.core/PersistentList)
      (>form [x] (->> x (map >form) list*))
 
-  #?@(:clj [clojure.lang.ASeq (>form [x] (->> x (map >form)))])
+  #?@(:clj [clojure.lang.ASeq    (>form [x] (->> x (map >form)))])
+  #?@(:clj [clojure.lang.LazySeq (>form [x] (->> x (map >form)))])
 
    #?(:clj  clojure.lang.Var
       :cljs cljs.core/Var)

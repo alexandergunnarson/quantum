@@ -48,7 +48,7 @@
       :refer [educe educei reducei]]
     [quantum.untyped.core.refs                  :as uref
       :refer [?deref]]
-    [quantum.untyped.core.spec                  :as s]
+    [quantum.untyped.core.spec                  :as us]
     [quantum.untyped.core.specs                 :as uss]
     [quantum.untyped.core.type                  :as t
       :refer [?]]
@@ -66,14 +66,14 @@
 
 ;; ===== `t/extend-defn!` specs ===== ;;
 
-(s/def :quantum.core.defnt/fn|extended-name symbol?)
+(us/def :quantum.core.defnt/fn|extended-name symbol?)
 
-(s/def :quantum.core.defnt/extend-defn!
-  (s/and (s/spec
-           (s/cat :quantum.core.defnt/fn|extended-name :quantum.core.defnt/fn|extended-name
-                  :quantum.core.defnt/overloads        :quantum.core.defnt/overloads))
-         (uss/fn-like|postchecks|gen :quantum.core.defnt/overloads)
-         :quantum.core.defnt/postchecks))
+(us/def :quantum.core.defnt/extend-defn!
+  (us/and (us/spec
+            (us/cat :quantum.core.defnt/fn|extended-name :quantum.core.defnt/fn|extended-name
+                   :quantum.core.defnt/overloads        :quantum.core.defnt/overloads))
+          (uss/fn-like|postchecks|gen :quantum.core.defnt/overloads)
+          :quantum.core.defnt/postchecks))
 
 ;; ===== End `t/extend-defn!` specs ===== ;;
 
@@ -87,129 +87,129 @@
 
 ;; ==== Internal specs ===== ;;
 
-(s/def ::lang #{:clj :cljs})
+(us/def ::lang #{:clj :cljs})
 
 (def ^:dynamic *compilation-mode* :normal)
 
-(s/def ::compilation-mode #{:normal :test})
+(us/def ::compilation-mode #{:normal :test})
 
-(s/def ::kind #{:fn :defn :extend-defn!})
+(us/def ::kind #{:fn :defn :extend-defn!})
 
-(s/def ::opts
-  (s/kv {:compilation-mode ::compilation-mode
-         :gen-gensym       t/fn?
-         :lang             ::lang
-         :kind             ::kind}))
+(us/def ::opts
+  (us/kv {:compilation-mode ::compilation-mode
+          :gen-gensym       t/fn?
+          :lang             ::lang
+          :kind             ::kind}))
 
 ;; "global" because they apply to the whole `t/fn`
-(s/def ::fn|globals
-  (s/kv {:fn|globals-name        simple-symbol?
-         :fn|meta                (s/nilable :quantum.core.specs/meta)
-         :fn|ns-name             simple-symbol?
-         :fn|name                ::uss/fn|name
-         :fn|output-type         t/type?
-         :fn|output-type|form    t/any?
-         :fn|overload-bases-name simple-symbol?
-         :fn|overload-types-name simple-symbol?
-         :fn|type-name           simple-symbol?}))
+(us/def ::fn|globals
+  (us/kv {:fn|globals-name        simple-symbol?
+          :fn|meta                (us/nilable :quantum.core.specs/meta)
+          :fn|ns-name             simple-symbol?
+          :fn|name                ::uss/fn|name
+          :fn|output-type         t/type?
+          :fn|output-type|form    t/any?
+          :fn|overload-bases-name simple-symbol?
+          :fn|overload-types-name simple-symbol?
+          :fn|type-name           simple-symbol?}))
 
-(s/def ::overload-basis|types|split
-  (s/vec-of (s/kv {:arg-types (s/vec-of t/type?) :output-type t/type?})))
+(us/def ::overload-basis|types|split
+  (us/vec-of (us/kv {:arg-types (us/vec-of t/type?) :output-type t/type?})))
 
-(s/def ::overload-basis|norx
+(us/def ::overload-basis|norx
   ;; None of these types should be reactive
-  (s/kv {:arg-types|basis   (s/vec-of t/type?)
-         :output-type|basis t/type?
-         ;; This is non-nil only for arglists with dependent types
-         :types|split       (s/nilable ::overload-basis|types|split)
-         :body-codelist     (s/vec-of t/any?)
-         :dependent?        boolean?
-         :reactive?         boolean?}))
+  (us/kv {:arg-types|basis   (us/vec-of t/type?)
+          :output-type|basis t/type?
+          ;; This is non-nil only for arglists with dependent types
+          :types|split       (us/nilable ::overload-basis|types|split)
+          :body-codelist     (us/vec-of t/any?)
+          :dependent?        boolean?
+          :reactive?         boolean?}))
 
-(s/def ::overload-basis
-  (s/kv {:ns                      simple-symbol?
-         :args-form               map? ; from binding to form
-         :varargs-form            (s/nilable map?) ; from binding to form
-         :arglist-form|unanalyzed t/any?
-         :arg-types|basis         (s/vec-of t/type?)
-         :output-type|form        t/any?
-         :output-type|basis       t/type?
-         ;; This is non-nil only for arglists with dependent types
-         :types|split             (s/nilable ::overload-basis|types|split)
-         :body-codelist           (s/vec-of t/any?)
-         :dependent?              boolean?
-         :reactive?               boolean?}))
+(us/def ::overload-basis
+  (us/kv {:ns                      simple-symbol?
+          :args-form               map? ; from binding to form
+          :varargs-form            (us/nilable map?) ; from binding to form
+          :arglist-form|unanalyzed t/any?
+          :arg-types|basis         (us/vec-of t/type?)
+          :output-type|form        t/any?
+          :output-type|basis       t/type?
+          ;; This is non-nil only for arglists with dependent types
+          :types|split             (us/nilable ::overload-basis|types|split)
+          :body-codelist           (us/vec-of t/any?)
+          :dependent?              boolean?
+          :reactive?               boolean?}))
 
-(s/def ::overload-bases-data
-  (s/kv {:prev-norx (s/nilable (s/vec-of ::overload-basis|norx))
-         :current   (s/vec-of ::overload-basis)}))
+(us/def ::overload-bases-data
+  (us/kv {:prev-norx (us/nilable (us/vec-of ::overload-basis|norx))
+          :current   (us/vec-of ::overload-basis)}))
 
  ;; Technically it's partially analyzed — its type definitions are analyzed (with the exception of
  ;; requests for type inference) while its body is not.
- (s/def ::unanalyzed-overload
-   (s/kv {:arglist-form|unanalyzed  t/any?
-          :args-form                map? ; from binding to form
-          :varargs-vorm             (s/nilable map?) ; from binding to form
-          :arg-types                (s/vec-of t/type?)
-          :output-type|form         t/any?
-          :output-type              t/type?
-          :body-codelist            t/any?
-          :i|basis                  index?}))
+ (us/def ::unanalyzed-overload
+   (us/kv {:arglist-form|unanalyzed  t/any?
+           :args-form                map? ; from binding to form
+           :varargs-vorm             (us/nilable map?) ; from binding to form
+           :arg-types                (us/vec-of t/type?)
+           :output-type|form         t/any?
+           :output-type              t/type?
+           :body-codelist            t/any?
+           :i|basis                  index?}))
 
 ;; This is the overload after the input specs are split by their respective `t/or` constituents,
 ;; and after primitivization, but before readiness for incorporation into a `reify`.
 ;; One of these corresponds to one reify overload.
-(s/def ::overload
-  (s/kv {:arg-classes                 (s/vec-of class?)
-         :arg-types                   (s/vec-of t/type?)
-         :arglist-form|unanalyzed     t/any?
-         :arglist-code|fn|hinted      t/any?
-         :arglist-code|reify|unhinted t/any?
-         :body-form                   t/any?
-         :output-class                (s/nilable class?)
-         :output-type                 t/type?
-         :positional-args-ct          count?
-         ;; When present, varargs are considered to be of class Object
-         :variadic?                   t/boolean?}))
+(us/def ::overload
+  (us/kv {:arg-classes                 (us/vec-of class?)
+          :arg-types                   (us/vec-of t/type?)
+          :arglist-form|unanalyzed     t/any?
+          :arglist-code|fn|hinted      t/any?
+          :arglist-code|reify|unhinted t/any?
+          :body-form                   t/any?
+          :output-class                (us/nilable class?)
+          :output-type                 t/type?
+          :positional-args-ct          count?
+          ;; When present, varargs are considered to be of class Object
+          :variadic?                   t/boolean?}))
 
-(s/def ::overload|id index?)
+(us/def ::overload|id index?)
 
-(s/def ::overload-types-decl
-  (s/kv {:form t/any?
-         :name simple-symbol?}))
+(us/def ::overload-types-decl
+  (us/kv {:form t/any?
+          :name simple-symbol?}))
 
-(s/def ::reify|name simple-symbol?) ; hinted with the interface name
+(us/def ::reify|name simple-symbol?) ; hinted with the interface name
 
-(s/def ::reify
-  (s/kv {:form      t/any?
-         :interface class?
-         :name      ::reify|name
-         :overload  ::overload}))
+(us/def ::reify
+  (us/kv {:form      t/any?
+          :interface class?
+          :name      ::reify|name
+          :overload  ::overload}))
 
-(s/def ::direct-dispatch-data
-  (s/kv {:overload-types-decl ::overload-types-decl
-         :reify               ::reify}))
+(us/def ::direct-dispatch-data
+  (us/kv {:overload-types-decl ::overload-types-decl
+          :reify               ::reify}))
 
-(s/def ::direct-dispatch
-  (s/kv {:form                     t/any?
-         :direct-dispatch-data-seq (s/vec-of ::direct-dispatch-data)}))
+(us/def ::direct-dispatch
+  (us/kv {:form                     t/any?
+          :direct-dispatch-data-seq (us/vec-of ::direct-dispatch-data)}))
 
-(s/def ::type-datum
-  (s/kv {:arg-types   (s/vec-of t/type?)
-         :pre-type    t/type?
-         :output-type t/type?}))
+(us/def ::type-datum
+  (us/kv {:arg-types   (us/vec-of t/type?)
+          :pre-type    t/type?
+          :output-type t/type?}))
 
-(s/def ::types-decl-datum
-  (s/kv {:id          ::overload|id
-         :ns-name     simple-symbol?
-         :arg-types   (s/vec-of t/type?)
-         :output-type t/type?
-         :index       index?})) ; overload-index (position in the overall types-decl)
+(us/def ::types-decl-datum
+  (us/kv {:id          ::overload|id
+          :ns-name     simple-symbol?
+          :arg-types   (us/vec-of t/type?)
+          :output-type t/type?
+          :index       index?})) ; overload-index (position in the overall types-decl)
 
-(s/def ::fn|types
-  (s/kv {:fn|output-type-norx t/type?
-         :fn|type-norx        t/type?
-         :overload-types      (s/vec-of ::types-decl-datum)}))
+(us/def ::fn|types
+  (us/kv {:fn|output-type-norx t/type?
+          :fn|type-norx        t/type?
+          :overload-types      (us/vec-of ::types-decl-datum)}))
 
 #_(:clj
 (c/defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
@@ -263,7 +263,7 @@
       1
       (uset/normalize-comparison (t/compare t0 t1)))))
 
-(c/defn compare-args-types [arg-types0 #_(s/vec-of t/type?) arg-types1 #_(s/vec-of t/type?)]
+(c/defn compare-args-types [arg-types0 #_(us/vec-of t/type?) arg-types1 #_(us/vec-of t/type?)]
   (let [ct-comparison (compare (count arg-types0) (count arg-types1))]
     (if (zero? ct-comparison)
         (reduce-2
@@ -307,8 +307,9 @@
             output-type|form _, body-codelist _]
      declared-output-type [:output-type _]}
     ::unanalyzed-overload
-   overload|id index?
-   fn|type     t/type?
+   overload|id       index?
+   fn|overload-types (us/vec-of ::types-decl-datum)
+   fn|type           t/type?
    > ::overload]
   (let [;; Not sure if `nil` is the right approach for the value
         recursive-ast-node-reference
@@ -318,7 +319,10 @@
                                     [arg-binding (uast/unbound nil arg-binding arg-type)]))
                          ;; To support recursion
                          (<- (cond-> (not= kind :extend-defn!)
-                                     (assoc fn|name recursive-ast-node-reference))))
+                               (assoc fn|name
+                                      recursive-ast-node-reference
+                                      (uid/qualify fn|ns-name fn|overload-types-name)
+                                      fn|overload-types))))
         variadic?   (not (empty? varargs-form))
         arg-classes (->> arg-types (uc/map type>class))
         body-node   (uana/analyze env (ufgen/?wrap-do body-codelist))
@@ -365,16 +369,14 @@
 
 ;; ----- Direct dispatch: `reify` ---- ;;
 
-(defns- overload-classes>interface-sym [args-classes (s/seq-of class?), out-class class? > symbol?]
+(defns- overload-classes>interface-sym [args-classes (us/seq-of class?), out-class class? > symbol?]
   (>symbol (str (->> args-classes (uc/lmap class>interface-part-name) (str/join "+"))
                 ">" (class>interface-part-name out-class))))
 
-(def reify-method-sym 'invoke)
-
 (defns- overload-classes>interface
-  [args-classes (s/vec-of class?), out-class class?, gen-gensym fn?]
+  [args-classes (us/vec-of class?), out-class class?, gen-gensym fn?]
   (let [interface-sym     (overload-classes>interface-sym args-classes out-class)
-        hinted-method-sym (ufth/with-type-hint reify-method-sym
+        hinted-method-sym (ufth/with-type-hint uana/direct-dispatch-method-sym
                             (ufth/>interface-method-tag out-class))
         hinted-args       (ufth/hint-arglist-with
                             (ufgen/gen-args 0 (count args-classes) "x" gen-gensym)
@@ -416,7 +418,7 @@
                        (ufth/with-type-hint (>name interface)))
         form `(~'def ~reify|name
                 (reify* [~(-> interface >name >symbol)]
-                  (~(ufth/with-type-hint reify-method-sym
+                  (~(ufth/with-type-hint uana/direct-dispatch-method-sym
                       (ufth/>arglist-embeddable-tag output-class|reify))
                     ~arglist-code ~body-form)))]
     {:form      form
@@ -431,13 +433,17 @@
    #_> #_(objects-of type?)]
   (apply uarr/*<> (-> !fn|types norx-deref :overload-types (get overload-index) :arg-types)))
 
-(c/defn overload-types>ftype [overload-types #_(vec-of ::type-datum), fn|output-type #_t/type?]
+(c/defn overload-types>ftype
+  [fn|ns-name     #_simple-symbol?
+   fn|name        #_simple-symbol?
+   overload-types #_(vec-of ::type-datum)
+   fn|output-type #_t/type?]
   (->> overload-types
        (uc/lmap (c/fn [{:keys [arg-types pre-type output-type]}]
                   (cond-> arg-types
                     pre-type    (conj :| pre-type)
                     output-type (conj :> output-type))))
-       (apply t/ftype fn|output-type)))
+       (apply t/ftype (uid/qualify fn|ns-name fn|name) fn|output-type)))
 
 (c/defn- dedupe-overload-types-data [fn|ns-name fn|name types-decl-data]
   (->> types-decl-data
@@ -479,10 +485,10 @@
   "Split and primitivized; not yet sorted."
   [{:keys [fn|output-type _]} ::fn|globals, args-form _, output-type|form _, body-codelist _]
   (->> (uana/analyze-arg-syms {} args-form (or output-type|form fn|output-type) true)
-       (uc/map+ (c/fn [{:keys [env out-type-node]}]
+       (uc/map+ (c/fn [{:keys [env output-type-node]}]
                   (let [arg-env     (->> env :opts :arg-env deref)
                         arg-types   (->> args-form keys (uc/map #(:type (get arg-env %))))
-                        output-type (:type out-type-node)]
+                        output-type (:type output-type-node)]
                     (when-not (t/<= output-type fn|output-type)
                       (err! (str "Overload's declared output type does not satisfy function's"
                                  "overall declared output type")
@@ -532,8 +538,8 @@
    times for each `m`. All other computations are done only once for each `m`."
   [fn|globals ::fn|globals
    {:keys [prev-norx _, current _]} ::overload-bases-data
-   existing-overload-types (s/nilable (s/vec-of ::types-decl-datum))
-   > (s/vec-of ::unanalyzed-overload)]
+   existing-overload-types (us/nilable (us/vec-of ::types-decl-datum))
+   > (us/vec-of ::unanalyzed-overload)]
   (let [first-new-basis-index (count prev-norx)]
     (->> current
          (uc/map-indexed+
@@ -567,8 +573,8 @@
 (defns- validate-unique-types-for-unanalyzed-overloads
   "Prior to validation we must first sort the overloads by comparing their arg types. Then if we
    find any type signature duplicates in a linear scan, we throw an error."
-  [unanalyzed-overloads (s/seq-of ::unanalyzed-overload)
-   > (s/vec-of ::unanalyzed-overload)]
+  [unanalyzed-overloads (us/seq-of ::unanalyzed-overload)
+   > (us/vec-of ::unanalyzed-overload)]
   (->> unanalyzed-overloads
        (dedupe-type-data
          (c/fn [overloads prev-overload overload]
@@ -584,7 +590,7 @@
   "Each overload type is structurally (`=`) unique and if an overload is introduced which is `t/=`
    but not `=` then that overload will be rejected."
   [overload-bases-data ::overload-bases-data
-   existing-fn-types   (s/nilable ::fn|types)
+   existing-fn-types   (us/nilable ::fn|types)
    opts                ::opts
    {:as   fn|globals
     :keys [fn|name _, fn|ns-name _, fn|output-type _, fn|overload-types-name _]} ::fn|globals
@@ -603,7 +609,7 @@
                           fn|globals overload-bases-data existing-overload-types))]
       (or existing-fn-types
           {:fn|output-type-norx fn|output-type-norx
-           :fn|type-norx        (t/ftype fn|output-type-norx)
+           :fn|type-norx        (t/ftype (uid/qualify fn|ns-name fn|name) fn|output-type-norx)
            :overload-types []})
       (let [sorted-changed-unanalyzed-overloads
               (->> changed-unanalyzed-overloads
@@ -638,7 +644,8 @@
                        (dedupe-overload-types-data fn|ns-name fn|name)
                        (uc/map-indexed (c/fn [i datum] (assoc datum :index i)))))
             ;; For recursive purposes
-            fn|type-norx (overload-types>ftype overload-types-with-replacing-ids fn|output-type-norx)
+            fn|type-norx (overload-types>ftype
+                           fn|ns-name fn|name overload-types-with-replacing-ids fn|output-type-norx)
             ;; We should analyze everything first in order to figure out body-dependent input types
             ;; before we can compare them against each other, but we're ignoring body-dependent input
             ;; types for now
@@ -647,7 +654,8 @@
                    (uc/map-indexed
                      (c/fn [i x]
                        (let [id (+ i first-current-overload-id)]
-                         (unanalyzed-overload>overload opts fn|globals x id fn|type-norx)))))
+                         (unanalyzed-overload>overload opts fn|globals x id
+                           overload-types-with-replacing-ids fn|type-norx)))))
             overload-types
               (->> overload-types-with-replacing-ids
                    (uc/map
@@ -684,9 +692,8 @@
 
 ;; ===== Dynamic dispatch ===== ;;
 
-(defns- >dynamic-dispatch|reify-call
-  [reify|name|qualified qualified-symbol?, arglist (s/vec-of simple-symbol?)]
-  `(. ~reify|name|qualified ~reify-method-sym ~@arglist))
+(defns >direct-dispatch|reify-call [reify-name symbol?, args-codelist (us/seq-of t/any?)]
+  `(. ~reify-name ~uana/direct-dispatch-method-sym ~@args-codelist))
 
 ;; TODO spec
 (defns unsupported! [name- _ #_t/qualified-symbol?, args _ #_indexed?, i index?]
@@ -695,14 +702,14 @@
 
 (defns- >combinatoric-seq+
   [{:as fn|globals :keys [fn|ns-name _ fn|name _]} ::fn|globals
-   overload-types-for-arity (s/vec-of ::types-decl-datum)
-   arglist (s/vec-of simple-symbol?)]
+   overload-types-for-arity (us/vec-of ::types-decl-datum)
+   arglist (us/vec-of simple-symbol?)]
   (->> overload-types-for-arity
        (uc/map+
          (c/fn [{:as types-decl-datum :keys [arg-types] overload|id :id ns-name- :ns-name}]
           (let [overload-types-decl|name (>overload-types-decl|name ns-name- fn|name overload|id)
-                reify|name|qualified     (>reify-name-unhinted      ns-name- fn|name overload|id)]
-            [(>dynamic-dispatch|reify-call reify|name|qualified arglist)
+                reify-name-unhinted      (>reify-name-unhinted      ns-name- fn|name overload|id)]
+            [(>direct-dispatch|reify-call reify-name-unhinted arglist)
              (->> arg-types
                   (uc/map-indexed
                     (c/fn [i|arg arg-type]
@@ -713,12 +720,11 @@
 
 (defns- >dynamic-dispatch|body-for-arity
   [{:as fn|globals :keys [fn|ns-name _, fn|name _]} ::fn|globals
-   overload-types-for-arity (s/vec-of ::types-decl-datum)
-   arglist (s/vec-of simple-symbol?)]
+   overload-types-for-arity (us/vec-of ::types-decl-datum)
+   arglist (us/vec-of simple-symbol?)]
   (if (empty? arglist)
       (let [overload|id (-> overload-types-for-arity first :id)]
-        (>dynamic-dispatch|reify-call
-          (>reify-name-unhinted fn|ns-name fn|name overload|id) arglist))
+        (>direct-dispatch|reify-call (>reify-name-unhinted fn|ns-name fn|name overload|id) arglist))
       (let [!!i|arg (atom 0)
             combinef
               (c/fn
@@ -803,7 +809,7 @@
                            (or output-type|form fn|output-type) false)
         binding->arg-type|basis (->> arglist-basis :env :opts :arg-env deref (uc/map-vals' :type))
         arg-types|basis   (->> args-form keys (uc/map binding->arg-type|basis))
-        output-type|basis (-> arglist-basis :out-type-node :type)
+        output-type|basis (-> arglist-basis :output-type-node :type)
         dependent?        (:dependent? arglist-basis)
         reactive?         (or (utr/rx-type? output-type|basis)
                               (seq-or utr/rx-type? arg-types|basis))]
@@ -837,8 +843,8 @@
 
 (defns- incorporate-overload-bases
   "O(m•n) where `m` = # of existing overload bases and `n` = # of new overload bases."
-  [existing-bases (s/vec-of ::overload-basis), new-bases (s/vec-of ::overload-basis)
-   > (s/vec-of ::overload-basis)]
+  [existing-bases (us/vec-of ::overload-basis), new-bases (us/vec-of ::overload-basis)
+   > (us/vec-of ::overload-basis)]
   (reduce
     (c/fn [bases new-basis]
       (if-let [i|existing
@@ -972,16 +978,16 @@
 (defns- >fn|globals+?overload-bases-form
   "`opts` are per invocation of `t/defn` and/or `extend-defn!`, while `globals` persist for as long
    as the `t/defn` does."
-  [kind ::kind, args _ > (s/kv {:fn|globals ::fn|globals :overload-bases-form t/any?})]
+  [kind ::kind, args _ > (us/kv {:fn|globals ::fn|globals :overload-bases-form t/any?})]
   (let [{:as args'
          :keys [:quantum.core.specs/fn|name
                 :quantum.core.defnt/fn|extended-name
                 :quantum.core.defnt/output-spec]
          overload-bases-form :quantum.core.defnt/overloads
          fn|meta :quantum.core.specs/meta}
-          (s/validate args (case kind :defn         :quantum.core.defnt/defnt
-                                      :fn           :quantum.core.defnt/fnt
-                                      :extend-defn! :quantum.core.defnt/extend-defn!))
+          (us/validate args (case kind :defn         :quantum.core.defnt/defnt
+                                       :fn           :quantum.core.defnt/fnt
+                                       :extend-defn! :quantum.core.defnt/extend-defn!))
         fn|var          (when (= kind :extend-defn!)
                               (or (uvar/resolve *ns* fn|extended-name)
                           (err! "Could not resolve fn name to extend"
@@ -999,7 +1005,7 @@
         (let [inline?                (-> (if (= kind :extend-defn!)
                                              (-> fn|var meta :inline)
                                              (:inline fn|meta))
-                                         (s/validate (t/? t/boolean?)))
+                                         (us/validate (t/? t/boolean?)))
               fn|meta                (if inline?
                                          (do (ulog/pr :warn
                                                "requested `:inline`; ignoring until feature is implemented")
@@ -1077,6 +1083,16 @@
      which Compile-Time Dispatch is not possible:
      - When a typed function (or a typed object with function-like characteristics such as a
        `t/deftype`) is referenced outside of a typed context.
+
+   Metadata directives special to all typed contexts include:
+   - `:val` : If `true` and attached as metadata to a form, it will cause that form's type to be
+              `t/and`ed with `t/val?`.
+   - `:dyn` : If `true` and attached as metadata to a form corresponding with a typed fn in functor
+              position, it will cause that typed fn to be called dynamically if no direct dispatch
+              is found at compile time.
+              - For instance, `(name (read ...))` fails at compile-time; we want it to at least try
+                at runtime. So we annotate like `(^:dyn name (read ...))`, which tells the compiler
+                to figure out at runtime whether a call to `name` will succeed.
 
    Metadata directives special to `t/fn`/`t/defn` include:
    - `:inline` : If `true` and attached as metadata to the arglist of an overload, will cause that

@@ -506,13 +506,15 @@
 ;; ===== `t/ftype` ===== ;;
 
 (defn ftype [& args]
-  (let [name- nil
-        out-type     (if (-> args first c/sequential?)
+  (let [name-        (when (-> args first c/symbol?)
+                       (first args))
+        rest-args    (if name- (rest args) args)
+        out-type     (if (-> rest-args first c/sequential?)
                          universal-set
-                         (first args))
-        arities-form (if (-> args first c/sequential?)
-                         args
-                         (rest args))
+                         (first rest-args))
+        arities-form (if (-> rest-args first c/sequential?)
+                         rest-args
+                         (rest rest-args))
         arities      (->> arities-form
                           (uc/map+ (c/fn [arity-form]
                                      (-> (us/conform ::fn-type|arity arity-form)
@@ -554,9 +556,9 @@
 
 (us/def ::match-spec
   (us/seq-of (us/or* #{:_ :?} type?
-                     (us/tuple #{:?}      type?)
-                     (us/tuple       ifn? type?)
-                     (us/tuple #{:?} ifn? type?))))
+                     (us/tuple #{:?}        type?)
+                     (us/tuple       c/ifn? type?)
+                     (us/tuple #{:?} c/ifn? type?))))
 
 (defn- find-spec? [match-spec-element]
   (c/or (c/= match-spec-element :?)

@@ -58,7 +58,8 @@ Legend:
 - [!] : refused
 
 - TODO implement the following:
-  [1] ^:inline
+  [1] Direct dispatch needs to actually work correctly in typed contexts
+  [3] ^:inline
       - should be able to mark either ^:unline or ^{:inline false} on arities of an inline function
       - if you do (Numeric/bitAnd a b) inline then bitAnd needs to know the primitive type so maybe
         we do the `let*`-binding approach to typing vars?
@@ -83,7 +84,6 @@ Legend:
           - numeric definitions
           - numeric ranges
           - numeric characteristics
-  [3] Direct dispatch needs to actually work correctly in typed contexts
   [ ] Probably should disallow recursive type references, including:
       `(t/defn f [x (t/input-type f ...)])`
   [ ] Perhaps it's the case that we can't actually have type bases but rather reactive splits.
@@ -234,10 +234,6 @@ Legend:
   [-] t/fn
   [-] t/ftype
       [ ] conditionally optional arities etc.
-  [ ] ^:dyn
-      - `(name (read ...))` fails at compile-time; we want it to at least try at runtime. So instead
-        we annotate like `(name ^:dyn (read ...))`, meaning figure out at runtime what the out-type of
-        the call to `(read ...)` is, not, call `name` dynamically.
   [-] `t/defn`
       [ ] Should not accept `t/none?` as an input type
           - Arity elision: if any type in an arity is `t/none?` then elide it and emit a warning

@@ -34,7 +34,7 @@
       :refer [educe join reducei]]
     [quantum.untyped.core.refs              :as uref
       :refer [>!thread-local]]
-    [quantum.untyped.core.spec              :as s]
+    [quantum.untyped.core.spec              :as us]
     [quantum.untyped.core.type              :as t
       :refer [?]]
     [quantum.untyped.core.type.compare      :as utcomp]
@@ -199,9 +199,9 @@
   ([v]       (->WatchableMutable v nil))
   ([v watch] (->WatchableMutable v watch)))
 
-(s/def ::opts (s/map-of keyword? t/any?))
+(us/def ::opts (us/map-of keyword? t/any?))
 
-(s/def ::env (s/map-of (s/or* symbol? #(= % :opts)) t/any?))
+(us/def ::env (us/map-of (us/or* symbol? #(= % :opts)) t/any?))
 
 (declare analyze* analyze-arg-syms*)
 
@@ -357,7 +357,7 @@
 
 (defns- call-sites>most-specific
   "Time complexity = O(m•n) where m = # of call sites and n = # of args per call site."
-  [call-sites (s/vec-of t/any? #_(s/array-of class?)) > (s/vec-of t/any? #_(s/array-of class?))]
+  [call-sites (us/vec-of t/any? #_(us/array-of class?)) > (us/vec-of t/any? #_(us/array-of class?))]
   (let [^"[Ljava.lang.Object;" sample-arg-classes (-> call-sites first :arg-classes)
         args-ct (alength sample-arg-classes)]
     (->> (range args-ct)
@@ -373,7 +373,7 @@
 
 (defns- analyze-seq|method-or-constructor-call|incrementally-analyze
   [env ::env, form _, target-class class?, args|form _, call-sites-for-ct _
-   kinds-str string? > (s/kv {:args|analyzed vector?})]
+   kinds-str string? > (us/kv {:args|analyzed vector?})]
   (let [{:as ret :keys [call-sites args|analyzed]}
           (->> args|form
                (reducei
@@ -414,13 +414,13 @@
 
 (defns- analyze-seq|dot|method-call|incrementally-analyze
   [env ::env, form _, target uast/node?, target-class class?, method-form _
-   args|form _ methods-for-ct-and-kind (s/seq-of t/any?) > uast/method-call?]
+   args|form _ methods-for-ct-and-kind (us/seq-of t/any?) > uast/method-call?]
   (let [{:keys [args|analyzed call-sites]}
           (analyze-seq|method-or-constructor-call|incrementally-analyze env form target-class
             args|form methods-for-ct-and-kind "methods")
         ?cast-type (?cast-call->type target-class method-form)
         ;; TODO enable the below:
-        ;; (s/validate (-> with-ret-type :args first :type) #(t/>= % (t/numerically ?cast-type)))
+        ;; (us/validate (-> with-ret-type :args first :type) #(t/>= % (t/numerically ?cast-type)))
         _ (when ?cast-type
             (log/ppr :warn
               "Not yet able to statically validate whether primitive cast will succeed at runtime"
@@ -472,7 +472,7 @@
 (defns classes>class
   "Ensure that given a set of classes, that set consists of at most a class C and nil.
    If so, returns C. Otherwise, throws."
-  [cs (s/set-of (s/nilable class?)) > class?]
+  [cs (us/set-of (us/nilable class?)) > class?]
   (let [cs' (disj cs nil)]
     (if (-> cs' count (= 1))
         (first cs')
@@ -606,52 +606,52 @@
                 (err! "Expected var, but found" {:form form :resolved resolved})
               (uast/var* env (list 'var (uid/>symbol resolved)) resolved (t/value resolved))))))
 
-(defn- filter-dynamic-dispatchable-overloads
+(defn- filter-dynamic-dispatchable-overload-types
   "An example of dynamic dispatch:
    - When we call `seq` on an input of type `(t/? (t/isa? java.util.Set))`, direct dispatch will
      fail as it is not `t/<=` to any overload (including `t/iterable?` which is the only one under
      which `(t/isa? java.util.Set)` falls).
      However since all branches of the `t/or` are guaranteed to result in a successful dispatch
      (i.e. `t/nil?` and `t/iterable?`) then dynamic dispatch will go forward without an error."
-  [{:as ret :keys [dispatchable-overloads-seq]} input|analyzed i caller|node body]
+  [{:as ret :keys [dispatchable-overload-types-seq]} input|analyzed i caller|node body]
   (if (-> input|analyzed :type utr/or-type?)
       (let [or-types (-> input|analyzed :type utr/or-type>args)
-            {:keys [dispatchable-overloads-seq' non-dispatchable-or-types]}
-              (->> dispatchable-overloads-seq
+            {:keys [dispatchable-overload-types-seq' non-dispatchable-or-types]}
+              (->> dispatchable-overload-types-seq
                    (reduce
-                     (fn [ret {:as overload :keys [input-types]}]
+                     (fn [ret {:as overload :keys [arg-types]}]
                        (if-let [or-types-that-match
-                                  (->> or-types (uc/lfilter #(t/<= % (get input-types i))) seq)]
+                                  (->> or-types (uc/lfilter #(t/<= % (get arg-types i))) seq)]
                          (-> ret
-                             (update :dispatchable-overloads-seq' conj overload)
+                             (update :dispatchable-overload-types-seq' conj overload)
                              (update :non-dispatchable-or-types
                                #(apply disj % or-types-that-match)))
                          ret))
-                     {:dispatchable-overloads-seq' []
+                     {:dispatchable-overload-types-seq' []
                       :non-dispatchable-or-types (set or-types)}))]
-        (if (or (empty? dispatchable-overloads-seq')
+        (if (or (empty? dispatchable-overload-types-seq')
                 (uc/contains? non-dispatchable-or-types))
             (err! "No overloads satisfy the inputs, whether direct or dynamic"
                   {:caller             caller|node
                    :inputs             body
                    :failing-input-form (:form input|analyzed)
                    :failing-input-type (:type input|analyzed)})
-            (assoc ret :dispatchable-overloads-seq dispatchable-overloads-seq'
-                       :dispatch-type              :dynamic)))
+            (assoc ret :dispatchable-overload-types-seq dispatchable-overload-types-seq'
+                       :dispatch-type                   :dynamic)))
       (err! "Cannot currently do a dynamic dispatch on a non-`t/or` input type"
             {:input|analyzed input|analyzed})))
 
-(defn- filter-direct-dispatchable-overloads
-  [{:as ret :keys [dispatchable-overloads-seq]} input|analyzed i caller|node args-form]
-  (if-let [dispatchable-overloads-seq'
-            (->> dispatchable-overloads-seq
+(defn- filter-direct-dispatchable-overload-types
+  [{:as ret :keys [dispatchable-overload-types-seq]} input|analyzed i caller|node args-form]
+  (if-let [dispatchable-overload-types-seq'
+            (->> dispatchable-overload-types-seq
                  (uc/lfilter
-                   (fn [{:keys [input-types]}]
-                     (t/<= (:type input|analyzed) (get input-types i))))
+                   (fn [{:keys [arg-types]}]
+                     (t/<= (:type input|analyzed) (get arg-types i))))
                  seq)]
-    (assoc ret :dispatchable-overloads-seq dispatchable-overloads-seq')
+    (assoc ret :dispatchable-overload-types-seq dispatchable-overload-types-seq')
     (if (-> caller|node :unanalyzed-form meta :dyn)
-        (filter-dynamic-dispatchable-overloads ret input|analyzed i caller|node args-form)
+        (filter-dynamic-dispatchable-overload-types ret input|analyzed i caller|node args-form)
         (err! (str "No overloads satisfy the inputs via direct dispatch; "
                    "dynamic dispatch not requested")
               {:caller             (select-keys caller|node [:unanalyzed-form :form :type])
@@ -659,55 +659,102 @@
                :failing-input-form (:form input|analyzed)
                :failing-input-type (:type input|analyzed)}))))
 
-(defn- >dispatch|out-type [dispatch-type dispatchable-overloads-seq]
+(defn- >dispatch|output-type [dispatch-type dispatchable-overload-types-seq]
   (case dispatch-type
-    :direct  (-> dispatchable-overloads-seq first :output-type)
-    :dynamic (->> dispatchable-overloads-seq
+    :direct  (->  dispatchable-overload-types-seq first :output-type)
+    :dynamic (->> dispatchable-overload-types-seq
                   (uc/lmap :output-type)
                   ;; Technically we could do a complex conditional instead of a simple `t/or` but
                   ;; no need
                   (apply t/or))))
 
-(defns- call>input-nodes+out-type
-  [env ::env, caller|node _, caller|type _, caller-kind _, inputs-ct _, args-form _
-   > (s/kv {:input-nodes t/any? #_(s/seq-of ast/node?)
-            :out-type  t/type?})]
-  (dissoc
-    (if (zero? inputs-ct)
+(def direct-dispatch-method-sym 'invoke)
+
+(defns- overload-type-datum>reify-name [type-datum _, fn|name symbol? > qualified-symbol?]
+  (symbol (-> type-datum :ns-name name) (str (name fn|name) "|__" (:id type-datum))))
+
+(defns- >direct-dispatch|reify-call
+  [caller|node uast/node?, caller|type _, type-datum _, args-codelist (us/seq-of t/any?)]
+  (if-let [fn|name (utr/fn-type>name caller|type)]
+    `(. ~(overload-type-datum>reify-name type-datum fn|name)
+        ~direct-dispatch-method-sym ~@args-codelist)
+    (err! "No name found for typed fn corresponding to caller; cannot create direct dispatch call"
+          (assoc (select-keys caller|node [:unanalyzed-form :form]) :type caller|type))))
+
+(defns- caller>overload-type-data-for-arity
+  [env ::env, caller|node uast/node?, caller|type _, inputs-ct _]
+  (if-let [fn|name (utr/fn-type>name caller|type)]
+    (let [overload-types-name (symbol (namespace fn|name) (str (name fn|name) "|__types"))]
+      (if-let [fn|types (get env overload-types-name)]
+        (->> fn|types (uc/filter #(-> % :arg-types count (= inputs-ct))))
+        (if-let [fn|types-var (resolve overload-types-name)]
+          (->> fn|types-var var-get urx/norx-deref :overload-types
+               (uc/filter #(-> % :arg-types count (= inputs-ct))))
+          (err! "Overload-types not found for typed fn"
+                {:fn|name fn|name
+                 :caller  (assoc (select-keys caller|node [:unanalyzed-form :form])
+                                 :type caller|type)}))))
+    (err! "No name found for typed fn corresponding to caller"
+          (assoc (select-keys caller|node [:unanalyzed-form :form]) :type caller|type))))
+
+(defns- update-call-data-with-fnt-dispatch|empty-args
+  [env ::env, caller|node uast/node?, caller|type _, caller-kind _, inputs-ct _, args-form _]
+  (if (= :fnt caller-kind)
+      (if-not-let [overload-type-datum
+                    (first (caller>overload-type-data-for-arity
+                              env caller|node caller|type inputs-ct))]
+        (err! (str "No overloads satisfy the inputs via direct dispatch; "
+                   "dynamic dispatch not requested")
+              {:caller (assoc (select-keys caller|node [:unanalyzed-form :form]) :type caller|type)
+               :inputs args-form})
         {:input-nodes []
-         :out-type
-           (if (= :fnt caller-kind)
-               (-> caller|type utr/fn-type>arities (get inputs-ct) first :output-type)
-               ;; We could do a little smarter analysis here but we'll keep it simple for now
-               t/any?)}
-        (->> args-form
-             (uc/map+ #(analyze* env %))
-             (reducei
-               (fn [{:as ret :keys [dispatch-type]} input|analyzed i]
-                 (if (= :fnt caller-kind)
-                     (let [{:as ret' :keys [dispatchable-overloads-seq]}
-                             (case dispatch-type
-                               :direct  (filter-direct-dispatchable-overloads
-                                          ret input|analyzed i caller|node args-form)
-                               :dynamic (filter-dynamic-dispatchable-overloads
-                                          ret input|analyzed i caller|node args-form))]
-                       (-> ret'
-                           (update :input-nodes conj input|analyzed)
-                           (assoc  :out-type
-                                     (when-let [last-input-to-check? (= i (dec inputs-ct))]
-                                       (>dispatch|out-type
-                                         dispatch-type dispatchable-overloads-seq)))))
-                     (update ret :input-nodes conj input|analyzed)))
-                 {:input-nodes   []
-                  ;; We could do a little smarter analysis here but we'll keep it simple for now
-                  :out-type      (when-not (= :fnt caller-kind) t/any?)
-                  :dispatch-type :direct
-                  :dispatchable-overloads-seq
-                    (when (= :fnt caller-kind)
-                      (-> caller|type
-                          utr/fn-type>arities
-                          (get inputs-ct)))})))
-    :dispatchable-overloads-seq))
+         :output-type (:output-type overload-type-datum)
+         :form        (>direct-dispatch|reify-call caller|node caller|type overload-type-datum [])})
+      ;; We could do a little smarter analysis here but we'll keep it simple for now
+      {:input-nodes [] :output-type t/any? :form (list (:form caller|node))}))
+
+(defns- update-call-data-with-fnt-dispatch
+  [env ::env, caller|node uast/node?, caller|type _, caller-kind _, inputs-ct _, args-form _
+   > (us/kv {:input-nodes t/any? #_(us/seq-of uast/node?)
+             :output-type t/type?
+             :form        t/any?})]
+  (if (zero? inputs-ct)
+      (update-call-data-with-fnt-dispatch|empty-args
+        env caller|node caller|type caller-kind inputs-ct args-form)
+      (->> args-form
+           (uc/map+ #(analyze* env %))
+           (reducei
+             (fn [{:as ret :keys [dispatch-type]} input|analyzed i]
+               (if (= :fnt caller-kind)
+                   (let [{:as ret' :keys [dispatchable-overload-types-seq input-nodes]}
+                           (case dispatch-type
+                             :direct  (filter-direct-dispatchable-overload-types
+                                        ret input|analyzed i caller|node args-form)
+                             :dynamic (filter-dynamic-dispatchable-overload-types
+                                        ret input|analyzed i caller|node args-form))
+                         last-input? (= i (dec inputs-ct))]
+                     (-> ret'
+                         (update :input-nodes conj input|analyzed)
+                         (cond-> last-input?
+                           (assoc
+                             :output-type
+                               (>dispatch|output-type dispatch-type dispatchable-overload-types-seq)
+                             :form
+                               (if (= dispatch-type :direct)
+                                   (>direct-dispatch|reify-call caller|node caller|type
+                                     (first dispatchable-overload-types-seq)
+                                     (uc/lmap :form input-nodes))
+                                   (list* (:form caller|node) (uc/lmap :form input-nodes)))))))
+                   (update ret :input-nodes conj input|analyzed)))
+               {:input-nodes   []
+                ;; We could do a little smarter analysis here but we'll keep it simple for now
+                :output-type   (when-not (= :fnt caller-kind) t/any?)
+                :caller|node   caller|node
+                :dispatch-type :direct
+                :dispatchable-overload-types-seq
+                  (when (= :fnt caller-kind)
+                    (caller>overload-type-data-for-arity env caller|node caller|type inputs-ct))})
+           (<- (dissoc :caller|node :dispatch-type :dispatchable-overload-types-seq)))))
 
 (defns- analyze-seq|dependent-type-call
   [env ::env, [caller|form _, & args-form _ :as form] _ > uast/node?]
@@ -748,7 +795,7 @@
 ;; Maybe it would work more cleanly if we added the `::t/type` metadata to each `t/` operator after
 ;; the fact?
 (defns- handle-type-combinators
-  [caller|node uast/node?, input-nodes _, out-type t/type? > t/type?]
+  [caller|node uast/node?, input-nodes _, output-type t/type? > t/type?]
   (condp = (:type caller|node)
     ;; TODO this relies on spec instrumentation not happening for these fns
     (t/value t/isa?)     (apply-arg-type-combine t/isa?     input-nodes)
@@ -762,7 +809,7 @@
     (t/value t/unref)    (apply-arg-type-combine t/unref    input-nodes)
     (t/value t/assume)   (apply-arg-type-combine t/assume   input-nodes)
     (t/value t/unassume) (apply-arg-type-combine t/unassume input-nodes)
-    out-type))
+    output-type))
 
 (defns- analyze-seq|call
   [env ::env, [caller|form _ & args-form _ :as form] _ > uast/call-node?]
@@ -815,24 +862,22 @@
                          (when-not (-> caller|type utr/fn-type>arities (contains? inputs-ct))
                            (err! "Unhandled number of inputs for fnt"
                                  {:inputs-ct inputs-ct :caller caller|node}))
-                         ;; For non-typed fns, unknown; we will have to risk runtime exception
-                         ;; because we can't necessarily rely on metadata to tell us the
-                         ;; whole truth
+                         ;; TODO use the `reflect/reflect` and `js/Object.getOwnPropertyNames` trick
                        :fn nil)
-                   {:keys [input-nodes out-type]}
-                     (call>input-nodes+out-type
+                   {:keys [input-nodes output-type] analyzed-form :form}
+                     (update-call-data-with-fnt-dispatch
                        env caller|node caller|type caller-kind inputs-ct args-form)
-                   out-type'
+                   output-type'
                      (if (-> env :opts :arglist-context?)
-                         (handle-type-combinators caller|node input-nodes out-type)
-                         out-type)]
+                         (handle-type-combinators caller|node input-nodes output-type)
+                         output-type)]
                (uast/call-node
                  {:env             env
                   :unanalyzed-form form
-                  :form            (list* (:form caller|node) (map :form input-nodes))
+                  :form            analyzed-form
                   :caller          caller|node
                   :args            input-nodes
-                  :type            out-type'})))))
+                  :type            output-type'})))))
 
 (defns- analyze-seq*
   "Analyze a seq after it has been macro-expanded.
@@ -876,6 +921,7 @@
       (let [expanded-form' (cond-> expanded-form
                              (uvar/with-metable? expanded-form) (update-meta merge (meta form)))
             expanded (analyze* env expanded-form')]
+        (pr! (kw-map form expanded-form' (:form expanded)))
         (uast/macro-call
           {:env             env
            :unexpanded-form form
@@ -985,7 +1031,7 @@
 
 ;; ===== Arglist analysis ===== ;;
 
-(s/def ::arg-sym->arg-type-form (s/map-of simple-symbol? t/any?))
+(us/def ::arg-sym->arg-type-form (us/map-of simple-symbol? t/any?))
 
 (def analyze-arg-syms|max-iter 10000)
 
@@ -1013,14 +1059,14 @@
 (defns type>split
   "Only `t/or`s and `t/meta-or`s are splittable for now.
    Reactive types are non-reactively derefed in order to make splitting possible."
-  [t t/type? > (s/vec-of t/type?)]
+  [t t/type? > (us/vec-of t/type?)]
   (let [t' (cond-> t (utr/rx-type? t) urx/norx-deref)]
     (ifs (utr/or-type?      t') (utr/or-type>args       t')
          ;; TODO determine if this is the appropriate place to deal with `t/none?`
          (utr/meta-or-type? t') (->> t' utr/meta-or-type>types (uc/remove (fn1 t/= t/none?)))
          [t'])))
 
-(defns type>split+primitivized [t t/type? > (s/vec-of t/type?)]
+(defns type>split+primitivized [t t/type? > (us/vec-of t/type?)]
   (let [t|norx  (cond-> t (utr/rx-type? t) urx/norx-deref)
         t|split (type>split t|norx)
         primitive-subtypes
@@ -1038,15 +1084,15 @@
 
 (defn- analyze-arg-syms* [env #_::env]
   (uref/update! !!analyze-arg-syms|iter inc)
-  (let [{:keys [arg-sym->arg-type-form arglist-syms|queue arglist-syms|unanalyzed out-type-or-form
-                split-types?]} (:opts env)]
+  (let [{:keys [arg-sym->arg-type-form arglist-syms|queue arglist-syms|unanalyzed
+                output-type-or-form split-types?]} (:opts env)]
     (ifs (empty? arglist-syms|unanalyzed)
-           [{:env           env
-             :out-type-node (if (t/type? out-type-or-form)
-                                (uast/literal env nil out-type-or-form) ; a simulated AST node
-                                (-> (analyze env out-type-or-form)
-                                    (update :type (fn-> t/unvalue urx/?norx-deref))))
-             :dependent?    (uref/get !!dependent?)}]
+           [{:env              env
+             :output-type-node (if (t/type? output-type-or-form)
+                                   (uast/literal env nil output-type-or-form) ; a simulated AST node
+                                   (-> (analyze env output-type-or-form)
+                                       (update :type (fn-> t/unvalue urx/?norx-deref))))
+             :dependent?       (uref/get !!dependent?)}]
          (>= (uref/get !!analyze-arg-syms|iter) analyze-arg-syms|max-iter)
            (err! "Max number of iterations reached for `analyze-arg-syms`"
                  {:n (uref/get !!analyze-arg-syms|iter)})
@@ -1078,14 +1124,14 @@
                     ur/join))))))
 
 (defns- >analyze-arg-syms|opts
-  [env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-or-form _
+  [env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, output-type-or-form _
    split-types? boolean?]
   {:arglist-context?        true
    :arglist-syms|queue      (uset/ordered-set (-> arg-sym->arg-type-form keys first))
    :arglist-syms|unanalyzed (-> arg-sym->arg-type-form keys set)
    :arg-env                 (atom env) ; Mutable so it can cache
    :arg-sym->arg-type-form  arg-sym->arg-type-form
-   :out-type-or-form        out-type-or-form
+   :output-type-or-form     output-type-or-form
    :split-types?            split-types?})
 
 (defns analyze-arg-syms
@@ -1098,19 +1144,19 @@
      deduced types of the inputs. In other words, in the worst case scenario each of the arg types
      might be a 'splittable' type like `t/or` (whose cardinality is the number of arguments to it
      when simplified) which would require a Cartesian product of the splits of the arg types."
-  > vector? #_(s/vec-of (s/kv {:env ::env :out-type-node uast/node? :dependent? boolean?}))
-  ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-or-form _]
-    (analyze-arg-syms {} arg-sym->arg-type-form out-type-or-form true))
-  ([arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-or-form _, split-types? boolean?]
-    (analyze-arg-syms {} arg-sym->arg-type-form out-type-or-form split-types?))
-  ([env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, out-type-or-form _
+  > vector? #_(us/vec-of (us/kv {:env ::env :output-type-node uast/node? :dependent? boolean?}))
+  ([arg-sym->arg-type-form ::arg-sym->arg-type-form, output-type-or-form _]
+    (analyze-arg-syms {} arg-sym->arg-type-form output-type-or-form true))
+  ([arg-sym->arg-type-form ::arg-sym->arg-type-form, output-type-or-form _, split-types? boolean?]
+    (analyze-arg-syms {} arg-sym->arg-type-form output-type-or-form split-types?))
+  ([env ::env, arg-sym->arg-type-form ::arg-sym->arg-type-form, output-type-or-form _
     split-types? boolean?
-    > (s/vec-of (s/kv {:env ::env :out-type-node uast/node?}))]
+    > (us/vec-of (us/kv {:env ::env :output-type-node uast/node?}))]
     (uref/set! !!analyze-arg-syms|iter 0)
     (uref/set! !!dependent?            false)
     (try (analyze-arg-syms*
            {:opts (merge (:opts env)
-                    (>analyze-arg-syms|opts env arg-sym->arg-type-form out-type-or-form
+                    (>analyze-arg-syms|opts env arg-sym->arg-type-form output-type-or-form
                       split-types?))})
       (catch Throwable t
         (if (and (uerr/error-map? t) (-> t :ident (= ::arg-syms-analyzed)))
