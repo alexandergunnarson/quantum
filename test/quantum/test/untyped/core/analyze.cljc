@@ -34,7 +34,7 @@
 (defn- transform-ana [ana]
   (->> ana
        (mapv #(vector (->> % :env :opts :arg-env deref (uc/map-vals' :type))
-                      (-> % :out-type-node :type)))))
+                      (-> % :output-type-node :type)))))
 
 ;; More dependent type tests in `quantum.test.untyped.core.type.defnt` but those are more like
 ;; integration tests

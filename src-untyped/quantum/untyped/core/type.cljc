@@ -830,6 +830,13 @@
            (ur/join #{}))))))
 
 #?(:clj
+(defns primitive-type? [t type? > boolean?]
+  (c/and (-> t c/meta :quantum.core.type/ref? c/not)
+         (let [cs (type>classes t)]
+           (c/and (-> cs count (c/= 1))
+                  (contains? boxed-class->unboxed-symbol (first cs)))))))
+
+#?(:clj
 (defns- -type>?class-value [t utr/type?, type-nilable? c/boolean?]
   (if (utr/value-type? t)
       (let [v (utr/value-type>value t)]

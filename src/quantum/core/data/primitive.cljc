@@ -312,10 +312,12 @@
 )
 
 (t/extend-defn! c?/compare
-        ([a false?                 , b false?] (int  0))
-        ([a false?                 , b true?]  (int -1))
-        ([a true?                  , b false?] (int  1))
-        ([a true?                  , b true?]  (int  0))
+        ([a false?                 , b false?]   (int  0))
+        ([a false?                 , b true?]    (int -1))
+        ([a true?                  , b false?]   (int  1))
+        ([a true?                  , b true?]    (int  0))
+        ([a boolean?               , b boolean?]
+          (if a (if b (int 0) (int 1)) (if b (int -1) (int 0))))
         ([a numeric?               , b numeric?]
           (ifs (c?/< a b) (int -1) (c?/> a b) (int 1) (int 0)))
 #?(:clj ([a (t/ref c?/icomparable?), b primitive?]              (.compareTo a       b)))

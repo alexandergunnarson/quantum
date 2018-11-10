@@ -701,11 +701,29 @@
   [env ::env, {:as overload-type-datum :keys [arglist-code|hinted _, body-codelist _, inline? _]} _
    caller|node uast/node?, caller|type _, input-nodes (us/vec-of uast/node?)]
   (if inline?
-      (analyze* env (list* 'let* (reducei (fn [bindings to i|arg]
-                                            (let [from (-> input-nodes (get i|arg) :form)]
-                                              (conj bindings to from)))
-                                          [] arglist-code|hinted)
-                                 body-codelist))
+            ;; TODO abstract this with the `let*` code
+      (let [bindings-map (reducei (fn [bindings sym i|arg]
+                                    (assoc bindings sym (get input-nodes i|arg)))
+                                  {} arglist-code|hinted)
+            body-node (analyze* (merge env bindings-map) (list* 'do body-codelist))
+            bindings|form
+              (reducei (fn [bindings to i|arg]
+                         (let [from-node (get input-nodes i|arg)
+                               ;; To avoid "Can't hint a primitive local" errors
+                               to' (cond-> to (-> from-node :type t/primitive-type?)
+                                     ufth/un-type-hint)]
+                           (conj bindings to' (:form from-node))))
+                       [] arglist-code|hinted)
+            node (uast/let* {:env             env
+                             :unanalyzed-form (list* 'let* bindings|form body-codelist)
+                             :form            (list* 'let* bindings|form
+                                                (->> body-node :body (uc/lmap :form)))
+                             :bindings        bindings-map
+                             :body            body-node
+                             :type            (:type body-node)})]
+        ;; TODO fix this; apparently it's not enough or maybe `assume` isn't being propagated
+        (cond-> node (-> overload-type-datum :output-type meta :quantum.core.type/assume?)
+          (update :type #(t/and % (:output-type overload-type-datum)))))
       {:input-nodes input-nodes
        :form        (>direct-dispatch|reify-call
                       caller|node caller|type overload-type-datum (uc/map :form input-nodes))
@@ -771,12 +789,12 @@
             caller|node        (analyze* env caller|form)
             caller|t           (-> arg-nodes first :type)
             unvalued-arg-types (->> arg-nodes rest (map :type) (map t/unvalue))
-            _           (uref/set! !!dependent? true)
+            _                  (uref/set! !!dependent? true)
             t (case (name caller|form)
-                "input-type"  (if (-> env :opts :quantum.untyped.core.analyze-types?)
+                "input-type"  (if (-> env :opts :split-types?)
                                   (t/input-type|meta-or  caller|t unvalued-arg-types)
                                   (t/input-type|or       caller|t unvalued-arg-types))
-                "output-type" (if (-> env :opts :analyze-arg-syms-types?)
+                "output-type" (if (-> env :opts :split-types?)
                                   (t/output-type|meta-or caller|t unvalued-arg-types)
                                   (t/output-type|or      caller|t unvalued-arg-types))
                 "type"        caller|t)]
@@ -1044,7 +1062,8 @@
 (defn pr! [x]
   (binding [quantum.untyped.core.analyze.ast/*print-env?* false
             quantum.untyped.core.print/*collapse-symbols?* true
-            *print-meta* true]
+            *print-meta*  true
+            *print-level* 10]
     (quantum.untyped.core.print/ppr x)))
 
 #?(:clj

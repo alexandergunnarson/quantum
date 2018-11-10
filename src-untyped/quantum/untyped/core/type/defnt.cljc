@@ -313,11 +313,10 @@
    {:as fn|globals :keys [fn|globals-name _, fn|name _, fn|ns-name _, fn|output-type _
                           fn|overload-types-name _]} ::fn|globals
    {:as unanalyzed-overload
-     :keys [arg-classes _, arg-types _, arglist-code|hinted _, arglist-code|reify|unhinted _,
-            arglist-form|unanalyzed _, args-form _, body-codelist _ output-type|form _
-            varargs-form _, variadic? _]
-     declared-output-type [:output-type _]}
-    ::unanalyzed-overload
+    :keys [arg-classes _, arg-types _, arglist-code|hinted _, arglist-code|reify|unhinted _,
+           arglist-form|unanalyzed _, args-form _, body-codelist _ output-type|form _
+           varargs-form _, variadic? _]
+    declared-output-type [:output-type _]} ::unanalyzed-overload
    overload|id       index?
    fn|overload-types (us/vec-of ::types-decl-datum)
    fn|type           t/type?
