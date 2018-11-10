@@ -58,11 +58,10 @@ Legend:
 - [!] : refused
 
 - TODO implement the following:
-  [1] Direct dispatch needs to actually work correctly in typed contexts
-  [3] ^:inline
-      - should be able to mark either ^:unline or ^{:inline false} on arities of an inline function
+  [1] ^:inline
       - if you do (Numeric/bitAnd a b) inline then bitAnd needs to know the primitive type so maybe
         we do the `let*`-binding approach to typing vars?
+      - `let*` the vars but make it so it can auto-replace if it's just a symbol to symbol mapping
       - A good example of inlining:
         (t/def empty?|rf
           (fn/aritoid
@@ -119,9 +118,10 @@ Legend:
       - In CLJS via e.g.:
         - `(js/Object.getOwnPropertyNames (fn ([]) ([a])))`
           -> `#js [... \"cljs$core$IFn$_invoke$arity$0\" \"cljs$core$IFn$_invoke$arity$1\"]`
-    - We should probably have a 'normal form' so we can correctly hash if we do spec lookup
-      - `or` and `and` should be `=` regardless of order
-        - To fix this, sort when it's created? (order by `t/compare` descending)
+    - We should probably use DNF (https://en.wikipedia.org/wiki/Disjunctive_normal_form) with sorted
+      arguments (on creation, order by `t/compare` descending) so we can correctly hash if we do
+      spec lookup, and so we can split more correctly, and so we can perform faster equality checks
+      - (t/and (t/or a b) c) should -> (t/or (t/and a c) (t/and b c))
     - `(or (and pred then) (and (not pred) else))` (which is not correct)
       - needs to equal `(t/and (t/or (t/not a) b) (t/or a c))` (which is correct)
       - `(- (or ?!+vector? !vector? #?(:clj !!vector?)) (isa? clojure.lang.Counted))` is not right
@@ -248,7 +248,6 @@ Legend:
       [ ] t/defn-
           - Not just a private var for the dynamic dispatch, but needs to be private for purposes of
             the analyzer when doing direct dispatch. Should emit a warning, not just fail.
-      [ ] (t/and (t/or a b) c) should -> (t/or (t/and a c) (t/and b c)) for purposes of type-splitting
       [ ] handle varargs / variadic arity
           - [& args _] shouldn't result in `t/any?` but rather like `t/reducible?` or whatever
           - should configurably auto-generate arities and/or perform variadic proxying

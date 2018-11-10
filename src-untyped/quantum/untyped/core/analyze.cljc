@@ -668,19 +668,6 @@
                   ;; no need
                   (apply t/or))))
 
-(def direct-dispatch-method-sym 'invoke)
-
-(defns- overload-type-datum>reify-name [type-datum _, fn|name symbol? > qualified-symbol?]
-  (symbol (-> type-datum :ns-name name) (str (name fn|name) "|__" (:id type-datum))))
-
-(defns- >direct-dispatch|reify-call
-  [caller|node uast/node?, caller|type _, type-datum _, args-codelist (us/seq-of t/any?)]
-  (if-let [fn|name (utr/fn-type>name caller|type)]
-    `(. ~(overload-type-datum>reify-name type-datum fn|name)
-        ~direct-dispatch-method-sym ~@args-codelist)
-    (err! "No name found for typed fn corresponding to caller; cannot create direct dispatch call"
-          (assoc (select-keys caller|node [:unanalyzed-form :form]) :type caller|type))))
-
 (defns- caller>overload-type-data-for-arity
   [env ::env, caller|node uast/node?, caller|type _, inputs-ct _]
   (if-let [fn|name (utr/fn-type>name caller|type)]
@@ -697,30 +684,50 @@
     (err! "No name found for typed fn corresponding to caller"
           (assoc (select-keys caller|node [:unanalyzed-form :form]) :type caller|type))))
 
-(defns- update-call-data-with-fnt-dispatch|empty-args
-  [env ::env, caller|node uast/node?, caller|type _, caller-kind _, inputs-ct _, args-form _]
+(def direct-dispatch-method-sym 'invoke)
+
+(defns- overload-type-datum>reify-name [type-datum _, fn|name symbol? > qualified-symbol?]
+  (symbol (-> type-datum :ns-name name) (str (name fn|name) "|__" (:id type-datum))))
+
+(defns- >direct-dispatch|reify-call
+  [caller|node uast/node?, caller|type _, type-datum _, args-codelist (us/seq-of t/any?)]
+  (if-let [fn|name (utr/fn-type>name caller|type)]
+    `(. ~(overload-type-datum>reify-name type-datum fn|name)
+        ~direct-dispatch-method-sym ~@args-codelist)
+    (err! "No name found for typed fn corresponding to caller; cannot create direct dispatch call"
+          (assoc (select-keys caller|node [:unanalyzed-form :form]) :type caller|type))))
+
+(defns- >direct-dispatch
+  [env ::env, {:as overload-type-datum :keys [arglist-code|hinted _, body-codelist _, inline? _]} _
+   caller|node uast/node?, caller|type _, input-nodes (us/vec-of uast/node?)]
+  (if inline?
+      (analyze* env (list* 'let* (reducei (fn [bindings to i|arg]
+                                            (let [from (-> input-nodes (get i|arg) :form)]
+                                              (conj bindings to from)))
+                                          [] arglist-code|hinted)
+                                 body-codelist))
+      {:input-nodes input-nodes
+       :form        (>direct-dispatch|reify-call
+                      caller|node caller|type overload-type-datum (uc/map :form input-nodes))
+       :type        (:output-type overload-type-datum)}))
+
+(defns- >call-data-with-fnt-dispatch|empty-args
+  [env ::env, caller|node uast/node?, caller|type _, caller-kind _]
   (if (= :fnt caller-kind)
       (if-not-let [overload-type-datum
-                    (first (caller>overload-type-data-for-arity
-                              env caller|node caller|type inputs-ct))]
+                    (first (caller>overload-type-data-for-arity env caller|node caller|type 0))]
         (err! (str "No overloads satisfy the inputs via direct dispatch; "
                    "dynamic dispatch not requested")
               {:caller (assoc (select-keys caller|node [:unanalyzed-form :form]) :type caller|type)
-               :inputs args-form})
-        {:input-nodes []
-         :output-type (:output-type overload-type-datum)
-         :form        (>direct-dispatch|reify-call caller|node caller|type overload-type-datum [])})
+               :inputs []})
+        (>direct-dispatch env overload-type-datum caller|node caller|type []))
       ;; We could do a little smarter analysis here but we'll keep it simple for now
-      {:input-nodes [] :output-type t/any? :form (list (:form caller|node))}))
+      {:form (list (:form caller|node)) :input-nodes [] :type t/any?}))
 
-(defns- update-call-data-with-fnt-dispatch
-  [env ::env, caller|node uast/node?, caller|type _, caller-kind _, inputs-ct _, args-form _
-   > (us/kv {:input-nodes t/any? #_(us/seq-of uast/node?)
-             :output-type t/type?
-             :form        t/any?})]
+(defns- >call-data-with-fnt-dispatch
+  [env ::env, caller|node uast/node?, caller|type _, caller-kind _, inputs-ct _, args-form _]
   (if (zero? inputs-ct)
-      (update-call-data-with-fnt-dispatch|empty-args
-        env caller|node caller|type caller-kind inputs-ct args-form)
+      (>call-data-with-fnt-dispatch|empty-args env caller|node caller|type caller-kind)
       (->> args-form
            (uc/map+ #(analyze* env %))
            (reducei
@@ -732,28 +739,27 @@
                                             ret input|analyzed i caller|node args-form)
                                  :dynamic (filter-dynamic-dispatchable-overload-types
                                             ret input|analyzed i caller|node args-form))
-                               (update :input-nodes conj input|analyzed))
-                         last-input? (= i (dec inputs-ct))]
-                     (cond-> ret' last-input?
-                       (assoc
-                         :output-type
-                           (>dispatch|output-type dispatch-type dispatchable-overload-types-seq)
-                         :form
-                           (if (= dispatch-type :direct)
-                               (>direct-dispatch|reify-call caller|node caller|type
-                                 (first dispatchable-overload-types-seq)
-                                 (uc/lmap :form input-nodes))
-                               (list* (:form caller|node) (uc/lmap :form input-nodes))))))
+                               (update :input-nodes conj input|analyzed))]
+                     (if-let [last-input? (= i (dec inputs-ct))]
+                       (if (= dispatch-type :direct)
+                           (>direct-dispatch env (first dispatchable-overload-types-seq)
+                             caller|node caller|type input-nodes)
+                           (-> ret'
+                               (assoc :form (list* (:form caller|node) (uc/lmap :form input-nodes))
+                                      :type (>dispatch|output-type dispatch-type
+                                                     dispatchable-overload-types-seq))
+                               (dissoc :caller|node :dispatch-type
+                                       :dispatchable-overload-types-seq)))
+                       ret'))
                    (update ret :input-nodes conj input|analyzed)))
                {:input-nodes   []
                 ;; We could do a little smarter analysis here but we'll keep it simple for now
-                :output-type   (when-not (= :fnt caller-kind) t/any?)
+                :type          (when-not (= :fnt caller-kind) t/any?)
                 :caller|node   caller|node
                 :dispatch-type :direct
                 :dispatchable-overload-types-seq
                   (when (= :fnt caller-kind)
-                    (caller>overload-type-data-for-arity env caller|node caller|type inputs-ct))})
-           (<- (dissoc :caller|node :dispatch-type :dispatchable-overload-types-seq)))))
+                    (caller>overload-type-data-for-arity env caller|node caller|type inputs-ct))}))))
 
 (defns- analyze-seq|dependent-type-call
   [env ::env, [caller|form _, & args-form _ :as form] _ > uast/node?]
@@ -863,20 +869,21 @@
                                  {:inputs-ct inputs-ct :caller caller|node}))
                          ;; TODO use the `reflect/reflect` and `js/Object.getOwnPropertyNames` trick
                        :fn nil)
-                   {:keys [input-nodes output-type] analyzed-form :form}
-                     (update-call-data-with-fnt-dispatch
-                       env caller|node caller|type caller-kind inputs-ct args-form)
-                   output-type'
-                     (if (-> env :opts :arglist-context?)
-                         (handle-type-combinators caller|node input-nodes output-type)
-                         output-type)]
-               (uast/call-node
-                 {:env             env
-                  :unanalyzed-form form
-                  :form            analyzed-form
-                  :caller          caller|node
-                  :args            input-nodes
-                  :type            output-type'})))))
+                   {:as call-data :keys [input-nodes] analyzed-form :form}
+                     (>call-data-with-fnt-dispatch
+                       env caller|node caller|type caller-kind inputs-ct args-form)]
+               (if (uast/node? call-data) ; in the case of an inline expansion
+                   call-data
+                   (uast/call-node
+                     {:env             env
+                      :unanalyzed-form form
+                      :form            analyzed-form
+                      :caller          caller|node
+                      :args            input-nodes
+                      :type            (if (-> env :opts :arglist-context?)
+                                           (handle-type-combinators
+                                             caller|node input-nodes (:type call-data))
+                                           (:type call-data))}))))))
 
 (defns- analyze-seq*
   "Analyze a seq after it has been macro-expanded.
@@ -920,7 +927,6 @@
       (let [expanded-form' (cond-> expanded-form
                              (uvar/with-metable? expanded-form) (update-meta merge (meta form)))
             expanded (analyze* env expanded-form')]
-        (pr! (kw-map form expanded-form' (:form expanded)))
         (uast/macro-call
           {:env             env
            :unexpanded-form form

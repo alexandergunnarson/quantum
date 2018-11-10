@@ -15,6 +15,7 @@
       [quantum.untyped.core.loops
         :refer [reduce-2]]
       [quantum.untyped.core.reducers       :as ur]
+      [quantum.untyped.core.refs           :as uref]
       [quantum.untyped.core.spec           :as us]
       [quantum.untyped.core.specs          :as uss])
 #?(:cljs
@@ -88,25 +89,29 @@
   (s/? (s/cat :sym #(= % '>) :spec :quantum.core.defnt/spec)))
 
 (s/def :quantum.core.defnt/arglist
-  (s/and vector?
-         (s/spec
-           (s/cat :args    (s/* :quantum.core.defnt/speced-binding)
-                  :varargs (s/? (s/cat :sym            #(= % '&)
-                                       :speced-binding :quantum.core.defnt/speced-binding))
-                  :pre     (s/? (s/cat :sym            #(= % '|)
-                                       :spec           (s/or :any-spec #{'_} :spec any?)))
-                  :post    :quantum.core.defnt/output-spec))
-         (s/conformer
-           #(cond-> % (nil? (:args %))       (assoc  :args    [])
-                      (contains? % :varargs) (update :varargs :speced-binding)
-                      (contains? % :pre    ) (update :pre     :spec)
-                      (contains? % :post   ) (update :post    :spec)))
-         (fn [{:keys [args varargs]}]
-           ;; so `env` in `fnt` can work properly in the analysis
-           ;; TODO need to adjust for destructuring
-           (distinct?
-             (concat (map :binding-form args)
-                     [(:binding-form varargs)])))))
+  (let [!meta (uref/>!thread-local nil)] ; a dirty hack till clojure.spec preserves meta
+    (s/and vector?
+           (fn [arglist] (uref/set! !meta (meta arglist)) true)
+           (s/spec
+             (s/cat :args    (s/* :quantum.core.defnt/speced-binding)
+                    :varargs (s/? (s/cat :sym            #(= % '&)
+                                         :speced-binding :quantum.core.defnt/speced-binding))
+                    :pre     (s/? (s/cat :sym            #(= % '|)
+                                         :spec           (s/or :any-spec #{'_} :spec any?)))
+                    :post    :quantum.core.defnt/output-spec))
+           (s/conformer
+             #(-> %
+                  (with-meta (uref/get !meta))
+                  (cond-> (nil? (:args %))       (assoc  :args    [])
+                          (contains? % :varargs) (update :varargs :speced-binding)
+                          (contains? % :pre    ) (update :pre     :spec)
+                          (contains? % :post   ) (update :post    :spec))))
+           (fn [{:keys [args varargs]}]
+             ;; so `env` in `fnt` can work properly in the analysis
+             ;; TODO need to adjust for destructuring
+             (distinct?
+               (concat (map :binding-form args)
+                       [(:binding-form varargs)]))))))
 
 (s/def :quantum.core.defnt/body (s/alt :body (s/* any?)))
 

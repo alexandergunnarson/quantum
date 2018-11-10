@@ -462,7 +462,7 @@
    Does not compare cardinalities or other relations of sets, but rather only sub/superset
    relations."
   [t0 type?, t1 type? > comparison?]
-  (if (identical? t0 t1)
+  (if (c/= t0 t1)
       =ident
       (let [dispatched (-> compare|dispatch (get (type t0)) (get (type t1)))]
         (if (nil? dispatched)
