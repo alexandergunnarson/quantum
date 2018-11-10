@@ -270,10 +270,8 @@
   (if-let [c0 (uana/sort-guide t0)]
     (if-let [c1 (uana/sort-guide t1)]
       (ifs (< c0 c1) -1 (> c0 c1) 1 0)
-      -1)
-    (if-let [c1 (uana/sort-guide t1)]
-      1
-      (uset/normalize-comparison (t/compare t0 t1)))))
+      (uset/normalize-comparison (t/compare t0 t1)))
+    (uset/normalize-comparison (t/compare t0 t1))))
 
 (c/defn compare-args-types [arg-types0 #_(us/vec-of t/type?) arg-types1 #_(us/vec-of t/type?)]
   (let [ct-comparison (compare (count arg-types0) (count arg-types1))]
