@@ -813,9 +813,9 @@
    Distinct from primitive-expansion / primitivization."
   [t type? > (us/set-of (us/nilable c/class?))]
   (let [cs (type>classes t)]
-    (if-let [nilable? (c/or (-> t c/meta :quantum.core.type/ref?) (contains? cs nil))]
-      cs
-      (->> cs (uc/map+ class>most-primitive-class) (ur/join #{}))))))
+    (if (c/or (contains? cs nil) (-> t c/meta :quantum.core.type/ref?))
+        cs
+        (->> cs (uc/map+ class>most-primitive-class) (ur/join #{}))))))
 
 #?(:clj
 (defns type>primitive-subtypes
