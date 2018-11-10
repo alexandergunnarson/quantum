@@ -1,8 +1,10 @@
 (ns quantum.test.untyped.core.type.defnt
   (:refer-clojure :exclude
-    [> count get name seq some? zero?])
+    [> count get identity name seq some? zero?])
   (:require
     [clojure.core                           :as core]
+    [quantum.core.type
+      :refer [dotyped]]
     [quantum.test.untyped.core.type         :as tt]
     [quantum.untyped.core.type.defnt        :as self
       :refer [unsupported!]]
@@ -80,80 +82,80 @@
 
 ;; TODO test `:inline`
 
-(deftest test|identity|uninlined
+(deftest test|identity
   (let [actual
           (binding [self/*compilation-mode* :test]
             (macroexpand '
-              (self/defn identity|uninlined ([x t/any? > (t/type x)] x))))
+              (self/defn ^:inline identity ([x t/any? > (t/type x) #_"TODO TYPED (t/== x)"] x))))
         expected
           (case (env-lang)
             :clj
-            ($ (do (declare ~'identity|uninlined)
+            ($ (do (declare ~'identity)
 
                    ;; [x t/any?]
 
-                   (def ~(tag (cstr `boolean>boolean) 'identity|uninlined|__0)
+                   (def ~(tag (cstr `boolean>boolean) 'identity|__0)
                      (reify* [boolean>boolean] (~(B 'invoke) [~'_0__ ~(B 'x)] ~'x)))
-                   (def ~(tag (cstr `byte>byte) 'identity|uninlined|__1)
+                   (def ~(tag (cstr `byte>byte) 'identity|__1)
                      (reify* [byte>byte]       (~(Y 'invoke) [~'_1__ ~(Y 'x)] ~'x)))
-                   (def ~(tag (cstr `short>short) 'identity|uninlined|__2)
+                   (def ~(tag (cstr `short>short) 'identity|__2)
                      (reify* [short>short]     (~(S 'invoke) [~'_2__ ~(S 'x)] ~'x)))
-                   (def ~(tag (cstr `char>char) 'identity|uninlined|__3)
+                   (def ~(tag (cstr `char>char) 'identity|__3)
                      (reify* [char>char]       (~(C 'invoke) [~'_3__ ~(C 'x)] ~'x)))
-                   (def ~(tag (cstr `int>int) 'identity|uninlined|__4)
+                   (def ~(tag (cstr `int>int) 'identity|__4)
                      (reify* [int>int]         (~(I 'invoke) [~'_4__ ~(I 'x)] ~'x)))
-                   (def ~(tag (cstr `long>long) 'identity|uninlined|__5)
+                   (def ~(tag (cstr `long>long) 'identity|__5)
                      (reify* [long>long]       (~(L 'invoke) [~'_5__ ~(L 'x)] ~'x)))
-                   (def ~(tag (cstr `float>float) 'identity|uninlined|__6)
+                   (def ~(tag (cstr `float>float) 'identity|__6)
                      (reify* [float>float]     (~(F 'invoke) [~'_6__ ~(F 'x)] ~'x)))
-                   (def ~(tag (cstr `double>double) 'identity|uninlined|__7)
+                   (def ~(tag (cstr `double>double) 'identity|__7)
                      (reify* [double>double]   (~(D 'invoke) [~'_7__ ~(D 'x)] ~'x)))
-                   (def ~(tag (cstr `Object>Object) 'identity|uninlined|__8)
+                   (def ~(tag (cstr `Object>Object) 'identity|__8)
                      (reify* [Object>Object]   (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
 
-                   [{:id 0 :index 0 :arg-types [(t/isa? Boolean)]   :output-type (t/isa? Boolean)}
-                    {:id 1 :index 1 :arg-types [(t/isa? Byte)]      :output-type (t/isa? Byte)}
-                    {:id 2 :index 2 :arg-types [(t/isa? Short)]     :output-type (t/isa? Short)}
-                    {:id 3 :index 3 :arg-types [(t/isa? Character)] :output-type (t/isa? Character)}
-                    {:id 4 :index 4 :arg-types [(t/isa? Integer)]   :output-type (t/isa? Integer)}
-                    {:id 5 :index 5 :arg-types [(t/isa? Long)]      :output-type (t/isa? Long)}
-                    {:id 6 :index 6 :arg-types [(t/isa? Float)]     :output-type (t/isa? Float)}
-                    {:id 7 :index 7 :arg-types [(t/isa? Double)]    :output-type (t/isa? Double)}
-                    {:id 8 :index 8 :arg-types [t/any?]             :output-type t/any?}]
+                   [[0 0 true [(t/isa? Boolean)]   (t/isa? Boolean)]
+                    [1 1 true [(t/isa? Byte)]      (t/isa? Byte)]
+                    [2 2 true [(t/isa? Short)]     (t/isa? Short)]
+                    [3 3 true [(t/isa? Character)] (t/isa? Character)]
+                    [4 4 true [(t/isa? Integer)]   (t/isa? Integer)]
+                    [5 5 true [(t/isa? Long)]      (t/isa? Long)]
+                    [6 6 true [(t/isa? Float)]     (t/isa? Float)]
+                    [7 7 true [(t/isa? Double)]    (t/isa? Double)]
+                    [8 8 true [t/any?]             t/any?]]
 
-                   (defmeta ~'identity|uninlined
-                     {:quantum.core.type/type identity|uninlined|__type}
+                   (defmeta ~'identity
+                     {:quantum.core.type/type identity|__type}
                      (fn* ([~'x00__]
                             (ifs
-                               ((Array/get identity|uninlined|__0|types 0) ~'x00__)
-                                 (. identity|uninlined|__0 ~'invoke ~'x00__)
-                               ((Array/get identity|uninlined|__1|types 0) ~'x00__)
-                                 (. identity|uninlined|__1 ~'invoke ~'x00__)
-                               ((Array/get identity|uninlined|__2|types 0) ~'x00__)
-                                 (. identity|uninlined|__2 ~'invoke ~'x00__)
-                               ((Array/get identity|uninlined|__3|types 0) ~'x00__)
-                                 (. identity|uninlined|__3 ~'invoke ~'x00__)
-                               ((Array/get identity|uninlined|__4|types 0) ~'x00__)
-                                 (. identity|uninlined|__4 ~'invoke ~'x00__)
-                               ((Array/get identity|uninlined|__5|types 0) ~'x00__)
-                                 (. identity|uninlined|__5 ~'invoke ~'x00__)
-                               ((Array/get identity|uninlined|__6|types 0) ~'x00__)
-                                 (. identity|uninlined|__6 ~'invoke ~'x00__)
-                               ((Array/get identity|uninlined|__7|types 0) ~'x00__)
-                                 (. identity|uninlined|__7 ~'invoke ~'x00__)
-                               ((Array/get identity|uninlined|__8|types 0) ~'x00__)
-                                 (. identity|uninlined|__8 ~'invoke ~'x00__)
+                               ((Array/get identity|__0|types 0) ~'x00__)
+                                 (. identity|__0 ~'invoke ~'x00__)
+                               ((Array/get identity|__1|types 0) ~'x00__)
+                                 (. identity|__1 ~'invoke ~'x00__)
+                               ((Array/get identity|__2|types 0) ~'x00__)
+                                 (. identity|__2 ~'invoke ~'x00__)
+                               ((Array/get identity|__3|types 0) ~'x00__)
+                                 (. identity|__3 ~'invoke ~'x00__)
+                               ((Array/get identity|__4|types 0) ~'x00__)
+                                 (. identity|__4 ~'invoke ~'x00__)
+                               ((Array/get identity|__5|types 0) ~'x00__)
+                                 (. identity|__5 ~'invoke ~'x00__)
+                               ((Array/get identity|__6|types 0) ~'x00__)
+                                 (. identity|__6 ~'invoke ~'x00__)
+                               ((Array/get identity|__7|types 0) ~'x00__)
+                                 (. identity|__7 ~'invoke ~'x00__)
+                               ((Array/get identity|__8|types 0) ~'x00__)
+                                 (. identity|__8 ~'invoke ~'x00__)
                                  ;; TODO no need for `unsupported!` because it will always get a valid
                                  ;; branch
-                                 (unsupported! `identity|uninlined [~'x00__] 0)))))))
+                                 (unsupported! `identity [~'x00__] 0)))))))
             :cljs
             ;; Direct dispatch will be simple functions, not `reify`s
-            ($ (do (defn ~'identity|uninlined [~'x] ~'x))))]
+            ($ (do (defn ~'identity [~'x] ~'x))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
-      (eval '(do (is= (identity|uninlined 1)  (identity 1))
-                 (is= (identity|uninlined "") (identity "")))))))
+      (eval '(do (is= (identity 1)  (dotyped (identity 1))  (core/identity 1))
+                 (is= (identity "") (dotyped (identity "")) (core/identity "")))))))
 
 (deftest test|name
   (let [actual
@@ -928,7 +930,7 @@
   (let [actual
           (binding [self/*compilation-mode* :test]
             (macroexpand '
-              (self/defn #_:inline >long*
+              (self/defn ^:inline >long*
                 {:source "clojure.lang.RT.uncheckedLongCast"}
                 > tt/long?
                 ([x (t/- tt/primitive? tt/boolean?)] (Primitive/uncheckedLongCast x))
@@ -975,15 +977,14 @@
                             (~(L 'invoke) [~'_7__ ~(O 'x)]
                               (. ~(tag "java.lang.Number" 'x) ~'longValue))))
 
-                        [{:id 0 :index 0 :arg-types [(t/isa? Byte)]      :output-type (t/isa? Long)}
-                         {:id 1 :index 1 :arg-types [(t/isa? Short)]     :output-type (t/isa? Long)}
-                         {:id 2 :index 2 :arg-types [(t/isa? Character)] :output-type (t/isa? Long)}
-                         {:id 3 :index 3 :arg-types [(t/isa? Integer)]   :output-type (t/isa? Long)}
-                         {:id 4 :index 4 :arg-types [(t/isa? Long)]      :output-type (t/isa? Long)}
-                         {:id 5 :index 5 :arg-types [(t/isa? Float)]     :output-type (t/isa? Long)}
-                         {:id 6 :index 6 :arg-types [(t/isa? Double)]    :output-type (t/isa? Long)}
-                         {:id 7 :index 7 :arg-types [(t/ref (t/isa? Number))]
-                          :output-type (t/isa? Long)}]
+                        [[0 0 true [(t/isa? Byte)]           (t/isa? Long)]
+                         [1 1 true [(t/isa? Short)]          (t/isa? Long)]
+                         [2 2 true [(t/isa? Character)]      (t/isa? Long)]
+                         [3 3 true [(t/isa? Integer)]        (t/isa? Long)]
+                         [4 4 true [(t/isa? Long)]           (t/isa? Long)]
+                         [5 5 true [(t/isa? Float)]          (t/isa? Long)]
+                         [6 6 true [(t/isa? Double)]         (t/isa? Long)]
+                         [7 7 true [(t/ref (t/isa? Number))] (t/isa? Long)]]
 
                         (defmeta ~'>long*
                           {:source "clojure.lang.RT.uncheckedLongCast"
@@ -1044,10 +1045,8 @@
                  (def ~(tag (cstr `byte>Object) 'ref-output-type|__1)
                    (reify* [byte>Object] (~(O 'invoke) [~'_1__ ~(Y 'x)] (new ~'Byte ~'x))))
 
-                 [{:id 0 :index 0 :arg-types [(t/isa? Boolean)]
-                   :output-type (t/ref (t/isa? Boolean))}
-                  {:id 1 :index 1 :arg-types [(t/isa? Byte)]
-                   :output-type (t/ref (t/isa? Byte))}]
+                 [[0 0 nil [(t/isa? Boolean)] (t/ref (t/isa? Boolean))]
+                  [1 1 nil [(t/isa? Byte)]    (t/ref (t/isa? Byte))]]
 
                  (defmeta ~'ref-output-type
                    {:quantum.core.type/type ref-output-type|__type}
@@ -1088,7 +1087,7 @@
                   (.longValue x))
                                ;; FIXME it doesn't know what `>long-checked`'s type is i.e. what it
                                ;; has defined so far
-                ([x tt/ratio?] (-> x >big-integer >long-checked))
+                ([x tt/ratio?] 5 (-> x >big-integer >long-checked))
                 ([x (t/value true)]  1)
                 ([x (t/value false)] 0)
                 ([x t/string?] (Long/parseLong x))
@@ -1102,35 +1101,35 @@
                           (reify byte>long
                             (~(L 'invoke) [_## ~(Y 'x)]
                               ;; Resolved from `(>long* x)`
-                              (.invoke >long*|__0 ~'x))))
+                              (. >long*|__0 invoke ~'x))))
 
-                        #_(def ~'>long|__1|input-types (*<> char?))
+                        #_(def ~'>long|__1|input-types (*<> short?))
                         (def ~'>long|__1
-                          (reify char>long
+                          (reify short>long
                             (~(L 'invoke) [_## ~(C 'x)]
                               ;; Resolved from `(>long* x)`
-                              (.invoke >long*|__1 ~'x))))
+                              (. >long*|__1 invoke ~'x))))
 
-                        #_(def ~'>long|__2|input-types (*<> short?))
+                        #_(def ~'>long|__2|input-types (*<> char?))
                         (def ~'>long|__2
-                          (reify short>long
+                          (reify char>long
                             (~(L 'invoke) [_## ~(S 'x)]
                               ;; Resolved from `(>long* x)`
-                              (.invoke >long*|__2 ~'x))))
+                              (. >long*|__2 invoke ~'x))))
 
                         #_(def ~'>long|__3|input-types (*<> tt/int?))
                         (def ~'>long|__3
                           (reify int>long
                             (~(L 'invoke) [_## ~(I 'x)]
                               ;; Resolved from `(>long* x)`
-                              (.invoke >long*|__3 ~'x))))
+                              (. >long*|__3 invoke ~'x))))
 
                         #_(def ~'>long|__4|input-types (*<> tt/long?))
                         (def ~'>long|__4
                           (reify long>long
                             (~(L 'invoke) [_## ~(L 'x)]
                               ;; Resolved from `(>long* x)`
-                              (.invoke >long*|__4 ~'x))))
+                              (. >long*|__4 invoke ~'x))))
 
                         #_[x (t/and (t/or double? float?)
                                     (t/fn [x (t/or double? float?)]
@@ -1144,7 +1143,7 @@
                           (reify double>long
                             (~(L 'invoke) [_## ~(D 'x)]
                               ;; Resolved from `(>long* x)`
-                              (.invoke >long*|__6 ~'x))))
+                              (. >long*|__6 invoke ~'x))))
 
                         #_(def ~'>long|__6|input-types
                           (*<> (t/and t/float?
@@ -1154,7 +1153,7 @@
                           (reify float>long
                             (~(L 'invoke) [_## ~(F 'x)]
                               ;; Resolved from `(>long* x)`
-                              (.invoke >long*|__5 ~'x))))
+                              (. >long*|__6 invoke ~'x))))
 
                         #_[(t/and (t/isa? clojure.lang.BigInt)
                                   (t/fn [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))]
