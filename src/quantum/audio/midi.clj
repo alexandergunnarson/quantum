@@ -8,7 +8,7 @@
     [quantum.core.fn
       :refer [<- fn-> fn->> fn1 fnl]]
     [quantum.core.logic
-      :refer [fn-and whenc whenf whenf1 xor cond-let]]
+      :refer [fn-and whenc whenf whenf1 xor ifs-let]]
     [quantum.core.collections :as coll
       :refer [ffilter filter+ remove+ remove partition-all+ keys+ partition-all lpartition-all
               cat lcat concatv
@@ -291,11 +291,11 @@
         _    (validate expr #(not (and (contains? % \^)
                                        (contains? % \v))))
         [octave' expr']
-        (cond-let [ups   (get expr \^)]
-                  [(+ octave ups  ) (dissoc expr \^)]
-                  [downs (get expr \v)]
-                  [(- octave downs) (dissoc expr \v)]
-                  [octave           expr])
+        (ifs-let [ups   (get expr \^)]
+                 [(+ octave ups  ) (dissoc expr \^)]
+                 [downs (get expr \v)]
+                 [(- octave downs) (dissoc expr \v)]
+                 [octave           expr])
         expr' (->> expr' keys+ (join #{}))
         found-articulation (-> (get articulations->articulation-name expr')
                                (validate keyword?))

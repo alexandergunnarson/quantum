@@ -18,7 +18,7 @@
     [quantum.core.fn                         :as fn
       :refer [fn' fn-> fn->> fn1 rcomp]]
     [quantum.core.logic                      :as logic
-      :refer [fn= fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let]]
+      :refer [fn= fn-or fn-and whenf whenf1 ifn1 condf1 if-let ifs-let]]
     [quantum.core.type-old                   :as t
       :refer [val?]]
     [quantum.core.type.core                  :as tcore]
@@ -464,7 +464,7 @@
              (fn-> last anap/return-statement?))
            (fn1 update-last (fn1 second))
            anap/sym-call?
-           (fn [x] (cond-let
+           (fn [x] (ifs-let
                      [{[form] :form [oper] :oper}
                       (re-match-whole x
                         (m/& (m/as :oper (| '+ '-))

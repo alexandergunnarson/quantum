@@ -93,7 +93,7 @@
   ([cond-expr then-expr]
     `(if ~cond-expr
          ~then-expr
-         (throw (ex-info "`cond`: No matching clause" {}))))
+         (throw (ex-info "`ifs`: No matching clause" {}))))
   ([cond-expr then-expr & clauses]
     `(if ~cond-expr
          ~then-expr
@@ -269,12 +269,12 @@
   [& args] `(when-let-base when-not ~@args)))
 
 #?(:clj
-(defmacro cond-let
+(defmacro ifs-let
   "Transforms into a series of nested `if-let` statements."
   {:attribution "alexandergunnarson"}
-  ([] nil) ; no else
+  ([] `(throw (ex-info "`ifs-let`: No matching clause" {}))) ; no else
   ([else] else)
-  ([bindings then & more] `(if-let ~bindings ~then (cond-let ~@more)))))
+  ([bindings then & more] `(if-let ~bindings ~then (ifs-let ~@more)))))
 
 #?(:clj
 (defmacro logical-let-base

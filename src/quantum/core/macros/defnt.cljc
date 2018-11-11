@@ -16,7 +16,7 @@
     [quantum.core.log                           :as log
       :refer [prl]]
     [quantum.core.logic                         :as logic
-      :refer [fn= fn-not fn-and fn-or whenc whenf whenf1 whenc1 ifn1 condf if-not-let cond-let]]
+      :refer [fn= fn-not fn-and fn-or whenc whenf whenf1 whenc1 ifn1 condf if-not-let ifs-let]]
     [quantum.core.macros.fn                     :as mfn]
     [quantum.core.analyze.clojure.core          :as ana]
     [quantum.core.analyze.clojure.predicates    :as anap]
@@ -506,7 +506,7 @@
                 (hint-expr-with-class arg expected-type)
                 not-matchable)
             (.isPrimitive actual-type)
-            (cond-let
+            (ifs-let
               [c (get-in tcore/unboxed->convertible [actual-type expected-type])]
               ; cast unboxed primitive to compatible unboxed primitive via Clojure intrinsic
               (hint-expr-with-class `(~(symbol "clojure.core" (.getName ^Class c)) ~arg) c)
@@ -517,7 +517,7 @@
               (hint-expr-with-class `(new ~(symbol (.getName ^Class c)) ~arg) c)
               not-matchable)
             (tcore/boxed->unboxed actual-type)
-            (cond-let
+            (ifs-let
               [c (get-in tcore/unboxed->convertible [(tcore/boxed->unboxed actual-type) expected-type])]
               ; cast boxed primitive to compatible unboxed primitive via Clojure intrinsic
               (hint-expr-with-class `(~(symbol "clojure.core" (.getName ^Class c)) ~arg) c)

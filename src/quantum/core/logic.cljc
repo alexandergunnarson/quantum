@@ -153,7 +153,7 @@
 (defaliases u
   if-let   if-not-let
   when-let when-not-let
-  cond-let
+  ifs-let
   and-let nand-let
   or-let  nor-let
   xor-let xnor-let))
