@@ -41,7 +41,7 @@
       :refer [>name >?namespace >symbol]]
     [quantum.untyped.core.log                   :as ulog]
     [quantum.untyped.core.logic                 :as ul
-      :refer [fn-or fn= if-not-let ifs]]
+      :refer [fn-or fn= if-not-let ifs ifs-let]]
     [quantum.untyped.core.loops
       :refer [reduce-2]]
     [quantum.untyped.core.reducers              :as ur
@@ -129,7 +129,7 @@
           :inline?           boolean?}))
 
 (us/def ::overload-basis
-  (us/kv {:ns                      simple-symbol?
+  (us/kv {:ns-name                 simple-symbol?
           :args-form               map? ; from binding to form
           :varargs-form            (us/nilable map?) ; from binding to form
           :arglist-form|unanalyzed t/any?
@@ -150,7 +150,8 @@
  ;; Technically it's partially analyzed — its type definitions are analyzed (with the exception of
  ;; requests for type inference) while its body is not.
  (us/def ::unanalyzed-overload
-   (us/kv {:arg-classes                 (us/vec-of class?)
+   (us/kv {:ns-name                     simple-symbol?
+           :arg-classes                 (us/vec-of class?)
            :arg-types                   (us/vec-of t/type?)
            :arglist-code|hinted         (us/vec-of simple-symbol?)
            :arglist-code|reify|unhinted (us/vec-of simple-symbol?)
@@ -273,6 +274,11 @@
       (uset/normalize-comparison (t/compare t0 t1)))
     (uset/normalize-comparison (t/compare t0 t1))))
 
+;; FIXME apparently this occasionally causes “Comparison method violates its general contract!”
+;; NOTE saw “Comparison method violates its general contract!” here
+;; (t/extend-defn! c?/comp<
+;;   ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]
+;;     (c?/<  (c?/compare a b) 0)))
 (c/defn compare-args-types [arg-types0 #_(us/vec-of t/type?) arg-types1 #_(us/vec-of t/type?)]
   (let [ct-comparison (compare (count arg-types0) (count arg-types1))]
     (if (zero? ct-comparison)
@@ -333,7 +339,9 @@
                                        recursive-ast-node-reference
                                        (uid/qualify fn|ns-name fn|overload-types-name)
                                        fn|overload-types))))
-        body-node    (uana/analyze env (ufgen/?wrap-do body-codelist))
+        body-node    (uana/analyze
+                       (assoc env :opts {:ns (-> unanalyzed-overload :ns-name the-ns)})
+                       (ufgen/?wrap-do body-codelist))
         hint-arg|fn  (c/fn [i arg-binding]
                        (ufth/with-type-hint arg-binding
                          (ufth/>fn-arglist-tag
@@ -488,8 +496,10 @@
 
 (defns- overload-basis-data>types+
   "Split and primitivized; not yet sorted."
-  [{:keys [fn|output-type _]} ::fn|globals, args-form _, output-type|form _, body-codelist _]
-  (->> (uana/analyze-arg-syms {} args-form (or output-type|form fn|output-type) true)
+  [{:keys [fn|output-type _]} ::fn|globals, ns-name-val _, args-form _, output-type|form _
+   body-codelist _]
+  (->> (uana/analyze-arg-syms {:opts {:ns (the-ns ns-name-val)}}
+          args-form (or output-type|form fn|output-type) true)
        (uc/map+ (c/fn [{:keys [env output-type-node]}]
                   (let [arg-env     (->> env :opts :arg-env deref)
                         arg-types   (->> args-form keys (uc/map #(:type (get arg-env %))))
@@ -552,6 +562,7 @@
           [:arglist-form|unanalyzed :args-form :body-codelist :inline? :output-type|form
            :varargs-form])
         (merge type-datum)
+        (assoc :ns-name (:ns-name basis))
         (merge (kw-map arg-classes arglist-code|hinted arglist-code|reify|unhinted i|basis
                        variadic?)))))
 
@@ -589,7 +600,7 @@
                                          (= arg-types   (:arg-types   %)))
                                    existing-overload-types))]
                    (->> (or types|split (overload-basis-data>types+
-                                          fn|globals args-form output-type|form
+                                          fn|globals (:ns-name basis) args-form output-type|form
                                           body-codelist|unanalyzed))
                         (cond->> (and (not new-overload-basis?)
                                       (= (:body-codelist basis) (:body-codelist prev-basis)))
@@ -649,11 +660,12 @@
             sorted-changed-overload-types
               (->> sorted-changed-unanalyzed-overloads
                    (uc/map-indexed
-                     (c/fn [i {:keys [arg-types output-type body-codelist arglist-code|hinted
+                     (c/fn [i {:as   unanalyzed-overload
+                               :keys [arg-types output-type body-codelist arglist-code|hinted
                                       inline?]}]
                        (-> (kw-map arg-types output-type arglist-code|hinted body-codelist inline?)
                            (assoc :id      (+ i first-current-overload-id)
-                                  :ns-name (ns-name *ns*))))))
+                                  :ns-name (:ns-name unanalyzed-overload))))))
             ;; We need to maintain the `overload-types` ordering by type-specificity so the dynamic
             ;; dispatch and fn-type work correctly.
             overload-types-with-replacing-ids
@@ -811,6 +823,7 @@
 ;; ===== End dynamic dispatch ===== ;;
 
 (defns- overload-basis-form>overload-basis
+  "This is for overloads being created brand-new within `defn` or `extend-defn!`."
   [opts ::opts
    {:as   fn|globals
     :keys [fn|inline? _, fn|output-type _, fn|output-type _, fn|output-type|form _]} ::fn|globals
@@ -839,7 +852,8 @@
                            ;; supported
                            (assert (-> varargs :binding-form first (= :sym))))
         args-form        (reduce-2 assoc (umap/om) arg-bindings arg-types|form)
-        [arglist-basis]  (uana/analyze-arg-syms {} args-form
+        ns-name-val      (>symbol *ns*)
+        [arglist-basis]  (uana/analyze-arg-syms {:opts {:ns (the-ns ns-name-val)}} args-form
                            (or output-type|form fn|output-type) false)
         binding->arg-type|basis (->> arglist-basis :env :opts :arg-env deref (uc/map-vals' :type))
         arg-types|basis   (->> args-form keys (uc/map binding->arg-type|basis))
@@ -849,7 +863,7 @@
                               (seq-or utr/rx-type? arg-types|basis))
         inline?           (or (and fn|inline? (-> arglist-form meta :unline? not))
                               (-> arglist-form meta :inline?))]
-    {:ns                      (>symbol *ns*)
+    {:ns-name                 ns-name-val
      ;; TODO Only needed if `dependent?` or if new
      :args-form               args-form
      :arg-types|basis         arg-types|basis
@@ -867,7 +881,7 @@
      ;; previous split types. If non-reactive, then the split types of this overload basis can be
      ;; compared to existing overload bases.
      :types|split             (when dependent?
-                                (->> (overload-basis-data>types+ fn|globals args-form
+                                (->> (overload-basis-data>types+ fn|globals ns-name-val args-form
                                        output-type|form body-codelist|unanalyzed)
                                      ur/join))
      ;; TODO Only needed if `inline? or `reactive?`, or if new
@@ -888,11 +902,12 @@
                  (->> existing-bases
                       (uc/map-indexed+
                         (c/fn [i existing-basis]
-                          (if-let [same-code?
-                                     (and (= (:arglist-form|unanalyzed existing-basis)
-                                             (:arglist-form|unanalyzed new-basis))
-                                          (= (:body-codelist           existing-basis)
-                                             (:body-codelist           new-basis)))]
+                          (ifs-let
+                            [same-code?
+                              (and (= (:arglist-form|unanalyzed existing-basis)
+                                      (:arglist-form|unanalyzed new-basis))
+                                   (= (:body-codelist           existing-basis)
+                                      (:body-codelist           new-basis)))]
                             (do (ulog/pr :warn
                                   "Overwriting existing overload with same arglist and body"
                                   {:arglist|form (:arglist-form|unanalyzed new-basis)})
@@ -900,43 +915,44 @@
                             ;; This only checks for `=` because `t/=` will be deduped later on in
                             ;; overloads, not overload bases
                             ;; TODO this doesn't take into account `|` types
-                            (if-let [same-unreactive-type?
-                                       (and (not (:reactive? existing-basis))
-                                            (not (:reactive? new-basis))
-                                            (if (and (:dependent? existing-basis)
-                                                     (:dependent? new-basis))
-                                                (= (:types|split existing-basis)
-                                                   (:types|split new-basis))
-                                                (and (= (:output-type|basis existing-basis)
-                                                        (:output-type|basis new-basis))
-                                                     (= (:arg-types|basis   existing-basis)
-                                                        (:arg-types|basis   new-basis)))))]
-                              (do (ulog/pr :warn "Overwriting existing overload with same types"
-                                    {:arglist|form|prev (:arglist-form|unanalyzed existing-basis)
-                                     :arglist|form      (:arglist-form|unanalyzed new-basis)})
-                                  i)
-                              ;; TODO enhance this; figure out how to effectively compare reactive
-                              ;;      and dependent types, if that's even possible
-                              ;; TODO maybe we don't even want this; maybe this should be based on
-                              ;;      an atom that's configurable. It does override/nullify some
-                              ;;      safety behavior in `overload-basis|changed?`
-                              (when-let [probably-same-reactive-type?
-                                          (and (= (:reactive?   existing-basis)
-                                                  (:reactive?   new-basis))
-                                               (= (:dependent?  existing-basis)
-                                                  (:dependent?  new-basis))
-                                               (= (:types|split existing-basis)
-                                                  (:types|split new-basis))
-                                               (= (-> existing-basis :output-type|basis ?norx-deref)
-                                                  (-> new-basis      :output-type|basis ?norx-deref))
-                                               (= (-> existing-basis :arg-types|basis   ?norx-deref)
-                                                  (-> new-basis      :arg-types|basis   ?norx-deref)))]
-                                (ulog/pr :warn
+                            [same-unreactive-type?
+                              (and (not (:reactive? existing-basis))
+                                   (not (:reactive? new-basis))
+                                   (if (and (:dependent? existing-basis)
+                                            (:dependent? new-basis))
+                                       (= (:types|split existing-basis)
+                                          (:types|split new-basis))
+                                       (and (= (:output-type|basis existing-basis)
+                                               (:output-type|basis new-basis))
+                                            (= (:arg-types|basis   existing-basis)
+                                               (:arg-types|basis   new-basis)))))]
+                            (do (ulog/pr :warn "Overwriting existing overload with same types"
+                                  {:arglist|form|prev (:arglist-form|unanalyzed existing-basis)
+                                   :arglist|form      (:arglist-form|unanalyzed new-basis)})
+                                i)
+                            ;; TODO enhance this; figure out how to effectively compare reactive
+                            ;;      and dependent types, if that's even possible
+                            ;; TODO maybe we don't even want this; maybe this should be based on
+                            ;;      an atom that's configurable. It does override/nullify some
+                            ;;      safety behavior in `overload-basis|changed?`
+                            [probably-same-reactive-type?
+                              (and (= (:reactive?   existing-basis)
+                                      (:reactive?   new-basis))
+                                   (= (:dependent?  existing-basis)
+                                      (:dependent?  new-basis))
+                                   (= (:types|split existing-basis)
+                                      (:types|split new-basis))
+                                   (= (-> existing-basis :output-type|basis ?norx-deref)
+                                      (-> new-basis      :output-type|basis ?norx-deref))
+                                   (= (-> existing-basis :arg-types|basis   ?norx-deref)
+                                      (-> new-basis      :arg-types|basis   ?norx-deref)))]
+                            (do (ulog/pr :warn
                                   (str "Assuming that new reactive overload basis is a subsequent "
                                        "version of existing reactive overload basis")
                                   {:new      (:arglist-form|unanalyzed existing-basis)
                                    :existing (:arglist-form|unanalyzed existing-basis)})
-                                i)))))
+                                i)
+                            nil)))
                       (uc/filter+ some?)
                       uc/first)]
         (assoc bases i|existing new-basis)

@@ -316,12 +316,12 @@
         ([a false?                 , b true?]    (int -1))
         ([a true?                  , b false?]   (int  1))
         ([a true?                  , b true?]    (int  0))
-        ([a boolean?               , b boolean?]
+        #_([a boolean?               , b boolean?]
           (if a (if b (int 0) (int 1)) (if b (int -1) (int 0))))
         ([a numeric?               , b numeric?]
           (ifs (c?/< a b) (int -1) (c?/> a b) (int 1) (int 0)))
-#?(:clj ([a (t/ref c?/icomparable?), b primitive?]              (.compareTo a       b)))
-#?(:clj ([a primitive?             , b (t/ref c?/icomparable?)] (.compareTo (box a) b))))
+#?(:clj ([a (t/ref c?/icomparable?), b numeric?]                (.compareTo a       b)))
+#?(:clj ([a numeric?               , b (t/ref c?/icomparable?)] (.compareTo (box a) b))))
 
 (t/extend-defn! c?/comp<
   ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]

@@ -599,7 +599,7 @@
          (err! "Must supply exactly one input to `var`" {:form form})
        (not (symbol? arg-form))
          (err! "`var` accepts a symbol argument" {:form form})
-       (let [resolved (uvar/resolve *ns* arg-form)]
+       (let [resolved (uvar/resolve (or (-> env :opts :ns) *ns*) arg-form)]
          (ifs (nil? resolved)
                 (err! "Could not resolve var from symbol" {:symbol arg-form})
               (not (var? resolved))
@@ -674,7 +674,7 @@
     (let [overload-types-name (symbol (namespace fn|name) (str (name fn|name) "|__types"))]
       (if-let [fn|types (get env overload-types-name)]
         (->> fn|types (uc/filter #(-> % :arg-types count (= inputs-ct))))
-        (if-let [fn|types-var (resolve overload-types-name)]
+        (if-let [fn|types-var (uvar/resolve (or (-> env :opts :ns) *ns*) overload-types-name)]
           (->> fn|types-var var-get urx/norx-deref :overload-types
                (uc/filter #(-> % :arg-types count (= inputs-ct))))
           (err! "Overload-types not found for typed fn"
@@ -705,7 +705,10 @@
       (let [bindings-map (reducei (fn [bindings sym i|arg]
                                     (assoc bindings sym (get input-nodes i|arg)))
                                   {} arglist-code|hinted)
-            body-node (analyze* (merge env bindings-map) (list* 'do body-codelist))
+            ns-val (the-ns (:ns-name overload-type-datum))
+            body-node
+              (analyze* (-> env (merge bindings-map) (update :opts assoc :ns ns-val))
+                        (list* 'do body-codelist))
             bindings|form
               (reducei (fn [bindings to i|arg]
                          (let [from-node (get input-nodes i|arg)
@@ -925,7 +928,9 @@
     (if (-> env :opts :arglist-context?)
         (if-let [caller-form-dependent-type-call?
                    (and (symbol? caller|form)
-                        (when-let [sym (some-> (uvar/resolve *ns* caller|form) uid/>symbol)]
+                        (when-let [sym (some->
+                                         (uvar/resolve (or (-> env :opts :ns) *ns*) caller|form)
+                                         uid/>symbol)]
                           (case sym
                             (quantum.core.type/type
                              quantum.untyped.core.type/type
@@ -939,7 +944,7 @@
         (analyze-seq|call env form))))
 
 (defns- analyze-seq [env ::env, form _]
-  (let [expanded-form (ufeval/macroexpand form)]
+  (let [expanded-form (binding [*ns* (or (-> env :opts :ns) *ns*)] (ufeval/macroexpand form))]
     (if-let [no-expansion? (ucomp/== form expanded-form)]
       (analyze-seq* env expanded-form)
       (let [expanded-form' (cond-> expanded-form
@@ -958,10 +963,10 @@
                          (and (-> env :opts :arglist-context?)
                               (-> env :opts :arg-env deref (find sym))))]
     {:resolved local :resolved-via :env}
-    (let [resolved (uvar/resolve *ns* sym)]
+    (let [resolved (uvar/resolve (or (-> env :opts :ns) *ns*) sym)]
       (ifs resolved
              {:resolved resolved :resolved-via :resolve}
-           (some->> sym namespace symbol (uvar/resolve *ns*) class?)
+           (some->> sym namespace symbol (uvar/resolve (or (-> env :opts :ns) *ns*)) class?)
              {:resolved     (analyze-seq|dot
                               env (list '. (-> sym namespace symbol) (-> sym name symbol)))
               :resolved-via :dot}
