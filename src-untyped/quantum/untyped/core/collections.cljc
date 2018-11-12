@@ -1,30 +1,31 @@
 (ns quantum.untyped.core.collections
   "Operations on collections."
-  (:refer-clojure :exclude
-    [#?(:cljs array?) assoc-in cat conj! contains? count distinct distinct? drop first get group-by
-     filter flatten frequencies last map map-indexed mapcat partition-all pmap remove reverse run!
-     take zipmap])
-  (:require
-    [clojure.core                  :as core]
-    [fast-zip.core                 :as zip]
-    [quantum.untyped.core.core     :as ucore
-      :refer [sentinel]]
-    [quantum.untyped.core.data
-      :refer [transient?]]
-    [quantum.untyped.core.data
-      :refer [val?]]
-    [quantum.untyped.core.data.array
-      :refer [array?]]
-    [quantum.untyped.core.error    :as uerr
-      :refer [err!]]
-    [quantum.untyped.core.fn       :as ufn
-      :refer [ntha fn' aritoid]]
-    [quantum.untyped.core.logic
-      #?(:clj :refer :cljs :refer-macros) [ifs condf1 fn-not]] ; no idea why this is required currently :/
-    [quantum.untyped.core.loops
-      :refer [reduce-2]]
-    [quantum.untyped.core.reducers :as ur
-      :refer [defeager def-transducer>eager transducer->transformer educe]]))
+       (:refer-clojure :exclude
+         [#?(:cljs array?) assoc-in cat conj! contains? count distinct distinct? drop first get
+          group-by filter flatten frequencies last map map-indexed mapcat partition-all pmap remove
+          reverse run! take zipmap])
+       (:require
+         [clojure.core                  :as core]
+         [fast-zip.core                 :as zip]
+#?(:cljs [goog.array                    :as garray])
+         [quantum.untyped.core.core     :as ucore
+           :refer [sentinel]]
+         [quantum.untyped.core.data
+           :refer [transient?]]
+         [quantum.untyped.core.data
+           :refer [val?]]
+         [quantum.untyped.core.data.array
+           :refer [array?]]
+         [quantum.untyped.core.error    :as uerr
+           :refer [err!]]
+         [quantum.untyped.core.fn       :as ufn
+           :refer [ntha fn' aritoid]]
+         [quantum.untyped.core.logic
+           #?(:clj :refer :cljs :refer-macros) [ifs condf1 fn-not]] ; no idea why this is required  currently :/
+         [quantum.untyped.core.loops
+           :refer [reduce-2]]
+         [quantum.untyped.core.reducers :as ur
+           :refer [defeager def-transducer>eager transducer->transformer educe]]))
 
 (ucore/log-this-ns)
 
@@ -483,3 +484,18 @@
                         (groupf (groupf) [k xs*])
                         x*])))
             xs)))))
+
+(defn sort!
+  "Like `sort` but coerces `xs` to an array and then sorts it in place, returning the coerced array
+   instead of a seq on top of it. If `xs` is already an array, modifies `xs`."
+  ([xs] (sort! compare xs))
+  ([compf xs]
+    (let [#?(:clj ^objects !xs :cljs !xs) (if (array? xs) xs (to-array xs))]
+      (doto !xs #?(:clj  (java.util.Arrays/sort ^Comparator compf)
+                   :cljs (garray/stableSort !xs (@#'fn->comparator compf)))))))
+
+(defn sort-by!
+  "Like `sort-by` but coerces `xs` to an array and then sorts it in place, returning the coerced
+   array instead of a seq on top of it. If `xs` is already an array, modifies `xs`."
+  ([kf xs] (sort-by! kf compare xs))
+  ([kf compf xs] (sort! (fn [a b] (compf (kf a) (kf b))) xs)))
