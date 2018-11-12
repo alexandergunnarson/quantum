@@ -27,7 +27,8 @@
     [quantum.untyped.core.data.reactive         :as urx
       :refer [?norx-deref norx-deref]]
     [quantum.untyped.core.data.set              :as uset]
-    [quantum.untyped.core.data.vector           :as uvec]
+    [quantum.untyped.core.data.vector           :as uvec
+      :refer [alist-conj!]]
     [quantum.untyped.core.error                 :as uerr
       :refer [TODO err!]]
     [quantum.untyped.core.fn
@@ -84,6 +85,48 @@
 (defonce *interfaces (atom {}))
 
 (defonce !overload-queue (uvec/alist)) ; (t/!seq-of ::types-decl-datum-with-overload)
+
+(uvar/defonce !effects-queue
+  "To ensure that side-effects are as atomic as possible in the case of a failure in `defn` or
+   `extend-defn!`."
+  (uvec/alist)) ; (t/!seq-of (t/ftype []))
+
+;; TODO move
+(defns- >effects-map|intern [ns-sym simple-symbol?, sym simple-symbol?, v _]
+  (let [var-val (resolve (uid/qualify ns-sym sym))
+        value   (atom nil)]
+    {:f   #(do (when v (reset! value (var-get var-val)))
+               (intern ns-sym sym v))
+     :unf #(if v
+               (intern ns-sym sym @value)
+               (uvar/unintern! ns-sym sym))}))
+
+(defn- drain-effects-queue!
+  "Runs effect fns, rolling back the already-executed ones in reverse order if any exception occurs."
+  []
+  (println "about to run effects queue")
+  (try
+    (->> !effects-queue
+         (reduce
+           (c/fn [!done {:as m :keys [f]}]
+             (uerr/catch-all
+               (do (f) (alist-conj! !done m))
+               effects-err
+               (do (->> !done
+                        (uc/run!
+                          (c/fn [{:keys [unf]}]
+                            (uerr/catch-all (unf)
+                              rollback-err
+                              (err! nil
+                                    "Exception in effects function; unable to roll back all effects"
+                                    {:failed-rollback-fn unf}
+                                    nil rollback-err)))))
+                   (err! nil "Exception in effects function; rolled back successfully"
+                             {:failed-fn f}
+                             nil effects-err))))
+           (uvec/alist)))
+    (finally (uvec/alist-empty! !effects-queue)))
+  (println "done with effects queue"))
 
 ;; ==== Internal specs ===== ;;
 
@@ -206,7 +249,7 @@
 
 (us/def ::type-datum
   (us/kv {:arg-types   (us/vec-of t/type?)
-          :pre-type    t/type?
+          :pre-type    (us/nilable t/type?)
           :output-type t/type?}))
 
 (us/def ::types-decl-datum
@@ -463,9 +506,9 @@
 ;; ----- Type declarations ----- ;;
 
 (c/defn overload-types>arg-types
-  [!fn|types #_(t/of urx/reactive? ::fn|types), overload-index #_index?
+  [?!fn|types #_(t/or ::fn|types (t/of urx/reactive? ::fn|types)), overload-index #_index?
    #_> #_(objects-of type?)]
-  (apply uarr/*<> (-> !fn|types norx-deref :overload-types (get overload-index) :arg-types)))
+  (apply uarr/*<> (-> ?!fn|types ?norx-deref :overload-types (get overload-index) :arg-types)))
 
 (c/defn overload-types>ftype
   [fn|ns-name     #_simple-symbol?
@@ -504,13 +547,16 @@
    dynamic dispatch uses to dispatch off input types."
   [{:as opts :keys [compilation-mode _, lang _]} ::opts
    {:as fn|globals :keys [fn|ns-name _, fn|name _, fn|overload-types-name _]} ::fn|globals
-   {:as types-decl-datum :keys [id _, index _] ns-name- [:ns-name _]} ::types-decl-datum, !fn|types _
+   {:as types-decl-datum :keys [id _, index _] ns-name- [:ns-name _]} ::types-decl-datum
+   fn|types ::fn|types
    > ::overload-types-decl]
   (let [decl-name (-> (>overload-types-decl|name fn|name id)
                       (ufth/with-type-hint "[Ljava.lang.Object;"))
         form      (if (or (not= compilation-mode :test) (= lang :clj))
-                      (do (intern ns-name- decl-name (overload-types>arg-types !fn|types index))
-                          nil)
+                      (let [arg-types (overload-types>arg-types fn|types index)]
+                        (do (alist-conj! !effects-queue
+                              (>effects-map|intern ns-name- decl-name arg-types))
+                            nil))
                       `(def ~decl-name
                          (overload-types>arg-types
                            ~(uid/qualify fn|ns-name fn|overload-types-name) ~index)))]
@@ -723,22 +769,23 @@
                            (let [overload (get sorted-changed-overloads
                                                (- id first-current-overload-id))]
                              ;; So that direct dispatch can use them later on in the pipeline
-                             (uvec/alist-conj! !overload-queue
-                               (assoc datum :overload overload))))
+                             (alist-conj! !overload-queue (assoc datum :overload overload))))
                          (dissoc datum :replacing-id)))))]
         (kw-map fn|output-type-norx fn|type-norx overload-types)))))
 
 ;; ----- Direct dispatch ----- ;;
 
 (defns- >direct-dispatch
-  [{:as opts :keys [gen-gensym _, lang _, kind _]} ::opts, fn|globals ::fn|globals, !fn|types _]
+  [{:as opts :keys [gen-gensym _, lang _, kind _]} ::opts
+   fn|globals ::fn|globals
+   fn|types   ::fn|types]
   (case lang
     :clj  (let [direct-dispatch-data-seq
                   (->> !overload-queue
                        (uc/map
                          (c/fn [{:as type-decl-datum :keys [arg-types id index overload]}]
                            {:overload-types-decl
-                              (>overload-types-decl opts fn|globals type-decl-datum !fn|types)
+                              (>overload-types-decl opts fn|globals type-decl-datum fn|types)
                             :reify (overload>reify overload opts fn|globals id)})))
                 _ (uvec/alist-empty! !overload-queue)
                 form (->> direct-dispatch-data-seq
@@ -807,10 +854,9 @@
   [{:as opts       :keys [compilation-mode _, gen-gensym _, lang _, kind _]} ::opts
    {:as fn|globals :keys [fn|meta _, fn|ns-name _, fn|name _, fn|output-type _
                           fn|overload-types-name _, fn|type-name _]} ::fn|globals
-   !fn|types _]
+   fn|types ::fn|types]
   (let [overload-forms
-         (->> !fn|types
-              norx-deref
+         (->> fn|types
               :overload-types
               (group-by (fn-> :arg-types count))
               (sort-by key) ; for purposes of reproducibility and organization
@@ -822,7 +868,7 @@
       fn|meta' (merge fn|meta {:quantum.core.type/type (uid/qualify fn|ns-name fn|type-name)})
       overload-types|form
         (when (= compilation-mode :test)
-          (->> !fn|types norx-deref :overload-types >form
+          (->> fn|types :overload-types >form
                (uc/map (c/fn [{:keys [id index inline? arg-types output-type]}]
                          [id index inline? arg-types output-type]))))]
     ;; TODO determine whether CLJS needs (update-in m [:jsdoc] conj "@param {...*} var_args")
@@ -878,8 +924,8 @@
         dependent?        (:dependent? arglist-basis)
         reactive?         (or (utr/rx-type? output-type|basis)
                               (seq-or utr/rx-type? arg-types|basis))
-        inline?           (or (and fn|inline? (-> arglist-form meta :unline? not))
-                              (-> arglist-form meta :inline?))]
+        inline?           (boolean (or (and fn|inline? (-> arglist-form meta :unline? not))
+                                       (-> arglist-form meta :inline?)))]
     {:ns-name                 ns-name-val
      ;; TODO Only needed if `dependent?` or if new
      :args-form               args-form
@@ -977,20 +1023,22 @@
     existing-bases
     new-bases))
 
+(defns- with-optional-validate-overload-bases [overload-bases ::overload-bases-data] overload-bases)
+
 (defns- >!overload-bases
   "`!overload-bases` is a reactive atom updated by `t/extend-defn!`, which cannot be deleted from
    but which can be updated and appended to."
   [{:as opts       :keys [kind _]} ::opts
    {:as fn|globals :keys [fn|ns-name _, fn|overload-bases-name _]} ::fn|globals
    overload-bases-form _]
-  (let [overload-bases
+  (let [new-overload-bases
          (->> overload-bases-form
               (uc/map (c/fn [x] (overload-basis-form>overload-basis opts fn|globals x))))]
     (if (= kind :extend-defn!)
-        (-> (uid/qualify fn|ns-name fn|overload-bases-name) resolve var-get
-            (doto
-              (uref/update!
-                (c/fn [{:keys [current]}]
+        (with-do-let [!overload-bases
+                        (-> (uid/qualify fn|ns-name fn|overload-bases-name) resolve var-get)]
+          (let [{:as overload-bases :keys [current]} (norx-deref !overload-bases)
+                overload-bases'
                   {:prev-norx
                     (->> current
                          (uc/map
@@ -1000,10 +1048,18 @@
                               :types|split       (:types|split   basis)
                               :body-codelist     (:body-codelist basis)
                               :dependent?        (:dependent?    basis)
-                              :reactive?         (:reactive?     basis)})))
-                   :current (incorporate-overload-bases current overload-bases)}))))
-        (with-do-let [!overload-bases (urx/! {:prev-norx nil :current overload-bases})]
-          (intern fn|ns-name fn|overload-bases-name !overload-bases)))))
+                              :reactive?         (:reactive?     basis)
+                              :inline?           (:inline?       basis)})))
+                   :current (incorporate-overload-bases current new-overload-bases)}]
+            (with-optional-validate-overload-bases overload-bases')
+            (let [prev-overload-bases (atom nil)]
+              (alist-conj! !effects-queue
+                {:f   #(do (reset! prev-overload-bases (norx-deref !overload-bases))
+                           (uref/set! !overload-bases overload-bases'))
+                 :unf #(uref/set! !overload-bases @prev-overload-bases)}))))
+        (with-do-let [!overload-bases (urx/! {:prev-norx nil :current new-overload-bases})]
+          (alist-conj! !effects-queue
+            (>effects-map|intern fn|ns-name fn|overload-bases-name !overload-bases))))))
 
 (defns- >!fn|types
   "`!fn|types` is a reaction which depends on the `!overload-bases` atom and all reactive types
@@ -1014,17 +1070,18 @@
    what they'll be for the lifetime of the function."
   [{:as opts       :keys [kind _]} ::opts
    {:as fn|globals :keys [fn|ns-name _, fn|overload-types-name _, fn|type-name _]} ::fn|globals
-   !overload-bases _]
+   !overload-bases urx/reactive?]
   (if (= kind :extend-defn!)
       (-> (uid/qualify fn|ns-name fn|overload-types-name) resolve var-get)
-      (with-do-let [!fn|types (urx/!rx @!overload-bases)]
-        (uref/add-interceptor! !fn|types :the-interceptor
-          (c/fn [_ _ old-overload-types overload-bases-data]
-            ;; `opts` and `fn|globals` are closed over
-            (overload-bases-data>fn|types
-              overload-bases-data old-overload-types opts fn|globals)))
-        (norx-deref !fn|types)
-        (intern fn|ns-name fn|overload-types-name !fn|types))))
+      (with-do-let [!fn|types (doto (urx/!rx @!overload-bases)
+                                    (uref/add-interceptor! :the-interceptor
+                                      (c/fn [_ _ old-overload-types overload-bases-data]
+                                        ;; `opts` and `fn|globals` are closed over
+                                        (overload-bases-data>fn|types
+                                          overload-bases-data old-overload-types opts fn|globals)))
+                                    norx-deref)]
+        (alist-conj! !effects-queue
+          (>effects-map|intern fn|ns-name fn|overload-types-name !fn|types)))))
 
 (defns- >!fn|type
   [{:as opts       :keys [kind _]} ::opts
@@ -1033,7 +1090,7 @@
   (if (= kind :extend-defn!)
       (-> (uid/qualify fn|ns-name fn|type-name) resolve var-get)
       (with-do-let [!fn|type (t/rx* (urx/>!rx #(:fn|type-norx @!fn|types) {:eq-fn t/=}) nil)]
-        (intern fn|ns-name fn|type-name !fn|type))))
+        (alist-conj! !effects-queue (>effects-map|intern fn|ns-name fn|type-name !fn|type)))))
 
 ;; ===== `opts` + `fn|globals` ===== ;;
 
@@ -1086,7 +1143,7 @@
                   (kw-map fn|globals-name fn|inline? fn|meta fn|name fn|ns-name fn|output-type|form
                           fn|output-type fn|overload-bases-name fn|overload-types-name
                           fn|type-name)]
-            (intern fn|ns-name fn|globals-name fn|globals)
+            (alist-conj! !effects-queue (>effects-map|intern fn|ns-name fn|globals-name fn|globals))
             (kw-map fn|globals overload-bases-form)))))
 
 ;; ===== Whole `t/(de)fn` creation ===== ;;
@@ -1097,20 +1154,25 @@
           {:keys [fn|globals overload-bases-form]} (>fn|globals+?overload-bases-form kind args)
           !overload-bases (>!overload-bases opts fn|globals overload-bases-form)
           !fn|types       (>!fn|types       opts fn|globals !overload-bases)
-          !fn|type        (>!fn|type        opts fn|globals !fn|types)]
-      (if (empty? (norx-deref !overload-bases))
-          `(declare ~(:fn|name fn|globals))
-          (let [direct-dispatch  (>direct-dispatch              opts fn|globals !fn|types)
-                dynamic-dispatch (>dynamic-dispatch-fn|codelist opts fn|globals !fn|types)
-                fn-codelist
-                  (->> `[;; For recursion
-                         ~@(when (not= kind :extend-defn!) [`(declare ~(:fn|name fn|globals))])
-                         ~@(:form direct-dispatch)
-                         ~@dynamic-dispatch]
-                         (remove nil?))]
-            (case kind
-              :fn                   (TODO "Haven't done t/fn yet")
-              (:defn :extend-defn!) `(do ~@fn-codelist)))))
+          fn|types        (norx-deref !fn|types)
+          !fn|type        (>!fn|type        opts fn|globals !fn|types)
+          code
+            (if (empty? (norx-deref !overload-bases))
+                `(declare ~(:fn|name fn|globals))
+                (let [direct-dispatch  (>direct-dispatch              opts fn|globals fn|types)
+                      dynamic-dispatch (>dynamic-dispatch-fn|codelist opts fn|globals fn|types)
+                      fn-codelist
+                        (->> `[;; For recursion
+                               ~@(when (not= kind :extend-defn!)
+                                   [`(declare ~(:fn|name fn|globals))])
+                               ~@(:form direct-dispatch)
+                               ~@dynamic-dispatch]
+                               (remove nil?))]
+                  (case kind
+                    :fn                   (TODO "Haven't done t/fn yet")
+                    (:defn :extend-defn!) `(do ~@fn-codelist))))]
+      (drain-effects-queue!)
+      code)
     t
     (do (ulog/ppr :error t)
         (throw t))))

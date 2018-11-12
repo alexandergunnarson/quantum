@@ -156,3 +156,5 @@
   ([ns-sym #_symbol?, sym #_symbol?, v #_t/ref?]
     (or (resolve (find-ns ns-sym) sym)
         (intern! ns-sym sym v))))
+
+(def unintern! ns-unmap)

@@ -90,6 +90,11 @@
 (var/def fixnum? "The set of all fixed-precision numbers."
   (t/or fixint? fixdec?))
 
+(var/def fixed-numeric?
+  "The set of all fixed-precision numeric things. Something 'numeric' is something that may be
+   treated as a number but may not actually *be* one."
+  (t/or fixnum? p/char?))
+
 (var/def bignum? "The set of all 'big' (arbitrary-precision) numbers."
   (t/or fixint? fixdec?))
 
@@ -134,7 +139,7 @@
 
 #?(:clj
 (t/defn ^:inline >java-bigint > java-bigint?
-  ([x fixnum? > (t/assume java-bigint?)] (-> x >long* BigInteger/valueOf))
+  ([x fixed-numeric? > (t/assume java-bigint?)] (-> x >long* BigInteger/valueOf))
   ([x java-bigint?] x)
   ([x clj-bigint? > (t/assume java-bigint?)] (.toBigInteger x))
   ;; Truncates the decimal portion
@@ -146,8 +151,8 @@
 
 #?(:clj
 (t/defn ^:inline >clj-bigint > clj-bigint?
-  ([x fixnum?      > (t/assume clj-bigint?)] (-> x >long* BigInt/fromLong))
-  ([x java-bigint? > (t/assume clj-bigint?)] (BigInt/fromBigInteger x))
+  ([x fixed-numeric? > (t/assume clj-bigint?)] (-> x >long* BigInt/fromLong))
+  ([x java-bigint?   > (t/assume clj-bigint?)] (BigInt/fromBigInteger x))
   ([x clj-bigint?] x)
   ;; Truncates the decimal portion
   ;; TODO should this overload be part of `>clj-bigint*`?
@@ -158,8 +163,8 @@
 
 #?(:clj
 (t/defn ^:inline >bigdec > bigdec?
-  ([x fixint? > (t/assume bigdec?)] (-> x >long*   BigDecimal/valueOf))
-  ([x fixdec? > (t/assume bigdec?)] (-> x >double* BigDecimal/valueOf))
+  ([x (t/or fixint? p/char?) > (t/assume bigdec?)] (-> x >long*   BigDecimal/valueOf))
+  ([x fixdec?                > (t/assume bigdec?)] (-> x >double* BigDecimal/valueOf))
   ([x java-bigint?] (BigDecimal. x))
   ([x clj-bigint? > (t/assume bigdec?)] (.toBigDecimal x))
   ([x bigdec?] x)
@@ -168,7 +173,7 @@
 
 #?(:clj
 (t/defn ^:inline >ratio > ratio?
-  ([x (t/or fixnum? bigint?)] (Ratio. (>java-bigint x) BigInteger/ONE))
+  ([x (t/or fixed-numeric? bigint?)] (Ratio. (>java-bigint x) BigInteger/ONE))
   ([x bigdec?] (let [v ^:val (.unscaledValue x)
                      scale (.scale x)]
                  (if (c?/< scale 0)
@@ -181,7 +186,8 @@
 ;; ===== Comparison extensions ===== ;;
 
 ;; TODO primitive with non-primitive
-(t/extend-defn! c?/=
+;; TODO this errors out in the middle of the effects queue
+((t/extend-defn! c?/=
         ;; `.equals` takes into account precision even if they're numerically equivalent
         ;; `core/=` uses `.equals` for `BigDecimal`s
 #?(:clj ([a bigdec?     , b bigdec?]      (c?/comp= a b)))
@@ -193,10 +199,11 @@
 #?(:clj ([a clj-bigint? , b clj-bigint?]  (.equals a b)))
 #?(:clj ([a clj-bigint? , b numeric?]     (c?/= a (>clj-bigint b))))
 #?(:clj ([a numeric?    , b clj-bigint?]  (c?/= (>clj-bigint a) b)))
-#?(:clj ([a ratio?      , b ratio?]       (and (c?/= (.numerator   a) (.numerator   b))
-                                               (c?/= (.denominator a) (.denominator b)))))
+#?(:clj ([a ratio?      , b ratio?]
+          (and (c?/= ^:val (.numerator   a) ^:val (.numerator   b))
+               (c?/= ^:val (.denominator a) ^:val (.denominator b)))))
 #?(:clj ([a ratio?      , b numeric?]     (c?/= a (>ratio b))))
-#?(:clj ([a numeric?    , b ratio?]       (c?/= (>ratio a) b))))
+#?(:clj ([a numeric?    , b ratio?]       (c?/= (>ratio a) b)))))
 
 ;; TODO primitive with non-primitive
 (t/extend-defn! c?/<
@@ -213,7 +220,7 @@
               (c?/comp< (>java-bigint a) (>java-bigint b)))))
 #?(:clj ([a clj-bigint? , b numeric?]     (c?/< a (>clj-bigint b))))
 #?(:clj ([a numeric?    , b clj-bigint?]  (c?/< (>clj-bigint a) b)))
-#?(:clj ([a ratio?     , b ratio?]
+#?(:clj ([a ratio?      , b ratio?]
           (c?/< (.multiply (.numerator   a) (.numerator   b))
                 (.multiply (.denominator a) (.denominator b)))))
 #?(:clj ([a ratio?      , b numeric?]     (c?/< a (>ratio b))))

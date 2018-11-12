@@ -24,7 +24,7 @@
     [quantum.untyped.core.form.evaluate     :as ufeval]
     [quantum.untyped.core.form.type-hint    :as ufth]
     [quantum.untyped.core.identifiers       :as uid]
-    [quantum.untyped.core.log               :as log
+    [quantum.untyped.core.log               :as ulog
       :refer [prl!]]
     [quantum.untyped.core.logic             :as l
       :refer [if-not-let ifs]]
@@ -204,6 +204,8 @@
 (us/def ::env (us/map-of (us/or* symbol? #(= % :opts)) t/any?))
 
 (declare analyze* analyze-arg-syms*)
+
+(defns- select-fields-for-print [node uast/node?] (select-keys node [:form :unanalyzed-form :type]))
 
 ;; TODO maybe just roll this into `analyze-seq|do`? Not sure yet
 (defns- analyze-non-map-seqable
@@ -423,7 +425,7 @@
         ;; (us/validate (-> with-ret-type :args first :type) #(t/>= % (t/numerically ?cast-type)))
         ;; _ (when ?cast-type
         ;; TODO fix this:
-        ;;     (log/ppr :warn
+        ;;     (ulog/ppr :warn
         ;;       "Not yet able to statically validate whether primitive cast will succeed at runtime"
         ;;       {:form form}))
               ]
@@ -568,9 +570,9 @@
                  :type            (apply t/or (->> [(:type @true-node) (:type @false-node)]
                                                    (remove nil?)))}))]
       (case (truthy-node? pred-node)
-        true  (do (log/ppr :warn "Predicate in `if` node is always true" {:pred pred-form})
+        true  (do (ulog/ppr :warn "Predicate in `if` node is always true" {:pred pred-form})
                   (assoc @true-node :env env))
-        false (do (log/ppr :warn "Predicate in `if` node is always false" {:pred pred-form})
+        false (do (ulog/ppr :warn "Predicate in `if` node is always false" {:pred pred-form})
                   (assoc @false-node :env env))
         nil   @whole-node))))
 
@@ -840,7 +842,7 @@
     output-type))
 
 (defns- analyze-seq|call
-  [env ::env, [caller|form _ & args-form _ :as form] _ > uast/call-node?]
+  [env ::env, [caller|form _ & args-form _ :as form] _ > uast/node?]
   (let [caller|node (analyze* env caller|form)
         caller|type (:type caller|node)
         ;; We just `norx-deref` the `caller|type` primarily for `t/defn`s but it could be unsafe
@@ -857,8 +859,9 @@
     (case (if (utr/fn-type? caller|type)
               -1
               (t/compare caller|type t/callable?))
-      (1 2)  (err! "It is not known whether form can be called" {:node caller|node})
-      3      (err! "Form cannot be called" {:node caller|node})
+      (1 2)  (err! "It is not known whether form can be called"
+                   {:node (select-fields-for-print caller|node)})
+      3      (err! "Form cannot be called" {:node (select-fields-for-print caller|node)})
       (-1 0) (let [caller-kind
                      (ifs (utr/fn-type? caller|type)             :fnt
                           (t/<= caller|type t/keyword?)          :keyword
@@ -866,10 +869,12 @@
                           (t/<= caller|type t/+vector|built-in?) :vector
                           (t/<= caller|type t/+set|built-in?)    :set
                           (t/<= caller|type t/fn?)               :fn
+                          (t/<= caller|type t/type?)             :type
                           ;; If it's callable but not fn, we might have missed something in
                           ;; this dispatch so for now we throw
                           (err! "Don't know how how to handle non-fn callable"
-                                {:caller caller|node}))
+                                {:caller (select-fields-for-print caller|node)}))
+                   _ (when (= caller-kind :type) (ulog/pr :warn "need to handle type call better"))
                    assert-valid-inputs-ct
                      (case caller-kind
                        (:keyword :map)
@@ -877,19 +882,25 @@
                            (err! (str "Keywords and `clojure.core` persistent maps must be "
                                       "provided with exactly one or two inputs when calling "
                                       "them")
-                                 {:inputs-ct inputs-ct :caller caller|node}))
-
+                                 {:inputs-ct inputs-ct
+                                  :caller    (select-fields-for-print caller|node)}))
                        (:vector :set)
                          (when-not (= inputs-ct 1)
-                            (err! (str "`clojure.core` persistent vectors and `clojure.core` "
-                                       "persistent sets must be provided with exactly one "
-                                       "input when calling them")
-                                  {:inputs-ct inputs-ct :caller caller|node}))
-
+                           (err! (str "`clojure.core` persistent vectors and `clojure.core` "
+                                      "persistent sets must be provided with exactly one "
+                                      "input when calling them")
+                                 {:inputs-ct inputs-ct
+                                  :caller    (select-fields-for-print caller|node)}))
+                       :type
+                         (when-not (= inputs-ct 1)
+                           (err! "Types must be provided with exactly one input when calling them"
+                                 {:inputs-ct inputs-ct
+                                  :caller    (select-fields-for-print caller|node)}))
                        :fnt
                          (when-not (-> caller|type utr/fn-type>arities (contains? inputs-ct))
                            (err! "Unhandled number of inputs for fnt"
-                                 {:inputs-ct inputs-ct :caller caller|node}))
+                                 {:inputs-ct inputs-ct
+                                  :caller    (select-fields-for-print caller|node)}))
                          ;; TODO use the `reflect/reflect` and `js/Object.getOwnPropertyNames` trick
                        :fn nil)
                    {:as call-data :keys [input-nodes] analyzed-form :form}
