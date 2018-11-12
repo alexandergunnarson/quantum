@@ -421,10 +421,12 @@
         ?cast-type (?cast-call->type target-class method-form)
         ;; TODO enable the below:
         ;; (us/validate (-> with-ret-type :args first :type) #(t/>= % (t/numerically ?cast-type)))
-        _ (when ?cast-type
-            (log/ppr :warn
-              "Not yet able to statically validate whether primitive cast will succeed at runtime"
-              {:form form}))]
+        ;; _ (when ?cast-type
+        ;; TODO fix this:
+        ;;     (log/ppr :warn
+        ;;       "Not yet able to statically validate whether primitive cast will succeed at runtime"
+        ;;       {:form form}))
+              ]
     (uast/method-call
       {:env             env
        :unanalyzed-form form
@@ -464,7 +466,7 @@
   (uast/field-access
     {:env             env
      :unanalyzed-form form
-     :form            (:form target)
+     :form            (list '. (:form target) field-form)
      :target          target
      :field           field-form
      :type            (-> field :class (maybe-with-assume-val form))}))
