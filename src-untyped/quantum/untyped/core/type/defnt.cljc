@@ -274,11 +274,6 @@
       (uset/normalize-comparison (t/compare t0 t1)))
     (uset/normalize-comparison (t/compare t0 t1))))
 
-;; FIXME apparently this occasionally causes “Comparison method violates its general contract!”
-;; NOTE saw “Comparison method violates its general contract!” here
-;; (t/extend-defn! c?/comp<
-;;   ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]
-;;     (c?/<  (c?/compare a b) 0)))
 (c/defn compare-args-types [arg-types0 #_(us/vec-of t/type?) arg-types1 #_(us/vec-of t/type?)]
   (let [ct-comparison (compare (count arg-types0) (count arg-types1))]
     (if (zero? ct-comparison)
@@ -289,6 +284,33 @@
           0
           arg-types0 arg-types1)
         ct-comparison)))
+
+(c/defn sort-overload-types
+  "A naïve implementation would do an aggregate compare on the arg-types vectors, but the resulting
+   comparator would not be transitive due to the behavior of `<>` and `><`. For example, for the
+   below arg-types vectors, x0 comp< x1, x1 comp< x2, but x0 not comp< x2:
+   - x0: [t/boolean?                  t/nil?]
+   - x1: [(t/ref (t/isa? Comparable)) t/byte?]
+   - x2: [t/nil?                      t/val?]
+
+   Because of this, we are forced to do as many sorts as the max arity of the typed fn, which
+   results in an O(m•n•log(n))) algorithm, where `m` is the max arity and `n` is the number of
+   overloads."
+  [kf overload-types]
+  (let [!overload-types (to-array overload-types)
+        max-arity (->> !overload-types (uc/map+ count) (educe (aritoid (c/fn [] 0) max max)))]
+    (dotimes [i max-arity]
+      (->> !overload-types
+           (uc/sort-by! kf
+             (c/fn [a b] (let [ct|a          (count a)
+                               ct|b          (count b)
+                               ct-comparison (compare ct|a ct|b)]
+                           (if (zero? ct-comparison)
+                               (if (< i ct|a)
+                                   (compare-arg-types (get a i) (get b i))
+                                   0)
+                               ct-comparison))))))
+    (>vec !overload-types)))
 
 (c/defn- dedupe-type-data
   "Performs both structural and `t/compare` deduplication."
@@ -653,7 +675,7 @@
            :overload-types []})
       (let [sorted-changed-unanalyzed-overloads
               (->> changed-unanalyzed-overloads
-                   (sort-by :arg-types compare-args-types)
+                   (sort-overload-types :arg-types)
                    validate-unique-types-for-unanalyzed-overloads)
             first-current-overload-id (count existing-overload-types)
             new-overload? (c/fn [type-datum] (>= (:id type-datum) first-current-overload-id))
@@ -672,16 +694,11 @@
               (if (empty? existing-overload-types)
                   (->> sorted-changed-overload-types
                        (uc/map-indexed (c/fn [i datum] (assoc datum :index i))))
-                  (->> (ur/join existing-overload-types sorted-changed-overload-types)
-                       (sort-by identity
-                         (c/fn [datum0 datum1]
-                           (let [c (compare-args-types (:arg-types datum0) (:arg-types datum1))]
-                             ;; In order to make the earlier ID appear
-                             (if (zero? c)
-                                 (if (new-overload? datum0)
-                                     (if (new-overload? datum1)  c 1)
-                                     (if (new-overload? datum1) -1 c))
-                                 c))))
+                  (->> ;; We `join` in this order because if two overloads are of equal sorting
+                       ;; priority, the ones with earlier IDs should appear in
+                       ;; `dedupe-overload-types-data`
+                       (ur/join existing-overload-types sorted-changed-overload-types)
+                       (sort-overload-types :arg-types)
                        (dedupe-overload-types-data fn|ns-name fn|name)
                        (uc/map-indexed (c/fn [i datum] (assoc datum :index i)))))
             ;; For recursive purposes
