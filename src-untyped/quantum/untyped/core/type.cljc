@@ -830,7 +830,7 @@
            (ur/join #{}))))))
 
 #?(:clj
-(defns primitive-type? [t type? > boolean?]
+(defns primitive-type? [t type? > c/boolean?]
   (c/and (-> t c/meta :quantum.core.type/ref? c/not)
          (let [cs (type>classes t)]
            (c/and (-> cs count (c/= 1))
