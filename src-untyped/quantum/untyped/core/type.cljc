@@ -999,8 +999,9 @@
 
 ;; Used by `quantum.untyped.core.analyze`
 (def literal?
-  (or nil? boolean? symbol? keyword? string? #?(:clj long?) double? regex?
-      #?(:clj tagged-literal?)))
+  (or nil? boolean? symbol? keyword? string?
+      #?(:clj long?) double? #?(:clj (isa? clojure.lang.BigInt)) #?(:clj (isa? BigDecimal))
+      regex? #?(:clj tagged-literal?)))
 
 ;; TODO this might not be right — quite possibly any seq is a valid form
 ;; TODO this has to be recursively true for seq, vector, map, and set

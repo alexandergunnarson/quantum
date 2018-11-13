@@ -211,7 +211,6 @@
 ;; TODO primitive with non-primitive
 ;; FIXME (c?/< (>clj-bigint 1) (>clj-bigint 2))
 ;; `This function is unsupported for the type combination at the argument index`
-;; FIXME BigInteger and BigDecimal literals in analyzer
 (t/extend-defn! c?/<
         ([x numeric?] true)
 #?(:clj ([a bigdec?                       , b bigdec?]       (c?/comp< a b)))
@@ -228,13 +227,13 @@
               (c?/comp< (>java-bigint a) (>java-bigint b)))))
 #?(:clj ([a clj-bigint?                   , b (t/input-type >clj-bigint :?)]
           (c?/< a (>clj-bigint b))))
-#?(:clj ([a (t/input-type >clj-bigint :?) , b clj-bigint?]  (c?/< (>clj-bigint a) b)))
+#?(:clj ([a (t/input-type >clj-bigint :?) , b clj-bigint?]   (c?/< (>clj-bigint a) b)))
 #?(:clj ([a ratio?                        , b ratio?]
           (c?/< ^:val (.multiply ^:val (.numerator   a) ^:val (.numerator   b))
                 ^:val (.multiply ^:val (.denominator a) ^:val (.denominator b)))))
 #?(:clj ([a ratio?                        , b (t/input-type >ratio :?)]
           (c?/< a (>ratio b))))
-#?(:clj ([a (t/input-type >ratio :?)      , b ratio?]       (c?/< (>ratio a) b))))
+#?(:clj ([a (t/input-type >ratio :?)      , b ratio?]        (c?/< (>ratio a) b))))
 
 ;; TODO primitive with non-primitive
 (t/extend-defn! c?/<=
@@ -340,12 +339,12 @@
 (t/defn ^:inline neg? > p/boolean?
 #?(:clj  (^:in [x (t/or p/long? p/double?)] (Numbers/isNeg x)))
 #?(:clj  (     [x (t/- p/numeric? p/long? p/double?)] (Numeric/isNeg x)))
-#?(:clj  (     [x clj-bigint?] (if (?/nil? (.bipart x))
+#?(:clj  (     [x clj-bigint?] (if (p/nil? (.bipart x))
                                    (-> x .lpart  neg?)
                                    (-> x .bipart neg?))))
 #?(:clj  (     [x (t/or java-bigint? bigdec?)] (-> x .signum neg?)))
 #?(:clj  (     [x ratio?] (-> x .numerator neg?)))
-         (     [x #?(:clj (t/ref number?) :clj numeric?)] (?/< x 0)))
+         (     [x #?(:clj (t/ref number?) :clj numeric?)] (c?/< x 0))) ; TODO dispatch not present
 
 ;; TODO TYPED this should realize that we're negating a `<` and change the operator to `<=`
 (t/def nneg? (fn/comp ?/not neg?))
@@ -358,7 +357,7 @@
                                    (-> x .bipart pos?))))
 #?(:clj  (     [x (t/or java-bigint? bigdec?)] (-> x .signum pos?)))
 #?(:clj  (     [x ratio?] (-> x .numerator pos?)))
-         (     [x #?(:clj (t/ref number?) :clj numeric?)] (c?/> x 0)))
+         (     [x #?(:clj (t/ref number?) :clj numeric?)] (c?/> x 0))) ; TODO dispatch not present
 
 ;; TODO TYPED this should realize that we're negating a `<` and change the operator to `<=`
 (t/def npos? (fn/comp ?/not pos?))
@@ -383,7 +382,7 @@
 
 ;; ===== Likenesses ===== ;;
 
-(t/defn integer-value? ; TODO this is the same as `numerically-integer?` but we need to turn it into a predicate
+(t/defn numerically-integer? ; TODO turn it into a type
   {:adapted-from
     '#{com.google.common.math.DoubleMath/isMathematicalInteger
        "https://stackoverflow.com/questions/1078953/check-if-bigdecimal-is-integer-value"}}
@@ -394,9 +393,7 @@
 #?(:clj  (     [x bigdec?] (or (zero? (.signum x))
                                (-> x .scale npos?)
                                (-> x .stripTrailingZeros .scale npos?))))
-#?(:clj  (     [x (t/ref number?)] x)))
-
-(def numerically-integer? (t/or integer? (t/and decimal? (>expr unum/integer-value?))))
+#?(:clj  (     [x (t/ref number?)] false)))
 
 #_(def numerically-byte?
     (and numerically-integer? (>expr (c/fn [x] (c/<= -128                 x 127)))))
