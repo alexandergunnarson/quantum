@@ -6,6 +6,8 @@
     [clojure.string         :as str]
     [leiningen.core.project :as project]))
 
+;; ===== Utils ===== ;;
+
 (defn merge-with-k
   "Like `merge-with`, but the merging function takes the key being merged
    as the first argument"
@@ -24,6 +26,8 @@
                 ([m1 m2]
                  (reduce merge-entry (or m1 {}) (seq m2))))]
       (reduce merge2 maps))))
+
+;; ===== Dependencies ===== ;;
 
 (def clj-dependency  '[org.clojure/clojure       "1.9.0"])
 (def cljs-dependency '[org.clojure/clojurescript "1.10.312"])
@@ -438,7 +442,8 @@
                                   "/" "js")
                   output-dir (str server-root-path "/" asset-path)]
               (cond->
-                {:source-paths
+                {:id id
+                 :source-paths
                   (vec
                     (concat source-paths
                       (case id-suffix
@@ -500,9 +505,9 @@
                         (->> (conj id-suffixes nil) ; for default non-suffixed version
                              (map (fn [id-suffix]
                                     (let [id (str (name id-base) (some->> id-suffix name (str "-")))]
-                                      [id (id>config id id-base id-suffix)]))))))
+                                      (id>config id id-base id-suffix)))))))
                  (apply concat)
-                 (into {})))]
+                 vec))]
     (id-bases>configs (cond-> #{:web} react-native? (conj :ios :android)))))
 
 (defn >default-config [opts project-config]
@@ -638,7 +643,7 @@
                   "-XX:-OmitStackTraceInFastThrow"
                   "-XX:ErrorFile=./JVMErrorDump.log"
                   "-Dquantum.core.log|out-file=./out.log"
-                  "-Dquantum.core.log|print-to-stderror=false"
+                  "-Dquantum.core.log|print-to-stderror=true"
                   ;; ----- Compilation ----- ;;
                    #_(case system-type
                        "t2.micro"
@@ -699,10 +704,10 @@
      ;; ===== Dependencies ===== ;;
      :dependencies [clj-dependency cljs-dependency]
      ;; ===== Paths ===== ;;
-     :target-path  "target"
-     :test-paths   ["test"]
-     :source-paths ["src"]
      :java-source-paths ["src-java"]
+     :source-paths      ["src"]
+     :target-path       "target"
+     :test-paths        ["test"]
      ;; ===== Compilation ===== ;;
      :jar-name     (str artifact-base-name "-dep.jar")
      :uberjar-name (str artifact-base-name ".jar")
@@ -816,7 +821,8 @@
             {:jvm-opts       (into ["-Dquantum.core.system|profile=dev"] (>jvm-opts :dev))
              :resource-paths ["resources-dev"]
              :source-paths   ["src-dev"]
-             :plugins        '[[lein-nodisassemble "0.1.3"]]}
+             :dependencies   '[[org.clojure/tools.nrepl "0.2.13"]]
+             :plugins        '[[lein-nodisassemble      "0.1.3"]]}
           :test
             {:jvm-opts (>jvm-opts :test)}
           :prod
@@ -831,16 +837,34 @@
             {:plugins '[[com.jakemccrary/lein-test-refresh "0.16.0"]]}
           :frontend
             {:source-paths ["src-frontend"]
-             :plugins '[[lein-cljsbuild "1.1.7"
-                          :exclusions [org.clojure/clojure org.clojure/clojurescript]]]}
+             :plugins      '[[lein-cljsbuild "1.1.7"
+                               :exclusions [org.clojure/clojure org.clojure/clojurescript]]]}
           :frontend|dev
             {:plugins '[[lein-figwheel "0.5.14"]]
              :cljsbuild
-               {:builds (>cljsbuild-builds :dev project-config opts ["src" "src-frontend" "src-dev"] artifact-base-name)}
+               {:builds (>cljsbuild-builds :dev project-config opts
+                          ["src" "src-frontend" "src-dev"] artifact-base-name)}
              :figwheel
                {:http-server-root "server-root" ; assumes "resources" is prepended
                 :server-port      3450
                 :css-dirs         ["resources/server-root/css"]}}
+          :frontend|dev|proto-repl
+            {:plugins      '[[lein-figwheel           "0.5.14"]]
+             :dependencies '[[figwheel-sidecar        "0.5.17"]
+                             [com.cemerick/piggieback "0.2.2"]
+                             [proto-repl              "0.3.1"]
+                             ;; To ensure Figwheel loads the project.clj correctly
+                             [leiningen-core          "2.8.1"]]
+             :repl-options ^:replace
+                           {:nrepl-middleware '[cemerick.piggieback/wrap-cljs-repl]
+                            :init
+                             `(do (require 'figwheel-sidecar.repl-api)
+                                  (figwheel-sidecar.repl-api/start-figwheel!
+                                    {:build-ids ["web"]
+                                     :all-builds
+                                       '~(>cljsbuild-builds :dev project-config opts
+                                           ["src" "src-frontend" "src-dev"] artifact-base-name)})
+                                  (figwheel-sidecar.repl-api/cljs-repl))}}
           :frontend|dev|re-frame-trace
             {:source-paths [(:re-frame-trace quantum-source-paths)]
              ;; It might work with React Native: https://github.com/Day8/re-frame-trace/issues/75
@@ -918,9 +942,11 @@
             config# (with-default-config opts# ~config)
             _#      (when (:print-config? opts#) (pprint config#))
             root#   ~(when f (.getParent f))]
-        (def ~'project
-          (project/make
-            (dissoc config# :name :version)
-            (:name    config#)
-            (:version config#)
-            root#))))))
+        (let [project-map#
+                (project/make
+                  (dissoc config# :name :version)
+                  (:name    config#)
+                  (:version config#)
+                  root#)]
+          (def ~'simple-lein-project project-map#) ; for Figwheel+nREPL
+          (def ~'project             project-map#))))))

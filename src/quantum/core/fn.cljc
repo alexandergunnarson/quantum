@@ -7,8 +7,7 @@
   (:require
     [clojure.core                :as core]
     [clojure.walk]
-    [quantum.core.core           :as qcore]
-    [quantum.core.typed          :as t]
+    [quantum.core.type           :as t]
     [quantum.untyped.core.form.evaluate
       :refer [case-env compile-if]]
     [quantum.untyped.core.form.generate
