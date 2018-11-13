@@ -1030,7 +1030,7 @@
            (uast/symbol env form node (:type node))))))
 
 (defns- analyze* [env ::env, form _ > uast/node?]
-  (when (> (uref/get (uref/update! !!analyze-depth inc)) 200)
+  (when (> (uref/get (uref/update! !!analyze-depth inc)) 500)
     (throw (ex-info "Stack too deep" {:form form})))
   (ifs (symbol?    form) (analyze-symbol env form)
        (t/literal? form) (uast/literal   env form (t/value form))

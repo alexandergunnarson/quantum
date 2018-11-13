@@ -86,47 +86,32 @@
 
 (defonce !overload-queue (uvec/alist)) ; (t/!seq-of ::types-decl-datum-with-overload)
 
-(uvar/defonce !effects-queue
+(uvar/defonce !rollback-queue
   "To ensure that side-effects are as atomic as possible in the case of a failure in `defn` or
    `extend-defn!`."
   (uvec/alist)) ; (t/!seq-of (t/ftype []))
 
-;; TODO move
-(defns- >effects-map|intern [ns-sym simple-symbol?, sym simple-symbol?, v _]
+(defns- intern-with-rollback! [ns-sym simple-symbol?, sym simple-symbol?, v _]
   (let [var-val (resolve (uid/qualify ns-sym sym))
-        value   (atom nil)]
-    {:f   #(do (when v (reset! value (var-get var-val)))
-               (intern ns-sym sym v))
-     :unf #(if v
-               (intern ns-sym sym @value)
-               (uvar/unintern! ns-sym sym))}))
+        !value  (atom nil)]
+    (when var-val (reset! !value (var-get var-val)))
+    (intern ns-sym sym v)
+    (alist-conj! !rollback-queue
+      #(if var-val
+           (intern ns-sym sym @!value)
+           (uvar/unintern! ns-sym sym)))))
 
-(defn- drain-effects-queue!
-  "Runs effect fns, rolling back the already-executed ones in reverse order if any exception occurs."
+(defn- drain-rollback-queue!
+  "Rolls back already-executed effects in reverse order."
   []
-  (println "about to run effects queue")
-  (try
-    (->> !effects-queue
-         (reduce
-           (c/fn [!done {:as m :keys [f]}]
-             (uerr/catch-all
-               (do (f) (alist-conj! !done m))
-               effects-err
-               (do (->> !done
-                        (uc/run!
-                          (c/fn [{:keys [unf]}]
-                            (uerr/catch-all (unf)
-                              rollback-err
-                              (err! nil
-                                    "Exception in effects function; unable to roll back all effects"
-                                    {:failed-rollback-fn unf}
-                                    nil rollback-err)))))
-                   (err! nil "Exception in effects function; rolled back successfully"
-                             {:failed-fn f}
-                             nil effects-err))))
-           (uvec/alist)))
-    (finally (uvec/alist-empty! !effects-queue)))
-  (println "done with effects queue"))
+  (->> !rollback-queue
+       reverse
+       (uc/run!
+         (c/fn [rollback-fn]
+           (uerr/catch-all (rollback-fn)
+             rollback-err
+             (err! nil "Unable to roll back all effects" {:failed-rollback-fn rollback-fn}
+                   nil rollback-err))))))
 
 ;; ==== Internal specs ===== ;;
 
@@ -554,8 +539,7 @@
                       (ufth/with-type-hint "[Ljava.lang.Object;"))
         form      (if (or (not= compilation-mode :test) (= lang :clj))
                       (let [arg-types (overload-types>arg-types fn|types index)]
-                        (do (alist-conj! !effects-queue
-                              (>effects-map|intern ns-name- decl-name arg-types))
+                        (do (intern-with-rollback! ns-name- decl-name arg-types)
                             nil))
                       `(def ~decl-name
                          (overload-types>arg-types
@@ -787,7 +771,6 @@
                            {:overload-types-decl
                               (>overload-types-decl opts fn|globals type-decl-datum fn|types)
                             :reify (overload>reify overload opts fn|globals id)})))
-                _ (uvec/alist-empty! !overload-queue)
                 form (->> direct-dispatch-data-seq
                           (uc/mapcat
                             (c/fn [{:as direct-dispatch-data :keys [overload-types-decl]}]
@@ -1052,14 +1035,12 @@
                               :inline?           (:inline?       basis)})))
                    :current (incorporate-overload-bases current new-overload-bases)}]
             (with-optional-validate-overload-bases overload-bases')
-            (let [prev-overload-bases (atom nil)]
-              (alist-conj! !effects-queue
-                {:f   #(do (reset! prev-overload-bases (norx-deref !overload-bases))
-                           (uref/set! !overload-bases overload-bases'))
-                 :unf #(uref/set! !overload-bases @prev-overload-bases)}))))
+            (let [prev-overload-bases (norx-deref !overload-bases)]
+              (alist-conj! !rollback-queue
+                #(uref/set! !overload-bases prev-overload-bases))
+              (uref/set! !overload-bases overload-bases'))))
         (with-do-let [!overload-bases (urx/! {:prev-norx nil :current new-overload-bases})]
-          (alist-conj! !effects-queue
-            (>effects-map|intern fn|ns-name fn|overload-bases-name !overload-bases))))))
+          (intern-with-rollback! fn|ns-name fn|overload-bases-name !overload-bases)))))
 
 (defns- >!fn|types
   "`!fn|types` is a reaction which depends on the `!overload-bases` atom and all reactive types
@@ -1080,8 +1061,7 @@
                                         (overload-bases-data>fn|types
                                           overload-bases-data old-overload-types opts fn|globals)))
                                     norx-deref)]
-        (alist-conj! !effects-queue
-          (>effects-map|intern fn|ns-name fn|overload-types-name !fn|types)))))
+        (intern-with-rollback! fn|ns-name fn|overload-types-name !fn|types))))
 
 (defns- >!fn|type
   [{:as opts       :keys [kind _]} ::opts
@@ -1090,7 +1070,7 @@
   (if (= kind :extend-defn!)
       (-> (uid/qualify fn|ns-name fn|type-name) resolve var-get)
       (with-do-let [!fn|type (t/rx* (urx/>!rx #(:fn|type-norx @!fn|types) {:eq-fn t/=}) nil)]
-        (alist-conj! !effects-queue (>effects-map|intern fn|ns-name fn|type-name !fn|type)))))
+        (intern-with-rollback! fn|ns-name fn|type-name !fn|type))))
 
 ;; ===== `opts` + `fn|globals` ===== ;;
 
@@ -1143,7 +1123,7 @@
                   (kw-map fn|globals-name fn|inline? fn|meta fn|name fn|ns-name fn|output-type|form
                           fn|output-type fn|overload-bases-name fn|overload-types-name
                           fn|type-name)]
-            (alist-conj! !effects-queue (>effects-map|intern fn|ns-name fn|globals-name fn|globals))
+            (intern-with-rollback! fn|ns-name fn|globals-name fn|globals)
             (kw-map fn|globals overload-bases-form)))))
 
 ;; ===== Whole `t/(de)fn` creation ===== ;;
@@ -1155,27 +1135,27 @@
           !overload-bases (>!overload-bases opts fn|globals overload-bases-form)
           !fn|types       (>!fn|types       opts fn|globals !overload-bases)
           fn|types        (norx-deref !fn|types)
-          !fn|type        (>!fn|type        opts fn|globals !fn|types)
-          code
-            (if (empty? (norx-deref !overload-bases))
-                `(declare ~(:fn|name fn|globals))
-                (let [direct-dispatch  (>direct-dispatch              opts fn|globals fn|types)
-                      dynamic-dispatch (>dynamic-dispatch-fn|codelist opts fn|globals fn|types)
-                      fn-codelist
-                        (->> `[;; For recursion
-                               ~@(when (not= kind :extend-defn!)
-                                   [`(declare ~(:fn|name fn|globals))])
-                               ~@(:form direct-dispatch)
-                               ~@dynamic-dispatch]
-                               (remove nil?))]
-                  (case kind
-                    :fn                   (TODO "Haven't done t/fn yet")
-                    (:defn :extend-defn!) `(do ~@fn-codelist))))]
-      (drain-effects-queue!)
-      code)
-    t
-    (do (ulog/ppr :error t)
-        (throw t))))
+          !fn|type        (>!fn|type        opts fn|globals !fn|types)]
+      (if (empty? (norx-deref !overload-bases))
+          `(declare ~(:fn|name fn|globals))
+          (let [direct-dispatch  (>direct-dispatch              opts fn|globals fn|types)
+                dynamic-dispatch (>dynamic-dispatch-fn|codelist opts fn|globals fn|types)
+                fn-codelist
+                  (->> `[;; For recursion
+                         ~@(when (not= kind :extend-defn!)
+                             [`(declare ~(:fn|name fn|globals))])
+                         ~@(:form direct-dispatch)
+                         ~@dynamic-dispatch]
+                         (remove nil?))]
+            (case kind
+              :fn                   (TODO "Haven't done t/fn yet")
+              (:defn :extend-defn!) `(do ~@fn-codelist)))))
+    e
+    (do (ulog/ppr :error e)
+        (drain-rollback-queue!)
+        (err! nil "Exception; rolled back successfully" nil nil e))
+    (do (uvec/alist-empty! !rollback-queue)
+        (uvec/alist-empty! !overload-queue))))
 
 #?(:clj
 (defmacro fn
