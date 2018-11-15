@@ -30,7 +30,11 @@
 
 ;; ===== `fn<i>`: Positional functions ===== ;;
 
-#?(:clj (defaliases u fn0 fn1 fnl))
+#?(:clj (defmacro fn0 [& args]
+          `(t/fn fn0# [f# (t/ftype ~(mapv (fn [arg] `(t/type ~arg)) args))] (f# ~@args))))
+
+#?(:clj (defmacro fn1 [f & args] `(t/fn fn1# [arg#] (~f arg# ~@args)))) ; analogous to ->
+#?(:clj (defmacro fnl [f & args] `(t/fn fnl# [arg#] (~f ~@args arg#)))) ; analogous to ->>
 
 ;; ===== `fn&`: Partial functions ===== ;;
 
