@@ -27,6 +27,11 @@
                  (reduce merge-entry (or m1 {}) (seq m2))))]
       (reduce merge2 maps))))
 
+(defn remove-nil-vals [m]
+  (->> m
+       (remove (fn [[_ v]] (nil? v)))
+       (into {})))
+
 ;; ===== Dependencies ===== ;;
 
 (def clj-dependency  '[org.clojure/clojure       "1.9.0"])
@@ -62,11 +67,6 @@
 
 (defn with-profiles [profiles & args]
   (into ["with-profile" (->> profiles (map name) (str/join ","))] args))
-
-(defn remove-nil-vals [m]
-  (->> m
-       (remove (fn [[_ v]] (nil? v)))
-       (into {})))
 
 (def base-config|quantum
   {;; ===== Dependencies ===== ;;
@@ -793,9 +793,16 @@
           "autobuilder|frontend|debug" ; accepts 1 arg: the target platform name
             (with-profiles (cond-> [:frontend :dev :frontend|dev] (not quantum?) (conj :quantum|static-deps))
               "cljsbuild" "auto")
+          "autobuilder|frontend|debug|proto-repl" ; accepts 1 arg: the target platform name
+            (with-profiles (cond-> [:frontend :dev :frontend|dev :frontend|dev|proto-repl] (not quantum?) (conj :quantum|static-deps))
+              "cljsbuild" "auto")
           "autobuilder|frontend|debug|quantum-dynamic" ; accepts 1 arg: the target platform name
             (when-not quantum?
               (with-profiles [:frontend :dev :frontend|dev :quantum|dynamic-deps :quantum|dynamic-source]
+                "cljsbuild" "auto"))
+          "autobuilder|frontend|debug|quantum-dynamic|proto-repl" ; accepts 1 arg: the target platform name
+            (when-not quantum?
+              (with-profiles [:frontend :dev :frontend|dev :frontend|dev|proto-repl :quantum|dynamic-deps :quantum|dynamic-source]
                 "cljsbuild" "auto"))
           "autobuilder|frontend|debug|quantum-dynamic-untyped" ; accepts 1 arg: the target platform name
             (when-not quantum?
