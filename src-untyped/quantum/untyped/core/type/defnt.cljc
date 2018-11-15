@@ -22,7 +22,8 @@
       :refer [not==]]
     [quantum.untyped.core.data
       :refer [kw-map]]
-    [quantum.untyped.core.data.array            :as uarr]
+    [quantum.untyped.core.data.array            :as uarr
+      :refer [*<>]]
     [quantum.untyped.core.data.map              :as umap]
     [quantum.untyped.core.data.reactive         :as urx
       :refer [?norx-deref norx-deref]]
@@ -261,6 +262,79 @@
 
 ;; TODO simplify this class computation
 
+;; ===== Concrete Types ===== ;;
+
+(defprotocol PAnonFn
+  (setFs [this fs']))
+
+;; TODO CLJS
+#?(:clj
+(deftype AnonFn
+  [;; the types for direct dispatch overloads
+   ^"[Ljava.lang.Object;" types
+   ;; the direct dispatch fn/`reify` overloads
+   ^:unsynchronized-mutable ^"[Ljava.lang.Object;" fs
+   ;; the dynamic dispatch fn
+   ^clojure.lang.IFn      dynf]
+  PAnonFn
+    (setFs  [this fs'] (set! fs fs') this)
+  clojure.lang.IFn
+    (invoke [       this]
+      (.invoke dynf types fs))
+    (invoke [       this     x0]
+      (.invoke dynf types fs this x0))
+    (invoke [       this     x0 x1]
+      (.invoke dynf types fs x0 x1))
+    (invoke [       this     x0 x1 x2]
+      (.invoke dynf types fs x0 x1 x2))
+    (invoke [       this     x0 x1 x2 x3]
+      (.invoke dynf types fs x0 x1 x2 x3))
+    (invoke [       this     x0 x1 x2 x3 x4]
+      (.invoke dynf types fs x0 x1 x2 x3 x4))
+    (invoke [       this     x0 x1 x2 x3 x4 x5]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17
+                             (*<> x18)))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19]
+      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17
+                             (*<> x18 x19)))
+    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19
+                             ^"[Ljava.lang.Object;" xs]
+      (.applyTo dynf (->> xs (cons x19) (cons x18) (cons x17) (cons x16) (cons x15) (cons x14)
+                             (cons x13) (cons x12) (cons x11) (cons x10) (cons x9)  (cons x8)
+                             (cons x7)  (cons x6)  (cons x5)  (cons x4)  (cons x3)  (cons x2)
+                             (cons x1)  (cons x0)  (cons fs)  (cons types))))
+    (applyTo [this ^clojure.lang.ISeq xs] (.applyTo dynf (cons types (cons fs xs))))))
+
+(c/defn >anon-fn [types gen-fs dynf]
+  (let [f (AnonFn. types nil dynf)]
+    (.setFs f (gen-fs f))))
+
 ;; ===== Arg type/class extraction/comparison ===== ;;
 
 #?(:clj
@@ -375,11 +449,11 @@
     declared-output-type [:output-type _]} ::unanalyzed-overload
    overload|id       index?
    fn|overload-types (us/vec-of ::types-decl-datum)
-   fn|type           t/type?
+   fn|type           (us/nilable t/type?)
    > ::overload]
   (let [;; Not sure if `nil` is the right approach for the value
         recursive-ast-node-reference
-          (when-not (= kind :extend-defn!) (uast/symbol {} fn|name nil fn|type))
+          (when (= kind :defn) (uast/symbol {} fn|name nil fn|type))
         env          (->> (zipmap (keys args-form) arg-types)
                           (uc/map' (c/fn [[arg-binding arg-type]]
                                      [arg-binding (uast/unbound nil arg-binding arg-type)]))
@@ -493,19 +567,21 @@
 (c/defn overload-types>arg-types
   [?!fn|types #_(t/or ::fn|types (t/of urx/reactive? ::fn|types)), overload-index #_index?
    #_> #_(objects-of type?)]
-  (apply uarr/*<> (-> ?!fn|types ?norx-deref :overload-types (get overload-index) :arg-types)))
+  (apply *<> (-> ?!fn|types ?norx-deref :overload-types (get overload-index) :arg-types)))
 
 (c/defn overload-types>ftype
   [fn|ns-name     #_simple-symbol?
-   fn|name        #_simple-symbol?
+   ?fn|name       #_(s/nilable simple-symbol?)
    overload-types #_(vec-of ::type-datum)
    fn|output-type #_t/type?]
-  (->> overload-types
-       (uc/lmap (c/fn [{:keys [arg-types pre-type output-type]}]
-                  (cond-> arg-types
-                    pre-type    (conj :| pre-type)
-                    output-type (conj :> output-type))))
-       (apply t/ftype (uid/qualify fn|ns-name fn|name) fn|output-type)))
+  (let [overload-types' (->> overload-types
+                             (uc/lmap (c/fn [{:keys [arg-types pre-type output-type]}]
+                                        (cond-> arg-types
+                                          pre-type    (conj :| pre-type)
+                                          output-type (conj :> output-type)))))]
+    (if ?fn|name
+        (apply t/ftype (uid/qualify fn|ns-name ?fn|name) fn|output-type overload-types')
+        (apply t/ftype                                   fn|output-type overload-types'))))
 
 (c/defn- dedupe-overload-types-data [fn|ns-name fn|name types-decl-data]
   (->> types-decl-data
@@ -731,9 +807,10 @@
                        (sort-overload-types :arg-types)
                        (dedupe-overload-types-data fn|ns-name fn|name)
                        (uc/map-indexed (c/fn [i datum] (assoc datum :index i)))))
-            ;; For recursive purposes
-            fn|type-norx (overload-types>ftype
-                           fn|ns-name fn|name overload-types-with-replacing-ids fn|output-type-norx)
+            ;; Partially for recursive purposes
+            fn|type-norx
+              (overload-types>ftype
+                fn|ns-name fn|name overload-types-with-replacing-ids fn|output-type-norx)
             ;; We should analyze everything first in order to figure out body-dependent input types
             ;; before we can compare them against each other, but we're ignoring body-dependent input
             ;; types for now
@@ -1142,11 +1219,10 @@
                 dynamic-dispatch (>dynamic-dispatch-fn|codelist opts fn|globals fn|types)
                 fn-codelist
                   (->> `[;; For recursion
-                         ~@(when (not= kind :extend-defn!)
-                             [`(declare ~(:fn|name fn|globals))])
+                         ~@(when (= kind :defn) [`(declare ~(:fn|name fn|globals))])
                          ~@(:form direct-dispatch)
                          ~@dynamic-dispatch]
-                         (remove nil?))]
+                       (remove nil?))]
             (case kind
               :fn                   (TODO "Haven't done t/fn yet")
               (:defn :extend-defn!) `(do ~@fn-codelist)))))
