@@ -9,7 +9,7 @@
     [quantum.untyped.core.type.defnt        :as self
       :refer [unsupported!]]
     [quantum.untyped.core.data.array
-      :refer [*<>]]
+      :refer [*<> *<>|macro]]
     [quantum.untyped.core.form
       :refer [$ code=]]
     [quantum.untyped.core.form.evaluate
@@ -26,9 +26,10 @@
     [quantum.untyped.core.vars
       :refer [defmeta]])
   (:import
-    [clojure.lang ASeq ISeq LazySeq Named Reduced Seqable]
-    [quantum.core.data Array]
-    [quantum.core Numeric Primitive]))
+    [clojure.lang                    ASeq ISeq LazySeq Named Reduced Seqable]
+    [quantum.core.data               Array]
+    [quantum.core                    Numeric Primitive]
+    [quantum.untyped.core.type.defnt AnonFn]))
 
 ;; Just in case
 (clojure.spec.test.alpha/unstrument)
@@ -2482,3 +2483,84 @@
           [(t/ref (t/isa? Comparable)) (t/isa? Double)]
           [(t/ref (t/isa? Comparable)) (t/ref (t/isa? Comparable))]
           [(t/value nil)               (t/not (t/value nil))]]))
+
+(deftest test|fn
+  (let [actual (binding [self/*compilation-mode* :test]
+                 (macroexpand '
+                   ;: FIXME this contract is not being held up when returning nil
+                   (self/defn f0 [a (t/or tt/boolean? tt/double?)
+                                  > (t/ftype [tt/byte? :> (t/ftype [tt/char?])])]
+                     ;; TODO When outputting this anon fn, any consumer can call it dynamically just
+                     ;; fine but in order to call it directly, it needs to know its actual (not
+                     ;; declared) type to know what indices map to what overloads. This means that
+                     ;; it's not good enough for callers to know that `(t/ftype [tt/char?])` is
+                     ;; outputted; they need to know that a `[(t/or tt/byte? tt/char?) :> ...]` is
+                     ;; outputted.
+                     ;; TODO this fits into a larger scheme of, should we have output types be
+                     ;; `(t/and actual declared)` or should we just have them be `declared`? The
+                     ;; latter is easier but it seems like the `t/fn` dispatch forces our hand
+                     ;; towards the former. We need to think about this more.
+                     (self/fn [b (t/or tt/byte? tt/char?)
+                               > (t/ftype [(t/or (t/type a) tt/short?)])]
+                       (self/fn f1 [c (t/or (t/type a) tt/short?)]
+                         b (f1 a) (f1 c))))))
+        expected
+          (case (env-lang)
+            :clj
+            ($ (do (declare ~'f0)
+
+(def ~'f0|__0
+  (reify* [boolean>Object]
+    (~'invoke [~'_0__ ~(B 'a)]
+      ;; From `(self/fn [b ...])`
+      (self/>anon-fn
+        ;; TODO perhaps extern this (and parts thereof) whenever possible in `let*`
+        ;; statement on the very outside of the fn (so around the outer `reify*`) ?
+        (*<>|macro (*<>|macro (t/isa? Byte)) (*<>|macro (t/isa? Character)))
+        (*<>|macro
+          (reify* [byte>Object]
+            (~'invoke [~'_0__ ~(Y 'b)]
+              ;; From `(self/fn [c ...])`
+              (self/>anon-fn
+                (*<>|macro (*<>|macro (t/isa? Boolean)) (*<>|macro (t/isa? Short)))
+                (fn* [~(tag (cstr `AnonFn) 'this__)]
+                  (*<>|macro
+                    (reify* [boolean>Object]
+                      (~'invoke [~'_0__ (B 'c)]
+                        ~'b
+                        (. (tag (cstr `boolean>Object) (Array/get (.-fs ~'this__) 0)) ~'invoke ~'a)
+                        (. (tag (cstr `boolean>Object) (Array/get (.-fs ~'this__) 0)) ~'invoke ~'c)))
+                    (reify* [short>Object]
+                      (~'invoke [~'_0__ (S 'c)]
+                        ~'b
+                        (. (tag (cstr `boolean>Object) (Array/get (.-fs ~'this__) 0)) ~'invoke ~'a)
+                        (. (tag (cstr `short>Object)   (Array/get (.-fs ~'this__) 1)) ~'invoke ~'c)))))
+                (fn* ([~(O<> 'types__) ~(O<> 'fs__) ~'x00]
+                       (ifs ((Array/get (Array/get ~'types__ 0) 0) ~'x00__)
+                            (. ~(tag (cstr `boolean>Object) `(Array/get ~'fs__ 0))
+                               ~'invoke ~'x00__)
+                            ((Array/get (Array/get ~'types__ 1) 0) ~'x00__)
+                            (. ~(tag (cstr `short>Object)   `(Array/get ~'fs__ 1))
+                               ~'invoke ~'x00__)
+                            (unsupported! [~'x00__] 0)))))))
+          (reify* [char>Object]
+            (~'invoke [~'_0__ ~(C 'a)] ...)))
+        (fn* ([~(O<> 'types__) ~(O<> 'fs__) ~'x00__]
+               (ifs ((Array/get (Array/get ~'types__ 0) 0) ~'x00__)
+                    (. ~(tag (cstr `byte>Object) `(Array/get ~'fs__ 0)) ~'invoke ~'x00__)
+                    ((Array/get (Array/get ~'types__ 1) 0) ~'x00__)
+                    (. ~(tag (cstr `char>Object) `(Array/get ~'fs__ 1)) ~'invoke ~'x00__)
+                    (unsupported! [~'x00__] 0)))))))
+(def ~'f0|__1
+  (reify* [double>Object]
+    (~'invoke [~'_0__ ~(D 'a)] ...)))
+[[0 0 false [] (t/ftype tt/boolean? [tt/byte? :> (t/ftype [tt/char?])])]]
+(defmeta ~'f0
+  {:quantum.core.type/type ~'f0|__type}
+  (fn* ([~'x00__]
+         (ifs ((Array/get f0|__0|types 0) ~'x00__)
+              (. f0|__0 ~'invoke ~'x00__)
+              ((Array/get f0|__1|types 0) ~'x00__)
+              (. f0|__1 ~'invoke ~'x00__)
+              (unsupported! `f0 [~'x00__] 0))))))))]
+    ))
