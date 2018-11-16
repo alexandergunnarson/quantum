@@ -620,32 +620,32 @@
      However since all branches of the `t/or` are guaranteed to result in a successful dispatch
      (i.e. `t/nil?` and `t/iterable?`) then dynamic dispatch will go forward without an error."
   [{:as ret :keys [dispatchable-overload-types-seq]} input|analyzed i caller|node body]
-  (if (-> input|analyzed :type utr/or-type?)
-      (let [or-types (-> input|analyzed :type utr/or-type>args)
-            {:keys [dispatchable-overload-types-seq' non-dispatchable-or-types]}
-              (->> dispatchable-overload-types-seq
-                   (reduce
-                     (fn [ret {:as overload :keys [arg-types]}]
-                       (if-let [or-types-that-match
-                                  (->> or-types (uc/lfilter #(t/<= % (get arg-types i))) seq)]
-                         (-> ret
-                             (update :dispatchable-overload-types-seq' conj overload)
-                             (update :non-dispatchable-or-types
-                               #(apply disj % or-types-that-match)))
-                         ret))
-                     {:dispatchable-overload-types-seq' []
-                      :non-dispatchable-or-types (set or-types)}))]
-        (if (or (empty? dispatchable-overload-types-seq')
-                (uc/contains? non-dispatchable-or-types))
-            (err! "No overloads satisfy the inputs, whether direct or dynamic"
-                  {:caller             caller|node
-                   :inputs             body
-                   :failing-input-form (:form input|analyzed)
-                   :failing-input-type (:type input|analyzed)})
-            (assoc ret :dispatchable-overload-types-seq dispatchable-overload-types-seq'
-                       :dispatch-type                   :dynamic)))
-      (err! "Cannot currently do a dynamic dispatch on a non-`t/or` input type"
-            {:input|analyzed input|analyzed})))
+  (if-not (-> input|analyzed :type utr/or-type?)
+    (err! "Cannot currently do a dynamic dispatch on a non-`t/or` input type"
+          {:input|analyzed input|analyzed})
+    (let [or-types (-> input|analyzed :type utr/or-type>args)
+          {:keys [dispatchable-overload-types-seq' non-dispatchable-or-types]}
+            (->> dispatchable-overload-types-seq
+                 (reduce
+                   (fn [ret {:as overload :keys [arg-types]}]
+                     (if-let [or-types-that-match
+                                (->> or-types (uc/lfilter #(t/<= % (get arg-types i))) seq)]
+                       (-> ret
+                           (update :dispatchable-overload-types-seq' conj overload)
+                           (update :non-dispatchable-or-types
+                             #(apply disj % or-types-that-match)))
+                       ret))
+                   {:dispatchable-overload-types-seq' []
+                    :non-dispatchable-or-types (set or-types)}))]
+      (if (or (empty? dispatchable-overload-types-seq')
+              (uc/contains? non-dispatchable-or-types))
+          (err! "No overloads satisfy the inputs, whether direct or dynamic"
+                {:caller             caller|node
+                 :inputs             body
+                 :failing-input-form (:form input|analyzed)
+                 :failing-input-type (:type input|analyzed)})
+          (assoc ret :dispatchable-overload-types-seq dispatchable-overload-types-seq'
+                     :dispatch-type                   :dynamic)))))
 
 (defn- filter-direct-dispatchable-overload-types
   [{:as ret :keys [dispatchable-overload-types-seq]} input|analyzed i caller|node args-form]
@@ -655,7 +655,8 @@
                    (fn [{:keys [arg-types]}]
                      (t/<= (:type input|analyzed) (get arg-types i))))
                  seq)]
-    (assoc ret :dispatchable-overload-types-seq dispatchable-overload-types-seq')
+    (assoc ret :dispatchable-overload-types-seq dispatchable-overload-types-seq'
+               :dispatch-type                   :direct)
     (if (-> caller|node :unanalyzed-form meta :dyn)
         (filter-dynamic-dispatchable-overload-types ret input|analyzed i caller|node args-form)
         (err! (str "No overloads satisfy the inputs via direct dispatch; "
@@ -760,7 +761,7 @@
            (reducei
              (fn [{:as ret :keys [dispatch-type]} input|analyzed i]
                (if (= :fnt caller-kind)
-                   (let [{:as ret' :keys [dispatchable-overload-types-seq input-nodes]}
+                   (let [{:as ret' :keys [dispatchable-overload-types-seq dispatch-type input-nodes]}
                            (-> (case dispatch-type
                                  :direct  (filter-direct-dispatchable-overload-types
                                             ret input|analyzed i caller|node args-form)
@@ -774,7 +775,7 @@
                            (-> ret'
                                (assoc :form (list* (:form caller|node) (uc/lmap :form input-nodes))
                                       :type (>dispatch|output-type dispatch-type
-                                                     dispatchable-overload-types-seq))
+                                              dispatchable-overload-types-seq))
                                (dissoc :caller|node :dispatch-type
                                        :dispatchable-overload-types-seq)))
                        ret'))

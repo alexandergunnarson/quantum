@@ -828,8 +828,9 @@
             {:jvm-opts       (into ["-Dquantum.core.system|profile=dev"] (>jvm-opts :dev))
              :resource-paths ["resources-dev"]
              :source-paths   ["src-dev"]
-             :dependencies   '[[org.clojure/tools.nrepl "0.2.13"]]
-             :plugins        '[[lein-nodisassemble      "0.1.3"]]}
+             :dependencies   '[[org.clojure/tools.nrepl                   "0.2.13"]
+                               [com.clojure-goes-fast/clj-java-decompiler "0.1.1"]]
+             :plugins        '[[lein-nodisassemble                        "0.1.3"]]}
           :test
             {:jvm-opts (>jvm-opts :test)}
           :prod

@@ -103,7 +103,8 @@ Legend:
         ([n dn/std-integer?, xs dc/counted?] (count xs))
         ([n dn/std-integer?, xs ?] ...)
       - [ ] No trailing `>` means `> ?`f
-  [ ] Non-boxed `def`s: `(var/def- min-float  (Numeric/negate Float/MAX_VALUE))`
+  [ ] Non-boxed (primitive) `t/def`s: `(var/def- min-float  (Numeric/negate Float/MAX_VALUE))`
+      - direct linking doesn't help with this; the way around this is seems to be to do `let` bindings for all captured non-dynamic vars, and unbox the var-values that are primitive
   [ ] `(t/validate x (t/run t/string?))` for `(t/run t/string?)` needs to be more performant
       - Don't re-create type on each call (see `defnt/unanalyzed-overload>overload`)
   [ ] replace `deref` with `ref/deref` in typed contexts? So we can do `@` still
