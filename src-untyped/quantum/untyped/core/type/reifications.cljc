@@ -432,27 +432,34 @@
 (udt/deftype FnType
   [meta         #_(t/? ::meta)
    name         #_(t/? qualified-symbol?)
+   fn-name      #_(t/? qualified-symbol?)
    output-type  #_t/type?
    arities-form
    arities      #_(s/map-of nneg-int? (s/seq-of (s/kv {:input-types (s/vec-of type?)
                                                        :output-type type?})))]
-  {PType          {with-name ([this name'] (FnType. meta name' output-type arities-form arities))}
+  {PType          {with-name ([this name']
+                               (FnType. meta name' fn-name output-type arities-form arities))}
    ;; Outputs whether the args match any input spec
    ?Fn            {invoke    ([this args] (TODO))}
    ?Meta          {meta      ([this] meta)
-                   with-meta ([this meta'] (FnType. meta' name output-type arities-form arities))}
+                   with-meta ([this meta']
+                               (FnType. meta' name fn-name output-type arities-form arities))}
    uform/PGenForm {>form     ([this] (or name
                                          (list 'new 'quantum.untyped.core.type.reifications.FnType
-                                           (>form meta) name (>form output-type)
+                                           (>form meta) name fn-name (>form output-type)
                                            (>form arities-form) (>form arities))))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn ([this] (-> (list* 't/ftype (fedn/-edn output-type)
-                                                    (fedn/-edn arities-form))
-                                    (?with-name name)))}})
+   fedn/IEdn      {-edn ([this] (if fn-name
+                                    (-> (list* 't/ftype fn-name (fedn/-edn output-type)
+                                                                (fedn/-edn arities-form))
+                                        (?with-name name))
+                                    (-> (list* 't/ftype (fedn/-edn output-type)
+                                                        (fedn/-edn arities-form))
+                                        (?with-name name))))}})
 
 (defns fn-type? [x _ > boolean?] (instance? FnType x))
 
-(defns fn-type>name [^FnType x fn-type?] (.-name x))
+(defns fn-type>fn-name [^FnType x fn-type?] (.-fn-name x))
 
 (defns fn-type>arities [^FnType x fn-type?] (.-arities x))
 

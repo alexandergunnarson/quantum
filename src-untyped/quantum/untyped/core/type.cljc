@@ -530,10 +530,10 @@
 ;; ===== `t/ftype` ===== ;;
 
 (defn ftype [& args]
-  (let [name-        (when (-> args first c/symbol?)
+  (let [?fn-name     (when (-> args first c/symbol?)
                        (first args))
-        rest-args    (if name- (rest args) args)
-        out-type     (if (-> rest-args first c/sequential?)
+        rest-args    (if ?fn-name (rest args) args)
+        output-type  (if (-> rest-args first c/sequential?)
                          universal-set
                          (first rest-args))
         arities-form (if (-> rest-args first c/sequential?)
@@ -542,9 +542,9 @@
         arities      (->> arities-form
                           (uc/map+ (c/fn [arity-form]
                                      (-> (us/conform ::fn-type|arity arity-form)
-                                         (update :output-type #(c/or % out-type universal-set)))))
+                                         (update :output-type #(c/or % output-type universal-set)))))
                           (uc/group-by #(-> % :input-types count)))]
-    (FnType. nil name- out-type arities-form arities)))
+    (FnType. nil nil ?fn-name output-type arities-form arities)))
 
 (defns compare|in [x0 utr/fn-type?, x1 utr/fn-type? > uset/comparison?]
   (let [ct->overloads|x0 (utr/fn-type>arities x0)
