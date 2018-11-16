@@ -44,6 +44,22 @@
 
 (def special-metadata-keys #{:val})
 
+#?(:clj
+(defns- maybe-look-up-type-from-class
+  "To save on memory — rather than creating a new `t/isa?` for every primitive class, uses the ones
+   already created in `quantum.untyped.core.type`."
+  [^Class c class? > t/type?]
+  (case (.getName c)
+    "java.lang.Boolean"   t/boolean?
+    "java.lang.Byte"      t/byte?
+    "java.lang.Short"     t/short?
+    "java.lang.Character" t/char?
+    "java.lang.Integer"   t/int?
+    "java.lang.Long"      t/long?
+    "java.lang.Float"     t/float?
+    "java.lang.Double"    t/double?
+    (t/isa? c))))
+
 ;; TODO move?
 (defns class>type
   "For converting a class in a reflective method, constructor, or field declaration to a type.
@@ -51,14 +67,16 @@
    non-null."
   [x class? > t/type?]
   (let [matching-boxed-class (t/unboxed-class->boxed-class x)]
-    (-> (or matching-boxed-class x) t/isa? (cond-> (not matching-boxed-class) t/?))))
+    (-> (or matching-boxed-class x)
+        maybe-look-up-type-from-class
+        (cond-> (not matching-boxed-class) t/?))))
 
 (defn- assume-val-for-form? [form] (-> form meta :val true?))
 
 (defns- maybe-with-assume-val [c class?, form _ > t/type?]
   (let [matching-boxed-class (t/unboxed-class->boxed-class c)]
     (-> (or matching-boxed-class c)
-        t/isa?
+        maybe-look-up-type-from-class
         (cond-> (and (not matching-boxed-class) (not (assume-val-for-form? form))) t/?))))
 
 ;; TODO move?
@@ -539,7 +557,7 @@
                  :form            (list* 'new c|form (map :form args|analyzed))
                  :class           c
                  :args            args|analyzed
-                 :type            (t/isa? c)})))))))
+                 :type            (maybe-look-up-type-from-class c)})))))))
 
 ;; TODO move this
 (defns truthy-node? [{:as ast t [:type _]} _ > (t/? t/boolean?)]
@@ -674,7 +692,7 @@
 
 (defns- caller>overload-type-data-for-arity
   [env ::env, caller|node uast/node?, caller|type _, inputs-ct _]
-  (if-let [fn|name (utr/fn-type>name caller|type)]
+  (if-let [fn|name (utr/fn-type>fn-name caller|type)]
     (let [overload-types-name (symbol (namespace fn|name) (str (name fn|name) "|__types"))]
       (if-let [fn|types (get env overload-types-name)]
         (->> fn|types (uc/filter #(-> % :arg-types count (= inputs-ct))))
@@ -695,7 +713,7 @@
 
 (defns- >direct-dispatch|reify-call
   [caller|node uast/node?, caller|type _, type-datum _, args-codelist (us/seq-of t/any?)]
-  (if-let [fn|name (utr/fn-type>name caller|type)]
+  (if-let [fn|name (utr/fn-type>fn-name caller|type)]
     `(. ~(overload-type-datum>reify-name type-datum fn|name)
         ~direct-dispatch-method-sym ~@args-codelist)
     (err! "No name found for typed fn corresponding to caller; cannot create direct dispatch call"
@@ -1071,6 +1089,7 @@
   ([form _] (analyze {} form))
   ([env ::env, form _]
     (uref/set! !!analyze-depth 0)
+    #_(pr! (kw-map env form))
     (analyze* env form)))
 
 ;; ===== Arglist analysis ===== ;;
