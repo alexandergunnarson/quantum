@@ -3,7 +3,6 @@
   (:refer-clojure :exclude
     [* - < <= = >= > and any? defn fn fn? isa? not or ref seq? symbol? type var?])
   (:require
-    [quantum.untyped.core.analyze    :as uana]
     [quantum.untyped.core.type.defnt :as udefnt]
     [quantum.untyped.core.type       :as ut]
     ;; TODO TYPED prefer e.g. `deft-alias`
@@ -13,7 +12,9 @@
 ;; TODO if we ever spec-instrument we need to be careful of these aliases as they'll no longer be
 ;; valid
 
-(defaliases udefnt fn defn extend-defn!)
+(defalias def udefnt/def)
+
+(defaliases udefnt dotyped fn defn extend-defn!)
 
 (defaliases ut
   type type?
@@ -65,5 +66,3 @@
 
 ;; TODO TYPED move
 #_(:clj (defalias false? core/false?))
-
-#?(:clj (defmacro dotyped [& args] (-> `(do ~@args) uana/analyze :form)))

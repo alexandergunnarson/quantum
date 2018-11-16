@@ -928,6 +928,9 @@
     def      (TODO "def"      {:form form})
     deftype* (TODO "deftype*" {:form form})
     do       (analyze-seq|do    env form)
+    ;; To avoid having to re-analyze
+    (quantum.untyped.core.type.defnt/dotyped quantum.core.type/dotyped)
+      (analyze-seq|do    env (list* 'do (rest form)))
     fn*      (TODO "fn*"      {:form form})
     if       (analyze-seq|if    env form)
     let*     (analyze-seq|let*  env form)

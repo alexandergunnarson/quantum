@@ -63,6 +63,35 @@
     [quantum.core.data Array]))
 
 ;; TODO move
+#?(:clj
+(defmacro dotyped
+  "Like `do`, but evaluates `args` in a typed context."
+  [& args] (-> `(do ~@args) uana/analyze :form)))
+
+;; TODO move
+#?(:clj
+(defmacro def
+  "Like `def`, but allows for docstring and metadata placement like `defn`, and performs type
+   analysis. For values that satisfy `t/type?`, calls `utr/with-name` on them with the provided
+   `sym`."
+  ([sym] (list 'def sym))
+  ([sym v] `(quantum.untyped.core.type.defnt/def ~sym nil nil ~v))
+  ([sym doc-or-meta v]
+    (if (string? doc-or-meta)
+        `(quantum.untyped.core.type.defnt/def ~sym ~doc-or-meta nil          ~v)
+        `(quantum.untyped.core.type.defnt/def ~sym nil          ~doc-or-meta ~v)))
+  ([sym doc-val meta-val v]
+    (list 'def
+      (if (or doc-val meta-val)
+          (with-meta sym (-> meta-val (cond-> doc-val (assoc :doc doc-val)) uana/analyze :form))
+          sym)
+      (let [node (uana/analyze v)]
+        (if (and (-> node :type utr/value-type?)
+                 (-> node :type t/unvalue t/type?))
+            `(utr/with-name ~(:form node) '~(uid/qualify *ns* sym))
+            (:form node)))))))
+
+;; TODO move
 (def index? #(and (integer? %) (>= % 0)))
 (def count? index?)
 
@@ -73,7 +102,7 @@
 (us/def :quantum.core.defnt/extend-defn!
   (us/and (us/spec
             (us/cat :quantum.core.defnt/fn|extended-name :quantum.core.defnt/fn|extended-name
-                   :quantum.core.defnt/overloads        :quantum.core.defnt/overloads))
+                    :quantum.core.defnt/overloads        :quantum.core.defnt/overloads))
           (uss/fn-like|postchecks|gen :quantum.core.defnt/overloads)
           :quantum.core.defnt/postchecks))
 
