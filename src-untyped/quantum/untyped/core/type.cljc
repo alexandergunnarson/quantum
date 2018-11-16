@@ -41,7 +41,7 @@
            [quantum.untyped.core.form
              :refer [$]]
            [quantum.untyped.core.form.generate.deftype :as udt]
-           [quantum.untyped.core.identifiers
+           [quantum.untyped.core.identifiers           :as uid
              :refer [>symbol]]
            [quantum.untyped.core.logic
              :refer [fn-and ifs whenp->]]
@@ -70,7 +70,7 @@
 #?(:clj  (:import
            [quantum.untyped.core.analyze.expr Expression]
            [quantum.untyped.core.type.reifications
-              UniversalSetType EmptySetType
+              MetaType UniversalSetType EmptySetType
               NotType OrType AndType
               ProtocolType ClassType UnorderedType OrderedType
               ValueType
@@ -80,13 +80,13 @@
 
 (ucore/log-this-ns)
 
-;; ===== TODOS ===== ;;
+#?(:clj (defmacro def
+          ([sym t]   `(uvar/def ~sym    (utr/with-name ~t '~(uid/qualify *ns* sym))))
+          ([sym x t] `(uvar/def ~sym ~x (utr/with-name ~t '~(uid/qualify *ns* sym))))))
 
-(declare
-  - create-logical-type meta-or with-expand-meta-ors nil? val?
-  and or val|by-class?)
+#?(:clj (uvar/defalias def* quantum.untyped.core.type/def))
 
-(defonce *type-registry (atom {}))
+(declare - create-logical-type meta-or with-expand-meta-ors nil? val? and or val|by-class?)
 
 ;; ===== Comparison ===== ;;
 
@@ -107,7 +107,7 @@
 ;; ----- ReactiveType (`t/rx`) ----- ;;
 
 (defns rx* [r urx/reactive?, body-codelist _ > utr/rx-type?]
-  (ReactiveType. uhash/default uhash/default nil body-codelist nil r))
+  (ReactiveType. uhash/default uhash/default nil nil body-codelist nil r))
 
 #?(:clj
 (defmacro rx
@@ -142,7 +142,7 @@
        (utr/or-type?  t)   (->> t utr/or-type>args  (uc/lmap not) (apply and))
        ;; DeMorgan's Law
        (utr/and-type? t)   (->> t utr/and-type>args (uc/lmap not) (apply or ))
-       (NotType. uhash/default uhash/default nil t)))
+       (NotType. uhash/default uhash/default nil nil t)))
 
 (uvar/defalias ! not)
 
@@ -198,16 +198,16 @@
 ;; ----- ProtocolType ----- ;;
 
 (defns- isa?|protocol [p uclass/protocol?]
-  (ProtocolType. uhash/default uhash/default nil p nil))
+  (ProtocolType. uhash/default uhash/default nil nil p))
 
 #?(:cljs
 (defns- isa?|protocol|direct [p uclass/protocol?]
-  (DirectProtocolType. uhash/default uhash/default nil p nil)))
+  (DirectProtocolType. uhash/default uhash/default nil nil p)))
 
 ;; ----- ClassType ----- ;;
 
 (defns- isa?|class [c #?(:clj c/class? :cljs c/fn?)]
-  (ClassType. uhash/default uhash/default nil c nil))
+  (ClassType. uhash/default uhash/default nil nil c))
 
 ;; ----- OrderedType ----- ;;
 
@@ -216,17 +216,17 @@
   ([> utr/unordered-type?] (unordered []))
   ([data _ > utr/unordered-type?]
     (ifs (utr/rx-type? data)
-           (rx (UnorderedType. uhash/default uhash/default nil {@data 1} nil))
+           (rx (UnorderedType. uhash/default uhash/default nil nil {@data 1}))
          (utr/type? data)
-           (UnorderedType. uhash/default uhash/default nil {data 1} nil)
+           (UnorderedType. uhash/default uhash/default nil nil {data 1})
          (c/not (sequential? data))
            (err! "Finite type info must be sequential" {:type (c/type data)})
          (c/not (seq-and utr/type? data))
            (err! "Not every element of finite type data is a type")
          (seq-or utr/rx-type? data)
-           (rx (UnorderedType. uhash/default uhash/default nil
-                 (->> data (uc/map+ utr/deref-when-reactive) uc/frequencies) nil))
-         (UnorderedType. uhash/default uhash/default nil (frequencies data) nil)))
+           (rx (UnorderedType. uhash/default uhash/default nil nil
+                 (->> data (uc/map+ utr/deref-when-reactive) uc/frequencies)))
+         (UnorderedType. uhash/default uhash/default nil nil (frequencies data))))
   ([datum _ & data _ > utr/unordered-type?] (unordered (cons datum data))))
 
 (defns ordered
@@ -234,24 +234,24 @@
   ([> utr/ordered-type?] (ordered []))
   ([data _ > utr/ordered-type?]
     (ifs (utr/rx-type? data)
-           (rx (OrderedType. uhash/default uhash/default nil [@data] nil))
+           (rx (OrderedType. uhash/default uhash/default nil nil [@data]))
          (utr/type? data)
-           (OrderedType. uhash/default uhash/default nil [data] nil)
+           (OrderedType. uhash/default uhash/default nil nil [data])
          (c/not (sequential? data))
            (err! "Finite type info must be sequential" {:type (c/type data)})
          (c/not (seq-and utr/type? data))
            (err! "Not every element of finite type data is a type")
          (seq-or utr/rx-type? data)
-           (rx (OrderedType. uhash/default uhash/default nil
-                 (->> data (uc/map utr/deref-when-reactive)) nil))
-         (OrderedType. uhash/default uhash/default nil data nil)))
+           (rx (OrderedType. uhash/default uhash/default nil nil
+                 (->> data (uc/map utr/deref-when-reactive))))
+         (OrderedType. uhash/default uhash/default nil nil data)))
   ([datum _ & data _ > utr/ordered-type?] (ordered (cons datum data))))
 
 ;; ----- ValueType ----- ;;
 
 (defn value
   "Creates a type whose extension is the singleton set containing only the value `v`."
-  [v] (ValueType. uhash/default uhash/default nil v))
+  [v] (ValueType. uhash/default uhash/default nil nil v))
 
 (defns unvalue
   [t utr/type?]
@@ -283,8 +283,7 @@
     (case (count args)
       0 empty-set
       1 (first args)
-      (OrType. uhash/default uhash/default nil args
-        (atom nil)))))
+      (OrType. uhash/default uhash/default nil nil args (atom nil)))))
 
 (defn - ;; TODO `defns` when variadic args are actually handled correctly
   "Computes the difference of `t0` from `t1`: (& t0 (! t1))
@@ -310,27 +309,27 @@
                     (condp == c0
                       NotType (condp == (-> t0 utr/not-type>inner-type c/type)
                                 ClassType (condp == c1
-                                            ClassType (AndType. uhash/default uhash/default nil
+                                            ClassType (AndType. uhash/default uhash/default nil nil
                                                         [t0 (not t1)] (atom nil)))
                                 ValueType (condp == c1
-                                            ValueType (AndType. uhash/default uhash/default nil
+                                            ValueType (AndType. uhash/default uhash/default nil nil
                                                         [t0 (not t1)] (atom nil))))
                       OrType  (condp == c1
                                 ClassType (-|or t0 t1)
                                 ValueType (-|or t0 t1)))))))))
   ([t0 #_utr/type?, t1 #_utr/type? & ts #_ _ #_> #_utr/type?] (reduce - (- t0 t1) ts)))
 
-(def type?          (isa? PType))
-(def not-type?      (isa? NotType))
-(def or-type?       (isa? OrType))
-(def and-type?      (isa? AndType))
-(def protocol-type? (isa? ProtocolType))
-(def class-type?    (isa? ClassType))
-(def value-type?    (isa? ValueType))
+(def* type?          (isa? PType))
+(def* not-type?      (isa? NotType))
+(def* or-type?       (isa? OrType))
+(def* and-type?      (isa? AndType))
+(def* protocol-type? (isa? ProtocolType))
+(def* class-type?    (isa? ClassType))
+(def* value-type?    (isa? ValueType))
 
 ;; For use in logical operators
-(def nil?           (value nil))
-(def object?        (isa? #?(:clj java.lang.Object :cljs js/Object)))
+(def* nil?           (value nil))
+(def* object?        (isa? #?(:clj java.lang.Object :cljs js/Object)))
 
 ;; ===== Type metadata (not for reactive types) ===== ;;
 
@@ -339,29 +338,54 @@
    be, it is assumed that the output satisfies that type."
   [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
-  (update-meta t assoc :quantum.core.type/assume? true))
+  (if (utr/meta-type? t)
+      (if (.-assume_QMARK_ ^MetaType t)
+          t
+          (MetaType. (.-meta ^MetaType t) nil (.-t ^MetaType t)
+                     true (.-ref_QMARK_ ^MetaType t) false)) ; un-`t/*`s it
+      (MetaType. (c/meta t) nil t true false false)))
 
 (defn unassume [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
-  (update-meta t dissoc :quantum.core.type/assume?))
+  (if (utr/meta-type? t)
+      (if-not (.-assume_QMARK_ ^MetaType t)
+        t
+        (MetaType. (.-meta ^MetaType t) nil (.-t ^MetaType t)
+                   false (.-ref_QMARK_ ^MetaType t) (.-runtime_QMARK_ ^MetaType t))) ; un-`t/*`s it
+      t))
 
 (defn *
   "Denote on a type that it must be enforced at runtime.
    For use with `defnt`."
   [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
-  (update-meta t assoc :quantum.core.type/runtime? true))
+  (if (utr/meta-type? t)
+      (if (.-runtime_QMARK_ ^MetaType t)
+          t
+          (MetaType. (.-meta ^MetaType t) nil (.-t ^MetaType t)
+                     false (.-ref_QMARK_ ^MetaType t) true)) ; un-`t/assume`s it
+      (MetaType. (c/meta t) nil t false false true)))
 
 (defn ref
   "Denote on a type that it must not be expanded to use primitive values.
    For use with `defnt`."
   [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
-  (update-meta t assoc :quantum.core.type/ref? true))
+  (if (utr/meta-type? t)
+      (if (.-ref_QMARK_ ^MetaType t)
+          t
+          (MetaType. (.-meta ^MetaType t) nil (.-t ^MetaType t)
+                     (.-assume_QMARK_ ^MetaType t) true (.-runtime_QMARK_ ^MetaType t)))
+      (MetaType. (c/meta t) nil t false true false)))
 
 (defn unref [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
-  (update-meta t dissoc :quantum.core.type/ref?))
+  (if (utr/meta-type? t)
+      (if-not (.-ref_QMARK_ ^MetaType t)
+        t
+        (MetaType. (.-meta ^MetaType t) nil (.-t ^MetaType t)
+                   (.-assume_QMARK_ ^MetaType t) false (.-runtime_QMARK_ ^MetaType t)))
+      t))
 
 ;; ===== Logical ===== ;;
 
@@ -493,7 +517,7 @@
     (assert (-> simplified count (c/>= 1))) ; for internal implementation correctness
     (if (-> simplified count (c/= 1))
         (first simplified)
-        (construct-fn uhash/default uhash/default nil simplified (atom nil)))))
+        (construct-fn uhash/default uhash/default nil nil simplified (atom nil)))))
 
 (defns- create-logical-type
   [kind #{:or :and}, construct-fn _, type-pred _, type>args _
@@ -710,7 +734,7 @@
   (let [types' (->> types uc/distinct (sort-by identity utcomp/compare) (uc/dedupe-by utcomp/=))]
     (ifs (empty? types')           empty-set
          (-> types' count (c/= 1)) (first types')
-         (MetaOrType. uhash/default uhash/default nil types'))))
+         (MetaOrType. uhash/default uhash/default nil nil types'))))
 
 (defns meta-or
   "Essentially a combinatorial combinator:
@@ -867,91 +891,91 @@
 
 ;; ===== General ===== ;;
 
-         (def none?         empty-set)
-         (def any?          universal-set)
+         (def* none?         empty-set)
+         (def* any?          universal-set)
 
                             ;; TODO this is incomplete for CLJS base classes
                             ;; TODO is this necessary?
-         (def val|by-class? (or object? #?@(:cljs [(isa? js/String) (isa? js/Symbol)])))
-         (def val?          (not nil?))
+         (def* val|by-class? (or object? #?@(:cljs [(isa? js/String) (isa? js/Symbol)])))
+         (def* val?          (not nil?))
 
-         (def ref?          (ref any?))
+         (def* ref?          (ref any?))
 
 ;; ===== Meta ===== ;;
 
          ;; TODO probably move, but this is used by `quantum.untyped.core.type` etc.
-#?(:clj  (def primitive-class? (or (value Boolean/TYPE)
-                                   (value Byte/TYPE)
-                                   (value Character/TYPE)
-                                   (value Short/TYPE)
-                                   (value Integer/TYPE)
-                                   (value Long/TYPE)
-                                   (value Float/TYPE)
-                                   (value Double/TYPE))))
+#?(:clj  (def* primitive-class? (or (value Boolean/TYPE)
+                                    (value Byte/TYPE)
+                                    (value Character/TYPE)
+                                    (value Short/TYPE)
+                                    (value Integer/TYPE)
+                                    (value Long/TYPE)
+                                    (value Float/TYPE)
+                                    (value Double/TYPE))))
 
 ;; ===== Primitives ===== ;;
 ;; NOTE these are kept here because they're used in both type analysis and various test namespaces
 
-         (def  boolean? (isa? #?(:clj Boolean :cljs js/Boolean)))
-#?(:clj  (def  byte?    (isa? Byte)))
-#?(:clj  (def  char?    (isa? Character)))
-#?(:clj  (def  short?   (isa? Short)))
-#?(:clj  (def  int?     (isa? Integer))) ; only primitive int, not goog.math.Integer
-#?(:clj  (def  long?    (isa? Long))) ; only primitive long, not goog.math.Long
-#?(:clj  (def  float?   (isa? Float)))
-         (def  double?  (isa? #?(:clj Double :cljs js/Number)))
+         (def*  boolean? (isa? #?(:clj Boolean :cljs js/Boolean)))
+#?(:clj  (def*  byte?    (isa? Byte)))
+#?(:clj  (def*  char?    (isa? Character)))
+#?(:clj  (def*  short?   (isa? Short)))
+#?(:clj  (def*  int?     (isa? Integer))) ; only primitive int, not goog.math.Integer
+#?(:clj  (def*  long?    (isa? Long))) ; only primitive long, not goog.math.Long
+#?(:clj  (def*  float?   (isa? Float)))
+         (def*  double?  (isa? #?(:clj Double :cljs js/Number)))
 
          ;; These are special for CLJS protocols
          ;; Possibly planned to be used by `quantum.untyped.core.analyze`
-#?(:cljs (def  native?  (or (isa? js/Boolean)
-                            (isa? js/Number)
-                            (isa? js/Object)
-                            (isa? js/Array)
-                            (isa? js/String)
-                            (isa? js/Function)
-                            nil?)))
+#?(:cljs (def*  native?  (or (isa? js/Boolean)
+                             (isa? js/Number)
+                             (isa? js/Object)
+                             (isa? js/Array)
+                             (isa? js/String)
+                             (isa? js/Function)
+                             nil?)))
 
 ;; ===== Booleans ===== ;;
 
 ;; Used by `quantum.untyped.core.analyze`
-(def true?  (value true))
-(def false? (value false))
+(def* true?  (value true))
+(def* false? (value false))
 
 ;; ========== Collections ========== ;;
 
 ;; Possibly planned to be used by `quantum.untyped.core.analyze`
-(def +list|built-in?
+(def* +list|built-in?
   (or (isa? #?(:clj clojure.lang.PersistentList$EmptyList :cljs cljs.core/EmptyList))
       (isa? #?(:clj clojure.lang.PersistentList           :cljs cljs.core/List))))
 
 ;; Used by `quantum.untyped.core.analyze`
-(def +vector|built-in?
+(def* +vector|built-in?
   (isa? #?(:clj clojure.lang.PersistentVector :cljs cljs.core/PersistentVector)))
 
 ;; Used by `quantum.untyped.core.analyze`
-(def +unordered-map|built-in?
+(def* +unordered-map|built-in?
   (or (isa? #?(:clj clojure.lang.PersistentHashMap  :cljs cljs.core/PersistentHashMap))
       (isa? #?(:clj clojure.lang.PersistentArrayMap :cljs cljs.core/PersistentArrayMap))))
 
 ;; Used by `quantum.untyped.core.analyze`
-(def +map|built-in?
-     (or +unordered-map|built-in?
-         (isa? #?(:clj clojure.lang.PersistentTreeMap :cljs cljs.core/PersistentTreeMap))))
+(def* +map|built-in?
+  (or +unordered-map|built-in?
+      (isa? #?(:clj clojure.lang.PersistentTreeMap :cljs cljs.core/PersistentTreeMap))))
 
 ;; Used by `quantum.untyped.core.analyze`
-(def +unordered-set|built-in?
+(def* +unordered-set|built-in?
   (isa? #?(:clj clojure.lang.PersistentHashSet :cljs cljs.core/PersistentHashSet)))
 
 ;; Used by `quantum.untyped.core.analyze`
-(def +set|built-in?
+(def* +set|built-in?
   (or +unordered-set|built-in?
       (isa? #?(:clj clojure.lang.PersistentTreeSet :cljs cljs.core/PersistentTreeSet))))
 
 ;; ===== Functions ===== ;;
 
 ;; Used by `quantum.untyped.core.analyze`
-(def fn? #?(:clj  (isa? clojure.lang.Fn)
-            :cljs (or (isa? js/Function) (isa? cljs.core/Fn))))
+(def* fn? #?(:clj  (isa? clojure.lang.Fn)
+             :cljs (or (isa? js/Function) (isa? cljs.core/Fn))))
 
 ;; Used by `quantum.untyped.core.analyze` via `t/callable?`
 (uvar/def ifn?
@@ -960,7 +984,7 @@
   (isa?|direct #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
 
 ;; Used by `quantum.untyped.core.analyze` via `t/callable?`
-(def fnt? (and fn? (>expr (fn-> c/meta :quantum.core.type/type type?))))
+(def* fnt? (and fn? (>expr (fn-> c/meta :quantum.core.type/type type?))))
 
 ;; TODO should we allow java.lang.Runnable, java.util.concurrent.Callable, and other
 ;; functional interfaces to be `callable?`?
@@ -973,32 +997,32 @@
 ;; ===== Metadata ===== ;;
 
 ;; Used by `quantum.untyped.core.analyze.ast`
-(def with-metable? (isa? #?(:clj clojure.lang.IObj :cljs cljs.core/IWithMeta)))
+(def* with-metable? (isa? #?(:clj clojure.lang.IObj :cljs cljs.core/IWithMeta)))
 
 ;; ===== Errors ===== ;;
 
 ;; Used by `quantum.untyped.core.analyze`
-(def throwable? "Able to be used with `throw`" #?(:clj (isa? java.lang.Throwable) :cljs any?))
+(def* throwable? "Able to be used with `throw`" #?(:clj (isa? java.lang.Throwable) :cljs any?))
 
 ;; ===== Literals ===== ;;
 
 ;; Used by `quantum.untyped.core.analyze`, including via `t/literal?`
-(def regex?   (isa? #?(:clj java.util.regex.Pattern :cljs js/RegExp)))
+(def* regex?   (isa? #?(:clj java.util.regex.Pattern :cljs js/RegExp)))
 
 ;; Used by `quantum.untyped.core.analyze`, including via `t/literal?`
-(def keyword? (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
+(def* keyword? (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
 
 ;; Used by `quantum.untyped.core.analyze` via `t/literal?`
-(def string?  (isa? #?(:clj java.lang.String :cljs js/String)))
+(def* string?  (isa? #?(:clj java.lang.String :cljs js/String)))
 
 ;; Used by `quantum.untyped.core.analyze` via `t/literal?`
-(def symbol?  (isa? #?(:clj clojure.lang.Symbol :cljs cljs.core/Symbol)))
+(def* symbol?  (isa? #?(:clj clojure.lang.Symbol :cljs cljs.core/Symbol)))
 
         ;; Used by `quantum.untyped.core.analyze` via `t/literal?`
-#?(:clj (def tagged-literal? (isa? clojure.lang.TaggedLiteral)))
+#?(:clj (def* tagged-literal? (isa? clojure.lang.TaggedLiteral)))
 
 ;; Used by `quantum.untyped.core.analyze`
-(def literal?
+(def* literal?
   (or nil? boolean? symbol? keyword? string?
       #?(:clj long?) double? #?(:clj (isa? clojure.lang.BigInt)) #?(:clj (isa? BigDecimal))
       regex? #?(:clj tagged-literal?)))

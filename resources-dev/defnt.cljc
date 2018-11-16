@@ -88,9 +88,10 @@ Legend:
   [ ] Perhaps it's the case that we can't actually have type bases but rather reactive splits.
       In the case of `narrowest`, it expects a split and fails without it:
       `[a (t/- integer? int?), b integer? > (narrowest (t/type a) (t/type b))]`
-  [ ] `t/ref` and `t/assume` need to be combined correctly. E.g. (t/and (t/ref ...) ...) means the
-      whole thing should be `t/ref`, while `(t/or (t/ref ...) (...))` does not mean the metadata
-      is transferred. Probably `t/assume` should be combined in the same way.
+  [ ] `t/ref`, `t/assume`, `t/*` need to be combined correctly with other types.
+      E.g. (t/and (t/ref ...) ...) means the whole thing should be `t/ref`, while `(t/or (t/ref ...)
+      (...))` does not mean the metadata is transferred. Probably `t/assume` and `t/*` should be
+      combined in the same way.
       - What about `(t/and (t/or t/long? (t/ref t/byte?)) pos?)` ?
   [ ] t/value-of
       - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`

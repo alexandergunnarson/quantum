@@ -2,6 +2,7 @@
   (:require
 #?@(:clj
    [[io.aviso.exception]])
+    [fipp.ednize                      :as fedn]
     [quantum.untyped.core.collections :as uc]
     [quantum.untyped.core.core        :as ucore]
     [quantum.untyped.core.error       :as uerr
@@ -63,3 +64,8 @@
   ([x & args] (Group. (cons x args))))
 
 (defn group? [x] (instance? Group x))
+
+;; ===== fipp.edn ===== ;;
+
+(extend-protocol fedn/IEdn
+  nil (-edn [this] nil))
