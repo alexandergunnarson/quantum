@@ -234,10 +234,9 @@
                (uc/map+ (fn [form-v] (analyze* env form-v)))
                (educe (fn ([ret] ret)
                           ([{:as ret :keys [all-values?]} v]
-                            (-> ret
-                                (cond-> (and all-values? (-> v :type utr/value-type?))
-                                  (assoc :all-values? true))
-                                (update :nodes conj v))))
+                            (let [all-values?' (and all-values? (-> v :type utr/value-type?))]
+                              (-> ret (assoc :all-values? all-values?')
+                                      (update :nodes conj v)))))
                       {:all-values? true :nodes []}))
         t (if all-values?
               (->> nodes
@@ -266,16 +265,16 @@
                (uc/map+ (fn [[form-k form-v]] [(analyze* env form-k) (analyze* env form-v)]))
                (educe (fn ([ret] ret)
                           ([{:as ret :keys [all-values?]} [k v :as kv]]
-                            (-> ret
-                                (cond-> (and all-values?
-                                             (-> k :type utr/value-type?)
-                                             (-> v :type utr/value-type?))
-                                  (assoc :all-values? true))
-                                (update :nodes conj kv))))
+                            (let [all-values?' (and all-values?
+                                                    (-> k :type utr/value-type?)
+                                                    (-> v :type utr/value-type?))]
+                              (-> ret (assoc :all-values? all-values?')
+                                      (update :nodes conj kv)))))
                       {:all-values? true :nodes []}))
         t (if all-values?
               (->> nodes
-                   (uc/map+ (fn [[k v]] [(-> k :type t/unvalue) (-> v :type t/unvalue)]))
+                   (uc/map+ (fn [[k v]]
+                              [(-> k :type t/unvalue) (-> v :type t/unvalue)]))
                    (join {})
                    t/value)
               (t/and t/+map|built-in?
