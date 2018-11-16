@@ -68,9 +68,32 @@
 ;; ===== fipp.edn ===== ;;
 
 (extend-protocol fedn/IEdn
-            nil                         (-edn [this] nil)
-  #?(:clj   java.lang.Boolean
-     :cljs  boolean)                    (-edn [this] this)
-  #?@(:clj [java.lang.Long              (-edn [this] this)])
+            nil                         (-edn [x] nil)
+   #?(:clj  java.lang.Boolean
+      :cljs boolean)                    (-edn [x] x)
+  #?@(:clj [java.lang.Integer           (-edn [x] x)
+            java.lang.Long              (-edn [x] x)])
+   #?(:clj  java.lang.Double
+      :cljs number)                     (-edn [x] x)
+   #?(:clj  java.lang.String
+      :cljs string)                     (-edn [x] x)
+   #?(:clj  clojure.lang.Symbol
+      :cljs cljs.core/Symbol)           (-edn [x] x)
+   #?(:clj  clojure.lang.Keyword
+      :cljs cljs.core/Keyword)          (-edn [x] x)
+   #?(:clj  clojure.lang.PersistentArrayMap
+      :cljs cljs.core/PersistentArrayMap)
+     (-edn [x] (->> x (map (fn [[k v]] [(fedn/-edn k) (fedn/-edn v)])) (into (array-map))))
+   #?(:clj  clojure.lang.PersistentHashMap
+      :cljs cljs.core/PersistentHashMap)
+     (-edn [x] (->> x (map (fn [[k v]] [(fedn/-edn k) (fedn/-edn v)])) (into (hash-map))))
    #?(:clj  clojure.lang.PersistentVector
-      :cljs cljs.core/PersistentVector) (-edn [this] (mapv fedn/-edn this)))
+      :cljs cljs.core/PersistentVector)
+     (-edn [x] (->> x (mapv fedn/-edn)))
+   #?(:clj  clojure.lang.PersistentList
+      :cljs cljs.core/PersistentList)
+     (-edn [x] (->> x (map fedn/-edn) list*))
+  #?@(:clj [clojure.lang.PersistentList$EmptyList (fedn/-edn [x] x)])
+  #?@(:clj [clojure.lang.ASeq    (-edn [x] (->> x (map fedn/-edn)))])
+  #?@(:clj [clojure.lang.LazySeq (-edn [x] (->> x (map fedn/-edn)))])
+  #?@(:clj [Class                (-edn [x] (-> x .getName symbol))]))
