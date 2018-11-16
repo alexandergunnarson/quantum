@@ -406,6 +406,7 @@
    :repl-options
      {:init
        '(do (require
+              '[clj-java-decompiler.core :refer [decompile]]
               '[no.disassemble :refer [disassemble]]
               'quantum.untyped.core.error
               'quantum.untyped.core.meta.debug
