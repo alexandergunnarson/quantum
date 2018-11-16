@@ -135,14 +135,14 @@
 
          ;; TODO differentiate between "all supported n-D arrays" and "all n-D arrays"
          (def objects-nd?     (t/or objects?
-                                    #?@(:clj [(>array-nd-type 'object  2)
-                                              (>array-nd-type 'object  3)
-                                              (>array-nd-type 'object  4)
-                                              (>array-nd-type 'object  5)
-                                              (>array-nd-type 'object  6)
-                                              (>array-nd-type 'object  7)
-                                              (>array-nd-type 'object  8)
-                                              (>array-nd-type 'object  9)
+                                    #?@(:clj [(>array-nd-type 'object 2)
+                                              (>array-nd-type 'object 3)
+                                              (>array-nd-type 'object 4)
+                                              (>array-nd-type 'object 5)
+                                              (>array-nd-type 'object 6)
+                                              (>array-nd-type 'object 7)
+                                              (>array-nd-type 'object 8)
+                                              (>array-nd-type 'object 9)
                                               (>array-nd-type 'object 10)])))
 
          (def std-array?      (t/or array-1d?

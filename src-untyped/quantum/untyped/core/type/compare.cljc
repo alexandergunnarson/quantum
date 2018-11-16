@@ -15,6 +15,7 @@
               :refer [==]]
             [quantum.untyped.core.core              :as ucore]
             [quantum.untyped.core.data.bits         :as ubit]
+            [quantum.untyped.core.data.hash         :as uhash]
             [quantum.untyped.core.data.set          :as uset
               :refer [<ident =ident >ident ><ident <>ident comparison?]]
             [quantum.untyped.core.defnt
@@ -51,6 +52,7 @@
                UniversalSetType EmptySetType
                NotType OrType AndType
                ProtocolType ClassType
+               UnorderedType OrderedType
                ValueType
                FnType
                MetaType MetaOrType
@@ -334,10 +336,55 @@
   #?(:clj  (compare|class+class* (utr/class-type>class t0) (utr/class-type>class t1))
      :cljs (TODO)))
 
+;; This is used to make comparisons work with `UnorderedType` and `OrderedType`.
+;; TODO we should not be using `seqable?` but rather `(t/input-type reduce :_ :_ :?)`. See also the
+;; implementations of `UnorderedType` and `OrderedType`.
+(def- seqable-except-array?
+  (OrType.
+    uhash/default uhash/default nil `seqable-except-array?
+    [#?(:clj  (ClassType.    uhash/default uhash/default nil nil clojure.lang.ISeq))
+     #?(:clj  (ClassType.    uhash/default uhash/default nil nil clojure.lang.Seqable)
+        :cljs (ProtocolType. uhash/default uhash/default nil nil cljs.core/ISeqable))
+     #?(:clj (ClassType. uhash/default uhash/default nil nil java.lang.Iterable))
+     #_array? ; TODO handle later
+     (ClassType. uhash/default uhash/default nil nil #?(:clj java.lang.String :cljs js/String))
+     #?(:clj (ClassType. uhash/default uhash/default nil nil java.util.Map))]
+    (atom nil)))
+
+(defns- compare|class+finite [t0 class-type?, t1 utr/ordered-type? > comparison?]
+  ;; TODO technically we need to have it satisfy `dc/reducible?`, not merely `c/seqable?`
+  ;; — see also note in UnorderedType's implementation about this
+  (case  (int (compare t0 seqable-except-array?))
+     ;; `(combine-comparisons <ident >ident)`
+     ;; t/< w.r.t. seqable; t/> w.r.t contents (TODO unless contents have restrictions)
+    -1 ><ident
+     ;; `(combine-comparisons =ident >ident)`
+     ;; t/= w.r.t. seqable; t/> w.r.t contents (TODO unless contents have restrictions)
+     0 <ident
+     ;; `(combine-comparisons >ident >ident)`
+     ;; t/> w.r.t. seqable; t/> w.r.t contents (TODO unless contents have restrictions)
+     1 >ident
+     ;; `(combine-comparisons ><ident ><ident)`
+     ;; t/>< w.r.t. seqable; t/>< w.r.t contents (TODO unless contents have restrictions)
+     2 ><ident
+     ;; `(combine-comparisons <>ident <>ident)`
+     ;; t/<> w.r.t. seqable; t/<> w.r.t contents
+     3 <>ident))
+
+(defns- compare|class+unordered [t0 class-type?, t1 utr/unordered-type? > comparison?]
+  (compare|class+finite t0 t1))
+
+(defns- compare|class+ordered [t0 class-type?, t1 utr/ordered-type? > comparison?]
+  (compare|class+finite t0 t1))
+
 (defns- compare|class+value [t0 class-type?, t1 value-type? > comparison?]
   (let [c (utr/class-type>class t0)
         v (utr/value-type>value t1)]
     (if (instance? c v) >ident <>ident)))
+
+;; ----- UnorderedType ----- ;;
+
+;; ----- OrderedType ----- ;;
 
 ;; ----- ValueType ----- ;;
 
@@ -462,8 +509,14 @@
         Expression       fn>< ; TODO not entirely true
         ProtocolType     (inverted compare|protocol+class)
         ClassType        compare|class+class
+        UnorderedType    compare|class+unordered
+        OrderedType      compare|class+ordered
         ValueType        compare|class+value
         MetaType         compare|non-meta+meta}
+     UnorderedType
+       {ClassType        (inverted compare|class+unordered)}
+     OrderedType
+       {ClassType        (inverted compare|class+ordered)}
      ValueType
        {UniversalSetType (inverted compare|universal+value)
         EmptySetType     (inverted compare|empty+value)
@@ -551,10 +604,10 @@
 
 ;; ===== FnType ===== ;;
 
-;; TODO unknown if this is `and`- or `or`-style combination
 (defns combine-comparisons
   "Used in `t/compare|in` and `t/compare|out`. Might be used for other things too in the future.
-   Commutative in the 2-ary arity."
+   Commutative in the 2-ary arity.
+   A `t/and`-style combination."
   ([cs _ #_(seq-of uset/comparison?) > uset/comparison?]
     ;; TODO it's possible to `reduced` early here depending
     (if (empty? cs)

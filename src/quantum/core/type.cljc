@@ -24,6 +24,7 @@
   ftype
   input-type  input-type|meta-or  input-type|or
   output-type output-type|meta-or output-type|or
+  unordered ordered
   value unvalue
   ;; Combinators
   and or - if not

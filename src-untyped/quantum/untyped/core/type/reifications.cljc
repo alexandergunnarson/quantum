@@ -326,7 +326,7 @@
 ;; ----- UnorderedType ----- ;;
 
 (defn- satisfies-unordered-type? [xs data]
-  (and (seqable? xs) ; TODO `dc/reducible?`
+  (and (seqable? xs) ; TODO we should rather use `(t/input-type reduce :_ :_ :?)`
        (let [!frequencies (! {})
              each-input-matches-one-type-not-exceeding-frequency?
                (->> xs
@@ -400,7 +400,8 @@
                                    (list 'new 'quantum.untyped.core.type.reifications.OrderedType
                                      hash hash-code (>form meta) name (-> data >vec >form))))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (-> (list 'quantum.untyped.core.type/ordered (fedn/-edn data))
+   fedn/IEdn      {-edn      ([this] (-> (list 'quantum.untyped.core.type/ordered
+                                               (-> data >vec fedn/-edn))
                                          (?with-name name)))}})
 
 (defn ordered-type? [x] (instance? OrderedType x))
