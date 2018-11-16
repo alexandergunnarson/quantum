@@ -231,10 +231,6 @@ Legend:
         only bound within typed contexts.
   [ ] t/defrecord
   [ ] t/def-concrete-type (i.e. `t/deftype`)
-  [ ] t/def
-      - TODO what would this even look like? I guess it would just declare the sym, meta, and type
-      - It would also have the benefit of creating a typed context
-      - Without an argument, it would work like `declare`
   [-] t/fn
   [-] t/ftype
       [ ] conditionally optional arities etc.
