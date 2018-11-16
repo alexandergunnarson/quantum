@@ -68,4 +68,7 @@
 ;; ===== fipp.edn ===== ;;
 
 (extend-protocol fedn/IEdn
-  nil (-edn [this] nil))
+  nil (-edn [this] nil)
+  #?(:clj  clojure.lang.PersistentVector
+     :cljs cljs.core/PersistentVector)
+    (-edn [this] this))

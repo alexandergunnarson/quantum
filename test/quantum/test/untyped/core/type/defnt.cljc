@@ -71,7 +71,7 @@
                                (tag "java.lang.management.RuntimeMXBean"
                                  '(. java.lang.management.ManagementFactory getRuntimeMXBean))
                                'getName)))))
-               [{:id 0 :index 0 :arg-types [] :output-type (t/or (t/value nil) (t/isa? String))}]
+               [[0 0 false [] :output-type (t/or t/nil? t/string?)]]
                (defmeta ~'pid|test
                  {:quantum.core.type/type pid|test|__type}
                  (fn* ([] (. pid|test|__0 ~'invoke))))))]

@@ -4,6 +4,7 @@
   (:require
     [clojure.core                               :as c]
     [clojure.string                             :as str]
+    [fipp.ednize                                :as fedn]
     ;; TODO excise this reference
     [quantum.core.type.core                     :as tcore]
     ;; TODO excise this reference
@@ -957,9 +958,10 @@
       fn|meta' (merge fn|meta {:quantum.core.type/type (uid/qualify fn|ns-name fn|type-name)})
       overload-types|form
         (when (= compilation-mode :test)
-          (->> fn|types :overload-types >form
+          (->> fn|types :overload-types
                (uc/map (c/fn [{:keys [id index inline? arg-types output-type]}]
-                         [id index inline? arg-types output-type]))))]
+                         [id index inline? arg-types output-type]))
+               fedn/-edn))]
     ;; TODO determine whether CLJS needs (update-in m [:jsdoc] conj "@param {...*} var_args")
     (if (= kind :extend-defn!)
         [overload-types|form
