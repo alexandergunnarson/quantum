@@ -47,7 +47,8 @@
         (or (= c0 c1)
             (do (pr! "FAIL: should be `(= code0 code1)`" (pr-str c0) (pr-str c1)) false))
         (and (or similar-class?
-                 (do (pr! "FAIL: should be similar class" (pr-str c0) (pr-str c1))
+                 (do (pr! "FAIL: should be similar class"
+                          {:c0 (type c0) :x0 (pr-str c0) :c1 (type c1) :x1 (pr-str c1)})
                      false))
              (or (if (or (set? c0) (map? c0))
                      (uc/seq= (sort c0) (sort c1) code=)

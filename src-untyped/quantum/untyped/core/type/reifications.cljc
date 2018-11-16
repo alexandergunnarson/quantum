@@ -47,7 +47,14 @@
 
 (defn type? [x #_> #_boolean?] (satisfies? PType x))
 
-(defn- ?with-name [form ?name] (if ?name (list 't/named ?name form) form))
+(def ^:dynamic *expand-names?* false)
+
+(defn- ?with-name [form ?name]
+  (if ?name
+      (if *expand-names?*
+          (list 't/named ?name form)
+          ?name)
+      form))
 
 ;; ----- MetaType ----- ;;
 
