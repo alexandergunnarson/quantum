@@ -9,6 +9,7 @@
           [quantum.core.type                 :as t]
           [quantum.untyped.core.logic
             :refer [ifs]]
+          [quantum.untyped.core.numeric      :as unum]
           [quantum.untyped.core.type         :as ut]
           ;; TODO TYPED excise reference
           [quantum.untyped.core.vars         :as var
@@ -413,3 +414,41 @@
                 b double?]                                                    (if (c?/> a b) a b)))
 #?(:clj  (     [a double?                   , b double?]                      (Math/max      a b)))
 #?(:cljs (     [a double?                   , b double? > (t/assume double?)] (js/Math.max   a b))))
+
+;; ===== Readers ===== ;;
+
+(t/defn read-byte
+  "Used for the `#b` literal. Only a literal long, double, or char may be converted to byte, as long
+   as it is in the numeric range of a byte, as with `num/>byte`.
+
+   Using e.g. `#b 1` outside of a typed context results in a runtime call to
+   `RT.readString(\"#=(java.lang.Byte. \\\"1\\\")\")` which is undesirable with respect to
+   performance."
+#?(:clj ([x char?] (read-byte (unchecked-long x))))
+#?(:clj ([x long?]
+          (if-not (and (c?/<= x (>max-value byte?))
+                       (c?/>= x (>min-value byte?)))
+            (throw (ex-info "Form input to `#b` is not in the numeric range of a byte"
+                            {:form x}))
+            (unchecked-byte x))))
+        ([x double?]
+          (if-not (and (c?/<= x (>max-value byte?))
+                       (c?/>= x (>min-value byte?))
+                       (unum/integer-value? x))
+            (throw (ex-info "Form input to `#b` is not in the numeric range of a byte"
+                            {:form x}))
+            (unchecked-byte x))))
+
+; c quantum.core.data.primitive/read-char
+; s quantum.core.data.primitive/read-short
+; i quantum.core.data.primitive/read-int
+; l quantum.core.data.primitive/read-long
+; f quantum.core.data.primitive/read-float
+; d quantum.core.data.primitive/read-double
+
+(t/and (t/isa? String) (t/unordered (t/value 1)))
+-> (t/and (t/isa? String) (t/unordered (t/value 1)))
+(t/or (t/isa? String) (t/unordered (t/value 1)))
+-> (t/or (t/isa? String) (t/unordered (t/value 1)))
+(t/or tcomp/seqable-except-array? (t/unordered (t/value 1)))
+-> (t/unordered (t/value 1))
