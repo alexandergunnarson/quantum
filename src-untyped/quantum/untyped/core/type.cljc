@@ -61,7 +61,11 @@
                      #?@(:cljs [UniversalSetType EmptySetType
                                 NotType OrType AndType
                                 ProtocolType DirectProtocolType ClassType
-                                ValueType])]]
+                                UnorderedType OrderedType
+                                ValueType
+                                FnType
+                                MetaType MetaOrType
+                                ReactiveType])]]
            [quantum.untyped.core.vars                  :as uvar
              :refer [def- defmacro- update-meta]])
 #?(:cljs (:require-macros
@@ -70,12 +74,13 @@
 #?(:clj  (:import
            [quantum.untyped.core.analyze.expr Expression]
            [quantum.untyped.core.type.reifications
-              MetaType UniversalSetType EmptySetType
+              UniversalSetType EmptySetType
               NotType OrType AndType
-              ProtocolType ClassType UnorderedType OrderedType
+              ProtocolType ClassType
+              UnorderedType OrderedType
               ValueType
               FnType
-              MetaOrType
+              MetaType MetaOrType
               ReactiveType])))
 
 (ucore/log-this-ns)

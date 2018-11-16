@@ -71,7 +71,7 @@
                                (tag "java.lang.management.RuntimeMXBean"
                                  '(. java.lang.management.ManagementFactory getRuntimeMXBean))
                                'getName)))))
-               [[0 0 false [] (~'t/or t/nil? t/string?)]]
+               [[0 0 false [] (t/or t/nil? t/string?)]]
                (defmeta ~'pid|test
                  {:quantum.core.type/type pid|test|__type}
                  (fn* ([] (. pid|test|__0 ~'invoke))))))]
@@ -978,14 +978,14 @@
                             (~(L 'invoke) [~'_7__ ~(O 'x)]
                               (. ~(tag "java.lang.Number" 'x) ~'longValue))))
 
-                        [[0 0 true [(t/isa? Byte)]           (t/isa? Long)]
-                         [1 1 true [(t/isa? Short)]          (t/isa? Long)]
-                         [2 2 true [(t/isa? Character)]      (t/isa? Long)]
-                         [3 3 true [(t/isa? Integer)]        (t/isa? Long)]
-                         [4 4 true [(t/isa? Long)]           (t/isa? Long)]
-                         [5 5 true [(t/isa? Float)]          (t/isa? Long)]
-                         [6 6 true [(t/isa? Double)]         (t/isa? Long)]
-                         [7 7 true [(t/ref (t/isa? Number))] (t/isa? Long)]]
+                        [[0 0 true [t/byte?]                 t/long?]
+                         [1 1 true [t/short?]                t/long?]
+                         [2 2 true [t/char?]                 t/long?]
+                         [3 3 true [t/int?]                  t/long?]
+                         [4 4 true [t/long?]                 t/long?]
+                         [5 5 true [t/float?]                t/long?]
+                         [6 6 true [t/double?]               t/long?]
+                         [7 7 true [(t/ref (t/isa? Number))] t/long?]]
 
                         (defmeta ~'>long*
                           {:source "clojure.lang.RT.uncheckedLongCast"

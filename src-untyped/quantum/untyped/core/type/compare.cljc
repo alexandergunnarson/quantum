@@ -37,8 +37,12 @@
                       fn-type?
                       #?@(:cljs [UniversalSetType EmptySetType
                                  NotType OrType AndType
-                                 ProtocolType ClassType
-                                 ValueType])]]
+                                 ProtocolType DirectProtocolType ClassType
+                                 UnorderedType OrderedType
+                                 ValueType
+                                 FnType
+                                 MetaType MetaOrType
+                                 ReactiveType])]]
             [quantum.untyped.core.vars
               :refer [def-]])
   #?(:clj (:import
@@ -47,7 +51,10 @@
                UniversalSetType EmptySetType
                NotType OrType AndType
                ProtocolType ClassType
-               ValueType])))
+               ValueType
+               FnType
+               MetaType MetaOrType
+               ReactiveType])))
 
 (ucore/log-this-ns)
 
@@ -353,6 +360,17 @@
       =ident
       <>ident))
 
+;; ----- MetaType ----- ;;
+
+(defns- compare|meta+meta [t0 utr/meta-type?, t1 utr/meta-type?]
+  (compare (utr/meta-type>inner-type t0) (utr/meta-type>inner-type t1)))
+
+(defns- compare|meta+non-meta [t0 utr/meta-type?, t1 type?]
+  (compare (utr/meta-type>inner-type t0) t1))
+
+(defns- compare|non-meta+meta [t0 type?, t1 utr/meta-type?]
+  (compare t0 (utr/meta-type>inner-type t1)))
+
 ;; ===== Dispatch ===== ;;
 
 (def- compare|dispatch
@@ -366,7 +384,8 @@
         Expression       compare|universal+expr
         ProtocolType     compare|universal+protocol
         ClassType        compare|universal+class
-        ValueType        compare|universal+value}
+        ValueType        compare|universal+value
+        MetaType         compare|non-meta+meta}
      EmptySetType
        {UniversalSetType (inverted compare|universal+empty)
         EmptySetType     fn=
@@ -376,7 +395,8 @@
         Expression       compare|empty+expr
         ProtocolType     compare|empty+protocol
         ClassType        compare|empty+class
-        ValueType        compare|empty+value}
+        ValueType        compare|empty+value
+        MetaType         compare|non-meta+meta}
      NotType
        {UniversalSetType (inverted compare|universal+not)
         EmptySetType     (inverted compare|empty+not)
@@ -386,7 +406,8 @@
         Expression       fn>< ; TODO not entirely true
         ProtocolType     compare|not+protocol
         ClassType        compare|not+class
-        ValueType        compare|not+value}
+        ValueType        compare|not+value
+        MetaType         compare|non-meta+meta}
      OrType
        {UniversalSetType (inverted compare|universal+or)
         EmptySetType     (inverted compare|empty+or)
@@ -396,7 +417,8 @@
         Expression       fn>< ; TODO not entirely true
         ProtocolType     compare|todo
         ClassType        (inverted compare|class+or)
-        ValueType        (inverted compare|value+or)}
+        ValueType        (inverted compare|value+or)
+        MetaType         compare|non-meta+meta}
      AndType
        {UniversalSetType (inverted compare|universal+and)
         EmptySetType     (inverted compare|empty+and)
@@ -406,7 +428,8 @@
         Expression       fn>< ; TODO not entirely true
         ProtocolType     compare|todo
         ClassType        (inverted compare|class+and)
-        ValueType        (inverted compare|value+and)}
+        ValueType        (inverted compare|value+and)
+        MetaType         compare|non-meta+meta}
      ;; TODO review this
      Expression
        {UniversalSetType (inverted compare|universal+expr)
@@ -417,7 +440,8 @@
         Expression       compare|expr+expr
         ProtocolType     fn>< ; TODO not entirely true
         ClassType        fn>< ; TODO not entirely true
-        ValueType        compare|expr+value}
+        ValueType        compare|expr+value
+        MetaType         compare|non-meta+meta}
      ProtocolType
        {UniversalSetType (inverted compare|universal+protocol)
         EmptySetType     (inverted compare|empty+protocol)
@@ -427,7 +451,8 @@
         Expression       fn>< ; TODO not entirely true
         ProtocolType     compare|protocol+protocol
         ClassType        compare|protocol+class
-        ValueType        (inverted compare|value+protocol)}
+        ValueType        (inverted compare|value+protocol)
+        MetaType         compare|non-meta+meta}
      ClassType
        {UniversalSetType (inverted compare|universal+class)
         EmptySetType     (inverted compare|empty+class)
@@ -437,7 +462,8 @@
         Expression       fn>< ; TODO not entirely true
         ProtocolType     (inverted compare|protocol+class)
         ClassType        compare|class+class
-        ValueType        compare|class+value}
+        ValueType        compare|class+value
+        MetaType         compare|non-meta+meta}
      ValueType
        {UniversalSetType (inverted compare|universal+value)
         EmptySetType     (inverted compare|empty+value)
@@ -447,7 +473,19 @@
         Expression       (inverted compare|expr+value)
         ProtocolType     compare|value+protocol
         ClassType        (inverted compare|class+value)
-        ValueType        compare|value+value}}))
+        ValueType        compare|value+value
+        MetaType         compare|non-meta+meta}
+     MetaType
+       {UniversalSetType compare|meta+non-meta
+        EmptySetType     compare|meta+non-meta
+        NotType          compare|meta+non-meta
+        OrType           compare|meta+non-meta
+        AndType          compare|meta+non-meta
+        Expression       compare|meta+non-meta
+        ProtocolType     compare|meta+non-meta
+        ClassType        compare|meta+non-meta
+        ValueType        compare|meta+non-meta
+        MetaType         compare|meta+meta}}))
 
 ;; ===== Operators ===== ;;
 
