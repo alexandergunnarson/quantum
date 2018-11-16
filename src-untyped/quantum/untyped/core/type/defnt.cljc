@@ -72,9 +72,10 @@
 ;; TODO move
 #?(:clj
 (defmacro def
-  "Like `def`, but allows for docstring and metadata placement like `defn`, and performs type
-   analysis. For values that satisfy `t/type?`, calls `utr/with-name` on them with the provided
-   `sym`."
+  "Like `def`, but:
+   - Allows for docstring and metadata placement like `defn`.
+   - Performs type analysis.
+   - For values that satisfy `t/type?`, calls `utr/with-name` on them with the provided `sym`."
   ([sym] (list 'def sym))
   ([sym v] `(quantum.untyped.core.type.defnt/def ~sym nil nil ~v))
   ([sym doc-or-meta v]
