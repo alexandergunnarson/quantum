@@ -34,7 +34,7 @@
 (t/defn >ns
   "Supersedes `clojure.core/the-ns`."
   ([x namespace? > namespace?] x)
-  ([x id/symbol? > (t/* namespace?)] (>?ns x))))
+  ([x id/symbol? > (t/run namespace?)] (>?ns x))))
 
 #?(:clj (t/extend-defn! id/>name (^:inline [x namespace?] (-> x .getName id/>name))))
 
@@ -65,13 +65,13 @@
    already-existing namespace of the same name.
 
    Supersedes `clojure.core/create-ns`."
-  [x id/symbol? > (t/* namespace?)] (clojure.lang.Namespace/findOrCreate x)))
+  [x id/symbol? > (t/run namespace?)] (clojure.lang.Namespace/findOrCreate x)))
 
 #?(:clj
 (t/defn remove-ns!
   "Removes the namespace named by the symbol. Use with caution. Cannot be used to remove the
    `clojure.core` namespace."
-  [x id/symbol? > (t/* namespace?)] (clojure.lang.Namespace/remove x)))
+  [x id/symbol? > (t/run namespace?)] (clojure.lang.Namespace/remove x)))
 
 ;; ===== Modification ===== ;;
 
@@ -127,11 +127,11 @@
    if supplied. The namespace must exist. The var will adopt any metadata from ->`name-val`.
    Returns the var."
   > var?
-  ([ns-val (t/or id/symbol? namespace?), var-name id/symbol? > (t/* var?)]
+  ([ns-val (t/or id/symbol? namespace?), var-name id/symbol? > (t/run var?)]
     (let [var-ref (clojure.lang.Var/intern (>ns ns-val) var-name)]
       (when (>meta var-name) (.setMeta var-ref (>meta var-name)))
       var-ref))
-  ([ns-val (t/or id/symbol? namespace?), var-name id/symbol?, var-val t/ref? > (t/* var?)]
+  ([ns-val (t/or id/symbol? namespace?), var-name id/symbol?, var-val t/ref? > (t/run var?)]
     (let [var-ref (clojure.lang.Var/intern (>ns ns-val) var-name var-val)]
       (when (>meta var-name) (.setMeta var-ref (>meta var-name)))
       var-ref))))

@@ -339,59 +339,65 @@
 
 ;; ===== Type metadata (not for reactive types) ===== ;;
 
-(defn assume
+(defns assume
   "Denotes that, whatever the declared output type (to which `assume` is applied) of a function may
    be, it is assumed that the output satisfies that type."
-  [t #_utr/type? #_> #_utr/type?]
+  [t utr/type? > utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (if (utr/meta-type? t)
-      (if (.-assume_QMARK_ ^MetaType t)
+      (if (.-assume? ^MetaType t)
           t
           (MetaType. (.-meta ^MetaType t) nil (.-t ^MetaType t)
-                     true (.-ref_QMARK_ ^MetaType t) false)) ; un-`t/*`s it
+                     true (.-ref? ^MetaType t) false)) ; un-`t/run`s it
       (MetaType. (c/meta t) nil t true false false)))
 
-(defn unassume [t #_utr/type? #_> #_utr/type?]
+(defns assume? [t utr/type? > c/boolean?] (c/and (utr/meta-type? t) (.-assume? ^MetaType t)))
+
+(defns unassume [t utr/type? > utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (if (utr/meta-type? t)
-      (if-not (.-assume_QMARK_ ^MetaType t)
+      (if-not (.-assume? ^MetaType t)
         t
         (MetaType. (.-meta ^MetaType t) nil (.-t ^MetaType t)
-                   false (.-ref_QMARK_ ^MetaType t) (.-runtime_QMARK_ ^MetaType t))) ; un-`t/*`s it
+                   false (.-ref? ^MetaType t) (.-runtime? ^MetaType t))) ; un-`t/run`s it
       t))
 
-(defn *
+(defns run
   "Denote on a type that it must be enforced at runtime.
    For use with `defnt`."
-  [t #_utr/type? #_> #_utr/type?]
+  [t utr/type? > utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (if (utr/meta-type? t)
-      (if (.-runtime_QMARK_ ^MetaType t)
+      (if (.-runtime? ^MetaType t)
           t
           (MetaType. (.-meta ^MetaType t) nil (.-t ^MetaType t)
-                     false (.-ref_QMARK_ ^MetaType t) true)) ; un-`t/assume`s it
+                     false (.-ref? ^MetaType t) true)) ; un-`t/assume`s it
       (MetaType. (c/meta t) nil t false false true)))
 
-(defn ref
+(defns run? [t utr/type? > c/boolean?] (c/and (utr/meta-type? t) (.-runtime? ^MetaType t)))
+
+(defns ref
   "Denote on a type that it must not be expanded to use primitive values.
    For use with `defnt`."
-  [t #_utr/type? #_> #_utr/type?]
+  [t utr/type? > utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (if (utr/meta-type? t)
-      (if (.-ref_QMARK_ ^MetaType t)
+      (if (.-ref? ^MetaType t)
           t
           (MetaType. (.-meta ^MetaType t) nil (.-t ^MetaType t)
-                     (.-assume_QMARK_ ^MetaType t) true (.-runtime_QMARK_ ^MetaType t)))
+                     (.-assume? ^MetaType t) true (.-runtime? ^MetaType t)))
       (MetaType. (c/meta t) nil t false true false)))
 
-(defn unref [t #_utr/type? #_> #_utr/type?]
+(defns unref [t utr/type? > utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (if (utr/meta-type? t)
-      (if-not (.-ref_QMARK_ ^MetaType t)
+      (if-not (.-ref? ^MetaType t)
         t
         (MetaType. (.-meta ^MetaType t) nil (.-t ^MetaType t)
-                   (.-assume_QMARK_ ^MetaType t) false (.-runtime_QMARK_ ^MetaType t)))
+                   (.-assume? ^MetaType t) false (.-runtime? ^MetaType t)))
       t))
+
+(defns type-ref? [t utr/type? > c/boolean?] (c/and (utr/meta-type? t) (.-ref? ^MetaType t)))
 
 ;; ===== Logical ===== ;;
 
@@ -791,7 +797,9 @@
 (defns- -type>classes
   [t utr/type?, include-classes-of-value-type? c/boolean?, classes c/set?
    > (us/set-of (us/nilable #?(:clj c/class? :cljs c/fn?)))]
-  (cond (utr/class-type? t)
+  (cond (utr/meta-type? t)
+          (recur (utr/meta-type>inner-type t) include-classes-of-value-type? classes)
+        (utr/class-type? t)
           (conj classes (utr/class-type>class t))
         (utr/protocol-type? t)
           ;; probably better than specifying *all* implementing classes
@@ -810,7 +818,7 @@
         (utr/or-type? t)
           (reduce (c/fn [classes' t'] (-type>classes t' include-classes-of-value-type? classes'))
             classes (utr/or-type>args t))
-        (c/= t val?)
+        (c/= t val?) ; TODO make this less ad-hoc
           (-type>classes val|by-class? include-classes-of-value-type? classes)
         :else
           (err! "Not sure how to handle type" t)))
@@ -843,7 +851,7 @@
    Distinct from primitive-expansion / primitivization."
   [t type? > (us/set-of (us/nilable c/class?))]
   (let [cs (type>classes t)]
-    (if (c/or (contains? cs nil) (-> t c/meta :quantum.core.type/ref?))
+    (if (c/or (contains? cs nil) (type-ref? t))
         cs
         (->> cs (uc/map+ class>most-primitive-class) (ur/join #{}))))))
 
@@ -851,7 +859,7 @@
 (defns type>primitive-subtypes
   ([t type? > (us/set-of type?)] (type>primitive-subtypes t true))
   ([t type?, include-subtypes-of-value-type? c/boolean? > (us/set-of type?)]
-  (if (-> t c/meta :quantum.core.type/ref?)
+  (if (type-ref? t)
       #{}
       (->> (type>classes t include-subtypes-of-value-type?)
            (uc/mapcat+ class>boxed-subclasses+)
@@ -861,7 +869,7 @@
 
 #?(:clj
 (defns primitive-type? [t type? > c/boolean?]
-  (c/and (-> t c/meta :quantum.core.type/ref? c/not)
+  (c/and (-> t type-ref? c/not)
          (let [cs (type>classes t)]
            (c/and (-> cs count (c/= 1))
                   (contains? boxed-class->unboxed-symbol (first cs)))))))

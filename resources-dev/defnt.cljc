@@ -88,13 +88,13 @@ Legend:
   [ ] Perhaps it's the case that we can't actually have type bases but rather reactive splits.
       In the case of `narrowest`, it expects a split and fails without it:
       `[a (t/- integer? int?), b integer? > (narrowest (t/type a) (t/type b))]`
-  [ ] `t/ref`, `t/assume`, `t/*` need to be combined correctly with other types.
+  [ ] `t/ref`, `t/assume`, `t/run` need to be combined correctly with other types.
       E.g. (t/and (t/ref ...) ...) means the whole thing should be `t/ref`, while `(t/or (t/ref ...)
-      (...))` does not mean the metadata is transferred. Probably `t/assume` and `t/*` should be
+      (...))` does not mean the metadata is transferred. Probably `t/assume` and `t/run` should be
       combined in the same way.
       - What about `(t/and (t/or t/long? (t/ref t/byte?)) pos?)` ?
   [ ] t/value-of
-      - `[x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]`
+      - `[x with-metable?, meta' meta? > (t/run with-metable?) #_(TODO TYPED (t/value-of x))]`
   [ ] (comp/t== x)
        - dependent type such that the passed input must be identical to x
   [ ] `?` : type inference
@@ -104,7 +104,7 @@ Legend:
         ([n dn/std-integer?, xs ?] ...)
       - [ ] No trailing `>` means `> ?`f
   [ ] Non-boxed `def`s: `(var/def- min-float  (Numeric/negate Float/MAX_VALUE))`
-  [ ] `(t/validate x (t/* t/string?))` for `(t/* t/string?)` needs to be more performant
+  [ ] `(t/validate x (t/run t/string?))` for `(t/run t/string?)` needs to be more performant
       - Don't re-create type on each call (see `defnt/unanalyzed-overload>overload`)
   [ ] replace `deref` with `ref/deref` in typed contexts? So we can do `@` still
   - Type Logic and Predicates

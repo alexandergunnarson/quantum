@@ -79,7 +79,7 @@
    fedn/IEdn      {-edn      ([this] (-> (cond->> (fedn/-edn t)
                                            assume?  (list 'quantum.untyped.core.type/assume)
                                            ref?     (list 'quantum.untyped.core.type/ref)
-                                           runtime? (list 'quantum.untyped.core.type/*))
+                                           runtime? (list 'quantum.untyped.core.type/run))
                                          (?with-name name)))}})
 
 (defns meta-type? [x _ > boolean?] (instance? MetaType x))

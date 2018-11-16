@@ -29,7 +29,7 @@
           ;; TODO for now
           (uxp/iexpr? t))
       nil
-      (let [cs (cond-> (t/type>classes t) (-> t meta :quantum.core.type/ref?) (conj nil))]
+      (let [cs (cond-> (t/type>classes t) (t/type-ref? t) (conj nil))]
         (case (count cs)
           1 (let [c (first cs)]
               (when-let [not-primitive? (not (contains? t/boxed-class->unboxed-symbol c))]

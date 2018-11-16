@@ -731,7 +731,7 @@
                              :body            body-node
                              :type            (:type body-node)})]
         ;; TODO fix this; apparently it's not enough or maybe `assume` isn't being propagated
-        (cond-> node (-> overload-type-datum :output-type meta :quantum.core.type/assume?)
+        (cond-> node (-> overload-type-datum :output-type t/assume?)
           (update :type #(t/and % (:output-type overload-type-datum)))))
       {:input-nodes input-nodes
        :form        (>direct-dispatch|reify-call
@@ -836,7 +836,7 @@
     (t/value t/and)      (apply-arg-type-combine t/and      input-nodes)
     (t/value t/-)        (apply-arg-type-combine t/-        input-nodes)
     (t/value t/?)        (apply-arg-type-combine t/?        input-nodes)
-    (t/value t/*)        (apply-arg-type-combine t/*        input-nodes)
+    (t/value t/run)      (apply-arg-type-combine t/run      input-nodes)
     (t/value t/ref)      (apply-arg-type-combine t/ref      input-nodes)
     (t/value t/unref)    (apply-arg-type-combine t/unref    input-nodes)
     (t/value t/assume)   (apply-arg-type-combine t/assume   input-nodes)

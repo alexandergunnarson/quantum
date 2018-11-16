@@ -1,7 +1,7 @@
 (ns quantum.core.type
   "This is this the namespace upon which all other fully-typed namespaces rest."
   (:refer-clojure :exclude
-    [* - < <= = >= > and any? defn fn fn? isa? not or ref seq? symbol? type var?])
+    [- < <= = >= > and any? defn fn fn? isa? not or ref seq? symbol? type var?])
   (:require
     [quantum.untyped.core.type.defnt :as udefnt]
     [quantum.untyped.core.type       :as ut]
@@ -19,7 +19,7 @@
 (defaliases ut
   type type?
   ;; Generators
-  ? *, isa? isa?|direct
+  ? run, isa? isa?|direct
   ; fn ; TODO TYPED rename
   ftype
   input-type  input-type|meta-or  input-type|or

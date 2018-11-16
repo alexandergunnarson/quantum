@@ -19,7 +19,7 @@
 (t/defn ^:inline with-meta
   "Returns an object of the same type and value as ->`x`, with ->`meta'` as its metadata."
   > with-metable?
-           ([x with-metable?, meta' meta? > (t/* with-metable?) #_(TODO TYPED (t/value-of x))]
+           ([x with-metable?, meta' meta? > (t/run with-metable?) #_(TODO TYPED (t/value-of x))]
              (#?(:clj .withMeta :cljs cljs.core/-with-meta) x meta'))
   #?(:cljs ([x (t/isa? js/Function), meta' meta?]
              (cljs.core/MetaFn. x meta'))))

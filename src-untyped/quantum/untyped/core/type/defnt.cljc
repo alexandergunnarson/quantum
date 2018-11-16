@@ -384,7 +384,7 @@
         java.lang.Object
         (-> (first cs')
             (cond-> (and (not (contains? cs nil))
-                         (not (-> t meta :quantum.core.type/ref?)))
+                         (not (t/type-ref? t)))
               t/class>most-primitive-class))))))
 
 (defns- with-validate-output-type [declared-output-type t/type?, body-node uast/node? > t/type?]
@@ -393,8 +393,8 @@
                   :declared-output-type declared-output-type}]
     (case (t/compare (:type body-node) declared-output-type)
       (-1 0) declared-output-type
-      1      (if (or (-> declared-output-type meta :quantum.core.type/runtime?)
-                     (-> declared-output-type meta :quantum.core.type/assume?))
+      1      (if (or (-> declared-output-type t/run?)
+                     (-> declared-output-type t/assume?))
                  declared-output-type
                  (err! "Body type incompatible with declared output type" err-info))
       (2 3)  (err! "Body type incompatible with declared output type" err-info))))
@@ -507,7 +507,7 @@
         output-class (type>class output-type)
         body-form
           (-> (:form body-node)
-              (cond-> (-> output-type meta :quantum.core.type/runtime?)
+              (cond-> (t/run? output-type)
                 ;; TODO here the output type is being re-created each time (unless the fn's overall
                 ;;      output type is being preferred) because it could reference inputs, but we
                 ;;      should probably analyze to determine whether it references inputs so we can,

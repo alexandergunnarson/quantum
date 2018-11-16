@@ -389,7 +389,7 @@
          ([x  p/nil?           > #?(:clj p/long? :cljs dn/std-fixint?)] 0)
 #?(:cljs ([xs dstr/string?     > (t/assume dn/std-fixint?)] (.-length xs)))
 #?(:cljs ([xs dstr/!string?    > (t/assume dn/std-fixint?)] (.getLength xs)))
-         ([xs dc/icounted?     > #?(:clj p/int? :cljs (t/* dn/std-fixint?))]
+         ([xs dc/icounted?     > #?(:clj p/int? :cljs (t/run dn/std-fixint?))]
            (#?(:clj .count :cljs cljs.core/-count) xs))
 #?(:clj  ([xs dstr/char-seq?   > p/int?] (.length xs)))
          ([xs tup/tuple?       > #?(:clj p/int? :cljs (t/assume dn/std-fixint?))]

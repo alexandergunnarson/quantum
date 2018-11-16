@@ -31,6 +31,8 @@
     [quantum.core                    Numeric Primitive]
     [quantum.untyped.core.type.defnt AnonFn]))
 
+;; TODO test `:inline`
+
 ;; Just in case
 (clojure.spec.test.alpha/unstrument)
 (do (require '[orchestra.spec.test :as st])
@@ -80,8 +82,6 @@
       (eval actual)
       (eval '(do (is (t/string? (pid|test)))
                  (throws (pid|test 1))))))))
-
-;; TODO test `:inline`
 
 (deftest test|identity
   (let [actual
@@ -164,8 +164,8 @@
             (macroexpand '
               (self/defn #_:inline name > t/string?
                          ([x t/string?] x)
-                #?(:clj  ([x (t/isa? Named)  > (t/* t/string?)] (.getName x))
-                   :cljs ([x (t/isa? INamed) > (t/* t/string?)] (-name x))))))
+                #?(:clj  ([x (t/isa? Named)  > (t/run t/string?)] (.getName x))
+                   :cljs ([x (t/isa? INamed) > (t/run t/string?)] (-name x))))))
         expected
         (case (env-lang)
           :clj
@@ -176,16 +176,16 @@
                  (def ~(tag (cstr `Object>Object) 'name|__0)
                    (reify* [Object>Object] (~(O 'invoke) [~'_0__ ~(O 'x)] ~(ST 'x))))
 
-                 ;; [x (t/isa? Named)] > (t/* t/string?)
+                 ;; [x (t/isa? Named)] > (t/run t/string?)
 
                  (def ~(tag (cstr `Object>Object) 'name|__1)
                    (reify* [Object>Object]
                      (~(O 'invoke) [~'_1__ ~(O 'x)]
                        (t/validate ~(ST (list '. (tag "clojure.lang.Named" 'x) 'getName))
-                                   ~'(t/* t/string?)))))
+                                   ~'(t/run t/string?)))))
 
                  [{:id 0 :index 0 :arg-types [(t/isa? String)] :output-type (t/isa? String)}
-                  {:id 1 :index 1 :arg-types [(t/isa? Named)]  :output-type (t/* (t/isa? String))}]
+                  {:id 1 :index 1 :arg-types [(t/isa? Named)]  :output-type (t/run (t/isa? String))}]
 
                  (defmeta ~'name
                    {:quantum.core.type/type name|__type}
@@ -476,7 +476,7 @@
                  ;;  -> (t/- (t/ref (t/isa? Number)) (t/- tt/primitive? tt/boolean?))]
 
                  (def ~(O<> '>int*|__1|input0|types)
-                   (*<> ~(with-meta `(t/isa? Number) {:quantum.core.type/ref? true})))
+                   (*<> (t/ref (t/isa? Number))))
                  (def ~'>int*|__1|0
                    (reify* [Object>int]
                      (~(I 'invoke) [~'_7__ ~(O 'x)]
@@ -1062,7 +1062,7 @@
     (testing "functionality" (eval actual)))))
 
 (self/defn >big-integer > (t/isa? java.math.BigInteger)
-  ([x tt/ratio? > (t/* (t/isa? java.math.BigInteger))] (.bigIntegerValue x)))
+  ([x tt/ratio? > (t/run (t/isa? java.math.BigInteger))] (.bigIntegerValue x)))
 
 ;; NOTE would use `>long` but that's already an interface
 (deftest test|>long-checked
@@ -1485,7 +1485,7 @@
            ([] "")
            ([x t/nil?] "")
            ;; could have inferred but there may be other objects who have overridden .toString
-  #?(#_:clj  #_([x (t/isa? Object) > (t/* t/string?)] (.toString x))
+  #?(#_:clj  #_([x (t/isa? Object) > (t/run t/string?)] (.toString x))
            ;; Can't infer that it returns a string (without a pre-constructed list of built-in fns)
            ;; As such, must explicitly mark
      :cljs ([x t/any? > (t/assume t/string?)] (.join #js [x] "")))
@@ -1596,7 +1596,7 @@
   ([xs t/iterable?] (clojure.lang.RT/chunkIteratorSeq (.iterator xs)))
   ([xs t/char-seq?] (clojure.lang.StringSeq/create xs))
   ([xs (t/isa? java.util.Map)] (seq (.entrySet xs)))
-  ([xs t/array? > (t/* (t/? (t/isa? ISeq)))]
+  ([xs t/array? > (t/run (t/? (t/isa? ISeq)))]
     ;; We do this only because `clojure.lang.ArraySeq/createFromObject` is private but perhaps it
     ;; would be wise from a performance perspective to bypass that with e.g. a fast version of
     ;; reflection
