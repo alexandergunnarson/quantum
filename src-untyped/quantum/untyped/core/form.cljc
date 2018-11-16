@@ -36,8 +36,14 @@
             nil                 (>form [x] nil)
    #?(:clj  java.lang.Boolean
       :cljs boolean)            (>form [x] x)
-  #?@(:clj [java.lang.Integer   (>form [x] x)
-            java.lang.Long      (>form [x] x)])
+            ;; If a byte etc. is emitted from a macro, then it emits
+            ;; `RT.readString("#=(java.lang.Byte. \"1\")")`. Below is a better way.
+  #?@(:clj [java.lang.Byte      (>form [x] (list `unchecked-byte  (long x)))
+            java.lang.Short     (>form [x] (list `unchecked-short (long x)))
+            java.lang.Character (>form [x] (list `unchecked-char  (long x)))
+            java.lang.Integer   (>form [x] (list `unchecked-int   (long x)))
+            java.lang.Long      (>form [x] x)
+            java.lang.Float     (>form [x] (list `unchecked-short (long x)))])
    #?(:clj  java.lang.Double
       :cljs number)             (>form [x] x)
    #?(:clj  java.lang.String
