@@ -2,7 +2,7 @@
   (:require
     [fipp.edn]
     [fipp.visit]
-    [fipp.ednize]
+    [fipp.ednize :as fedn]
     [quantum.untyped.core.fn
       :refer [rcomp]]
     [quantum.untyped.core.ns]
@@ -11,8 +11,8 @@
     [quantum.untyped.core.vars]))
 
 #?(:clj
-(defmethod print-method fipp.ednize.IEdn [^fipp.ednize.IEdn v ^java.io.Writer w]
-  (print-method (._edn v) w)))
+(defmethod print-method fipp.ednize.IEdn [v ^java.io.Writer w]
+  (print-method (fedn/-edn v) w)))
 
 #?(:clj (prefer-method print-method fipp.ednize.IEdn clojure.lang.IRecord))
 #?(:clj (prefer-method print-method fipp.ednize.IEdn clojure.lang.IPersistentMap))

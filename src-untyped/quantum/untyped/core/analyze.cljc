@@ -44,22 +44,6 @@
 
 (def special-metadata-keys #{:val})
 
-#?(:clj
-(defns- maybe-look-up-type-from-class
-  "To save on memory — rather than creating a new `t/isa?` for every primitive class, uses the ones
-   already created in `quantum.untyped.core.type`."
-  [^Class c class? > t/type?]
-  (case (.getName c)
-    "java.lang.Boolean"   t/boolean?
-    "java.lang.Byte"      t/byte?
-    "java.lang.Short"     t/short?
-    "java.lang.Character" t/char?
-    "java.lang.Integer"   t/int?
-    "java.lang.Long"      t/long?
-    "java.lang.Float"     t/float?
-    "java.lang.Double"    t/double?
-    (t/isa? c))))
-
 ;; TODO move?
 (defns class>type
   "For converting a class in a reflective method, constructor, or field declaration to a type.
@@ -68,7 +52,7 @@
   [x class? > t/type?]
   (let [matching-boxed-class (t/unboxed-class->boxed-class x)]
     (-> (or matching-boxed-class x)
-        maybe-look-up-type-from-class
+        t/maybe-look-up-type-from-class
         (cond-> (not matching-boxed-class) t/?))))
 
 (defn- assume-val-for-form? [form] (-> form meta :val true?))
@@ -76,7 +60,7 @@
 (defns- maybe-with-assume-val [c class?, form _ > t/type?]
   (let [matching-boxed-class (t/unboxed-class->boxed-class c)]
     (-> (or matching-boxed-class c)
-        maybe-look-up-type-from-class
+        t/maybe-look-up-type-from-class
         (cond-> (and (not matching-boxed-class) (not (assume-val-for-form? form))) t/?))))
 
 ;; TODO move?
@@ -557,7 +541,7 @@
                  :form            (list* 'new c|form (map :form args|analyzed))
                  :class           c
                  :args            args|analyzed
-                 :type            (maybe-look-up-type-from-class c)})))))))
+                 :type            (t/maybe-look-up-type-from-class c)})))))))
 
 ;; TODO move this
 (defns truthy-node? [{:as ast t [:type _]} _ > (t/? t/boolean?)]

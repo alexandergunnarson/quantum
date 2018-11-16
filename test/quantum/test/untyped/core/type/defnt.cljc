@@ -114,15 +114,15 @@
                    (def ~(tag (cstr `Object>Object) 'identity|__8)
                      (reify* [Object>Object]   (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
 
-                   [[0 0 true [(t/isa? Boolean)]   (t/isa? Boolean)]
-                    [1 1 true [(t/isa? Byte)]      (t/isa? Byte)]
-                    [2 2 true [(t/isa? Short)]     (t/isa? Short)]
-                    [3 3 true [(t/isa? Character)] (t/isa? Character)]
-                    [4 4 true [(t/isa? Integer)]   (t/isa? Integer)]
-                    [5 5 true [(t/isa? Long)]      (t/isa? Long)]
-                    [6 6 true [(t/isa? Float)]     (t/isa? Float)]
-                    [7 7 true [(t/isa? Double)]    (t/isa? Double)]
-                    [8 8 true [t/any?]             t/any?]]
+                   [[0 0 true [t/boolean?] t/boolean?]
+                    [1 1 true [t/byte?]    t/byte?]
+                    [2 2 true [t/short?]   t/short?]
+                    [3 3 true [t/char?]    t/char?]
+                    [4 4 true [t/int?]     t/int?]
+                    [5 5 true [t/long?]    t/long?]
+                    [6 6 true [t/float?]   t/float?]
+                    [7 7 true [t/double?]  t/double?]
+                    [8 8 true [t/any?]     t/any?]]
 
                    (defmeta ~'identity
                      {:quantum.core.type/type identity|__type}

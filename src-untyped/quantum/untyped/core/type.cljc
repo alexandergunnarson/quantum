@@ -86,7 +86,8 @@
 
 #?(:clj (uvar/defalias def* quantum.untyped.core.type/def))
 
-(declare - create-logical-type meta-or with-expand-meta-ors nil? val? and or val|by-class?)
+(declare - create-logical-type maybe-look-up-type-from-class meta-or with-expand-meta-ors nil? val?
+  and or val|by-class?)
 
 ;; ===== Comparison ===== ;;
 
@@ -850,7 +851,7 @@
       (->> (type>classes t include-subtypes-of-value-type?)
            (uc/mapcat+ class>boxed-subclasses+)
            uc/distinct+
-           (uc/map+ isa?)
+           (uc/map+ maybe-look-up-type-from-class)
            (ur/join #{}))))))
 
 #?(:clj
@@ -934,6 +935,22 @@
                              (isa? js/String)
                              (isa? js/Function)
                              nil?)))
+
+#?(:clj
+(defns maybe-look-up-type-from-class
+  "To save on memory — rather than creating a new `t/isa?` for every primitive class, uses the ones
+   already created in `quantum.untyped.core.type`."
+  [^Class c c/class? > utr/type?]
+  (case (.getName c)
+    "java.lang.Boolean"   boolean?
+    "java.lang.Byte"      byte?
+    "java.lang.Short"     short?
+    "java.lang.Character" char?
+    "java.lang.Integer"   int?
+    "java.lang.Long"      long?
+    "java.lang.Float"     float?
+    "java.lang.Double"    double?
+    (isa? c))))
 
 ;; ===== Booleans ===== ;;
 

@@ -52,7 +52,7 @@
 (defn- ?with-name [form ?name]
   (if ?name
       (if *expand-names?*
-          (list 't/named ?name form)
+          (list 'quantum.untyped.core.type/named ?name form)
           ?name)
       form))
 
@@ -77,9 +77,9 @@
                                            (>form meta) name (>form t) assume? ref? runtime?)))}
    fedn/IOverride nil
    fedn/IEdn      {-edn      ([this] (-> (cond->> (fedn/-edn t)
-                                           assume?  (list 't/assume)
-                                           ref?     (list 't/ref)
-                                           runtime? (list 't/*))
+                                           assume?  (list 'quantum.untyped.core.type/assume)
+                                           ref?     (list 'quantum.untyped.core.type/ref)
+                                           runtime? (list 'quantum.untyped.core.type/*))
                                          (?with-name name)))}})
 
 (defns meta-type? [x _ > boolean?] (instance? MetaType x))
@@ -99,7 +99,7 @@
    ?Equals        {=         ([this that] (or (== this that) (instance? UniversalSetType that)))}
    uform/PGenForm {>form     ([this] 'quantum.untyped.core.type/any?)}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] 't/any?)}})
+   fedn/IEdn      {-edn      ([this] 'quantum.untyped.core.type/any?)}})
 
 (def universal-set (UniversalSetType. nil))
 
@@ -118,7 +118,7 @@
    ?Equals        {=         ([this that] (or (== this that) (instance? EmptySetType that)))}
    uform/PGenForm {>form     ([this] 'quantum.untyped.core.type/none?)}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] 't/none?)}})
+   fedn/IEdn      {-edn      ([this] 'quantum.untyped.core.type/none?)}})
 
 (def empty-set (EmptySetType. nil))
 
@@ -144,7 +144,8 @@
                                (or name (list 'new 'quantum.untyped.core.type.reifications.NotType
                                           hash hash-code (>form meta) name (>form t))))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (-> (list 't/not (fedn/-edn t)) (?with-name name)))}})
+   fedn/IEdn      {-edn      ([this] (-> (list 'quantum.untyped.core.type/not (fedn/-edn t))
+                                         (?with-name name)))}})
 
 (defns not-type? [x _ > boolean?] (instance? NotType x))
 
@@ -181,7 +182,8 @@
                                           hash hash-code (>form meta) name (-> args >vec >form)
                                           `(atom nil))))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (-> (list* 't/or (map fedn/-edn args)) (?with-name name)))}})
+   fedn/IEdn      {-edn      ([this] (-> (list* 'quantum.untyped.core.type/or (map fedn/-edn args))
+                                         (?with-name name)))}})
 
 (defns or-type? [x _ > boolean?] (instance? OrType x))
 
@@ -215,7 +217,8 @@
                                           hash hash-code (>form meta) name (-> args >vec >form)
                                           `(atom nil))))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (-> (list* 't/and (map fedn/-edn args)) (?with-name name)))}})
+   fedn/IEdn      {-edn      ([this] (-> (list* 'quantum.untyped.core.type/and (map fedn/-edn args))
+                                         (?with-name name)))}})
 
 (defns and-type? [x _ > boolean?] (instance? AndType x))
 
@@ -248,7 +251,8 @@
                                           'quantum.untyped.core.type.reifications.ProtocolType
                                           hash hash-code (>form meta) name (-> p :var >symbol))))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (-> (list 't/isa?|protocol (-> p :var >symbol))
+   fedn/IEdn      {-edn      ([this] (-> (list 'quantum.untyped.core.type/isa?|protocol
+                                               (-> p :var >symbol))
                                          (?with-name name)))}})
 
 (defns protocol-type? [x _] (instance? ProtocolType x))
@@ -282,7 +286,8 @@
                                           'quantum.untyped.core.type.reifications.DirectProtocolType
                                           hash hash-code (>form meta) name (-> p :var >symbol))))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (-> (list 't/isa?|protocol|direct (-> p :var >symbol))
+   fedn/IEdn      {-edn      ([this] (-> (list 'quantum.untyped.core.type/isa?|protocol|direct
+                                               (-> p :var >symbol))
                                          (?with-name name)))}}))
 
 #?(:cljs (defns direct-protocol-type? [x _] (instance? DirectProtocolType x)))
@@ -311,7 +316,8 @@
                                (or name (list 'new 'quantum.untyped.core.type.reifications.ClassType
                                           hash hash-code (>form meta) name (>form c))))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (-> (list 't/isa? (fedn/-edn c)) (?with-name name)))}})
+   fedn/IEdn      {-edn      ([this] (-> (list 'quantum.untyped.core.type/isa? (fedn/-edn c))
+                                         (?with-name name)))}})
 
 (defns class-type? [x _] (instance? ClassType x))
 
@@ -361,7 +367,9 @@
                                    (list 'new 'quantum.untyped.core.type.reifications.UnorderedType
                                      hash hash-code (>form meta) name (>form data))))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (-> (list 't/unordered (fedn/-edn data)) (?with-name name)))}})
+   fedn/IEdn      {-edn      ([this]
+                               (-> (list 'quantum.untyped.core.type/unordered (fedn/-edn data))
+                                   (?with-name name)))}})
 
 (defn unordered-type? [x] (instance? UnorderedType x))
 
@@ -392,7 +400,8 @@
                                    (list 'new 'quantum.untyped.core.type.reifications.OrderedType
                                      hash hash-code (>form meta) name (-> data >vec >form))))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (-> (list 't/ordered (fedn/-edn data)) (?with-name name)))}})
+   fedn/IEdn      {-edn      ([this] (-> (list 'quantum.untyped.core.type/ordered (fedn/-edn data))
+                                         (?with-name name)))}})
 
 (defn ordered-type? [x] (instance? OrderedType x))
 
@@ -420,7 +429,8 @@
                                (or name (list 'new 'quantum.untyped.core.type.reifications.ValueType
                                           hash hash-code (>form meta) name (>form v))))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (-> (list 't/value (fedn/-edn v)) (?with-name name)))}})
+   fedn/IEdn      {-edn      ([this] (-> (list 'quantum.untyped.core.type/value (fedn/-edn v))
+                                         (?with-name name)))}})
 
 (defns value-type? [x _] (instance? ValueType x))
 
@@ -450,11 +460,11 @@
                                            (>form arities-form) (>form arities))))}
    fedn/IOverride nil
    fedn/IEdn      {-edn ([this] (if fn-name
-                                    (-> (list* 't/ftype fn-name (fedn/-edn output-type)
-                                                                (fedn/-edn arities-form))
+                                    (-> (list* 'quantum.untyped.core.type/ftype fn-name
+                                               (fedn/-edn output-type) (fedn/-edn arities-form))
                                         (?with-name name))
-                                    (-> (list* 't/ftype (fedn/-edn output-type)
-                                                        (fedn/-edn arities-form))
+                                    (-> (list* 'quantum.untyped.core.type/ftype
+                                               (fedn/-edn output-type) (fedn/-edn arities-form))
                                         (?with-name name))))}})
 
 (defns fn-type? [x _ > boolean?] (instance? FnType x))
@@ -497,7 +507,8 @@
                                    (list 'new 'quantum.untyped.core.type.reifications.MetaOrType
                                      hash hash-code (>form meta) name (>form types))))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (-> (list 't/meta-or types) (?with-name name)))}})
+   fedn/IEdn      {-edn      ([this] (-> (list 'quantum.untyped.core.type/meta-or types)
+                                         (?with-name name)))}})
 
 (defn meta-or-type? [x] (instance? MetaOrType x))
 
@@ -537,7 +548,8 @@
                                (or name (err! "Can't call `>form` on anonymous reactive type"
                                               {:t this})))}
    fedn/IOverride nil
-   fedn/IEdn      {-edn      ([this] (-> (list 't/reactive-type {:value (urx/norx-deref this)})
+   fedn/IEdn      {-edn      ([this] (-> (list 'quantum.untyped.core.type/reactive-type
+                                               {:value (urx/norx-deref this)})
                                          (?with-name name)))}})
 
 (defn rx-type? [x] (instance? ReactiveType x))
