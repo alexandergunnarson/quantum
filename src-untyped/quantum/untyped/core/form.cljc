@@ -11,6 +11,7 @@
 
 (ucore/log-this-ns)
 
+;; TODO this semi-interacts with `print-dup` in the context of macros; unify them
 (defprotocol PGenForm
   (>form [this] "Returns the form associated with the object.
                  If evaluated, the form should evaluate to something exactly equivalent to the

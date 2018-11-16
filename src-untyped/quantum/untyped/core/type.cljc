@@ -1053,7 +1053,10 @@
 
 ;; Used by `quantum.untyped.core.analyze`
 (def* literal?
-  (or nil? boolean? symbol? keyword? string?
+  (or nil? boolean? char? string? symbol? keyword?
+      ;; These primitives are allowed even though macros emit them incorrectly, because they're
+      ;; converted via `>form` during analysis
+      #?(:clj byte?) #?(:clj short?) #?(:clj int?) #?(:clj float?)
       #?(:clj long?) double? #?(:clj (isa? clojure.lang.BigInt)) #?(:clj (isa? BigDecimal))
       regex? #?(:clj tagged-literal?)))
 

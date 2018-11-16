@@ -71,8 +71,12 @@
             nil                         (-edn [x] nil)
    #?(:clj  java.lang.Boolean
       :cljs boolean)                    (-edn [x] x)
-  #?@(:clj [java.lang.Integer           (-edn [x] x)
-            java.lang.Long              (-edn [x] x)])
+  #?@(:clj [java.lang.Byte              (-edn [x] x)
+            java.lang.Short             (-edn [x] x)
+            java.lang.Character         (-edn [x] x)
+            java.lang.Integer           (-edn [x] x)
+            java.lang.Long              (-edn [x] x)
+            java.lang.Float             (-edn [x] x)])
    #?(:clj  java.lang.Double
       :cljs number)                     (-edn [x] x)
    #?(:clj  java.lang.String

@@ -8,6 +8,8 @@
     [quantum.untyped.core.compare           :as comp
       :refer [==]]
     [quantum.untyped.core.core              :as ucore]
+    [quantum.untyped.core.form
+      :refer [>form]]
     [quantum.untyped.core.form.type-hint    :as ufth]
     [quantum.untyped.core.type              :as t]
     [quantum.untyped.core.type.reifications :as utr]))
@@ -79,7 +81,7 @@
 
 (defrecord
   ^{:doc "AST node whose `type` is `(t/value form)`."}
-  Literal [env #_::env, form #_t/literal?, type #_t/type?]
+  Literal [env #_::env, unanalyzed-form #_t/literal?, form #_form?, type #_t/type?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -87,7 +89,9 @@
 
 (defn literal
   ([form t] (literal nil form t))
-  ([env form t] (Literal. env (ufth/with-type-hint form (>type-hint form t)) t)))
+  ([env form t]
+    (let [form' (>form form)]
+      (Literal. env form (ufth/with-type-hint form' (>type-hint form' t)) t))))
 
 (defn literal? [x] (instance? Literal x))
 
