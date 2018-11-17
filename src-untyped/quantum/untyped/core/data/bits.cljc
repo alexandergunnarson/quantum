@@ -32,7 +32,7 @@
 
 (defn conj
   ([] empty)
-  ([v] (conj empty v))
+  ([xs] xs)
   ([xs v] (bit-set xs v))
   ([xs v0 v1] (-> xs (conj v0) (conj v1))))
 

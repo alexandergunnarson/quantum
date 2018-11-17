@@ -26,6 +26,8 @@
               :refer [fn' fn1]]
             [quantum.untyped.core.logic
               :refer [ifs]]
+            [quantum.untyped.core.reducers
+              :refer [educe]]
             [quantum.untyped.core.spec              :as us]
             ;; TODO remove this dependency
             [quantum.untyped.core.type.core         :as utcore]
@@ -224,9 +226,33 @@
 (defns- compare|or+or [^OrType t0 or-type?, ^OrType t1 or-type? > comparison?]
   (compare|or+or-like (.-args t0) (.-args t1) (fn1 < t0) (fn1 < t1) (fn1 <> t1)))
 
+;; TODO this might not actually be right
+;; TODO performance can be improved here
 (defns- compare|or+and [^OrType t0 or-type?, ^AndType t1 and-type? > comparison?]
-  (let [r (->> t1 .-args (seq-and (fn1 < t0)))]
-    (if r >ident <>ident)))
+  (let [t0+t1 (->> t0 .-args (uc/map+ #(compare % t1)) (educe ubit/conj ubit/empty))
+        t1+t0 (->> t1 .-args (uc/map+ #(compare % t0)) (educe ubit/conj ubit/empty))]
+    (ifs (or (and (ubit/contains? t0+t1 >ident)
+                  (not (ubit/contains? t0+t1 <ident))
+                  (not (ubit/contains? t0+t1 ><ident)))
+             (and (ubit/contains? t1+t0 <ident)
+                  (not (ubit/contains? t1+t0 >ident))
+                  (not (ubit/contains? t1+t0 ><ident))))
+           >ident
+         (or (and (ubit/contains? t0+t1 <ident)
+                  (not (ubit/contains? t0+t1 >ident))
+                  (not (ubit/contains? t0+t1 ><ident)))
+             (and (ubit/contains? t1+t0 >ident)
+                  (not (ubit/contains? t1+t0 <ident))
+                  (not (ubit/contains? t1+t0 ><ident))))
+           <ident
+         (and (and (ubit/contains? t0+t1 ><ident)
+                   (not (ubit/contains? t0+t1 <ident))
+                   (not (ubit/contains? t0+t1 >ident)))
+              (and (ubit/contains? t1+t0 ><ident)
+                   (not (ubit/contains? t1+t0 <ident))
+                   (not (ubit/contains? t1+t0 >ident))))
+           ><ident
+         <>ident)))
 
 (def- compare|or+class     (inverted compare|atomic+or))
 (def- compare|or+unordered (inverted compare|atomic+or))

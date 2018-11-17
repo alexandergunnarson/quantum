@@ -546,10 +546,7 @@
         (testing "+ #{<>}"
           ;; comparisons:             <> <>    <>  <>
           (test-comparison <>ident (| a  b) (| ><0 ><1)))))
-    ;; FIXME fix tests/impl in order to proceed
-    ;; - the comparisons need to be assessed
-    ;; - non `i|`s should become `i|`s.
-    ;; - complete comparisons via `comparison-combinations`
+    ;; TODO complete comparisons via `comparison-combinations`
     (testing "+ AndType"
       ;; Comparison annotations achieved by first comparing each element of the first/left to the
       ;; entire second/right, then comparing each element of the second/right to the entire
@@ -610,10 +607,10 @@
       (testing "#{= >< <>}")
       (testing "#{= <>}")
       (testing "#{>}"
-        (testing "+ #{<}"  (t/compare i|>a1 (| i|>a+b i|>a0))
+        (testing "+ #{<}"
           ;; comparisons:            >      >               <      <
           (test-comparison >ident (| i|>a+b i|>a0)       (& i|>a+b i|>a0))
-          ;; comparisons:            >      >     >           <      <     <
+          ;; comparisons:            >      >     >         <      <     <
           (test-comparison >ident (| i|>a+b i|>a0 i|>a1) (& i|>a+b i|>a0 i|>a1)))
       #_(testing "+ #{< =}")         ; impossible for `AndType`
       #_(testing "+ #{< = >}")       ; impossible for `AndType`
@@ -628,8 +625,12 @@
       #_(testing "+ #{< > >< <>}")   ; impossible for `AndType`
       #_(testing "+ #{< > <>}")      ; impossible for `AndType`
         (testing "+ #{<, ><}"
-          ;; comparisons:               >      >               <      <     ><
-          (test-comparison #_<>ident (| i|>a+b i|>a0)       (& i|>a+b i|>a0 i|>a1)))
+          ;; comparisons:            >      >         <      <     ><
+          (test-comparison >ident (| i|>a+b i|>a0) (& i|>a+b i|>a0 i|>a1))
+          ;; comparisons:            >      >         <   ><
+          (test-comparison >ident (| i|>a+b i|>a0) (& i|a i|><0))
+          ;; comparisons:            >      >         <   ><    ><
+          (test-comparison >ident (| i|>a+b i|>a0) (& i|a i|><0 i|><1)))
         (testing "+ #{< >< <>}")
         (testing "+ #{< <>}")
       #_(testing "+ #{=}")         ; impossible for `AndType`
@@ -649,8 +650,8 @@
         (testing "+ #{<>}"))
       (testing "#{> ><}"
         (testing "+ #{<}"
-          ;; comparisons:              >      >     ><        <      <
-          (test-comparison #_>ident (| i|>a+b i|>a0 i|>a1) (& i|>a+b i|>a0)))
+          ;; comparisons:            >      >     ><        <      <
+          (test-comparison >ident (| i|>a+b i|>a0 i|>a1) (& i|>a+b i|>a0)))
       #_(testing "+ #{< =}")         ; impossible for `AndType`
       #_(testing "+ #{< = >}")       ; impossible for `AndType`
       #_(testing "+ #{< = > ><}")    ; impossible for `AndType`
@@ -682,36 +683,96 @@
         (testing "+ #{>< <>}")
         (testing "+ #{<>}"))
       (testing "#{> >< <>}")
-      (testing "#{> <>}")
-      (testing "#{><}")
+      (testing "#{> <>}"
+        (testing "+ #{<}")
+      #_(testing "+ #{< =}")         ; impossible for `AndType`
+      #_(testing "+ #{< = >}")       ; impossible for `AndType`
+      #_(testing "+ #{< = > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{< = > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{< = > <>}")    ; impossible for `AndType`
+      #_(testing "+ #{< = ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< = >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< = <>}")      ; impossible for `AndType`
+      #_(testing "+ #{< >}")         ; impossible for `AndType`
+      #_(testing "+ #{< > ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< > >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< > <>}")      ; impossible for `AndType`
+        (testing "+ #{<, ><}"
+          ;; comparisons:            >      <>         <   ><
+          (test-comparison >ident (| i|>a+b t/nil?) (& i|a i|><1)))
+        (testing "+ #{< >< <>}")
+        (testing "+ #{< <>}")
+      #_(testing "+ #{=}")         ; impossible for `AndType`
+      #_(testing "+ #{= >}")       ; impossible for `AndType`
+      #_(testing "+ #{= > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{= > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{= > <>}")    ; impossible for `AndType`
+        (testing "+ #{= ><}")
+        (testing "+ #{= >< <>}")
+        (testing "+ #{= <>}")
+        (testing "+ #{>}")
+        (testing "+ #{> ><}")
+        (testing "+ #{> >< <>}")
+        (testing "+ #{> <>}")
+        (testing "+ #{><}")
+        (testing "+ #{>< <>}")
+        (testing "+ #{<>}"))
+      (testing "#{><}"
+        (testing "+ #{<}")
+      #_(testing "+ #{< =}")         ; impossible for `AndType`
+      #_(testing "+ #{< = >}")       ; impossible for `AndType`
+      #_(testing "+ #{< = > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{< = > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{< = > <>}")    ; impossible for `AndType`
+      #_(testing "+ #{< = ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< = >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< = <>}")      ; impossible for `AndType`
+      #_(testing "+ #{< >}")         ; impossible for `AndType`
+      #_(testing "+ #{< > ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< > >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< > <>}")      ; impossible for `AndType`
+        (testing "+ #{<, ><}")
+        (testing "+ #{< >< <>}")
+        (testing "+ #{< <>}")
+      #_(testing "+ #{=}")         ; impossible for `AndType`
+      #_(testing "+ #{= >}")       ; impossible for `AndType`
+      #_(testing "+ #{= > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{= > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{= > <>}")    ; impossible for `AndType`
+        (testing "+ #{= ><}")
+        (testing "+ #{= >< <>}")
+        (testing "+ #{= <>}")
+        (testing "+ #{>}")
+        (testing "+ #{> ><}")
+        (testing "+ #{> >< <>}")
+        (testing "+ #{> <>}")
+        (testing "+ #{><}"
+          ;; comparisons:             ><  ><     ><        ><    ><
+          (test-comparison ><ident (| i|a i|>a+b i|>a0) (& i|><0 i|><1)))
+        (testing "+ #{>< <>}")
+        (testing "+ #{<>}"))
       (testing "#{>< <>}")
       (testing "#{<>}")
 
 
-
+      ;; FIXME incorporate the below
+      ;; - the comparisons need to be assessed
+      ;; - non `i|`s should become `i|`s
       (testing "#{<}"
-        (testing "+ #{∅+}"
-          ;; comparisons: ; [3, 3, 3], [3, 3]
-          (test-comparison #_<>ident (| a >a+b >a0)     (& ><0 ><1)))
         (testing "+ #{<+ ∅+}"
           ;; comparisons: ; [-1, 3], [-1, 3, 3]
-          (test-comparison #_<>ident (| a >a+b >a0)    (& >a+b         ><0 ><1))
+          (test-comparison #_<>ident (| i|>a+b i|>a0)       (& i|>a+b             i|><0 i|><1))
           ;; comparisons: ; [-1, 3, 3], [-1, 3, 3]
-          (test-comparison #_<>ident (| a >a+b >a0 >a1) (& >a+b         ><0 ><1))
+          (test-comparison #_<>ident (| i|>a+b i|>a0 i|>a1) (& i|>a+b             i|><0 i|><1))
           ;; comparisons: ; [-1, -1], [-1, -1, 3, 3]
-          (test-comparison #_<>ident (| a >a+b >a0)     (& >a+b >a0     ><0 ><1))
+          (test-comparison #_<>ident (| i|>a+b i|>a0)       (& i|>a+b i|>a0       i|><0 i|><1))
           ;; comparisons: ; [-1, -1, 3], [-1, -1, 3, 3]
-          (test-comparison #_<>ident (| a >a+b >a0 >a1) (& >a+b >a0     ><0 ><1))
+          (test-comparison #_<>ident (| i|>a+b i|>a0 i|>a1) (& i|>a+b i|>a0       i|><0 i|><1))
           ;; comparisons: ; [-1, -1], [-1, -1, 3, 3, 3]
-          (test-comparison #_<>ident (| a >a+b >a0)     (& >a+b >a0 >a1 ><0 ><1))
+          (test-comparison #_<>ident (| i|>a+b i|>a0)       (& i|>a+b i|>a0 i|>a1 i|><0 i|><1))
           ;; comparisons: ; [-1, -1, -], [-1, -1, -1, 3, 3]
-          (test-comparison #_<>ident (| a >a+b >a0 >a1) (& >a+b >a0 >a1 ><0 ><1)))
-        (testing "+ #{= ∅+}"
-          ;; comparisons: ; [3, 3], [-1, 3]
-          (test-comparison #_<>ident (| a >a+b >a0)     (& a ><0))
-          ;; comparisons: ; [3, 3], [-1, 3, 3]
-          (test-comparison #_<>ident (| a >a+b >a0)     (& a ><0 ><1)))
-        (testing "+ #{>+ ∅+}"
+          (test-comparison #_<>ident (| i|>a+b i|>a0 i|>a1) (& i|>a+b i|>a0 i|>a1 i|><0 i|><1)))
+        (testing "+ #{>+ ∅+}" (t/compare i|a (& i|a i|><0 i|><1))
           ;; comparisons: ; [3, 3], [-1, 3, 3]
           (test-comparison #_<>ident (| a >a+b >a0)     (& <a+b         ><0 ><1))
           ;; comparisons: ; [3, 3, 3], [-1, 3, 3]
