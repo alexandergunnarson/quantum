@@ -428,15 +428,15 @@
 #?(:clj ([x long?]
           (if-not (and (c?/<= x (>max-value byte?))
                        (c?/>= x (>min-value byte?)))
-            (throw (ex-info "Form input to `#b` is not in the numeric range of a byte"
-                            {:form x}))
+            (throw (new #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
+                        "Form input to `#b` is not in the numeric range of a byte" {:form x} nil))
             (unchecked-byte x))))
         ([x double?]
           (if-not (and (c?/<= x (>max-value byte?))
                        (c?/>= x (>min-value byte?))
                        (unum/integer-value? x))
-            (throw (ex-info "Form input to `#b` is not in the numeric range of a byte"
-                            {:form x}))
+            (throw (new #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
+                        "Form input to `#b` is not in the numeric range of a byte" {:form x} nil))
             (unchecked-byte x))))
 
 ; c quantum.core.data.primitive/read-char
