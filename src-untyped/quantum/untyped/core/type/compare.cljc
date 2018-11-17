@@ -62,6 +62,8 @@
 
 (declare compare < <= = not= >= > >< <>)
 
+(def inverted (fn [f] (fn [t0 t1] (uset/invert-comparison (f t1 t0)))))
+
 ;; ===== (Comparison) idents ===== ;;
 
 (def- fn<  (fn' <ident))
@@ -101,27 +103,31 @@
       (reduce
         (fn [[ret found] t]
           (let [c (compare t0 t)]
-            (if (c/= c =ident)
+            (if (or (c/= c =ident) (c/= c >ident))
                 (reduced [>ident nil])
                 (let [found' (-> found (ubit/conj c) long)
                       ret'   (ifs (ubit/contains? found' ><ident)
-                                  (if (c/= found' (ubit/conj ><ident <>ident))
-                                      <>ident
-                                      ><ident)
-
+                                    (if (c/= found' (ubit/conj ><ident <>ident)) <>ident ><ident)
                                   (ubit/contains? found' <>ident)
-                                  (ifs (ubit/contains? found' <ident) <>ident
-                                       (ubit/contains? found' >ident) >ident
-                                       c)
-
+                                    (if (ubit/contains? found' <ident) <>ident c)
                                   c)]
                   [ret' found']))))
-        [3 ubit/empty]
+        [<>ident ubit/empty]
         ts))))
+
+(defns- compare|value+type [t0 utr/value-type?, t1 type? > comparison?]
+  (if (t1 (utr/value-type>value t0)) <ident <>ident))
+
+(defns- compare|meta+non-meta [t0 utr/meta-type?, t1 type? > comparison?]
+  (compare (utr/meta-type>inner-type t0) t1))
+
+(defns- compare|non-meta+meta [t0 type?, t1 utr/meta-type? > comparison?]
+  (compare t0 (utr/meta-type>inner-type t1)))
 
 ;; ----- UniversalSet ----- ;;
 
-(def- compare|universal+empty fn>)
+(def- compare|universal+universal fn=)
+(def- compare|universal+empty     fn>)
 
 (defns- compare|universal+not [t0 type?, t1 not-type? > comparison?]
   (let [t1|inner (utr/not-type>inner-type t1)]
@@ -129,24 +135,39 @@
          (= t1|inner empty-set)     =ident
          (compare t0 t1|inner))))
 
-(def- compare|universal+or       fn>)
-(def- compare|universal+and      fn>)
-(def- compare|universal+expr     compare|todo)
-(def- compare|universal+protocol fn>)
-(def- compare|universal+class    fn>)
-(def- compare|universal+value    fn>)
+(def- compare|universal+or        fn>)
+(def- compare|universal+and       fn>)
+(def- compare|universal+expr      compare|todo)
+(def- compare|universal+protocol  fn>)
+(def- compare|universal+class     fn>)
+(def- compare|universal+unordered fn>)
+(def- compare|universal+ordered   fn>)
+(def- compare|universal+value     fn>)
+(def- compare|universal+meta      compare|non-meta+meta)
 
 ;; ----- EmptySet ----- ;;
 
-(def- compare|empty+not      fn<>)
-(def- compare|empty+or       fn<>)
-(def- compare|empty+and      fn<>)
-(def- compare|empty+expr     compare|todo)
-(def- compare|empty+protocol fn<>)
-(def- compare|empty+class    fn<>)
-(def- compare|empty+value    fn<>)
+(def- compare|empty+not       fn<>)
+(def- compare|empty+or        fn<>)
+(def- compare|empty+and       fn<>)
+(def- compare|empty+expr      compare|todo)
+(def- compare|empty+protocol  fn<>)
+(def- compare|empty+class     fn<>)
+(def- compare|empty+unordered fn<>)
+(def- compare|empty+ordered   fn<>)
+(def- compare|empty+value     fn<>)
+(def- compare|empty+meta      compare|non-meta+meta)
 
 ;; ----- NotType ----- ;;
+
+(defns- compare|not+atomic [t0 not-type?, t1 type? > comparison?]
+  (let [t0|inner (utr/not-type>inner-type t0)]
+    (if (= t0|inner empty-set)
+        >ident
+        (case (int (compare t0|inner t1))
+          ( 1 0) <>ident
+          (-1 2) ><ident
+          3      >ident))))
 
 (defns- compare|not+not [t0 not-type?, t1 not-type? > comparison?]
   (let [c (int (compare (utr/not-type>inner-type t0) (utr/not-type>inner-type t1)))]
@@ -157,8 +178,7 @@
       2 ><ident
       3 ><ident)))
 
-(def- compare|not+or compare|atomic+or)
-
+(def- compare|not+or  compare|atomic+or)
 (def- compare|not+and compare|atomic+and)
 
 (defns- compare|not+protocol [t0 not-type?, t1 protocol-type? > comparison?]
@@ -166,13 +186,13 @@
     (if (= t0|inner empty-set) >ident <>ident)))
 
 (defns- compare|not+class [t0 not-type?, t1 class-type? > comparison?]
-  (let [t0|inner (utr/not-type>inner-type t0)]
-    (if (= t0|inner empty-set)
-        >ident
-        (case (int (compare t0|inner t1))
-          ( 1 0) <>ident
-          (-1 2) ><ident
-          3      >ident))))
+  (compare|not+atomic t0 t1))
+
+(defns- compare|not+unordered [t0 not-type?, t1 class-type? > comparison?]
+  (compare|not+atomic t0 t1))
+
+(defns- compare|not+ordered [t0 not-type?, t1 class-type? > comparison?]
+  (compare|not+atomic t0 t1))
 
 (defns- compare|not+value [t0 not-type?, t1 value-type? > comparison?]
   (let [t0|inner (utr/not-type>inner-type t0)]
@@ -182,6 +202,8 @@
         (case (int (compare t0|inner t1))
           (1 0) <>ident
           3     >ident))))
+
+(def- compare|not+meta compare|non-meta+meta)
 
 ;; ----- OrType ----- ;;
 
@@ -206,22 +228,30 @@
   (let [r (->> t1 .-args (seq-and (fn1 < t0)))]
     (if r >ident <>ident)))
 
-(def- compare|class+or compare|atomic+or)
-(def- compare|value+or compare|atomic+or)
+(def- compare|or+class     (inverted compare|atomic+or))
+(def- compare|or+unordered (inverted compare|atomic+or))
+(def- compare|or+ordered   (inverted compare|atomic+or))
+(def- compare|or+value     (inverted compare|value+type))
+(def- compare|or+meta      compare|non-meta+meta)
 
 ;; ----- AndType ----- ;;
 
 (defns- compare|and+and [^AndType t0 and-type?, ^AndType t1 and-type? > comparison?]
   (TODO))
 
-(def- compare|class+and compare|atomic+and)
-(def- compare|value+and compare|atomic+and)
+(def- compare|and+class     (inverted compare|atomic+and))
+(def- compare|and+unordered (inverted compare|atomic+and))
+(def- compare|and+ordered   (inverted compare|atomic+and))
+(def- compare|and+value     (inverted compare|value+type))
+(def- compare|and+meta      compare|non-meta+meta)
 
 ;; ----- Expression ----- ;;
 
 (defns- compare|expr+expr [t0 _, t1 _ > comparison?] (if (c/= t0 t1) =ident <>ident))
 
 (def- compare|expr+value fn><) ; TODO not entirely true
+
+(def- compare|expr+meta compare|non-meta+meta)
 
 ;; ----- ProtocolType ----- ;;
 ;; Protocols cannot extend protocols.
@@ -290,11 +320,10 @@
                  (compare|or+or-via-class (extenders p0) [c1]))
        :cljs (TODO))))
 
-;; TODO transition to `compare|protocol+value` when stable
-(defns- compare|value+protocol [t0 value-type?, t1 protocol-type? > comparison?]
-  (let [v (utr/value-type>value       t0)
-        p (utr/protocol-type>protocol t1)]
-    (if (satisfies? p v) <ident <>ident)))
+(defns- compare|protocol+value [t0 protocol-type?, t1 value-type? > comparison?]
+  (uset/invert-comparison (compare|value+type t1 t0)))
+
+(def- compare|protocol+meta compare|non-meta+meta)
 
 ;; ----- ClassType ----- ;;
 
@@ -382,9 +411,17 @@
         v (utr/value-type>value t1)]
     (if (instance? c v) >ident <>ident)))
 
+(def- compare|class+meta compare|non-meta+meta)
+
 ;; ----- UnorderedType ----- ;;
 
+(def- compare|unordered+value (inverted compare|value+type))
+(def- compare|unordered+meta  compare|non-meta+meta)
+
 ;; ----- OrderedType ----- ;;
+
+(def- compare|ordered+value (inverted compare|value+type))
+(def- compare|ordered+meta  compare|non-meta+meta)
 
 ;; ----- ValueType ----- ;;
 
@@ -407,138 +444,173 @@
       =ident
       <>ident))
 
+(def- compare|value+meta compare|non-meta+meta)
+
 ;; ----- MetaType ----- ;;
 
 (defns- compare|meta+meta [t0 utr/meta-type?, t1 utr/meta-type?]
   (compare (utr/meta-type>inner-type t0) (utr/meta-type>inner-type t1)))
 
-(defns- compare|meta+non-meta [t0 utr/meta-type?, t1 type?]
-  (compare (utr/meta-type>inner-type t0) t1))
-
-(defns- compare|non-meta+meta [t0 type?, t1 utr/meta-type?]
-  (compare t0 (utr/meta-type>inner-type t1)))
-
 ;; ===== Dispatch ===== ;;
 
 (def- compare|dispatch
-  (let [inverted (fn [f] (fn [t0 t1] (uset/invert-comparison (f t1 t0))))]
-    {UniversalSetType
-       {UniversalSetType fn=
-        EmptySetType     compare|universal+empty
-        NotType          compare|universal+not
-        OrType           compare|universal+or
-        AndType          compare|universal+and
-        Expression       compare|universal+expr
-        ProtocolType     compare|universal+protocol
-        ClassType        compare|universal+class
-        ValueType        compare|universal+value
-        MetaType         compare|non-meta+meta}
-     EmptySetType
-       {UniversalSetType (inverted compare|universal+empty)
-        EmptySetType     fn=
-        NotType          compare|empty+not
-        OrType           compare|empty+or
-        AndType          compare|empty+and
-        Expression       compare|empty+expr
-        ProtocolType     compare|empty+protocol
-        ClassType        compare|empty+class
-        ValueType        compare|empty+value
-        MetaType         compare|non-meta+meta}
-     NotType
-       {UniversalSetType (inverted compare|universal+not)
-        EmptySetType     (inverted compare|empty+not)
-        NotType          compare|not+not
-        OrType           compare|not+or
-        AndType          compare|not+and
-        Expression       fn>< ; TODO not entirely true
-        ProtocolType     compare|not+protocol
-        ClassType        compare|not+class
-        ValueType        compare|not+value
-        MetaType         compare|non-meta+meta}
-     OrType
-       {UniversalSetType (inverted compare|universal+or)
-        EmptySetType     (inverted compare|empty+or)
-        NotType          (inverted compare|not+or)
-        OrType           compare|or+or
-        AndType          compare|or+and
-        Expression       fn>< ; TODO not entirely true
-        ProtocolType     compare|todo
-        ClassType        (inverted compare|class+or)
-        ValueType        (inverted compare|value+or)
-        MetaType         compare|non-meta+meta}
-     AndType
-       {UniversalSetType (inverted compare|universal+and)
-        EmptySetType     (inverted compare|empty+and)
-        NotType          compare|todo
-        OrType           (inverted compare|or+and)
-        AndType          compare|and+and
-        Expression       fn>< ; TODO not entirely true
-        ProtocolType     compare|todo
-        ClassType        (inverted compare|class+and)
-        ValueType        (inverted compare|value+and)
-        MetaType         compare|non-meta+meta}
-     ;; TODO review this
-     Expression
-       {UniversalSetType (inverted compare|universal+expr)
-        EmptySetType     (inverted compare|empty+expr)
-        NotType          fn>< ; TODO not entirely true
-        OrType           fn>< ; TODO not entirely true
-        AndType          fn>< ; TODO not entirely true
-        Expression       compare|expr+expr
-        ProtocolType     fn>< ; TODO not entirely true
-        ClassType        fn>< ; TODO not entirely true
-        ValueType        compare|expr+value
-        MetaType         compare|non-meta+meta}
-     ProtocolType
-       {UniversalSetType (inverted compare|universal+protocol)
-        EmptySetType     (inverted compare|empty+protocol)
-        NotType          (inverted compare|not+protocol)
-        OrType           compare|todo
-        AndType          compare|todo
-        Expression       fn>< ; TODO not entirely true
-        ProtocolType     compare|protocol+protocol
-        ClassType        compare|protocol+class
-        ValueType        (inverted compare|value+protocol)
-        MetaType         compare|non-meta+meta}
-     ClassType
-       {UniversalSetType (inverted compare|universal+class)
-        EmptySetType     (inverted compare|empty+class)
-        NotType          (inverted compare|not+class)
-        OrType           compare|class+or
-        AndType          compare|class+and
-        Expression       fn>< ; TODO not entirely true
-        ProtocolType     (inverted compare|protocol+class)
-        ClassType        compare|class+class
-        UnorderedType    compare|class+unordered
-        OrderedType      compare|class+ordered
-        ValueType        compare|class+value
-        MetaType         compare|non-meta+meta}
-     UnorderedType
-       {ClassType        (inverted compare|class+unordered)}
-     OrderedType
-       {ClassType        (inverted compare|class+ordered)}
-     ValueType
-       {UniversalSetType (inverted compare|universal+value)
-        EmptySetType     (inverted compare|empty+value)
-        NotType          (inverted compare|not+value)
-        OrType           compare|value+or
-        AndType          compare|value+and
-        Expression       (inverted compare|expr+value)
-        ProtocolType     compare|value+protocol
-        ClassType        (inverted compare|class+value)
-        ValueType        compare|value+value
-        MetaType         compare|non-meta+meta}
-     MetaType
-       {UniversalSetType compare|meta+non-meta
-        EmptySetType     compare|meta+non-meta
-        NotType          compare|meta+non-meta
-        OrType           compare|meta+non-meta
-        AndType          compare|meta+non-meta
-        Expression       compare|meta+non-meta
-        ProtocolType     compare|meta+non-meta
-        ClassType        compare|meta+non-meta
-        ValueType        compare|meta+non-meta
-        MetaType         compare|meta+meta}}))
+  {UniversalSetType
+     {UniversalSetType compare|universal+universal
+      EmptySetType     compare|universal+empty
+      NotType          compare|universal+not
+      OrType           compare|universal+or
+      AndType          compare|universal+and
+      Expression       compare|universal+expr
+      ProtocolType     compare|universal+protocol
+      ClassType        compare|universal+class
+      UnorderedType    compare|universal+unordered
+      OrderedType      compare|universal+ordered
+      ValueType        compare|universal+value
+      MetaType         compare|universal+meta}
+   EmptySetType
+     {UniversalSetType (inverted compare|universal+empty)
+      EmptySetType     fn=
+      NotType          compare|empty+not
+      OrType           compare|empty+or
+      AndType          compare|empty+and
+      Expression       compare|empty+expr
+      ProtocolType     compare|empty+protocol
+      ClassType        compare|empty+class
+      UnorderedType    compare|empty+unordered
+      OrderedType      compare|empty+ordered
+      ValueType        compare|empty+value
+      MetaType         compare|empty+meta}
+   NotType
+     {UniversalSetType (inverted compare|universal+not)
+      EmptySetType     (inverted compare|empty+not)
+      NotType          compare|not+not
+      OrType           compare|not+or
+      AndType          compare|not+and
+      Expression       fn>< ; TODO not entirely true
+      ProtocolType     compare|not+protocol
+      ClassType        compare|not+class
+      UnorderedType    compare|not+unordered
+      OrderedType      compare|not+ordered
+      ValueType        compare|not+value
+      MetaType         compare|not+meta}
+   OrType
+     {UniversalSetType (inverted compare|universal+or)
+      EmptySetType     (inverted compare|empty+or)
+      NotType          (inverted compare|not+or)
+      OrType           compare|or+or
+      AndType          compare|or+and
+      Expression       fn>< ; TODO not entirely true
+      ProtocolType     compare|todo
+      ClassType        compare|or+class
+      UnorderedType    compare|or+unordered
+      OrderedType      compare|or+ordered
+      ValueType        compare|or+value
+      MetaType         compare|or+meta}
+   AndType
+     {UniversalSetType (inverted compare|universal+and)
+      EmptySetType     (inverted compare|empty+and)
+      NotType          compare|todo
+      OrType           (inverted compare|or+and)
+      AndType          compare|and+and
+      Expression       fn>< ; TODO not entirely true
+      ProtocolType     compare|todo
+      ClassType        compare|and+class
+      UnorderedType    compare|and+unordered
+      OrderedType      compare|and+ordered
+      ValueType        compare|and+value
+      MetaType         compare|and+meta}
+   ;; TODO review this
+   Expression
+     {UniversalSetType (inverted compare|universal+expr)
+      EmptySetType     (inverted compare|empty+expr)
+      NotType          fn>< ; TODO not entirely true
+      OrType           fn>< ; TODO not entirely true
+      AndType          fn>< ; TODO not entirely true
+      Expression       compare|expr+expr
+      ProtocolType     fn>< ; TODO not entirely true
+      ClassType        fn>< ; TODO not entirely true
+      UnorderedType    fn>< ; TODO not entirely true
+      OrderedType      fn>< ; TODO not entirely true
+      ValueType        compare|expr+value
+      MetaType         compare|expr+meta}
+   ProtocolType
+     {UniversalSetType (inverted compare|universal+protocol)
+      EmptySetType     (inverted compare|empty+protocol)
+      NotType          (inverted compare|not+protocol)
+      OrType           compare|todo
+      AndType          compare|todo
+      Expression       fn>< ; TODO not entirely true
+      ProtocolType     compare|protocol+protocol
+      ClassType        compare|protocol+class
+      UnorderedType    compare|todo
+      OrderedType      compare|todo
+      ValueType        compare|protocol+value
+      MetaType         compare|protocol+meta}
+   ClassType
+     {UniversalSetType (inverted compare|universal+class)
+      EmptySetType     (inverted compare|empty+class)
+      NotType          (inverted compare|not+class)
+      OrType           (inverted compare|or+class)
+      AndType          (inverted compare|and+class)
+      Expression       fn>< ; TODO not entirely true
+      ProtocolType     (inverted compare|protocol+class)
+      ClassType        compare|class+class
+      UnorderedType    compare|class+unordered
+      OrderedType      compare|class+ordered
+      ValueType        compare|class+value
+      MetaType         compare|class+meta}
+   UnorderedType
+     {UniversalSetType (inverted compare|universal+unordered)
+      EmptySetType     (inverted compare|empty+unordered)
+      NotType          (inverted compare|not+unordered)
+      OrType           (inverted compare|or+unordered)
+      AndType          (inverted compare|and+unordered)
+      Expression       compare|todo
+      ProtocolType     compare|todo
+      ClassType        (inverted compare|class+unordered)
+      UnorderedType    compare|todo
+      OrderedType      compare|todo
+      ValueType        compare|unordered+value
+      MetaType         compare|unordered+meta}
+   OrderedType
+     {UniversalSetType (inverted compare|universal+ordered)
+      EmptySetType     (inverted compare|empty+ordered)
+      NotType          (inverted compare|not+ordered)
+      OrType           (inverted compare|or+ordered)
+      AndType          (inverted compare|and+ordered)
+      Expression       compare|todo
+      ProtocolType     compare|todo
+      ClassType        (inverted compare|class+ordered)
+      UnorderedType    compare|todo
+      OrderedType      compare|todo
+      ValueType        compare|ordered+value
+      MetaType         compare|ordered+meta}
+   ValueType
+     {UniversalSetType (inverted compare|universal+value)
+      EmptySetType     (inverted compare|empty+value)
+      NotType          (inverted compare|not+value)
+      OrType           (inverted compare|or+value)
+      AndType          (inverted compare|and+value)
+      Expression       (inverted compare|expr+value)
+      ProtocolType     (inverted compare|protocol+value)
+      ClassType        (inverted compare|class+value)
+      UnorderedType    (inverted compare|unordered+value)
+      OrderedType      (inverted compare|ordered+value)
+      ValueType        compare|value+value
+      MetaType         compare|value+meta}
+   MetaType
+     {UniversalSetType (inverted compare|universal+meta)
+      EmptySetType     (inverted compare|empty+meta)
+      NotType          (inverted compare|not+meta)
+      OrType           (inverted compare|or+meta)
+      AndType          (inverted compare|and+meta)
+      Expression       (inverted compare|expr+meta)
+      ProtocolType     (inverted compare|protocol+meta)
+      ClassType        (inverted compare|class+meta)
+      UnorderedType    (inverted compare|unordered+meta)
+      OrderedType      (inverted compare|ordered+meta)
+      ValueType        (inverted compare|value+meta)
+      MetaType         compare|meta+meta}})
 
 ;; ===== Operators ===== ;;
 
