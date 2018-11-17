@@ -297,79 +297,255 @@
       ;; Comparison annotations achieved by first comparing each element of the first/left
       ;; to the entire second/right, then comparing each element of the second/right to the
       ;; entire first/left
-      ;; TODO add complete comparisons via `comparison-combinations`
-      (testing "#{<}, #{<}"
-        ;; comparisons:             < <                        < <
-        (test-comparison  =ident (| a b)                    (| a b))
-        ;; comparisons:                 <      <               <      <
-        (test-comparison  =ident (|     i|>a+b i|>a0)       (| i|>a+b i|>a0)))
-      (testing "#{<}, #{<, ><}"
-        ;; comparisons:                 <      <               <      <     ><    ><
-        (test-comparison  <ident (|     i|>a+b i|>a0)       (| i|>a+b i|>a0 i|><0 i|><1))
-        ;; comparisons:                 <      <               <      <     ><    ><    ><
-        (test-comparison  <ident (|     i|>a+b i|>a0)       (| i|>a+b i|>a0 i|>a1 i|><0 i|><1))
-        ;; comparisons:                 <      <     <         <      <     <     ><    ><
-        (test-comparison  <ident (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0 i|>a1 i|><0 i|><1)))
-      (testing "#{<, ><}, #{<}"
-        ;; comparisons:                 <      <     ><        <      <
-        (test-comparison  >ident (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0))
-        ;; comparisons:             ><  <     <                <     <
-        (test-comparison  >ident (| i|a i|><0 i|><1)        (| i|><0 i|><1)))
-      (testing "#{<, ><}, #{<, ><}"
-        ;; comparisons:                 <      ><              <                  ><
-        (test-comparison ><ident (|     i|>a+b i|>a0)       (| i|>a+b             i|><0))
-        ;; comparisons:                 <      ><    ><        <                  ><    ><
-        (test-comparison ><ident (|     i|>a+b i|>a0 i|>a1) (| i|>a+b             i|><0 i|><1))
-        ;; comparisons:                 <      <     ><        <      <           ><    ><
-        (test-comparison ><ident (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0       i|><0 i|><1))
-        ;; comparisons:             <   <      ><              <                  ><
-        (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|a                i|><0))
-        ;; comparisons:             <   ><     ><              <                  ><    ><
-        (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|a                i|><0 i|><1))
-        ;; comparisons:             ><  <                                         <     ><
-        (test-comparison ><ident (| i|a i|><0)              (|                    i|><0 i|><1))
-        ;; comparisons:             ><        <     ><                                  ><    <
-        (test-comparison ><ident (| i|a       i|><1 i|><2)  (|                    i|><0 i|><1))
-        ;; comparisons:             ><  ><    <                                         <     ><
-        (test-comparison ><ident (| i|a i|><0 i|><1)        (|                          i|><1 i|><2)))
-      (testing "#{<, ><}, #{><}"
-        ;; comparisons:             <   ><                     ><     ><
-        (test-comparison ><ident (| i|a i|><0)              (| i|>a+b i|>a0))
-        ;; comparisons:             <   ><    ><               ><     ><
-        (test-comparison ><ident (| i|a i|><0 i|><1)        (| i|>a+b i|>a0))
-        ;; comparisons:             <   ><                     ><     ><    ><
-        (test-comparison ><ident (| i|a i|><0)              (| i|>a+b i|>a0 i|>a1))
-        ;; comparisons:             <   ><    ><               ><     ><    ><
-        (test-comparison ><ident (| i|a i|><0 i|><1)        (| i|>a+b i|>a0 i|>a1)))
-      (testing "#{<, <>}, #{<, <>}"
-        ;; comparisons:             <  <>                      <      <>
-        (test-comparison ><ident (| a  b)                   (| a      ><1))
-        ;; comparisons:             <> <                       <      <>
-        (test-comparison ><ident (| a  b)                   (| b      ><1)))
-      (testing "#{<, <>}, #{><, <>}"
-        ;; comparisons:             <, <>                      >< <>  <>
-        (test-comparison ><ident (| a  b)                   (| >a ><0 ><1)))
-      (testing "#{><}, #{<, ><}"
-        ;; comparisons:             ><  ><     ><              <                  ><    ><
-        (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|<a+b             i|><0 i|><1))
-        ;; comparisons:             ><  ><     ><    ><        <                  ><    ><
-        (test-comparison ><ident (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b             i|><0 i|><1))
-        ;; comparisons:             ><  ><     ><              <      <           ><    ><
-        (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|<a+b i|<a0       i|><0 i|><1))
-        ;; comparisons:             ><  ><     ><    ><        <      <           ><    ><
-        (test-comparison ><ident (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b i|<a0       i|><0 i|><1))
-        ;; comparisons:             ><  ><     ><              <      <     <     ><    ><
-        (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|<a+b i|<a0 i|<a1 i|><0 i|><1))
-        ;; comparisons:             ><  ><     ><    ><        <      <     <     ><    ><
-        (test-comparison ><ident (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b i|<a0 i|<a1 i|><0 i|><1)))
-      (testing "#{><}, #{><}"
-        ;; comparisons:             ><  ><                                        ><    ><
-        (test-comparison ><ident (| i|a i|><2)              (|                    i|><0 i|><1))
-        ;; comparisons:             ><  ><                                        ><    ><
-        (test-comparison ><ident (| i|a i|><0)              (|                    i|><1 i|><2)))
-      (testing "#{<>}, #{<>}"
-        ;; comparisons:             <> <>                         <>  <>
-        (test-comparison <>ident (| a  b)                   (|    ><0 ><1)))))
+      ;; TODO fill in these comparisons
+      (testing "#{<}"
+        (testing "+ #{<}"
+          ;; comparisons:             < <                    < <
+          (test-comparison  =ident (| a b)                (| a b))
+          ;; comparisons:             <      <               <      <
+          (test-comparison  =ident (| i|>a+b i|>a0)       (| i|>a+b i|>a0)))
+      #_(testing "+ #{< =}")         ; not possible for `OrType`
+      #_(testing "+ #{< = >}")       ; not possible for `OrType`
+      #_(testing "+ #{< = > ><}")    ; not possible for `OrType`
+      #_(testing "+ #{< = > >< <>}") ; not possible for `OrType`
+      #_(testing "+ #{< = > <>}")    ; not possible for `OrType`
+      #_(testing "+ #{< = ><}")      ; not possible for `OrType`
+      #_(testing "+ #{< = >< <>}")   ; not possible for `OrType`
+      #_(testing "+ #{< = <>}")      ; not possible for `OrType`
+        (testing "+ #{< >}")
+        (testing "+ #{< > ><}")
+        (testing "+ #{< > >< <>}")
+        (testing "+ #{< > <>}")
+        (testing "+ #{< ><}"
+          ;; comparisons:                 <      <               <      <     ><    ><
+          (test-comparison  <ident (|     i|>a+b i|>a0)       (| i|>a+b i|>a0 i|><0 i|><1))
+          ;; comparisons:                 <      <               <      <     ><    ><    ><
+          (test-comparison  <ident (|     i|>a+b i|>a0)       (| i|>a+b i|>a0 i|>a1 i|><0 i|><1))
+          ;; comparisons:                 <      <     <         <      <     <     ><    ><
+          (test-comparison  <ident (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0 i|>a1 i|><0 i|><1)))
+        (testing "+ #{< >< <>}")
+        (testing "+ #{< <>}")
+        (testing "+ #{=}")
+      #_(testing "+ #{= >}")       ; not possible for `OrType`
+      #_(testing "+ #{= > ><}")    ; not possible for `OrType`
+      #_(testing "+ #{= > >< <>}") ; not possible for `OrType`
+      #_(testing "+ #{= > <>}")    ; not possible for `OrType`
+        (testing "+ #{= ><}")
+        (testing "+ #{= >< <>}")
+        (testing "+ #{= <>}")
+        (testing "+ #{>}")
+        (testing "+ #{> ><}")
+        (testing "+ #{> >< <>}")
+        (testing "+ #{> <>}")
+        (testing "+ #{><}")
+        (testing "+ #{>< <>}")
+        (testing "+ #{<>}"))
+    #_(testing "#{< =}")         ; not possible for `OrType`
+    #_(testing "#{< = >}")       ; not possible for `OrType`
+    #_(testing "#{< = > ><}")    ; not possible for `OrType`
+    #_(testing "#{< = > >< <>}") ; not possible for `OrType`
+    #_(testing "#{< = > <>}")    ; not possible for `OrType`
+    #_(testing "#{< = ><}"))     ; not possible for `OrType`
+    #_(testing "#{< = >< <>}")   ; not possible for `OrType`
+    #_(testing "#{< = <>}")      ; not possible for `OrType`
+      (testing "#{< >}")
+      (testing "#{< > ><}")
+      (testing "#{< > >< <>}")
+      (testing "#{< > <>}")
+      (testing "#{< ><}"
+        (testing "+ #{<}"
+          ;; comparisons:                 <      <     ><        <      <
+          (test-comparison  >ident (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0))
+          ;; comparisons:             ><  <     <                <     <
+          (test-comparison  >ident (| i|a i|><0 i|><1)        (| i|><0 i|><1)))
+      #_(testing "+ #{< =}")         ; not possible for `OrType`
+      #_(testing "+ #{< = >}")       ; not possible for `OrType`
+      #_(testing "+ #{< = > ><}")    ; not possible for `OrType`
+      #_(testing "+ #{< = > >< <>}") ; not possible for `OrType`
+      #_(testing "+ #{< = > <>}")    ; not possible for `OrType`
+      #_(testing "+ #{< = ><}")      ; not possible for `OrType`
+      #_(testing "+ #{< = >< <>}")   ; not possible for `OrType`
+      #_(testing "+ #{< = <>}")      ; not possible for `OrType`
+        (testing "+ #{< >}")
+        (testing "+ #{< > ><}")
+        (testing "+ #{< > >< <>}")
+        (testing "+ #{< > <>}")
+        (testing "+ #{< ><}"
+          ;; comparisons:                 <      ><              <            ><
+          (test-comparison ><ident (|     i|>a+b i|>a0)       (| i|>a+b       i|><0))
+          ;; comparisons:                 <      ><    ><        <            ><    ><
+          (test-comparison ><ident (|     i|>a+b i|>a0 i|>a1) (| i|>a+b       i|><0 i|><1))
+          ;; comparisons:                 <      <     ><        <      <     ><    ><
+          (test-comparison ><ident (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0 i|><0 i|><1))
+          ;; comparisons:             <   <      ><              <            ><
+          (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|a          i|><0))
+          ;; comparisons:             <   ><     ><              <            ><    ><
+          (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|a          i|><0 i|><1))
+          ;; comparisons:             ><  <                                   <     ><
+          (test-comparison ><ident (| i|a i|><0)              (|              i|><0 i|><1))
+          ;; comparisons:             ><        <     ><                            ><    <
+          (test-comparison ><ident (| i|a       i|><1 i|><2)  (|              i|><0 i|><1))
+          ;; comparisons:             ><  ><    <                                   <     ><
+          (test-comparison ><ident (| i|a i|><0 i|><1)        (|                    i|><1 i|><2)))
+        (testing "+ #{< >< <>}")
+        (testing "+ #{< <>}")
+        (testing "+ #{=}")
+      #_(testing "+ #{= >}")       ; not possible for `OrType`
+      #_(testing "+ #{= > ><}")    ; not possible for `OrType`
+      #_(testing "+ #{= > >< <>}") ; not possible for `OrType`
+      #_(testing "+ #{= > <>}")    ; not possible for `OrType`
+        (testing "+ #{= ><}")
+        (testing "+ #{= >< <>}")
+        (testing "+ #{= <>}")
+        (testing "+ #{>}")
+        (testing "+ #{> ><}")
+        (testing "+ #{> >< <>}")
+        (testing "+ #{> <>}")
+        (testing "+ #{><}"
+          ;; comparisons:             <   ><              ><     ><
+          (test-comparison ><ident (| i|a i|><0)       (| i|>a+b i|>a0))
+          ;; comparisons:             <   ><    ><        ><     ><
+          (test-comparison ><ident (| i|a i|><0 i|><1) (| i|>a+b i|>a0))
+          ;; comparisons:             <   ><              ><     ><    ><
+          (test-comparison ><ident (| i|a i|><0)       (| i|>a+b i|>a0 i|>a1))
+          ;; comparisons:             <   ><    ><        ><     ><    ><
+          (test-comparison ><ident (| i|a i|><0 i|><1) (| i|>a+b i|>a0 i|>a1)))
+        (testing "+ #{>< <>}")
+        (testing "+ #{<>}"))
+      (testing "#{< >< <>}")
+      (testing "#{< <>}"
+        (testing "+ #{<}")
+      #_(testing "+ #{< =}")         ; not possible for `OrType`
+      #_(testing "+ #{< = >}")       ; not possible for `OrType`
+      #_(testing "+ #{< = > ><}")    ; not possible for `OrType`
+      #_(testing "+ #{< = > >< <>}") ; not possible for `OrType`
+      #_(testing "+ #{< = > <>}")    ; not possible for `OrType`
+      #_(testing "+ #{< = ><}")      ; not possible for `OrType`
+      #_(testing "+ #{< = >< <>}")   ; not possible for `OrType`
+      #_(testing "+ #{< = <>}")      ; not possible for `OrType`
+        (testing "+ #{< >}")
+        (testing "+ #{< > ><}")
+        (testing "+ #{< > >< <>}")
+        (testing "+ #{< > <>}")
+        (testing "+ #{< ><}")
+        (testing "+ #{< >< <>}")
+        (testing "+ #{< <>}"
+          ;; comparisons:             <  <>    < <>
+          (test-comparison ><ident (| a  b) (| a ><1))
+          ;; comparisons:             <> <     < <>
+          (test-comparison ><ident (| a  b) (| b ><1)))
+        (testing "+ #{=}")
+      #_(testing "+ #{= >}")       ; not possible for `OrType`
+      #_(testing "+ #{= > ><}")    ; not possible for `OrType`
+      #_(testing "+ #{= > >< <>}") ; not possible for `OrType`
+      #_(testing "+ #{= > <>}")    ; not possible for `OrType`
+        (testing "+ #{= ><}")
+        (testing "+ #{= >< <>}")
+        (testing "+ #{= <>}")
+        (testing "+ #{>}")
+        (testing "+ #{> ><}")
+        (testing "+ #{> >< <>}")
+        (testing "+ #{> <>}")
+        (testing "+ #{><}")
+        (testing "+ #{>< <>}"
+          ;; comparisons:             <, <>    >< <>  <>
+          (test-comparison ><ident (| a  b) (| >a ><0 ><1)))
+        (testing "+ #{<>}"))
+      (testing "#{=}")
+    #_(testing "#{= >}")       ; not possible for `OrType`
+    #_(testing "#{= > ><}")    ; not possible for `OrType`
+    #_(testing "#{= > >< <>}") ; not possible for `OrType`
+    #_(testing "#{= > <>}")    ; not possible for `OrType`
+      (testing "#{= ><}")
+      (testing "#{= >< <>}")
+      (testing "#{= <>}")
+      (testing "#{>}")
+      (testing "#{> ><}")
+      (testing "#{> >< <>}")
+      (testing "#{> <>}")
+      (testing "#{><}"
+        (testing "+ #{<}")
+      #_(testing "+ #{< =}")         ; not possible for `OrType`
+      #_(testing "+ #{< = >}")       ; not possible for `OrType`
+      #_(testing "+ #{< = > ><}")    ; not possible for `OrType`
+      #_(testing "+ #{< = > >< <>}") ; not possible for `OrType`
+      #_(testing "+ #{< = > <>}")    ; not possible for `OrType`
+      #_(testing "+ #{< = ><}")      ; not possible for `OrType`
+      #_(testing "+ #{< = >< <>}")   ; not possible for `OrType`
+      #_(testing "+ #{< = <>}")      ; not possible for `OrType`
+        (testing "+ #{< >}")
+        (testing "+ #{< > ><}")
+        (testing "+ #{< > >< <>}")
+        (testing "+ #{< > <>}")
+        (testing "+ #{<, ><}"
+          ;; comparisons:             ><  ><     ><              <                  ><    ><
+          (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|<a+b             i|><0 i|><1))
+          ;; comparisons:             ><  ><     ><    ><        <                  ><    ><
+          (test-comparison ><ident (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b             i|><0 i|><1))
+          ;; comparisons:             ><  ><     ><              <      <           ><    ><
+          (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|<a+b i|<a0       i|><0 i|><1))
+          ;; comparisons:             ><  ><     ><    ><        <      <           ><    ><
+          (test-comparison ><ident (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b i|<a0       i|><0 i|><1))
+          ;; comparisons:             ><  ><     ><              <      <     <     ><    ><
+          (test-comparison ><ident (| i|a i|>a+b i|>a0)       (| i|<a+b i|<a0 i|<a1 i|><0 i|><1))
+          ;; comparisons:             ><  ><     ><    ><        <      <     <     ><    ><
+          (test-comparison ><ident (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b i|<a0 i|<a1 i|><0 i|><1)))
+        (testing "+ #{< >< <>}")
+        (testing "+ #{< <>}")
+        (testing "+ #{=}")
+      #_(testing "+ #{= >}")       ; not possible for `OrType`
+      #_(testing "+ #{= > ><}")    ; not possible for `OrType`
+      #_(testing "+ #{= > >< <>}") ; not possible for `OrType`
+      #_(testing "+ #{= > <>}")    ; not possible for `OrType`
+        (testing "+ #{= ><}")
+        (testing "+ #{= >< <>}")
+        (testing "+ #{= <>}")
+        (testing "+ #{>}")
+        (testing "+ #{> ><}")
+        (testing "+ #{> >< <>}")
+        (testing "+ #{> <>}")
+        (testing "+ #{><}"
+          ;; comparisons:             ><  ><                                        ><    ><
+          (test-comparison ><ident (| i|a i|><2)              (|                    i|><0 i|><1))
+          ;; comparisons:             ><  ><                                        ><    ><
+          (test-comparison ><ident (| i|a i|><0)              (|                    i|><1 i|><2)))
+        (testing "+ #{>< <>}")
+        (testing "+ #{<>}"))
+      (testing "#{>< <>}")
+      (testing "#{<>}"
+        (testing "+ #{<}")
+      #_(testing "+ #{< =}")         ; not possible for `OrType`
+      #_(testing "+ #{< = >}")       ; not possible for `OrType`
+      #_(testing "+ #{< = > ><}")    ; not possible for `OrType`
+      #_(testing "+ #{< = > >< <>}") ; not possible for `OrType`
+      #_(testing "+ #{< = > <>}")    ; not possible for `OrType`
+      #_(testing "+ #{< = ><}")      ; not possible for `OrType`
+      #_(testing "+ #{< = >< <>}")   ; not possible for `OrType`
+      #_(testing "+ #{< = <>}")      ; not possible for `OrType`
+        (testing "+ #{< >}")
+        (testing "+ #{< > ><}")
+        (testing "+ #{< > >< <>}")
+        (testing "+ #{< > <>}")
+        (testing "+ #{<, ><}")
+        (testing "+ #{< >< <>}")
+        (testing "+ #{< <>}")
+        (testing "+ #{=}")
+      #_(testing "+ #{= >}")       ; not possible for `OrType`
+      #_(testing "+ #{= > ><}")    ; not possible for `OrType`
+      #_(testing "+ #{= > >< <>}") ; not possible for `OrType`
+      #_(testing "+ #{= > <>}")    ; not possible for `OrType`
+        (testing "+ #{= ><}")
+        (testing "+ #{= >< <>}")
+        (testing "+ #{= <>}")
+        (testing "+ #{>}")
+        (testing "+ #{> ><}")
+        (testing "+ #{> >< <>}")
+        (testing "+ #{> <>}")
+        (testing "+ #{><}")
+        (testing "+ #{>< <>}")
+        (testing "+ #{<>}"
+          ;; comparisons:             <> <>                         <>  <>
+          (test-comparison <>ident (| a  b)                   (|    ><0 ><1)))))
     ;; FIXME fix tests/impl in order to proceed
     ;; - non `i|`s should become `i|`s.
     ;; - complete comparisons via `comparison-combinations`
