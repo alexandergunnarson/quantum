@@ -1,14 +1,14 @@
 (ns quantum.untyped.core.collections
   "Operations on collections."
        (:refer-clojure :exclude
-         [#?(:cljs array?) assoc-in cat conj! contains? count distinct distinct? drop first get
-          group-by filter flatten frequencies last map map-indexed mapcat partition-all pmap remove
-          reverse run! take zipmap])
+         [#?(:cljs array?) assoc-in cat conj! contains? count dedupe distinct distinct? drop first
+          get group-by filter flatten frequencies key last map map-indexed mapcat partition-all pmap
+          remove reverse run! take val zipmap])
        (:require
-         [clojure.core                  :as core]
-         [fast-zip.core                 :as zip]
-#?(:cljs [goog.array                    :as garray])
-         [quantum.untyped.core.core     :as ucore
+         [clojure.core                     :as core]
+         [fast-zip.core                    :as zip]
+#?(:cljs [goog.array                       :as garray])
+         [quantum.untyped.core.core        :as ucore
            :refer [sentinel]]
          [quantum.untyped.core.data
            :refer [transient?]]
@@ -16,15 +16,17 @@
            :refer [val?]]
          [quantum.untyped.core.data.array
            :refer [array?]]
-         [quantum.untyped.core.error    :as uerr
+         [quantum.untyped.core.data.map    :as umap]
+         [quantum.untyped.core.data.vector :as uvec]
+         [quantum.untyped.core.error       :as uerr
            :refer [err!]]
-         [quantum.untyped.core.fn       :as ufn
-           :refer [ntha fn' aritoid]]
+         [quantum.untyped.core.fn          :as ufn
+           :refer [<- ntha fn' aritoid]]
          [quantum.untyped.core.logic
            #?(:clj :refer :cljs :refer-macros) [ifs condf1 fn-not]] ; no idea why this is required  currently :/
          [quantum.untyped.core.loops
            :refer [reduce-2]]
-         [quantum.untyped.core.reducers :as ur
+         [quantum.untyped.core.reducers    :as ur
            :refer [defeager def-transducer>eager transducer->transformer educe]]))
 
 (ucore/log-this-ns)
@@ -54,6 +56,18 @@
       (core/first xs)))
 
 (defn reverse [xs] (if (reversible? xs) (rseq xs) (core/reverse xs)))
+
+(defn key [x]
+  #?(:clj  (if (instance? java.util.Map$Entry x)
+               (.getKey ^java.util.Map$Entry x)
+               (first x))
+     :cljs (first x)))
+
+(defn val [x]
+  #?(:clj  (if (instance? java.util.Map$Entry x)
+               (.getValue ^java.util.Map$Entry x)
+               (second x))
+     :cljs (second x)))
 
 ;; ===== SOCIATIVE ===== ;;
 
@@ -265,6 +279,7 @@
 (defeager remove-vals  remove-vals+ 1)
 
 (defn keys+ [xs] (->> xs (map+ key)))
+(defn vals+ [xs] (->> xs (map+ val)))
 
 (defn indexed+ [xs] (map-indexed+ vector xs))
 (defn lindexed [xs] (lmap-indexed vector xs))
@@ -363,14 +378,71 @@
              coll)]
     frequencies-f))
 
-(defn group-by
-  "Like `group-by` but uses `educe` internally"
-  [f xs]
-  (educe (aritoid (fn' (transient {})) persistent!
-           (fn [ret x]
-             (let [k (f x)]
-               (assoc! ret k (conj (get ret k []) x)))))
-         xs))
+(def group-by|rf     (aritoid (fn [] (transient {})) persistent! nil assoc!))
+(def group-by|sub-rf (aritoid vector nil conj))
+
+(def group-by|!rf
+  (aritoid umap/>!hash-map identity nil
+    #?(:clj (fn [^java.util.HashMap ret k v] (doto ret (.put k v))) :cljs assoc!)))
+
+(def group-by|!sub-rf uvec/alist-conj!)
+
+(defn group-by-into
+  "Like `group-by`, but uses `educe` internally, and you can choose what collection and
+   subcollection to group into."
+  ([kf rf        xs] (group-by-into kf rf group-by|sub-rf xs))
+  ([kf rf sub-rf xs]
+    (educe
+      (aritoid rf rf
+        (fn [ret x]
+          (let [k (kf x), v (get ret k sentinel)]
+            (rf ret k (sub-rf (if (identical? v sentinel) (sub-rf) v) x)))))
+      xs)))
+
+(defn group-by [kf xs] (group-by-into kf group-by|rf xs))
+
+(defn group-into
+  ([rf        xs] (group-by-into identity rf group-by|rf xs))
+  ([rf sub-rf xs] (group-by-into identity rf sub-rf      xs)))
+
+(defn group [xs] (group-by-into identity group-by|rf xs))
+
+(defn- group-deep-by-into* [i n kf rf sub-rf xs]
+  (if (>= i n)
+      xs
+      (->> xs
+           (group-by-into (fn [x] (kf i x)) group-by|!rf group-by|!sub-rf)
+           (map-vals+ (fn [sub-xs] (group-deep-by-into* (inc i) n kf rf sub-rf sub-xs)))
+           (educe (aritoid rf rf (fn [ret [k v]] (rf ret k v)))))))
+
+(defn group-deep-by-into
+  "Like `group-by-into` but:
+   - Expects a reducible of reducibles
+   - Performs up to N groupings, defaulting to the max size of the inner reducibles
+   - `kf` takes two inputs: `depth` and `x`.
+
+   E.g. `(group-deep-by (fn [i x] (get x i)) [[1 4] [3 2] [1 2] [3 2 5]])`
+     -> `{1 {2 {nil [[1 2]]}
+             4 {nil [[1 4]]}}
+          3 {2 {nil [[3 2]]
+                5   [[3 2 5]]}}}`"
+  ([          kf rf        xs] (group-deep-by-into kf rf group-by|sub-rf xs))
+  ([          kf rf sub-rf xs]
+    (group-deep-by-into (->> xs (map+ count) (educe max 0)) kf rf sub-rf xs))
+  ([n #_(> 0) kf rf sub-rf xs] (group-deep-by-into* 0 n kf rf sub-rf xs)))
+
+(defn group-deep-by
+  ([  kf xs] (group-deep-by-into   kf group-by|rf group-by|sub-rf xs))
+  ([n kf xs] (group-deep-by-into n kf group-by|rf group-by|sub-rf xs)))
+
+(defn group-deep-into
+  ([  rf        xs] (group-deep-by-into   (fn [i x] x) rf group-by|sub-rf xs))
+  ([  rf sub-rf xs] (group-deep-by-into   (fn [i x] x) rf sub-rf          xs))
+  ([n rf sub-rf xs] (group-deep-by-into n (fn [i x] x) rf sub-rf          xs)))
+
+(defn group-deep
+  ([  xs] (group-deep-by-into   (fn [i x] x) group-by|rf group-by|sub-rf xs))
+  ([n xs] (group-deep-by-into n (fn [i x] x) group-by|rf group-by|sub-rf xs)))
 
 (defn lcat [xs] (apply concat xs))
 
@@ -459,7 +531,7 @@
 (defn >combinatoric-tree
   "See tests for examples.
 
-   Assumes all are sorted and of the same count."
+   Assumes all are sorted, grouped, and of the same count."
   {:todo #{"Generalize to handle uneven input lengths and unsorted combination"}}
   ([n #_pos-int?, xs #_(t/of (t/tuple (t/spec t/any? "identifier") (t/of)))]
     (>combinatoric-tree
@@ -484,6 +556,40 @@
                         (groupf (groupf) [k xs*])
                         x*])))
             xs)))))
+
+(defn aswap!
+  [#?(:clj ^"[Ljava.lang.Object;" !xs :cljs !xs)
+   #?(:clj ^long i :cljs ^number i)
+   #?(:clj ^long j :cljs ^number j)]
+   (let [tmp (aget !xs i)]
+     (doto !xs (aset i (aget !xs j))
+               (aset j tmp))))
+
+(defn shuffle!
+  "Uses the Fisher–Yates shuffle as enhanced by Durstenfeld."
+  [#?(:clj ^"[Ljava.lang.Object;" !xs :cljs !xs)]
+  (let [r #?(:clj (java.util.concurrent.ThreadLocalRandom/current) :cljs nil)]
+    (loop [i (-> !xs alength unchecked-dec)]
+      (if (> i 0)
+          (do (aswap! !xs i (#?@(:clj [.nextInt r] :cljs rand-int) (unchecked-inc i)))
+              (recur (unchecked-dec i)))
+          !xs))))
+
+(defn sort|insertion!
+  {:adapted-from "https://en.wikipedia.org/wiki/Insertion_sort"}
+  ([#?(:clj ^"[Ljava.lang.Object;" !xs :cljs !xs)] (sort|insertion! compare !xs))
+  ([compf #?(:clj ^"[Ljava.lang.Object;" !xs :cljs !xs)]
+    (let [ct (alength !xs)]
+      (loop [i 1]
+        (if (< i ct)
+            (let [x (aget !xs i)]
+              (loop [j (unchecked-dec i)]
+                (if (and (>= j 0) (pos? (int (compf (aget !xs j) x))))
+                    (do (aset !xs (unchecked-inc j) (aget !xs j))
+                        (recur (unchecked-dec j)))
+                    (aset !xs (unchecked-inc j) x)))
+              (recur (unchecked-inc i)))
+            !xs)))))
 
 (defn sort!
   "Like `sort` but coerces `xs` to an array and then sorts it in place, returning the coerced array
