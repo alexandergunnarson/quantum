@@ -1,67 +1,68 @@
 (ns quantum.untyped.core.type.defnt
-  (:refer-clojure :exclude
-    [defn fn])
-  (:require
-    [clojure.core                               :as c]
-    [clojure.string                             :as str]
-    [fipp.ednize                                :as fedn]
-    ;; TODO excise this reference
-    [quantum.core.type.core                     :as tcore]
-    ;; TODO excise this reference
-    [quantum.core.type.defs                     :as tdef]
-    [quantum.untyped.core.analyze               :as uana]
-    [quantum.untyped.core.analyze.ast           :as uast]
-    [quantum.untyped.core.core
-      :refer [istr sentinel]] ; TODO use quantum.untyped.core.string/istr instead
-    [quantum.untyped.core.defnt
-      :refer [defns defns- fns]]
-    [quantum.untyped.core.collections           :as uc
-      :refer [>set >vec]]
-    [quantum.untyped.core.collections.logic
-      :refer [seq-or]]
-    [quantum.untyped.core.compare               :as ucomp
-      :refer [not==]]
-    [quantum.untyped.core.data
-      :refer [kw-map]]
-    [quantum.untyped.core.data.array            :as uarr
-      :refer [*<>]]
-    [quantum.untyped.core.data.map              :as umap]
-    [quantum.untyped.core.data.reactive         :as urx
-      :refer [?norx-deref norx-deref]]
-    [quantum.untyped.core.data.set              :as uset]
-    [quantum.untyped.core.data.vector           :as uvec
-      :refer [alist-conj!]]
-    [quantum.untyped.core.error                 :as uerr
-      :refer [TODO err!]]
-    [quantum.untyped.core.fn
-      :refer [<- aritoid fn1 fn-> with-do with-do-let]]
-    [quantum.untyped.core.form                  :as uform
-      :refer [>form]]
-    [quantum.untyped.core.form.evaluate         :as ufeval]
-    [quantum.untyped.core.form.generate         :as ufgen]
-    [quantum.untyped.core.form.type-hint        :as ufth]
-    [quantum.untyped.core.identifiers           :as uid
-      :refer [>name >?namespace >symbol]]
-    [quantum.untyped.core.log                   :as ulog]
-    [quantum.untyped.core.logic                 :as ul
-      :refer [fn-or fn= if-not-let ifs ifs-let]]
-    [quantum.untyped.core.loops
-      :refer [reduce-2]]
-    [quantum.untyped.core.reducers              :as ur
-      :refer [educe educei reducei]]
-    [quantum.untyped.core.refs                  :as uref
-      :refer [?deref]]
-    [quantum.untyped.core.spec                  :as us]
-    [quantum.untyped.core.specs                 :as uss]
-    [quantum.untyped.core.type                  :as t
-      :refer [?]]
-    [quantum.untyped.core.type.compare          :as utcomp]
-    [quantum.untyped.core.type.reifications     :as utr]
-    [quantum.untyped.core.vars                  :as uvar
-      :refer [update-meta]])
-  (:import
-    [quantum.core Numeric]
-    [quantum.core.data Array]))
+        (:refer-clojure :exclude
+          [defn fn])
+        (:require
+          [clojure.core                               :as c]
+          [clojure.string                             :as str]
+          [fipp.ednize                                :as fedn]
+          ;; TODO excise this reference
+          [quantum.core.type.core                     :as tcore]
+          ;; TODO excise this reference
+          [quantum.core.type.defs                     :as tdef]
+          [quantum.untyped.core.analyze               :as uana]
+          [quantum.untyped.core.analyze.ast           :as uast]
+          [quantum.untyped.core.core
+            :refer [istr sentinel]] ; TODO use quantum.untyped.core.string/istr instead
+          [quantum.untyped.core.defnt
+            :refer [defns defns- fns]]
+          [quantum.untyped.core.collections           :as uc
+            :refer [>set >vec]]
+          [quantum.untyped.core.collections.logic
+            :refer [seq-or]]
+          [quantum.untyped.core.compare               :as ucomp
+            :refer [not==]]
+          [quantum.untyped.core.data
+            :refer [kw-map]]
+          [quantum.untyped.core.data.array            :as uarr
+            :refer [*<>]]
+          [quantum.untyped.core.data.map              :as umap]
+          [quantum.untyped.core.data.reactive         :as urx
+            :refer [?norx-deref norx-deref]]
+          [quantum.untyped.core.data.set              :as uset]
+          [quantum.untyped.core.data.vector           :as uvec
+            :refer [alist-conj!]]
+          [quantum.untyped.core.error                 :as uerr
+            :refer [TODO err!]]
+          [quantum.untyped.core.fn
+            :refer [<- aritoid fn' fn1 fn-> with-do with-do-let]]
+          [quantum.untyped.core.form                  :as uform
+            :refer [>form]]
+          [quantum.untyped.core.form.evaluate         :as ufeval]
+          [quantum.untyped.core.form.generate         :as ufgen]
+          [quantum.untyped.core.form.type-hint        :as ufth]
+          [quantum.untyped.core.identifiers           :as uid
+            :refer [>name >?namespace >symbol]]
+          [quantum.untyped.core.log                   :as ulog]
+          [quantum.untyped.core.logic                 :as ul
+            :refer [fn-or fn= if-not-let ifs ifs-let]]
+          [quantum.untyped.core.loops
+            :refer [reduce-2]]
+          [quantum.untyped.core.reducers              :as ur
+            :refer [educe educei reducei]]
+          [quantum.untyped.core.refs                  :as uref
+            :refer [?deref]]
+          [quantum.untyped.core.spec                  :as us]
+          [quantum.untyped.core.specs                 :as uss]
+          [quantum.untyped.core.type                  :as t
+            :refer [?]]
+          [quantum.untyped.core.type.compare          :as utcomp]
+          [quantum.untyped.core.type.reifications     :as utr]
+          [quantum.untyped.core.vars                  :as uvar
+            :refer [update-meta]])
+#?(:clj (:import
+          [java.util         ArrayList HashMap TreeMap]
+          [quantum.core      Numeric]
+          [quantum.core.data Array])))
 
 ;; TODO move
 #?(:clj
@@ -412,14 +413,7 @@
       (2 3)  (err! "Body type incompatible with declared output type" err-info))))
 
 (c/defn compare-arg-types [t0 #_t/type?, t1 #_t/type? #_> #_ucomp/comparison?]
-  (uset/normalize-comparison (t/compare t0 t1))
-  ;; With `sort-guide`, `t/nil?` < `t/boolean?`, `t/boolean?` < `t/val?`, but `t/nil?` <> `t/val?`
-  ;; so results in a comparator violation
-  #_(if-let [c0 (uana/sort-guide t0)]
-    (if-let [c1 (uana/sort-guide t1)]
-      (ifs (< c0 c1) -1 (> c0 c1) 1 0)
-      (uset/normalize-comparison (t/compare t0 t1)))
-    (uset/normalize-comparison (t/compare t0 t1))))
+  (uset/normalize-comparison (t/compare t0 t1)))
 
 (c/defn compare-args-types [arg-types0 #_(us/vec-of t/type?) arg-types1 #_(us/vec-of t/type?)]
   (let [ct-comparison (compare (count arg-types0) (count arg-types1))]
@@ -432,31 +426,63 @@
           arg-types0 arg-types1)
         ct-comparison)))
 
+(c/defn- >comparator-respecting-arglist-counts [compf #_fn?, i #_index? #_> #_fn?]
+  (c/fn [a b]
+    (let [ct|a          (count a)
+          ct|b          (count b)
+          ct-comparison (compare ct|a ct|b)]
+      (if (zero? ct-comparison)
+          (if (< i ct|a)
+              (compf (get a i) (get b i))
+              0)
+          ct-comparison))))
+
+(defonce thing (atom nil))
+
 (c/defn sort-overload-types
   "A naïve implementation would do an aggregate compare on the arg-types vectors, but the resulting
-   comparator would not be transitive due to the behavior of `<>` and `><`. For example, for the
-   below arg-types vectors, x0 comp< x1, x1 comp< x2, but x0 not comp< x2:
+   comparator would not be transitive due to the behavior of `<>` and `><`, and the arg-types
+   vectors would not be sorted in a 'multilevel' (by first input type, then second, etc.) way. For
+   example, for the below arg-types vectors, x0 comp< x1, x1 comp< x2, but x0 not comp< x2:
    - x0: [t/boolean?                  t/nil?]
    - x1: [(t/ref (t/isa? Comparable)) t/byte?]
    - x2: [t/nil?                      t/val?]
 
    Because of this, we are forced to do as many sorts as the max arity of the typed fn, which
    results in an O(m•n•log(n))) algorithm, where `m` is the max arity and `n` is the number of
-   overloads."
+   overloads.
+
+   The comparator used here is transitive for `t/<` and `t/>` comparisons but not for `t/=`:
+   - x0: t/char? <> t/nil?
+   - x1: t/nil?  <> (t/ref (t/isa? Comparable))
+   - x2: t/char? <  (t/ref (t/isa? Comparable))
+
+   Given this fact, we have to avoid `java.util.TimSort` and use a sorting implementation tolerant
+   to non-transitive comparators."
   [kf overload-types]
-  (let [!overload-types (to-array overload-types)
-        max-arity (->> !overload-types (uc/map+ count) (educe (aritoid (c/fn [] 0) max max)))]
+  (let [max-arity (->> overload-types (uc/map+ kf) (uc/map+ count) (educe max 0))
+        ;; With `sort-guide` and/or hashing also aggregated into the main comparator, a comparator
+        ;; violation occurs:
+        ;; `t/nil?` < `t/boolean?`, `t/boolean?` < `t/val?`, but `t/nil?` <> `t/val?`
+        !overload-types (->> overload-types
+                             (uc/group-deep-by-into max-arity
+                               (c/fn [i x] (let [t (-> x kf (get i))]
+                                             (if-let [c (uana/sort-guide t)]
+                                               ;; Min int value to ensure sort-guide ones always
+                                               ;; come first
+                                               (+ -2147483648 c)
+                                               (hash t))))
+                               (c/fn ([] (umap/>!sorted-map))
+                                     ([ret] (->> ret uc/vals+ uc/cat+ (educe alist-conj!)))
+                            #?(:clj  ([^TreeMap ret k v] (doto ret (.put k v)))
+                               :cljs ([         ret k v] (doto ret (.add k v)))))
+                               alist-conj!)
+                             to-array)]
+    ;; We use insertion sort because it's tolerant to non-transitive comparators, and because
+    ;; the `group-deep` into sorted map will already produce a partially sorted array
     (dotimes [i max-arity]
-      (->> !overload-types
-           (uc/sort-by! kf
-             (c/fn [a b] (let [ct|a          (count a)
-                               ct|b          (count b)
-                               ct-comparison (compare ct|a ct|b)]
-                           (if (zero? ct-comparison)
-                               (if (< i ct|a)
-                                   (compare-arg-types (get a i) (get b i))
-                                   0)
-                               ct-comparison))))))
+      (uc/sort-by|insertion! kf
+        (>comparator-respecting-arglist-counts compare-arg-types i) !overload-types))
     (>vec !overload-types)))
 
 (c/defn- dedupe-type-data
@@ -1231,11 +1257,11 @@
                           (err! "Could not resolve fn name to extend"
                                 {:sym fn|extended-name})))
         fn|ns-name      (if (= kind :extend-defn!)
-                           (-> fn|var >?namespace >symbol)
-                           (>symbol *ns*))
+                            (-> fn|var >?namespace >symbol)
+                            (>symbol *ns*))
         fn|name         (if (= kind :extend-defn!)
-                           (-> fn|extended-name >name symbol)
-                           fn|name)
+                            (-> fn|extended-name >name symbol)
+                            fn|name)
         fn|globals-name (symbol (str fn|name "|__globals"))]
       (if (= kind :extend-defn!)
           {:fn|globals          (-> (uid/qualify fn|ns-name fn|globals-name) resolve var-get)
