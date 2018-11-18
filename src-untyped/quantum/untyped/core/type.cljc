@@ -541,6 +541,21 @@
 
 ;; ===== `t/ftype` ===== ;;
 
+(defn arities>ored-input-types [arities]
+  (->> arities
+       (uc/map-vals'
+         (c/fn [overloads]
+            (->> overloads (uc/lmap :input-types) (apply uc/lmap or))))
+       delay))
+
+(defn arities>ored-output-types [arities]
+  (->> arities
+       vals
+       (apply concat)
+       (uc/lmap :output-type)
+       (apply or)
+       delay))
+
 (defn ftype [& args]
   (let [?fn-name     (when (-> args first c/symbol?)
                        (first args))
@@ -556,19 +571,8 @@
                                      (-> (us/conform ::fn-type|arity arity-form)
                                          (update :output-type #(c/or % output-type universal-set)))))
                           (uc/group-by #(-> % :input-types count)))
-        ored-input-types
-          (->> arities
-               (uc/map-vals'
-                 (c/fn [overloads]
-                    (->> overloads (uc/lmap :input-types) (apply uc/lmap or))))
-               delay)
-        ored-output-type
-          (->> arities
-               vals
-               (apply concat)
-               (uc/lmap :output-type)
-               (apply or)
-               delay)]
+        ored-input-types (arities>ored-input-types  arities)
+        ored-output-type (arities>ored-output-types arities)]
     (FnType. nil nil ?fn-name output-type arities-form arities ored-input-types ored-output-type)))
 
 (us/def ::match-spec

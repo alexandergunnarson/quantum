@@ -1,7 +1,7 @@
 (ns quantum.core.type
   "This is this the namespace upon which all other fully-typed namespaces rest."
   (:refer-clojure :exclude
-    [- < <= = >= > and any? defn fn fn? isa? not or ref seq? symbol? type var?])
+    [- < <= = >= > and any? compare defn fn fn? isa? not or ref seq? symbol? type var?])
   (:require
     [quantum.untyped.core.type.defnt :as udefnt]
     [quantum.untyped.core.type       :as ut]
@@ -36,7 +36,7 @@
   none?
   ref?
   fn?
-  < <= = >= > <> ><)
+  compare compare|in compare|out < <= = >= > <> ><)
 
 
 ;; TODO TYPED move

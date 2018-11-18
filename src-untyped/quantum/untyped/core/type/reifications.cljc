@@ -459,10 +459,15 @@
                    with-meta ([this meta']
                                (FnType. meta' name fn-name output-type arities-form arities
                                         ored-input-types ored-output-type))}
-   uform/PGenForm {>form     ([this] (or name
-                                         (list 'new 'quantum.untyped.core.type.reifications.FnType
-                                           (>form meta) name fn-name (>form output-type)
-                                           (>form arities-form) (>form arities))))}
+   uform/PGenForm {>form
+                    ([this]
+                      (or name
+                          `(let* [arities# ~(>form arities)]
+                            (new quantum.untyped.core.type.reifications.FnType
+                              ~(>form meta) ~name ~fn-name ~(>form output-type)
+                              ~(>form arities-form) arities
+                              (quantum.untyped.core.type/arities>ored-input-types  arities#)
+                              (quantum.untyped.core.type/arities>ored-output-types arities#)))))}
    fedn/IOverride nil
    fedn/IEdn      {-edn ([this] (if fn-name
                                     (-> (list* 'quantum.untyped.core.type/ftype fn-name
