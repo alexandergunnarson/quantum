@@ -91,9 +91,11 @@
   ([xs] (comp-max-of compare xs))
   ([compf xs] (->> xs (reduce (gen-comp-max|rf compf)))))
 
-(defn check-comparator-transitivity
+(defn check-comparator
   "To ensure the comparator maintains its contract and that `IllegalArgumentException Comparison
-   method violates its general contract!` is not thrown."
+   method violates its general contract!` is not thrown.
+
+   Checks symmetry, reflexivity and transitivity."
   {:complexity "O(n^3) time"
    :adapted-from
     "http://code.nomad-labs.com/2015/06/02/finding-the-error-in-your-comparators-compare-method-aka-comparison-method-violates-its-general-contract/"}
@@ -102,22 +104,20 @@
       (throw (ex-info "`xs` must have at least 3 items"))
       (let [^objects xs' (to-array xs) ct (count xs')]
         (doseq [i0 (range 0 ct)]
-          (doseq [i1 (range 1 ct)]
-            (doseq [i2 (range 2 ct)]
-              (when (and (not= i0 i1) (not= i0 i2) (not= i1 i2))
-                (let [x0    (aget xs' i0)
-                      x1    (aget xs' i1)
-                      x2    (aget xs' i2)
-                      x0+x1 (int (compf x0 x1))
-                      x0+x2 (int (compf x0 x2))
-                      x1+x2 (int (compf x1 x2))]
-                  (when (and (< x0+x1 0) (< x1+x2 0) (not (< x0+x2 0)))
-                    (println "x0 comp< x1, x1 comp< x2, but x0 not comp< x2")
-                    (println "x0:" x0)
-                    (println "x1:" x1)
-                    (println "x2:" x2))
-                  (when (and (> x0+x1 0) (> x1+x2 0) (not (> x0+x2 0)))
-                    (println "x0 comp> x1, x1 comp> x2, but x0 not comp< x2")
-                    (println "x0:" x0)
-                    (println "x1:" x1)
-                    (println "x2:" x2))))))))))
+          (doseq [i1 (range 0 ct)]
+            (doseq [i2 (range 0 ct)]
+              (let [x0    (aget xs' i0)
+                    x1    (aget xs' i1)
+                    x2    (aget xs' i2)
+                    x0+x1 (int (compf x0 x1))
+                    x0+x2 (int (compf x0 x2))
+                    x1+x2 (int (compf x1 x2))]
+                (when (and (neg?  x0+x1) (neg?  x1+x2) (not (neg?  x0+x2)))
+                  (throw (ex-info "x0 comp< x1, x1 comp< x2, but x0 not comp< x2"
+                                  {:x0 x0 :x1 x1 :x2 x2})))
+                (when (and (zero? x0+x1) (zero? x1+x2) (not (zero? x0+x2)))
+                  (throw (ex-info "x0 comp= x1, x1 comp= x2, but x0 not comp= x2"
+                                  {:x0 x0 :x1 x1 :x2 x2})))
+                (when (and (pos?  x0+x1) (pos?  x1+x2) (not (pos?  x0+x2)))
+                  (throw (ex-info "x0 comp> x1, x1 comp> x2, but x0 not comp> x2"
+                                  {:x0 x0 :x1 x1 :x2 x2}))))))))))
