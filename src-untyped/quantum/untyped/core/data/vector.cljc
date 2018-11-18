@@ -11,8 +11,15 @@
      :cljs [           xs ^number i v])
   (#?(:clj .set :cljs aset) xs i v))
 
-(defn alist-conj! [#?(:clj ^ArrayList xs :cljs xs) v]
-  (doto xs (#?(:clj .add :cljs .push) v)))
+(defn #?(:clj ^ArrayList alist :cljs alist)
+  ([]  #?(:clj (ArrayList.) :cljs #js []))
+  ([x] #?(:clj (doto (ArrayList.) (.add x)) :cljs #js [x])))
+
+(defn alist-conj!
+  ([] (alist))
+  ([#?(:clj ^ArrayList xs :cljs xs)] xs)
+  ([#?(:clj ^ArrayList xs :cljs xs) v]
+    (doto xs (#?(:clj .add :cljs .push) v))))
 
 (defn #?(:clj alist-count :cljs ^number alist-count) [#?(:clj ^ArrayList xs :cljs xs)]
   (#?(:clj .size :cljs alength) xs))
@@ -33,7 +40,3 @@
                (if (identical? (alist-get x i) (alist-get y i))
                    (recur (inc i))
                    false))))))
-
-(defn #?(:clj ^ArrayList alist :cljs alist)
-  ([]  #?(:clj (ArrayList.) :cljs #js []))
-  ([x] #?(:clj (doto (ArrayList.) (.add x)) :cljs #js [x])))
