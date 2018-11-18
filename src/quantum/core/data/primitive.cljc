@@ -418,37 +418,94 @@
 ;; ===== Readers ===== ;;
 
 (t/defn read-byte
-  "Used for the `#b` literal. Only a literal long, double, or char may be converted to byte, as long
-   as it is in the numeric range of a byte, as with `num/>byte`.
+  "Used for the `#b` literal. Only a literal long, double, or char may be converted to a byte, as
+   long as it is in the numeric range of a byte, as with `num/>byte`.
 
    Using e.g. `#b 1` outside of a typed context results in a runtime call to
    `RT.readString(\"#=(java.lang.Byte. \\\"1\\\")\")` which is undesirable with respect to
    performance."
-#?(:clj ([x char?] (read-byte (unchecked-long x))))
-#?(:clj ([x long?]
-          (if-not (and (c?/<= x (>max-value byte?))
-                       (c?/>= x (>min-value byte?)))
+  ([x (t/or #?(:clj char?) #?(:clj long?) double?)]
+    (if-not (and (c?/>= x -128) (c?/<= x 127) (unum/integer-value? x))
+      (throw (new #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
+                  "Form input to `#b` is not in the numeric range of a byte" {:form x} nil))
+      (#?(:clj Primitive/uncheckedByteCast :cljs unchecked-byte) x))))
+
+(t/defn read-short
+  "Used for the `#s` literal. Only a literal long, double, or char may be converted to a short, as
+   long as it is in the numeric range of a short, as with `num/>short`.
+
+   Using e.g. `#s 1` outside of a typed context results in a runtime call to
+   `RT.readString(\"#=(java.lang.Short. \\\"1\\\")\")` which is undesirable with respect to
+   performance."
+  ([x (t/or #?(:clj char?) #?(:clj long?) double?)]
+    (if-not (and (c?/>= x -32768) (c?/<= x 32767) (unum/integer-value? x))
+      (throw (new #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
+                  "Form input to `#s` is not in the numeric range of a short" {:form x} nil))
+      (#?(:clj Primitive/uncheckedShortCast :cljs unchecked-short) x))))
+
+(t/defn read-char
+  "Used for the `#c` literal. Only a literal long, double, or char may be converted to a char, as
+   long as it is in the numeric range of a char, as with `num/>char`.
+
+   Using e.g. `#c 1` outside of a typed context results in a runtime call to
+   `RT.readString(\"#=(java.lang.Character. \\\"1\\\")\")` which is undesirable with respect to
+   performance."
+#?(:clj ([x char?] x))
+        ([x (t/or #?(:clj long?) double?)]
+          (if-not (and (c?/>= x 0) (c?/<= x 65535) (unum/integer-value? x))
             (throw (new #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
-                        "Form input to `#b` is not in the numeric range of a byte" {:form x} nil))
-            (unchecked-byte x))))
+                        "Form input to `#c` is not in the numeric range of a char" {:form x} nil))
+            (unchecked-char x))))
+
+(t/defn read-int
+  "Used for the `#i` literal. Only a literal long, double, or char may be converted to an int, as
+   long as it is in the numeric range of a int, as with `num/>int`.
+
+   Using e.g. `#i 1` outside of a typed context results in a runtime call to
+   `RT.readString(\"#=(java.lang.Integer. \\\"1\\\")\")` which is undesirable with respect to
+   performance."
+#?(:clj ([x char?] (Primitive/uncheckedIntCast x)))
+        ([x (t/or #?(:clj long?) double?)]
+          (if-not (and (c?/>= x -2147483648) (c?/<= x 2147483647) (unum/integer-value? x))
+            (throw (new #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
+                        "Form input to `#i` is not in the numeric range of a int" {:form x} nil))
+            (unchecked-int x))))
+
+(t/defn read-long
+  "Used for the `#l` literal. Only a literal long, double, or char may be converted to a long, as
+   long as it is in the numeric range of a long, as with `num/>long`."
+#?(:clj ([x char?] (Primitive/uncheckedLongCast x)))
+#?(:clj ([x long?] x))
         ([x double?]
-          (if-not (and (c?/<= x (>max-value byte?))
-                       (c?/>= x (>min-value byte?))
+          (if-not (and (c?/>= x (>min-safe-integer-value double?))
+                       (c?/<= x (>max-safe-integer-value double?))
                        (unum/integer-value? x))
             (throw (new #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
-                        "Form input to `#b` is not in the numeric range of a byte" {:form x} nil))
-            (unchecked-byte x))))
+                        "Form input to `#l` is not in the numeric range of a long" {:form x} nil))
+            (unchecked-long x))))
 
-; c quantum.core.data.primitive/read-char
-; s quantum.core.data.primitive/read-short
-; i quantum.core.data.primitive/read-int
-; l quantum.core.data.primitive/read-long
-; f quantum.core.data.primitive/read-float
-; d quantum.core.data.primitive/read-double
+(t/defn read-float
+  "Used for the `#f` literal. Only a literal long, double, or char may be converted to a float, as
+   long as it is in the numeric range of a float, as with `num/>float`.
 
-(t/and (t/isa? String) (t/unordered (t/value 1)))
--> (t/and (t/isa? String) (t/unordered (t/value 1)))
-(t/or (t/isa? String) (t/unordered (t/value 1)))
--> (t/or (t/isa? String) (t/unordered (t/value 1)))
-(t/or tcomp/seqable-except-array? (t/unordered (t/value 1)))
--> (t/unordered (t/value 1))
+   Using e.g. `#f 1` outside of a typed context results in a runtime call to
+   `RT.readString(\"#=(java.lang.Float. \\\"1\\\")\")` which is undesirable with respect to
+   performance."
+#?(:clj ([x char?] (Primitive/uncheckedFloatCast x)))
+        ([x (t/or #?(:clj long?) double?)]
+          (if-not (and (c?/>= x -3.4028235e+38) (c?/<= x 3.4028235e+38) (unum/integer-value? x))
+            (throw (new #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
+                        "Form input to `#f` is not in the numeric range of a float" {:form x} nil))
+            (unchecked-float x))))
+
+(t/defn read-double
+  "Used for the `#d` literal. Only a literal long, double, or char may be converted to a double, as
+   long as it is in the numeric range of a double, as with `num/>double`."
+#?(:clj ([x char?] (Primitive/uncheckedDoubleCast x)))
+#?(:clj ([x long?]
+          (if-not (and (c?/>= x (>min-safe-integer-value double?))
+                       (c?/<= x (>max-safe-integer-value double?)))
+            (throw (new #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)
+                        "Form input to `#d` is not in the numeric range of a double" {:form x} nil))
+            (unchecked-double x))))
+        ([x double?] x))
