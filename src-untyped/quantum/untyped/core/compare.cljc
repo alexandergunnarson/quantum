@@ -100,7 +100,7 @@
   [compf xs]
   (if (< (int (bounded-count 3 xs)) 3)
       (throw (ex-info "`xs` must have at least 3 items"))
-      (let [^objects xs' (into-array xs) ct (count xs')]
+      (let [^objects xs' (to-array xs) ct (count xs')]
         (doseq [i0 (range 0 ct)]
           (doseq [i1 (range 1 ct)]
             (doseq [i2 (range 2 ct)]
