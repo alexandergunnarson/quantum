@@ -401,7 +401,8 @@
                                                [arg|analyzed|type]
                                                (repeat (- (count args|form)
                                                           (inc (count args|analyzed)))
-                                                       :unanalyzed)))})
+                                                       :unanalyzed)))
+                                (keyword kinds-str) call-sites-for-ct})
                          (-> ret
                              (assoc :call-sites call-sites')
                              (update :args|analyzed conj arg|analyzed)))))
@@ -1073,7 +1074,6 @@
   ([form _] (analyze {} form))
   ([env ::env, form _]
     (uref/set! !!analyze-depth 0)
-    #_(pr! (kw-map env form))
     (analyze* env form)))
 
 ;; ===== Arglist analysis ===== ;;
