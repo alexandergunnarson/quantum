@@ -41,13 +41,13 @@
 
 ;; Incorporated `clojure.core/int?`
 ;; Incorporated `cljs.core/int?`
-(var/def fixint? "The set of all fixed-precision (though not necessarily primitive) integers."
+(t/def fixint? "The set of all fixed-precision (though not necessarily primitive) integers."
   (t/or #?@(:clj [p/byte? p/short?]) p/int? p/long?))
 
-#?(:clj (def java-bigint? (t/isa? java.math.BigInteger)))
-#?(:clj (def clj-bigint?  (t/isa? clojure.lang.BigInt)))
+#?(:clj (t/def java-bigint? (t/isa? java.math.BigInteger)))
+#?(:clj (t/def clj-bigint?  (t/isa? clojure.lang.BigInt)))
 
-(var/def bigint? "The set of all 'big' (arbitrary-precision) integers."
+(t/def bigint? "The set of all 'big' (arbitrary-precision) integers."
   #?(:clj  ;; TODO bring in a better implementation per the ns docstring?
            (t/or clj-bigint? java-bigint?)
            ;; TODO bring in implementation per the ns docstring
@@ -56,7 +56,7 @@
 ;; Incorporated `clojure.lang.Util/isInteger`
 ;; Incorporated `clojure.core/integer?`
 ;; Incorporated `cljs.core/integer?`
-(def integer? (t/or fixint? bigint?))
+(t/def integer? (t/or fixint? bigint?))
 
 ;; ----- Decimals ----- ;;
 
@@ -73,45 +73,45 @@
 
 ;; Incorporated `clojure.core/float?`
 ;; Incorporated `cljs.core/float?`
-(var/def fixdec? "The set of all fixed-precision decimals."
+(t/def fixdec? "The set of all fixed-precision decimals."
   (t/or #?(:clj p/float?) p/double?))
 
 ;; Incorporated `clojure.core/decimal?`
-(var/def bigdec? "The set of all 'big' (arbitrary-precision) decimals."
+(t/def bigdec? "The set of all 'big' (arbitrary-precision) decimals."
   #?(:clj  ;; TODO bring in a better implementation per the ns docstring?
            (t/isa? BigDecimal)
            ;; TODO bring in implementation per the ns docstring
      :cljs t/none?))
 
-(def decimal? (t/or fixdec? bigdec?))
+(t/def decimal? (t/or fixdec? bigdec?))
 
 ;; ----- Precision ----- ;;
 
-(var/def fixnum? "The set of all fixed-precision numbers."
+(t/def fixnum? "The set of all fixed-precision numbers."
   (t/or fixint? fixdec?))
 
-(var/def fixed-numeric?
+(t/def fixed-numeric?
   "The set of all fixed-precision numeric things. Something 'numeric' is something that may be
    treated as a number but may not actually *be* one."
   (t/or fixnum? p/char?))
 
-(var/def bignum? "The set of all 'big' (arbitrary-precision) numbers."
+(t/def bignum? "The set of all 'big' (arbitrary-precision) numbers."
   (t/or fixint? fixdec?))
 
 ;; ----- Ratios ----- ;;
 
-(def ratio? #?(:clj  (t/isa? clojure.lang.Ratio)
-                     ;; TODO bring in implementation per the ns docstring
-               :cljs t/none?))
+(t/def ratio? #?(:clj  (t/isa? clojure.lang.Ratio)
+                       ;; TODO bring in implementation per the ns docstring
+                 :cljs t/none?))
 
 ;; ----- General ----- ;;
 
-(def exact? (t/or integer? ratio?))
+(t/def exact? (t/or integer? ratio?))
 
-(def number? (t/or #?@(:clj  [(t/isa? java.lang.Number)]
-                       :cljs [integer? decimal? ratio?])))
+(t/def number? (t/or #?@(:clj  [(t/isa? java.lang.Number)]
+                         :cljs [integer? decimal? ratio?])))
 
-(var/def numeric?
+(t/def numeric?
   "Something 'numeric' is something that may be treated as a number but may not actually *be* one."
   (t/or number? #?(:clj p/char?)))
 

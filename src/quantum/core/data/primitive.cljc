@@ -184,7 +184,7 @@
           ([x (t/or int?    (t/value int?))    > int?]    (>min-value x))
           ([x (t/or long?   (t/value long?))   > long?]   (>min-value x))
           ;; [2 ^ (<mantissa bits> + 1)] - 1
-          ([x (t/or float?  (t/value float?))  > float?]  (float -16777216.0))])
+          ([x (t/or float?  (t/value float?))  > float?]  (unchecked-float -16777216.0))])
           ([x (t/or double? (t/value double?)) > double?] -9007199254740991.0))
 
 (t/defn ^:inline >max-safe-integer-value
@@ -194,7 +194,7 @@
           ([x (t/or int?    (t/value int?))    > int?]    (>max-value x))
           ([x (t/or long?   (t/value long?))   > long?]   (>max-value x))
           ;; [2 ^ (<mantissa bits> + 1)] - 1
-          ([x (t/or float?  (t/value float?))  > float?]  (float 16777216.0))])
+          ([x (t/or float?  (t/value float?))  > float?]  (unchecked-float 16777216.0))])
           ([x (t/or double? (t/value double?)) > double?] 9007199254740991.0))
 
 ;; ===== Primitive type properties ===== ;;

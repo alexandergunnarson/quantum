@@ -25,7 +25,7 @@
            ;; TODO TYPED excise reference
            [quantum.untyped.core.form
              :refer [#?(:clj core-symbol)]]
-           [quantum.untyped.core.log          :as log])
+           [quantum.untyped.core.log          :as ulog])
 #?(:cljs (:require-macros
            [quantum.core.numeric.operators    :as self
              :refer [+ - *]]))
@@ -34,7 +34,7 @@
            [quantum.core Numeric]
            [java.math BigInteger BigDecimal])))
 
-(log/this-ns)
+(ulog/this-ns)
 
 ;; ===== (Up-to-)binary operators ===== ;;
 
