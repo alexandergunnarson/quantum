@@ -96,7 +96,7 @@
 
 ;; ===== Comparison ===== ;;
 
-(uvar/defaliases utcomp compare < <= = not= >= > >< <>)
+(uvar/defaliases utcomp compare < <= = not= >= > >< <> compare|in compare|out)
 
 ;; ===== Type Reification Constructors ===== ;;
 
@@ -127,7 +127,7 @@
 
 (defns- separate-rx-and-apply
   "Only works for commutative functions."
-  [f c/fn?, type-args (fn-> count (c/> 1)) > utr/type?]
+  [f c/fn?, type-args c/sequential? > utr/type?]
   ;; For efficiency, so as much as possible gets run outside a reaction
   (if-let [rx-args (->> type-args (filter utr/rx-type?) seq)]
     (if-let [norx-args (->> type-args (remove utr/rx-type?) seq)]
@@ -478,13 +478,13 @@
                     (educe
                       (c/fn ([accum] accum)
                             ([accum [t* c*]]
-                              #_(prl! kind conj-s? prefer-orig-args? t' types t* c*)
                               (case kind
                                 :or  (create-logical-type|inner|or  accum t* c*)
                                 :and (create-logical-type|inner|and accum t* c*))))
-                      {:conj-t?            ;; If `t` is a `NotType`, and kind is `:and`, then it will be
-                                           ;; applied by being `-` from all args, not by being `conj`ed
-                                           (c/not (c/and (c/= kind :and) (utr/not-type? t)))
+                      {:conj-t?           ;; If `t` is a `NotType`, and kind is `:and`, then it will
+                                          ;; be applied by being `-` from all args, not by being
+                                          ;; `conj`ed
+                                          (c/not (c/and (c/= kind :and) (utr/not-type? t)))
                        :prefer-orig-args? false
                        :t'                t
                        :types             []}))]
@@ -555,40 +555,21 @@
                           (uc/map+ (c/fn [arity-form]
                                      (-> (us/conform ::fn-type|arity arity-form)
                                          (update :output-type #(c/or % output-type universal-set)))))
-                          (uc/group-by #(-> % :input-types count)))]
-    (FnType. nil nil ?fn-name output-type arities-form arities)))
-
-(defns compare|in [x0 utr/fn-type?, x1 utr/fn-type? > uset/comparison?]
-  (let [ct->overloads|x0 (utr/fn-type>arities x0)
-        ct->overloads|x1 (utr/fn-type>arities x1)
-        cts-only-in-x0 (uset/- (-> ct->overloads|x0 keys set) (-> ct->overloads|x1 keys set))
-        cts-only-in-x1 (uset/- (-> ct->overloads|x1 keys set) (-> ct->overloads|x0 keys set))
-        comparison|cts (uset/compare cts-only-in-x0 cts-only-in-x1)
-        cts-in-both (->> ct->overloads|x0 (filter (fn-> first ct->overloads|x1)))
-        overloads->ored-input-types
-          ;; Yes, there must be a more performant way to do this
-          (c/fn [overloads] (->> overloads (uc/lmap :input-types) (apply uc/lmap or)))]
-    (utcomp/combine-comparisons
-      comparison|cts
-      (->> cts-in-both
-           (map (c/fn [[ct overloads|x0]]
-                  (if (zero? ct)
-                      0
-                      (utcomp/combine-comparisons
-                        (uc/lmap utcomp/compare
-                          (->> overloads|x0        overloads->ored-input-types)
-                          (->> ct ct->overloads|x1 overloads->ored-input-types))))))
-           utcomp/combine-comparisons))))
-
-(defns fn-type>output-type [x utr/fn-type? > type?]
-  (->> x utr/fn-type>arities
-         vals
-         (apply concat)
-         (uc/lmap :output-type)
-         (apply or)))
-
-(defns compare|out [x0 utr/fn-type?, x1 utr/fn-type? > uset/comparison?]
-  (utcomp/compare (fn-type>output-type x0) (fn-type>output-type x1)))
+                          (uc/group-by #(-> % :input-types count)))
+        ored-input-types
+          (->> arities
+               (uc/map-vals'
+                 (c/fn [overloads]
+                    (->> overloads (uc/lmap :input-types) (apply uc/lmap or))))
+               delay)
+        ored-output-type
+          (->> arities
+               vals
+               (apply concat)
+               (uc/lmap :output-type)
+               (apply or)
+               delay)]
+    (FnType. nil nil ?fn-name output-type arities-form arities ored-input-types ored-output-type)))
 
 (us/def ::match-spec
   (us/seq-of (us/or* #{:_ :?} type?
@@ -738,12 +719,12 @@
          meta-or)))
 
 (defns- meta-or|norx
-  > utr/type?
-  [types (us/seq-of utr/type?)]
+  [types (us/seq-of utr/type?) > utr/type?]
   (let [types' (->> types uc/distinct (sort-by identity utcomp/compare) (uc/dedupe-by utcomp/=))]
-    (ifs (empty? types')           empty-set
-         (-> types' count (c/= 1)) (first types')
-         (MetaOrType. uhash/default uhash/default nil nil types'))))
+    (case (bounded-count 2 types')
+      0 empty-set
+      1 (first types')
+      (MetaOrType. uhash/default uhash/default nil nil types'))))
 
 (defns meta-or
   "Essentially a combinatorial combinator:
@@ -757,8 +738,7 @@
    - Dedupes inputs that are either structurally `=` or `t/=`.
    - Does not currently handle nested `meta-or`s."
    > utr/type?
-   [types (us/seq-of utr/type?)]
-   (separate-rx-and-apply meta-or|norx types))
+   [types (us/seq-of utr/type?)] (separate-rx-and-apply meta-or|norx types))
 
 ;; TODO figure out the best place to put this
 #?(:clj

@@ -142,6 +142,7 @@
 (def- compare|universal+expr      compare|todo)
 (def- compare|universal+protocol  fn>)
 (def- compare|universal+class     fn>)
+(def- compare|universal+fn        fn>)
 (def- compare|universal+unordered fn>)
 (def- compare|universal+ordered   fn>)
 (def- compare|universal+value     fn>)
@@ -155,6 +156,7 @@
 (def- compare|empty+expr      compare|todo)
 (def- compare|empty+protocol  fn<>)
 (def- compare|empty+class     fn<>)
+(def- compare|empty+fn        fn<>)
 (def- compare|empty+unordered fn<>)
 (def- compare|empty+ordered   fn<>)
 (def- compare|empty+value     fn<>)
@@ -209,6 +211,9 @@
 
 ;; ----- OrType ----- ;;
 
+;; TODO performance can be improved here by doing fewer comparisons
+;; Possibly look at `quantum.untyped.core.type.defnt/compare-args-types` for reference?
+;; Expected to handle possibly non-distinct types within `ts0` and `ts1`
 (defns- compare|or+or-like
   [ts0 _, ts1 _, <ts0 fn?, <ts1 fn?, <>ts1 fn? > comparison?]
   (let [l (->> ts0 (seq-and <ts1))
@@ -221,8 +226,6 @@
                 <>ident
                 ><ident)))))
 
-;; TODO performance can be improved here by doing fewer comparisons
-;; Possibly look at `quantum.untyped.core.type.defnt/compare-args-types` for reference?
 (defns- compare|or+or [^OrType t0 or-type?, ^OrType t1 or-type? > comparison?]
   (compare|or+or-like (.-args t0) (.-args t1) (fn1 < t0) (fn1 < t1) (fn1 <> t1)))
 
@@ -406,7 +409,8 @@
      #?(:clj (ClassType. uhash/default uhash/default nil nil java.util.Map))]
     (atom nil)))
 
-(defns- compare|class+finite [t0 class-type?, t1 utr/ordered-type? > comparison?]
+(defns- compare|class+finite
+  [t0 class-type?, t1 _ #_(t/or unordered-type? ordered-type?) > comparison?]
   ;; TODO technically we need to have it satisfy `dc/reducible?`, not merely `c/seqable?`
   ;; — see also note in UnorderedType's implementation about this
   (case  (int (compare t0 seqable-except-array?))
@@ -438,6 +442,33 @@
     (if (instance? c v) >ident <>ident)))
 
 (def- compare|class+meta compare|non-meta+meta)
+
+;; ----- FnType ----- ;;
+
+(defns compare|in [t0 utr/fn-type?, t1 utr/fn-type? > uset/comparison?]
+  (let [ct->overloads|t0 (utr/fn-type>arities t0)
+        ct->overloads|t1 (utr/fn-type>arities t1)
+        cts-only-in-t0   (uset/- (-> ct->overloads|t0 keys set) (-> ct->overloads|t1 keys set))
+        cts-only-in-t1   (uset/- (-> ct->overloads|t1 keys set) (-> ct->overloads|t0 keys set))
+        comparison|cts   (uset/compare cts-only-in-t0 cts-only-in-t1)
+        cts-in-both      (->> ct->overloads|t0 keys (filter ct->overloads|t1))]
+    (combine-comparisons
+      comparison|cts
+      (->> cts-in-both
+           (map (c/fn [ct]
+                  (if (zero? ct)
+                      0
+                      (combine-comparisons
+                        (uc/lmap compare
+                          (-> t0 utr/fn-type>ored-input-types (get ct))
+                          (-> t1 utr/fn-type>ored-input-types (get ct)))))))
+           combine-comparisons))))
+
+(defns compare|out [t0 utr/fn-type?, t1 utr/fn-type? > uset/comparison?]
+  (compare (utr/fn-type>ored-output-type t0) (utr/fn-type>ored-output-type t1)))
+
+(defns- compare|fn+fn [t0 utr/fn-type?, t1 utr/fn-type? > comparison?]
+  (combine-comparisons (compare|in t0 t1) (compare|out t0 t1)))
 
 ;; ----- UnorderedType ----- ;;
 
@@ -489,6 +520,7 @@
       Expression       compare|universal+expr
       ProtocolType     compare|universal+protocol
       ClassType        compare|universal+class
+      FnType           compare|universal+fn
       UnorderedType    compare|universal+unordered
       OrderedType      compare|universal+ordered
       ValueType        compare|universal+value
@@ -502,6 +534,7 @@
       Expression       compare|empty+expr
       ProtocolType     compare|empty+protocol
       ClassType        compare|empty+class
+      FnType           compare|empty+fn
       UnorderedType    compare|empty+unordered
       OrderedType      compare|empty+ordered
       ValueType        compare|empty+value
@@ -515,6 +548,7 @@
       Expression       fn>< ; TODO not entirely true
       ProtocolType     compare|not+protocol
       ClassType        compare|not+class
+      FnType           compare|todo
       UnorderedType    compare|not+unordered
       OrderedType      compare|not+ordered
       ValueType        compare|not+value
@@ -528,6 +562,7 @@
       Expression       fn>< ; TODO not entirely true
       ProtocolType     compare|todo
       ClassType        compare|or+class
+      FnType           compare|todo
       UnorderedType    compare|or+unordered
       OrderedType      compare|or+ordered
       ValueType        compare|or+value
@@ -541,6 +576,7 @@
       Expression       fn>< ; TODO not entirely true
       ProtocolType     compare|todo
       ClassType        compare|and+class
+      FnType           compare|todo
       UnorderedType    compare|and+unordered
       OrderedType      compare|and+ordered
       ValueType        compare|and+value
@@ -555,6 +591,7 @@
       Expression       compare|expr+expr
       ProtocolType     fn>< ; TODO not entirely true
       ClassType        fn>< ; TODO not entirely true
+      FnType           compare|todo
       UnorderedType    fn>< ; TODO not entirely true
       OrderedType      fn>< ; TODO not entirely true
       ValueType        compare|expr+value
@@ -568,6 +605,7 @@
       Expression       fn>< ; TODO not entirely true
       ProtocolType     compare|protocol+protocol
       ClassType        compare|protocol+class
+      FnType           compare|todo
       UnorderedType    compare|todo
       OrderedType      compare|todo
       ValueType        compare|protocol+value
@@ -581,10 +619,25 @@
       Expression       fn>< ; TODO not entirely true
       ProtocolType     (inverted compare|protocol+class)
       ClassType        compare|class+class
+      FnType           compare|todo
       UnorderedType    compare|class+unordered
       OrderedType      compare|class+ordered
       ValueType        compare|class+value
       MetaType         compare|class+meta}
+   FnType
+     {UniversalSetType (inverted compare|universal+fn)
+      EmptySetType     (inverted compare|empty+fn)
+      NotType          compare|todo
+      OrType           compare|todo
+      AndType          compare|todo
+      Expression       compare|todo
+      ProtocolType     compare|todo
+      ClassType        compare|todo
+      FnType           compare|fn+fn
+      UnorderedType    compare|todo
+      OrderedType      compare|todo
+      ValueType        compare|todo
+      MetaType         compare|todo}
    UnorderedType
      {UniversalSetType (inverted compare|universal+unordered)
       EmptySetType     (inverted compare|empty+unordered)
@@ -594,6 +647,7 @@
       Expression       compare|todo
       ProtocolType     compare|todo
       ClassType        (inverted compare|class+unordered)
+      FnType           compare|todo
       UnorderedType    compare|todo
       OrderedType      compare|todo
       ValueType        compare|unordered+value
@@ -607,6 +661,7 @@
       Expression       compare|todo
       ProtocolType     compare|todo
       ClassType        (inverted compare|class+ordered)
+      FnType           compare|todo
       UnorderedType    compare|todo
       OrderedType      compare|todo
       ValueType        compare|ordered+value
@@ -620,6 +675,7 @@
       Expression       (inverted compare|expr+value)
       ProtocolType     (inverted compare|protocol+value)
       ClassType        (inverted compare|class+value)
+      FnType           compare|todo
       UnorderedType    (inverted compare|unordered+value)
       OrderedType      (inverted compare|ordered+value)
       ValueType        compare|value+value
@@ -633,6 +689,7 @@
       Expression       (inverted compare|expr+meta)
       ProtocolType     (inverted compare|protocol+meta)
       ClassType        (inverted compare|class+meta)
+      FnType           compare|todo
       UnorderedType    (inverted compare|unordered+meta)
       OrderedType      (inverted compare|ordered+meta)
       ValueType        (inverted compare|value+meta)

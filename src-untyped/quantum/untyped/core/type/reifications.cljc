@@ -447,14 +447,18 @@
    output-type  #_t/type?
    arities-form
    arities      #_(s/map-of nneg-int? (s/seq-of (s/kv {:input-types (s/vec-of type?)
-                                                       :output-type type?})))]
+                                                       :output-type type?})))
+   ored-input-types #_(s/delay-of (s/map-of nneg-int? (s/seq-of type?)))
+   ored-output-type #_(s/delay-of type?)]
   {PType          {with-name ([this name']
-                               (FnType. meta name' fn-name output-type arities-form arities))}
+                               (FnType. meta name' fn-name output-type arities-form arities
+                                        ored-input-types ored-output-type))}
    ;; Outputs whether the args match any input spec
    ?Fn            {invoke    ([this args] (TODO))}
    ?Meta          {meta      ([this] meta)
                    with-meta ([this meta']
-                               (FnType. meta' name fn-name output-type arities-form arities))}
+                               (FnType. meta' name fn-name output-type arities-form arities
+                                        ored-input-types ored-output-type))}
    uform/PGenForm {>form     ([this] (or name
                                          (list 'new 'quantum.untyped.core.type.reifications.FnType
                                            (>form meta) name fn-name (>form output-type)
@@ -470,11 +474,11 @@
 
 (defns fn-type? [x _ > boolean?] (instance? FnType x))
 
-(defns fn-type>fn-name [^FnType x fn-type?] (.-fn-name x))
-
-(defns fn-type>arities [^FnType x fn-type?] (.-arities x))
-
-(defns fn-type>output-type [^FnType x fn-type?] (.-output-type x))
+(defns fn-type>fn-name          [^FnType x fn-type?] (.-fn-name x))
+(defns fn-type>arities          [^FnType x fn-type?] (.-arities x))
+(defns fn-type>output-type      [^FnType x fn-type?] (.-output-type x))
+(defns fn-type>ored-input-types [^FnType x fn-type?] (force (.-ored-input-types x)))
+(defns fn-type>ored-output-type [^FnType x fn-type?] (force (.-ored-output-type x)))
 
 (us/def :quantum.untyped.core.type/fn-type|arity
   (us/and
