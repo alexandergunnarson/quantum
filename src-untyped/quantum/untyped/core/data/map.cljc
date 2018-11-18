@@ -30,12 +30,131 @@
 
 ;; ----- Hash maps ----- ;;
 
+;; TODO TYPED — use `deftypet` and also typed internals
+#?(:cljs
+(deftype MutableHashMap ; There can be no `undefined` values
+  [meta ^:mutable ct ^js/Map m #_"Keys are int hashes; vals are map entries from k to v"
+   ^:mutable ^boolean has-nil? ^:mutable nil-val ^:mutable __hash]
+  Object
+    (toString [this] (str (into {} (es6-iterator-seq (.values m)))))
+    (equiv    [this other] (-equiv this other))
+    (keys     [this] (es6-iterator (cljs.core/keys this)))
+    (entries  [this] (es6-entries-iterator (seq this)))
+    (values   [this] (es6-iterator (vals this)))
+    (has      [this k] (contains? this k))
+    (get      [this k not-found] (-lookup this k not-found))
+    (forEach  [this f] (doseq [[k v] this] (f v k)))
+  ICloneable
+    (-clone [_] (MutableHashMap. meta ct m has-nil? nil-val __hash))
+  IIterable
+    (-iterator [this] (-iterator (vals this)))
+  IWithMeta
+    (-with-meta [this meta-] (MutableHashMap. meta- ct m has-nil? nil-val __hash))
+  IMeta
+    (-meta [this] meta)
+  IEmptyableCollection
+    (-empty [this] (MutableHashMap. meta 0 (js/Map.) false nil 0))
+  IEquiv
+    (-equiv [this that] (equiv-map this that))
+  IHash
+    (-hash [this] (caching-hash this hash-unordered-coll __hash))
+  ISeqable
+    (-seq [this]
+      (when (pos? ct)
+        (let [s (es6-iterator-seq (.values m))]
+          (if has-nil?
+              (cons (>map-entry nil nil-val) s)
+              s))))
+  ICounted
+    (-count [this] ct)
+  ILookup
+    (-lookup [this k] (-lookup this k nil))
+    (-lookup [this k not-found]
+      (if (nil? k)
+          (if has-nil? nil-val not-found)
+          (let [kv (.get m (hash k))]
+            (if (undefined? kv) not-found (-val kv)))))
+  IAssociative
+    (-contains-key? [this k]
+      (if (nil? k)
+          has-nil?
+          (.has m (hash k))))
+  IFind
+    (-find [this k]
+      (if (nil? k)
+          (when has-nil? (>map-entry nil nil-val))
+          (let [kv (.get m (hash k))]
+            (if (undefined? kv) nil kv))))
+  ITransientCollection
+    (-conj! [this entry]
+      (if (vector? entry)
+          (-assoc! this (-nth entry 0) (-nth entry 1))
+           (loop [ret this es (seq entry)]
+             (if (nil? es)
+                 ret
+                 (let [e (first es)]
+                   (if (vector? e)
+                       (recur (-assoc! ret (-nth e 0) (-nth e 1))
+                              (next es))
+                       (throw (ex-info "conj on a map takes map entries or seqables of map    entries" {}))))))))
+  ITransientAssociative
+    (-assoc! [this k v]
+      (cond
+        (undefined? v)
+          (throw (ex-info "Cannot `assoc` undefined value to `MutableHashMap`" {}))
+        (nil? k)
+          (if (and has-nil? (identical? v nil-val))
+              this
+              (do (when-not has-nil? (set! ct (inc ct)))
+                  (set! has-nil? true)
+                  (set! nil-val v)
+                  (set! __hash nil) ; TODO recalculate incrementally?
+                  this))
+        :else
+          (let [hash-k (hash k)]
+            (if (.has m hash-k)
+                this
+                (do (.set m (hash k) (map-entry k v))
+                    (set! ct (inc ct))
+                    (set! __hash nil) ; TODO recalculate incrementally?
+                    this)))))
+  ITransientMap
+    (-dissoc! [this k]
+      (if (nil? k)
+          (if has-nil?
+              (do (set! ct (dec ct))
+                  (set! has-nil? false)
+                  (set! nil-val nil)
+                  (set! __hash nil) ; TODO recalculate incrementally?
+                  this)
+              this)
+          (if (.delete m (hash k))
+              (do (set! ct (dec ct))
+                  (set! __hash nil) ; TODO recalculate incrementally?
+                  this)
+              this)))
+  IKVReduce
+    (-kv-reduce [this f init]
+      (let [init (if has-nil? (f init nil nil-val) init)]
+        (if (reduced? init)
+            @init
+            (unreduced (reduce (fn [ret kv] (f ret (-key kv) (-val kv))) init m)))))
+  IFn
+    (-invoke [this k]           (-lookup this k))
+    (-invoke [this k not-found] (-lookup this k not-found))))
+
 #?(:clj (def hash-map? (partial instance? clojure.lang.PersistentHashMap)))
 
         (defalias hash-map core/hash-map)
 
 #?(:clj (defalias hash-map|long->ref imap/int-map))
 #?(:clj (defalias int-map hash-map|long->ref))
+
+(defn >!hash-map
+  "Creates a single-threaded, mutable hash map.
+   On the JVM, this is a `java.util.HashMap`.
+   On JS, this is a `quantum.untyped.core.data.map.HashMap`."
+  ([] #?(:clj (HashMap.) :cljs (MutableHashMap. nil 0 (js/Map.) false nil nil))))
 
 ;; ===== Ordered value-semantic maps ===== ;;
 
@@ -67,6 +186,14 @@
 (defalias avl/subrange)
 (defalias avl/split-key)
 (defalias avl/split-at)
+
+(defn >!sorted-map-by
+  "Creates a single-threaded, mutable sorted map with the specified comparator.
+   On the JVM, this is a `java.util.TreeMap`.
+   On JS, this is a `goog.structs.AvlTree`."
+  ([compf] #?(:clj (TreeMap. ^java.util.Comparator compf) :cljs (AvlTree. compf))))
+
+(defn >!sorted-map [] (>!sorted-map-by compare))
 
 ;; ===== Interval Tree / Map ===== ;;
 
