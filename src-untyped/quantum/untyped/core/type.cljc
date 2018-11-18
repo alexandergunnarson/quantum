@@ -339,10 +339,10 @@
 
 ;; ===== Type metadata (not for reactive types) ===== ;;
 
-(defns assume
+(defn assume
   "Denotes that, whatever the declared output type (to which `assume` is applied) of a function may
    be, it is assumed that the output satisfies that type."
-  [t utr/type? > utr/type?]
+  [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (if (utr/meta-type? t)
       (if (.-assume? ^MetaType t)
@@ -353,7 +353,7 @@
 
 (defns assume? [t utr/type? > c/boolean?] (c/and (utr/meta-type? t) (.-assume? ^MetaType t)))
 
-(defns unassume [t utr/type? > utr/type?]
+(defn unassume [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (if (utr/meta-type? t)
       (if-not (.-assume? ^MetaType t)
@@ -362,10 +362,10 @@
                    false (.-ref? ^MetaType t) (.-runtime? ^MetaType t))) ; un-`t/run`s it
       t))
 
-(defns run
+(defn run
   "Denote on a type that it must be enforced at runtime.
    For use with `defnt`."
-  [t utr/type? > utr/type?]
+  [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (if (utr/meta-type? t)
       (if (.-runtime? ^MetaType t)
@@ -376,10 +376,10 @@
 
 (defns run? [t utr/type? > c/boolean?] (c/and (utr/meta-type? t) (.-runtime? ^MetaType t)))
 
-(defns ref
+(defn ref
   "Denote on a type that it must not be expanded to use primitive values.
    For use with `defnt`."
-  [t utr/type? > utr/type?]
+  [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (if (utr/meta-type? t)
       (if (.-ref? ^MetaType t)
@@ -388,7 +388,7 @@
                      (.-assume? ^MetaType t) true (.-runtime? ^MetaType t)))
       (MetaType. (c/meta t) nil t false true false)))
 
-(defns unref [t utr/type? > utr/type?]
+(defn unref [t #_utr/type? #_> #_utr/type?]
   (assert (c/not (utr/rx-type? t)))
   (if (utr/meta-type? t)
       (if-not (.-ref? ^MetaType t)
@@ -636,13 +636,12 @@
           (f t args))))
 
 (defn- input-type|meta-or|norx [t match-spec #_::match-spec]
-  (let [i|? (->> match-spec (reducei (c/fn [_ t i] (when (find-spec? t) (reduced i))) nil))]
-    (with-expand-meta-ors match-spec
-      (fn [match-spec']
-        (->> match-spec'
-             (match-spec>type-data-seq t)
-             (uc/map (c/fn [{:keys [input-types]}] (get input-types i|?)))
-             meta-or)))))
+  (let [i|? (->> match-spec (reducei (c/fn [_ t i] (when (find-spec? t) (reduced i))) nil))
+        type-args
+          (->> match-spec
+               (match-spec>type-data-seq t)
+               (uc/map (c/fn [{:keys [input-types]}] (get input-types i|?))))]
+    (with-expand-meta-ors type-args meta-or)))
 
 (defns input-type|meta-or
   [t (us/or* utr/fn-type? utr/rx-type?), match-spec _ #_::match-spec
@@ -674,11 +673,9 @@
        `reduce` when the third input satisfies `string?`."
   ([t & args] (err! "Can't use `input-type` outside of arglist contexts")))
 
-(defn- output-type|meta-or|norx [t args]
-  (with-expand-meta-ors args
-    (fn->> (match-spec>type-data-seq t)
-           (uc/map :output-type)
-           meta-or)))
+(defn- output-type|meta-or|norx [t match-spec]
+  (let [type-args (->> match-spec (match-spec>type-data-seq t) (uc/map :output-type))]
+    (with-expand-meta-ors type-args meta-or)))
 
 (defns output-type|meta-or
   [t (us/or* utr/fn-type? utr/rx-type?) args (us/seq-of (us/or* #{:_} type?)) > type?]

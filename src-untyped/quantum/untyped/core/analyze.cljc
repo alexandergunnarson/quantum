@@ -488,11 +488,9 @@
   [env ::env, [_ _, target-form _, ?method-or-field _ & ?args _ :as form] _]
   (let [target          (analyze* env target-form)
         method-or-field (if (symbol? ?method-or-field) ?method-or-field (first ?method-or-field))
-        ;; To get around a weird behavior in Clojure, at least in 1.9
-        method-or-field (if (and (= target-form 'clojure.lang.RT)
-                                 (= method-or-field 'clojure.core/longCast))
-                            'longCast
-                            method-or-field)
+        ;; To get around a weird behavior in `ufeval/macroexpand` in which e.g. `uncheckedLongCast`
+        ;; becomes `clojure.core/uncheckedLongCast`
+        method-or-field (-> method-or-field name symbol)
         args-forms      (if (symbol? ?method-or-field) ?args (rest ?method-or-field))]
     (if (t/= (:type target) t/nil?)
         (err! "Cannot use the dot operator on a target of nil type." {:form form})
@@ -760,26 +758,32 @@
            (uc/map+ #(analyze* env %))
            (reducei
              (fn [{:as ret :keys [dispatch-type]} input|analyzed i]
-               (if (= :fnt caller-kind)
-                   (let [{:as ret' :keys [dispatchable-overload-types-seq dispatch-type input-nodes]}
-                           (-> (case dispatch-type
-                                 :direct  (filter-direct-dispatchable-overload-types
-                                            ret input|analyzed i caller|node args-form)
-                                 :dynamic (filter-dynamic-dispatchable-overload-types
-                                            ret input|analyzed i caller|node args-form))
-                               (update :input-nodes conj input|analyzed))]
-                     (if-let [last-input? (= i (dec inputs-ct))]
-                       (if (= dispatch-type :direct)
-                           (>direct-dispatch env (first dispatchable-overload-types-seq)
-                             caller|node caller|type input-nodes)
-                           (-> ret'
-                               (assoc :form (list* (:form caller|node) (uc/lmap :form input-nodes))
-                                      :type (>dispatch|output-type dispatch-type
-                                              dispatchable-overload-types-seq))
-                               (dissoc :caller|node :dispatch-type
-                                       :dispatchable-overload-types-seq)))
-                       ret'))
-                   (update ret :input-nodes conj input|analyzed)))
+               (let [last-input? (= i (dec inputs-ct))]
+                 (if (= :fnt caller-kind)
+                     (let [{:as ret'
+                            :keys [dispatchable-overload-types-seq dispatch-type input-nodes]}
+                             (-> (case dispatch-type
+                                   :direct  (filter-direct-dispatchable-overload-types
+                                              ret input|analyzed i caller|node args-form)
+                                   :dynamic (filter-dynamic-dispatchable-overload-types
+                                              ret input|analyzed i caller|node args-form))
+                                 (update :input-nodes conj input|analyzed))]
+                       (if last-input?
+                           (if (= dispatch-type :direct)
+                               (>direct-dispatch env (first dispatchable-overload-types-seq)
+                                 caller|node caller|type input-nodes)
+                               (-> ret'
+                                   (assoc :form (list* (:form caller|node)
+                                                       (uc/lmap :form input-nodes))
+                                          :type (>dispatch|output-type dispatch-type
+                                                  dispatchable-overload-types-seq))
+                                   (dissoc :caller|node :dispatch-type
+                                           :dispatchable-overload-types-seq)))
+                           ret'))
+                     (let [{:as ret' :keys [input-nodes]}
+                             (update ret :input-nodes conj input|analyzed)]
+                       (cond-> ret' last-input?
+                         (assoc :form (list* (:form caller|node) (uc/lmap :form input-nodes))))))))
                {:input-nodes   []
                 ;; We could do a little smarter analysis here but we'll keep it simple for now
                 :type          (when-not (= :fnt caller-kind) t/any?)
