@@ -14,7 +14,7 @@
 
 (defalias def udefnt/def)
 
-(defaliases udefnt dotyped fn defn extend-defn!)
+(defaliases udefnt def- dotyped fn defn extend-defn!)
 
 (defaliases ut
   type type?

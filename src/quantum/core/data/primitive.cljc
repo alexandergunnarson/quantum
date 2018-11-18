@@ -20,63 +20,63 @@
           [quantum.core Numeric Primitive])))
 
 ;; TODO for CLJS nil/val, we need to check via `js/==` not `js/===`
-(def nil? ut/nil?)
-(def val? ut/val?)
+(t/def nil? ut/nil?)
+(t/def val? ut/val?)
 
 ;; ===== Predicates ===== ;;
 
-#?(:clj (def boolean? (t/isa? #?(:clj Boolean :cljs js/Boolean))))
+#?(:clj (t/def boolean? (t/isa? #?(:clj Boolean :cljs js/Boolean))))
 
-#?(:clj (def byte?    (t/isa? Byte)))
+#?(:clj (t/def byte?    (t/isa? Byte)))
 
-#?(:clj (def short?   (t/isa? Short)))
+#?(:clj (t/def short?   (t/isa? Short)))
 
-#?(:clj (def char?    (t/isa? Character)))
+#?(:clj (t/def char?    (t/isa? Character)))
 
-        (var/def int?
+        (t/def int?
           "For CLJS, `int?` is not primitive even though it mimics the boxed version of the Java
            `int` primitive. It is included in this namespace merely for cohesion."
           (t/isa? #?(:clj Integer :cljs goog.math.Integer)))
 
-        (var/def long?
+        (t/def long?
           "For CLJS, `long?` is not primitive even though it mimics the boxed version of the Java
            `long` primitive. It is included in this namespace merely for cohesion."
           (t/isa? #?(:clj Long :cljs goog.math.Long)))
 
-#?(:clj (def float?   (t/isa? Float)))
+#?(:clj (t/def float?   (t/isa? Float)))
 
-        (def double?  (t/isa? #?(:clj Double :cljs js/Number)))
+        (t/def double?  (t/isa? #?(:clj Double :cljs js/Number)))
 
-        (var/def primitive?
+        (t/def primitive?
           "For CLJS, `int?` and `long?` are not primitive even though they mimic Java primitives.
            For CLJS, does not include built-in platform types like js/String that are considered
            'primitive' in some contexts."
           (t/or boolean? #?@(:clj [byte? short? char? int? long? float?]) double?))
 
-        (def primitive-type?
+        (t/def primitive-type?
           (t/or (t/value boolean?)
       #?@(:clj [(t/value byte?) (t/value short?) (t/value char?) (t/value int?) (t/value long?)
                 (t/value float?)]) (t/value double?)))
 
-        (var/def integer? "Specifically primitive integers."
+        (t/def integer? "Specifically primitive integers."
           (t/or #?@(:clj [byte? short? int? long?])))
 
-        (var/def decimal? "Specifically primitive decimals."
+        (t/def decimal? "Specifically primitive decimals."
           (t/or #?(:clj float?) double?))
 
-        (var/def numeric?
+        (t/def numeric?
           "Specifically primitive numeric things.
            Something 'numeric' is something that may be treated as a number but may not actually *be* one."
           (t/- primitive? boolean?))
 
-        (def numeric-type? (t/- primitive-type? (t/value boolean?)))
+        (t/def numeric-type? (t/- primitive-type? (t/value boolean?)))
 
         (defaliases ut true? false?)
 
 ;; ===== Boxing/unboxing ===== ;;
 
 #?(:clj
-(def unboxed-class->boxed-class
+(t/def unboxed-class->boxed-class
   {Boolean/TYPE   Boolean
    Byte/TYPE      Byte
    Character/TYPE Character
@@ -87,7 +87,7 @@
    Float/TYPE     Float}))
 
 #?(:clj
-(def boxed-class->unboxed-class
+(t/def boxed-class->unboxed-class
   {Integer   Integer/TYPE
    Long      Long/TYPE
    Float     Float/TYPE
@@ -133,14 +133,14 @@
 
 ;; ===== Bit lengths ===== ;;
 
-(var/def boolean-bits "Implementationally might not be bit-manipulable but logically 1 bit" 1)
-(def byte-bits   8)
-(def short-bits  16)
-(def char-bits   16)
-(def int-bits    32)
-(def long-bits   64)
-(def float-bits  32)
-(def double-bits 64)
+(t/def boolean-bits "Implementationally might not be bit-manipulable but logically 1 bit" 1)
+(t/def byte-bits   8)
+(t/def short-bits  16)
+(t/def char-bits   16)
+(t/def int-bits    32)
+(t/def long-bits   64)
+(t/def float-bits  32)
+(t/def double-bits 64)
 
 ;; ===== Extreme magnitudes and values ===== ;;
 
@@ -155,8 +155,8 @@
           #?(:clj Double/MIN_VALUE :cljs js/Number.MIN_VALUE)))
 
 ;; TODO TYPED these are probably getting boxed
-#?(:clj (var/def- min-float  (Numeric/negate Float/MAX_VALUE)))
-        (var/def- min-double (- #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
+#?(:clj (t/def- min-float  (Numeric/negate Float/MAX_VALUE)))
+        (t/def- min-double (- #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
 
 (t/defn ^:inline >min-value
 #?(:clj ([x (t/or byte?   (t/value byte?))   > byte?]   Byte/MIN_VALUE))

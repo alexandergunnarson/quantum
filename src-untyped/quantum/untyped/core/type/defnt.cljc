@@ -77,21 +77,32 @@
    - Performs type analysis.
    - For values that satisfy `t/type?`, calls `utr/with-name` on them with the provided `sym`."
   ([sym] (list 'def sym))
-  ([sym v] `(quantum.untyped.core.type.defnt/def ~sym nil nil ~v))
+  ([sym v] (list 'quantum.untyped.core.type.defnt/def sym nil nil v))
   ([sym doc-or-meta v]
     (if (string? doc-or-meta)
-        `(quantum.untyped.core.type.defnt/def ~sym ~doc-or-meta nil          ~v)
-        `(quantum.untyped.core.type.defnt/def ~sym nil          ~doc-or-meta ~v)))
-  ([sym doc-val meta-val v]
+        (list 'quantum.untyped.core.type.defnt/def sym doc-or-meta nil          v)
+        (list 'quantum.untyped.core.type.defnt/def sym nil          doc-or-meta v)))
+  ([sym doc meta-val v]
     (list 'def
-      (if (or doc-val meta-val)
-          (with-meta sym (-> meta-val (cond-> doc-val (assoc :doc doc-val)) uana/analyze :form))
+      (if (or doc meta-val)
+          (update-meta sym merge
+            (-> meta-val (cond-> doc (assoc :doc doc)) uana/analyze :form))
           sym)
       (let [node (uana/analyze v)]
         (if (and (-> node :type utr/value-type?)
                  (-> node :type t/unvalue t/type?))
             `(utr/with-name ~(:form node) '~(uid/qualify *ns* sym))
             (:form node)))))))
+
+#?(:clj
+(defmacro def-
+  "Like `t/def`, but creates a private var."
+  ([sym] (list 'def (update-meta sym merge {:private true})))
+  ([sym v] (list 'quantum.untyped.core.type.defnt/def (update-meta sym merge {:private true}) v))
+  ([sym doc-or-meta v] (list 'quantum.untyped.core.type.defnt/def
+                         (update-meta sym merge {:private true}) doc-or-meta v))
+  ([sym doc meta-val v] (list 'quantum.untyped.core.type.defnt/def
+                          (update-meta sym merge {:private true}) doc meta-val v))))
 
 ;; TODO move
 (def index? #(and (integer? %) (>= % 0)))
