@@ -44,7 +44,7 @@
             java.lang.Character (>form [x] (list `unchecked-char  (long x)))
             java.lang.Integer   (>form [x] (list `unchecked-int   (long x)))
             java.lang.Long      (>form [x] x)
-            java.lang.Float     (>form [x] (list `unchecked-short (long x)))])
+            java.lang.Float     (>form [x] (list `unchecked-float (long x)))])
    #?(:clj  java.lang.Double
       :cljs number)             (>form [x] x)
    #?(:clj  java.lang.String
