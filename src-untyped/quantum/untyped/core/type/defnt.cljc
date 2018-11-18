@@ -251,10 +251,10 @@
 (us/def ::reify|name simple-symbol?) ; hinted with the interface name
 
 (us/def ::reify
-  (us/kv {:form      t/any?
-          :interface class?
-          :name      ::reify|name
-          :overload  ::overload}))
+  (us/kv {:form        t/any?
+          :hinted-name ::reify|name
+          :interface   class?
+          :overload    ::overload}))
 
 (us/def ::direct-dispatch-data
   (us/kv {:overload-types-decl ::overload-types-decl
@@ -401,7 +401,10 @@
       (2 3)  (err! "Body type incompatible with declared output type" err-info))))
 
 (c/defn compare-arg-types [t0 #_t/type?, t1 #_t/type? #_> #_ucomp/comparison?]
-  (if-let [c0 (uana/sort-guide t0)]
+  (uset/normalize-comparison (t/compare t0 t1))
+  ;; With `sort-guide`, `t/nil?` < `t/boolean?`, `t/boolean?` < `t/val?`, but `t/nil?` <> `t/val?`
+  ;; so results in a comparator violation
+  #_(if-let [c0 (uana/sort-guide t0)]
     (if-let [c1 (uana/sort-guide t1)]
       (ifs (< c0 c1) -1 (> c0 c1) 1 0)
       (uset/normalize-comparison (t/compare t0 t1)))
@@ -588,10 +591,10 @@
                   (~(ufth/with-type-hint uana/direct-dispatch-method-sym
                       (ufth/>arglist-embeddable-tag output-class|reify))
                     ~arglist-code ~body-form)))]
-    {:form      form
-     :interface interface
-     :name      reify|name
-     :overload  overload})))
+    {:form        form
+     :hinted-name reify|name
+     :interface   interface
+     :overload    overload})))
 
 ;; ----- Type declarations ----- ;;
 
@@ -870,7 +873,8 @@
 (defns- >direct-dispatch
   [{:as opts :keys [gen-gensym _, lang _, kind _]} ::opts
    fn|globals ::fn|globals
-   fn|types   ::fn|types]
+   fn|types   ::fn|types
+   > ::direct-dispatch]
   (case lang
     :clj  (let [direct-dispatch-data-seq
                   (->> !overload-queue
@@ -879,11 +883,18 @@
                            {:overload-types-decl
                               (>overload-types-decl opts fn|globals type-decl-datum fn|types)
                             :reify (overload>reify overload opts fn|globals id)})))
-                form (->> direct-dispatch-data-seq
-                          (uc/mapcat
-                            (c/fn [{:as direct-dispatch-data :keys [overload-types-decl]}]
-                              [(:form overload-types-decl)
-                               (-> direct-dispatch-data :reify :form)])))]
+                declare-form-seq
+                  (when-let [hinted-names
+                               (->> direct-dispatch-data-seq
+                                    (uc/lmap (fn-> :reify :hinted-name))
+                                    seq)]
+                    [(list* `declare hinted-names)])
+                form (concat declare-form-seq
+                             (->> direct-dispatch-data-seq
+                                  (uc/mapcat
+                                    (c/fn [{:as direct-dispatch-data :keys [overload-types-decl]}]
+                                      [(:form overload-types-decl)
+                                       (-> direct-dispatch-data :reify :form)]))))]
             (kw-map form direct-dispatch-data-seq))
     :cljs (TODO)))
 
