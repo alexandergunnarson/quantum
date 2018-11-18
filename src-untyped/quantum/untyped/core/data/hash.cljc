@@ -14,8 +14,8 @@
   #?(:clj  (clojure.lang.Util/hash x)
      :cljs (hash                   x)))
 
-(def unordered hash-ordered-coll)
-(def ordered   hash-unordered-coll)
+(def unordered hash-unordered-coll)
+(def ordered   hash-ordered-coll)
 (def mix       mix-collection-hash)
 
 #?(:clj
@@ -32,7 +32,7 @@
 
    See also https://clojure.org/reference/data_structures."
   [field #_simple-symbol? & args]
-  `(if (identical? ~field default)
+  `(if (identical? ~field (unchecked-int default))
        (set! ~field (unordered-args ~@args))
        ~field)))
 
@@ -52,7 +52,7 @@
 
    See also https://clojure.org/reference/data_structures."
   [field #_simple-symbol? & args]
-  `(if (identical? ~field default)
+  `(if (identical? ~field (unchecked-int default))
        (set! ~field (ordered-args ~@args))
        ~field)))
 
@@ -66,6 +66,6 @@
   "Tries to retrive a cached hash-code value at the provided field. If not found, sets the field
    with a computed hash-code using the sum of the hash-codes of the provided args."
   [field #_simple-symbol? & args]
-  `(if (identical? ~field default)
+  `(if (identical? ~field (unchecked-int default))
        (set! ~field (code-args ~@args))
        ~field)))
