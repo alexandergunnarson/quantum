@@ -62,7 +62,7 @@
 
 (ucore/log-this-ns)
 
-(declare compare < <= = not= >= > >< <>)
+(declare compare < <= = not= >= > >< <> combine-comparisons)
 
 (def inverted (fn [f] (fn [t0 t1] (uset/invert-comparison (f t1 t0)))))
 
