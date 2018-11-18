@@ -20,6 +20,15 @@
 
 (def conj|!vec (aritoid (fn [] (transient [])) persistent! conj!))
 
+(deftest test|group-deep-by-into
+  (is= (self/group-deep-by (fn [i x] (get x i)) [[1 4] [3 2] [1 2]])
+       {1 {2 [[1 2]], 4 [[1 4]]}, 3 {2 [[3 2]]}})
+  (is= (self/group-deep-by (fn [i x] (get x i)) [[1 4] [3 2] [1 2] [3 2 5]])
+       {1 {4 {nil [[1 4]]}
+           2 {nil [[1 2]]}}
+        3 {2 {nil [[3 2]]
+              5   [[3 2 5]]}}}))
+
 (deftest test|>combinatoric-tree
   (let [in '[[0 [a b a]]
              [1 [a b c]]
