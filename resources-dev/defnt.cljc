@@ -181,6 +181,7 @@ Legend:
     protocols can be extended
     - TODO CLJS needs to implement it better
   [-] Analysis/Optimization
+      - maybe redefine `untyped.core.type` in a typed way? `t/def` doesn't realize certain things are `t/type?`
       - dead code elimination
         - in `let*`, we should elide variables that are unused and that have no side effects (or at
           least warn)
