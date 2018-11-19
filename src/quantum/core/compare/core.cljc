@@ -127,6 +127,9 @@
 
 (def comparison? #?(:clj ut/int? :cljs ut/double?))
 
+(t/def comparator?         (t/ftype comparison? [t/any? t/any?]))
+(t/def boolean-comparator? (t/ftype ut/boolean? [t/any? t/any?]))
+
 (t/defn ^:inline compare
   "Logical (not exclusively numeric) comparison.
 

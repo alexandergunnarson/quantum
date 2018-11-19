@@ -185,133 +185,100 @@
 
 ;; ===== Comparison extensions ===== ;;
 
-;; TODO primitive with non-primitive
 (t/extend-defn! c?/=
         ;; `.equals` takes into account precision even if they're numerically equivalent
         ;; `core/=` uses `.equals` for `BigDecimal`s
-#?(:clj ([a bigdec?                       , b bigdec?]       (c?/comp= a b)))
-#?(:clj ([a bigdec?                       , b (t/input-type >bigdec :?)]
+#?(:clj ([a bigdec?
+          b bigdec?] (c?/comp= a b)))
+#?(:clj ([a bigdec?
+          b (t/- (t/input-type >bigdec :?) bigdec? java-bigint? clj-bigint? ratio?)]
           (c?/= a (>bigdec b))))
-#?(:clj ([a (t/input-type >bigdec :?)     , b bigdec?]       (c?/= (>bigdec a) b)))
-#?(:clj ([a java-bigint?                  , b java-bigint?]  (.equals a b)))
-#?(:clj ([a java-bigint?, b (t/- (t/input-type >java-bigint :?) java-bigint?)]
+#?(:clj ([a (t/- (t/input-type >bigdec :?) bigdec? java-bigint? clj-bigint? ratio?)
+          b bigdec?] (c?/= (>bigdec a) b)))
+#?(:clj ([a java-bigint?
+          b java-bigint?] (.equals a b)))
+#?(:clj ([a java-bigint?
+          b (t/- (t/input-type >java-bigint :?) java-bigint? clj-bigint? ratio?)]
           (c?/= a (>java-bigint b))))
-#?(:clj ([a (t/- (t/input-type >java-bigint :?) java-bigint?), b java-bigint?]
-          (c?/= (>java-bigint a) b)))
-#?(:clj ([a clj-bigint?                   , b clj-bigint?]   (.equals a b)))
-#?(:clj ([a clj-bigint?, b (t/- (t/input-type >clj-bigint :?) clj-bigint?)]
-          (c?/= a (>clj-bigint b))))
-#?(:clj ([a (t/- (t/input-type >clj-bigint :?) clj-bigint?), b clj-bigint?]
-          (c?/= (>clj-bigint a) b)))
-#?(:clj ([a ratio?                        , b ratio?]
-          (and (c?/= ^:val (.numerator   a) ^:val (.numerator   b))
-               (c?/= ^:val (.denominator a) ^:val (.denominator b)))))
-#?(:clj ([a ratio?                        , b (t/input-type >ratio :?)]
-          (c?/= a (>ratio b))))
-#?(:clj ([a (t/input-type >ratio :?)      , b ratio?]        (c?/= (>ratio a) b))))
+#?(:clj ([a (t/- (t/input-type >java-bigint :?) java-bigint? clj-bigint? ratio?)
+          b java-bigint?] (c?/= (>java-bigint a) b)))
+#?(:clj ([a clj-bigint?
+          b clj-bigint?] (.equals a b)))
+#?(:clj ([a clj-bigint?
+          b (t/- (t/input-type >clj-bigint :?) clj-bigint? ratio?)] (c?/= a (>clj-bigint b))))
+#?(:clj ([a (t/- (t/input-type >clj-bigint :?) clj-bigint? ratio?)
+          b clj-bigint?] (c?/= (>clj-bigint a) b)))
+#?(:clj ([a ratio?
+          b ratio?] (and (c?/= ^:val (.numerator   a) ^:val (.numerator   b))
+                         (c?/= ^:val (.denominator a) ^:val (.denominator b)))))
+#?(:clj ([a ratio?
+          b (t/- (t/input-type >ratio :?) ratio?)] (c?/= a (>ratio b))))
+#?(:clj ([a (t/- (t/input-type >ratio :?) ratio?)
+          b ratio?] (c?/= (>ratio a) b))))
 
-;; TODO primitive with non-primitive
-;; FIXME (c?/< (>clj-bigint 1) (>clj-bigint 2))
-;; `This function is unsupported for the type combination at the argument index`
+(t/def numeric-comparator? (t/ftype p/boolean? [numeric? numeric?]))
+
+(t/defn ^:inline numeric-compare > p/boolean?
+        ([x numeric?] true)
+#?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
+          a bigdec?
+          b bigdec?] (compf a b)))
+#?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
+          a bigdec?
+          b (t/input-type >bigdec :?)] (numeric-compf a (>bigdec b))))
+#?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
+          a (t/input-type >bigdec :?)
+          b bigdec?] (numeric-compf (>bigdec a) b)))
+#?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
+          a java-bigint?
+          b java-bigint?] (compf a b)))
+#?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
+          a java-bigint?
+          b (t/input-type >java-bigint :?)] (numeric-compf a (>java-bigint b))))
+#?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
+          a (t/input-type >java-bigint :?)
+          b java-bigint?] (numeric-compf (>java-bigint a) b)))
+#?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
+          a clj-bigint?
+          b clj-bigint?] (if (and (p/nil? (.bipart a)) (p/nil? (.bipart b)))
+                             (numeric-compf (.lpart       a) (.lpart       b))
+                             (compf         (>java-bigint a) (>java-bigint b)))))
+#?(:clj ([a clj-bigint?
+          b (t/input-type >clj-bigint :?)] (numeric-compf a (>clj-bigint b))))
+#?(:clj ([a (t/input-type >clj-bigint :?)
+          b clj-bigint?] (numeric-compf (>clj-bigint a) b)))
+#?(:clj ([a ratio?
+          b ratio?] (numeric-compf
+                      ^:val (.multiply ^:val (.numerator   a) ^:val (.numerator   b))
+                      ^:val (.multiply ^:val (.denominator a) ^:val (.denominator b)))))
+#?(:clj ([a ratio?
+          b (t/input-type >ratio :?)] (numeric-compf a (>ratio b))))
+#?(:clj ([a (t/input-type >ratio :?)
+          b ratio?] (numeric-compf (>ratio a) b))))
+
 (t/extend-defn! c?/<
-        ([x numeric?] true)
-#?(:clj ([a bigdec?                       , b bigdec?]       (c?/comp< a b)))
-#?(:clj ([a bigdec?                       , b (t/input-type >bigdec :?)]
-          (c?/< a (>bigdec b))))
-#?(:clj ([a (t/input-type >bigdec :?)     , b bigdec?]       (c?/< (>bigdec a) b)))
-#?(:clj ([a java-bigint?                  , b java-bigint?]  (c?/comp< a b)))
-#?(:clj ([a java-bigint?                  , b (t/input-type >java-bigint :?)]
-          (c?/< a (>java-bigint b))))
-#?(:clj ([a (t/input-type >java-bigint :?), b java-bigint?]  (c?/< (>java-bigint a) b)))
-#?(:clj ([a clj-bigint?                   , b clj-bigint?]
-          (if (and (p/nil? (.bipart a)) (p/nil? (.bipart b)))
-              (c?/<     (.lpart       a) (.lpart       b))
-              (c?/comp< (>java-bigint a) (>java-bigint b)))))
-#?(:clj ([a clj-bigint?                   , b (t/input-type >clj-bigint :?)]
-          (c?/< a (>clj-bigint b))))
-#?(:clj ([a (t/input-type >clj-bigint :?) , b clj-bigint?]   (c?/< (>clj-bigint a) b)))
-#?(:clj ([a ratio?                        , b ratio?]
-          (c?/< ^:val (.multiply ^:val (.numerator   a) ^:val (.numerator   b))
-                ^:val (.multiply ^:val (.denominator a) ^:val (.denominator b)))))
-#?(:clj ([a ratio?                        , b (t/input-type >ratio :?)]
-          (c?/< a (>ratio b))))
-#?(:clj ([a (t/input-type >ratio :?)      , b ratio?]        (c?/< (>ratio a) b))))
+  ([x (t/input-type numeric-compare :?)] (numeric-compare x))
+  ([a (t/input-type numeric-compare :_ :_ :?             :_)
+    b (t/input-type numeric-compare :_ :_ [= (t/type a)] :?)]
+    (numeric-compare c?/<  c?/comp<  a b)))
 
-;; TODO primitive with non-primitive
 (t/extend-defn! c?/<=
-        ([x numeric?] true)
-#?(:clj ([a bigdec?                       , b bigdec?]      (c?/comp<= a b)))
-#?(:clj ([a bigdec?                       , b (t/input-type >bigdec :?)]
-          (c?/<= a (>bigdec b))))
-#?(:clj ([a (t/input-type >bigdec :?)     , b bigdec?]      (c?/<= (>bigdec a) b)))
-#?(:clj ([a java-bigint?                  , b java-bigint?] (c?/comp<= a b)))
-#?(:clj ([a java-bigint?                  , b (t/input-type >java-bigint :?)]
-          (c?/<= a (>java-bigint b))))
-#?(:clj ([a (t/input-type >java-bigint :?), b java-bigint?] (c?/<= (>java-bigint a) b)))
-#?(:clj ([a clj-bigint?                   , b clj-bigint?]
-          (if (and (p/nil? (.bipart a)) (p/nil? (.bipart b)))
-              (c?/<=     (.lpart       a) (.lpart       b))
-              (c?/comp<= (>java-bigint a) (>java-bigint b)))))
-#?(:clj ([a clj-bigint?                   , b (t/input-type >clj-bigint :?)]
-          (c?/<= a (>clj-bigint b))))
-#?(:clj ([a (t/input-type >clj-bigint :?) , b clj-bigint?]  (c?/<= (>clj-bigint a) b)))
-#?(:clj ([a ratio?                        , b ratio?]
-          (c?/<= ^:val (.multiply ^:val (.numerator   a) ^:val (.numerator   b))
-                 ^:val (.multiply ^:val (.denominator a) ^:val (.denominator b)))))
-#?(:clj ([a ratio?                        , b (t/input-type >ratio :?)]
-          (c?/<= a (>ratio b))))
-#?(:clj ([a (t/input-type >ratio :?)      , b ratio?] (c?/<= (>ratio a) b))))
-
-;; TODO primitive with non-primitive
-;; TODO all the stuff the `<` extension has
+  ([x (t/input-type numeric-compare :?)] (numeric-compare x))
+  ([a (t/input-type numeric-compare :_ :_ :?             :_)
+    b (t/input-type numeric-compare :_ :_ [= (t/type a)] :?)]
+    (numeric-compare c?/<= c?/comp<= a b)))
 
 (t/extend-defn! c?/>
-        ([x numeric?] true)
-#?(:clj ([a bigdec?                       , b bigdec?]      (c?/comp> a b)))
-#?(:clj ([a bigdec?                       , b (t/input-type >bigdec :?)]
-          (c?/> a (>bigdec b))))
-#?(:clj ([a (t/input-type >bigdec :?)     , b bigdec?]      (c?/> (>bigdec a) b)))
-#?(:clj ([a java-bigint?                  , b java-bigint?] (c?/comp> a b)))
-#?(:clj ([a java-bigint?                  , b (t/input-type >java-bigint :?)]
-          (c?/> a (>java-bigint b))))
-#?(:clj ([a (t/input-type >java-bigint :?), b java-bigint?] (c?/> (>java-bigint a) b)))
-#?(:clj ([a clj-bigint?                   , b clj-bigint?]
-          (if (and (p/nil? (.bipart a)) (p/nil? (.bipart b)))
-              (c?/>     (.lpart       a) (.lpart       b))
-              (c?/comp> (>java-bigint a) (>java-bigint b)))))
-#?(:clj ([a clj-bigint?                   , b (t/input-type >clj-bigint :?)]
-          (c?/> a (>clj-bigint b))))
-#?(:clj ([a (t/input-type >clj-bigint :?) , b clj-bigint?]  (c?/> (>clj-bigint a) b)))
-#?(:clj ([a ratio?                        , b ratio?]
-          (c?/> ^:val (.multiply ^:val (.numerator   a) ^:val (.numerator   b))
-                ^:val (.multiply ^:val (.denominator a) ^:val (.denominator b)))))
-#?(:clj ([a ratio?                        , b (t/input-type >ratio :?)]
-          (c?/> a (>ratio b))))
-#?(:clj ([a (t/input-type >ratio :?)      , b ratio?] (c?/> (>ratio a) b))))
+  ([x (t/input-type numeric-compare :?)] (numeric-compae x))
+  ([a (t/input-type numeric-compare :_ :_ :?             :_)
+    b (t/input-type numeric-compare :_ :_ [= (t/type a)] :?)]
+    (numeric-compare c?/>  c?/comp>  a b)))
 
 (t/extend-defn! c?/>=
-        ([x numeric?] true)
-#?(:clj ([a bigdec?                       , b bigdec?]      (c?/comp> a b)))
-#?(:clj ([a bigdec?                       , b (t/input-type >bigdec :?)]
-          (c?/> a (>bigdec b))))
-#?(:clj ([a (t/input-type >bigdec :?)     , b bigdec?]      (c?/> (>bigdec a) b)))
-#?(:clj ([a java-bigint?                  , b java-bigint?] (c?/comp> a b)))
-#?(:clj ([a java-bigint?                  , b (t/input-type >java-bigint :?)]
-          (c?/> a (>java-bigint b))))
-#?(:clj ([a (t/input-type >java-bigint :?), b java-bigint?] (c?/> (>java-bigint a) b)))
-#?(:clj ([a clj-bigint?                   , b clj-bigint?]
-          (if (and (p/nil? (.bipart a)) (p/nil? (.bipart b)))
-              (c?/>     (.lpart       a) (.lpart       b))
-              (c?/comp> (>java-bigint a) (>java-bigint b)))))
-#?(:clj ([a clj-bigint?                   , b (t/input-type >clj-bigint :?)]
-          (c?/> a (>clj-bigint b))))
-#?(:clj ([a (t/input-type >clj-bigint :?) , b clj-bigint?]  (c?/> (>clj-bigint a) b)))
-#?(:clj ([a ratio?                        , b ratio?]
-          (c?/> ^:val (.multiply ^:val (.numerator   a) ^:val (.numerator   b))
-                ^:val (.multiply ^:val (.denominator a) ^:val (.denominator b)))))
-#?(:clj ([a ratio?                        , b (t/input-type >ratio :?)]
-          (c?/> a (>ratio b))))
-#?(:clj ([a (t/input-type >ratio :?)      , b ratio?] (c?/> (>ratio a) b))))
+  ([x (t/input-type numeric-compare :?)] (numeric-compare x))
+  ([a (t/input-type numeric-compare :_ :_ :?             :_)
+    b (t/input-type numeric-compare :_ :_ [= (t/type a)] :?)]
+    (numeric-compare c?/>= c?/comp>= a b)))
 
 ;; TODO `c?/compare`
 
