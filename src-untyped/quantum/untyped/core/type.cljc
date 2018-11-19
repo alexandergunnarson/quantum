@@ -284,14 +284,37 @@
 
 ;; ------------------
 
-(defns- -|or [t0 utr/type?, t1 utr/type?]
+(defns- -|or [t0 utr/type?, t1 utr/type? > utr/type?]
   (let [args (->> t0 utr/or-type>args (uc/remove (fn1 = t1)))]
     (case (count args)
       0 empty-set
       1 (first args)
       (OrType. uhash/default uhash/default nil nil args (atom nil)))))
 
-(defn - ;; TODO `defns` when variadic args are actually handled correctly
+(defns -|norx [t0 utr/type?, t1 utr/type? > utr/type?]
+  (let [c (c/int (compare t0 t1))]
+    (case c
+      (0 -1) empty-set
+       3     t0
+      (1 2)
+        (let [c0 (c/type t0) c1 (c/type t1)]
+          ;; TODO add dispatch?
+          (condp == c0
+            ClassType (condp == c1
+                        ClassType (AndType. uhash/default uhash/default nil nil
+                                    [t0 (not t1)] (atom nil)))
+            NotType   (condp == (-> t0 utr/not-type>inner-type c/type)
+                        ClassType (condp == c1
+                                    ClassType (AndType. uhash/default uhash/default nil nil
+                                                [t0 (not t1)] (atom nil)))
+                        ValueType (condp == c1
+                                    ValueType (AndType. uhash/default uhash/default nil nil
+                                                [t0 (not t1)] (atom nil))))
+            OrType    (condp == c1
+                        ClassType (-|or t0 t1)
+                        ValueType (-|or t0 t1)))))))
+
+(defn -
   "Computes the difference of `t0` from `t1`: (& t0 (! t1))
    If `t0` =       `t1`, `∅`
    If `t0` <       `t1`, `∅`
@@ -305,24 +328,10 @@
             (rx (- @t0  t1)))
         (if (utr/rx-type? t1)
             (rx (-  t0 @t1))
-            (let [c (c/int (compare t0 t1))]
-              (case c
-                (0 -1) empty-set
-                 3     t0
-                (1 2)
-                  (let [c0 (c/type t0) c1 (c/type t1)]
-                    ;; TODO add dispatch?
-                    (condp == c0
-                      NotType (condp == (-> t0 utr/not-type>inner-type c/type)
-                                ClassType (condp == c1
-                                            ClassType (AndType. uhash/default uhash/default nil nil
-                                                        [t0 (not t1)] (atom nil)))
-                                ValueType (condp == c1
-                                            ValueType (AndType. uhash/default uhash/default nil nil
-                                                        [t0 (not t1)] (atom nil))))
-                      OrType  (condp == c1
-                                ClassType (-|or t0 t1)
-                                ValueType (-|or t0 t1)))))))))
+            (with-expand-meta-ors [t0 t1]
+              (fn [types']
+                (assert (-> types' count (c/= 2)))
+                (-|norx (first types') (second types')))))))
   ([t0 #_utr/type?, t1 #_utr/type? & ts #_ _ #_> #_utr/type?] (reduce - (- t0 t1) ts)))
 
 (def* type?          (isa? PType))
@@ -709,7 +718,7 @@
   "Computes a type denoting a nilable value satisfying `t`."
   ([t #_utr/type? #_> #_utr/type?] (or nil? t)))
 
-;; ===== Etc. ===== ;;
+;; ===== `meta-or` ===== ;;
 
 (defns- with-expand-meta-ors [type-args (us/seq-of type?), f c/fn?]
   (if-not (seq-or utr/meta-or-type? type-args)
@@ -743,6 +752,8 @@
    - Does not currently handle nested `meta-or`s."
    > utr/type?
    [types (us/seq-of utr/type?)] (separate-rx-and-apply meta-or|norx types))
+
+;; ===== Etc. ===== ;;
 
 ;; TODO figure out the best place to put this
 #?(:clj
