@@ -154,7 +154,6 @@
         ([x (t/or double? (t/value double?)) > double?]
           #?(:clj Double/MIN_VALUE :cljs js/Number.MIN_VALUE)))
 
-;; TODO TYPED these are probably getting boxed
 #?(:clj (t/def- min-float  (Numeric/negate Float/MAX_VALUE)))
         (t/def- min-double (- #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE)))
 
