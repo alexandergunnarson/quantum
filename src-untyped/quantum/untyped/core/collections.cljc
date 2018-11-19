@@ -598,7 +598,7 @@
 (defn sort!
   "Like `sort` but coerces `xs` to an array and then sorts it in place, returning the coerced array
    instead of a seq on top of it. If `xs` is already an array, modifies `xs`."
-  ([xs] (sort! compare !xs))
+  ([xs] (sort! compare xs))
   ([compf xs]
     (let [#?(:clj ^objects !xs :cljs !xs) (if (array? xs) xs (to-array xs))]
       (doto !xs #?(:clj  (java.util.Arrays/sort ^Comparator compf)
