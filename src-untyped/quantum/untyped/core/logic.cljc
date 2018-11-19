@@ -82,6 +82,23 @@
 
 #?(:clj (defmacro fn-implies? [a b]     `(fn-logic-base implies? ~a ~b)))
 
+;; ===== `case-val` ===== ;;
+
+#?(:clj
+(defmacro case-val
+  "Like `case` but the dispatch value forms are `eval`ed at compile time rather than needing to be
+   compile-time literals. The results of the evaluation of the forms must each be literals."
+  [v & args]
+  (let [[branches else has-else?]
+          (if (-> args count even?)
+              [args           nil         false]
+              [(butlast args) (last args) true])]
+    `(case ~v
+       ~@(->> branches
+              (partition-all 2)
+              (mapcat (fn [[dispatch then]] [(eval dispatch) then])))
+       ~@(when has-else? [else])))))
+
 ;; ===== `cond(f|c|p)` ===== ;;
 
 #?(:clj
