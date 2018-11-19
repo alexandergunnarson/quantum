@@ -225,35 +225,43 @@
           b bigdec?] (compf a b)))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
           a bigdec?
-          b (t/input-type >bigdec :?)] (numeric-compf a (>bigdec b))))
+          b (t/- (t/input-type >bigdec :?) bigdec? java-bigint? clj-bigint? ratio?)]
+          (numeric-compf a (>bigdec b))))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
-          a (t/input-type >bigdec :?)
+          a (t/- (t/input-type >bigdec :?) bigdec? java-bigint? clj-bigint? ratio?)
           b bigdec?] (numeric-compf (>bigdec a) b)))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
           a java-bigint?
           b java-bigint?] (compf a b)))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
           a java-bigint?
-          b (t/input-type >java-bigint :?)] (numeric-compf a (>java-bigint b))))
+          b (t/- (t/input-type >java-bigint :?) java-bigint? clj-bigint? ratio?)]
+          (numeric-compf a (>java-bigint b))))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
-          a (t/input-type >java-bigint :?)
+          a (t/- (t/input-type >java-bigint :?) java-bigint? clj-bigint? ratio?)
           b java-bigint?] (numeric-compf (>java-bigint a) b)))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
           a clj-bigint?
           b clj-bigint?] (if (and (p/nil? (.bipart a)) (p/nil? (.bipart b)))
                              (numeric-compf (.lpart       a) (.lpart       b))
                              (compf         (>java-bigint a) (>java-bigint b)))))
-#?(:clj ([a clj-bigint?
-          b (t/input-type >clj-bigint :?)] (numeric-compf a (>clj-bigint b))))
-#?(:clj ([a (t/input-type >clj-bigint :?)
+#?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
+          a clj-bigint?
+          b (t/- (t/input-type >clj-bigint :?) clj-bigint? ratio?)]
+          (numeric-compf a (>clj-bigint b))))
+#?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
+          a (t/- (t/input-type >clj-bigint :?) clj-bigint? ratio?)
           b clj-bigint?] (numeric-compf (>clj-bigint a) b)))
-#?(:clj ([a ratio?
+#?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
+          a ratio?
           b ratio?] (numeric-compf
                       ^:val (.multiply ^:val (.numerator   a) ^:val (.numerator   b))
                       ^:val (.multiply ^:val (.denominator a) ^:val (.denominator b)))))
-#?(:clj ([a ratio?
-          b (t/input-type >ratio :?)] (numeric-compf a (>ratio b))))
-#?(:clj ([a (t/input-type >ratio :?)
+#?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
+          a ratio?
+          b (t/- (t/input-type >ratio :?) ratio?)] (numeric-compf a (>ratio b))))
+#?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
+          a (t/- (t/input-type >ratio :?) ratio?)
           b ratio?] (numeric-compf (>ratio a) b))))
 
 (t/extend-defn! c?/<
