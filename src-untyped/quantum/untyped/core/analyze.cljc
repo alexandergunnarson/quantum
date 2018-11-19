@@ -841,6 +841,7 @@
     (t/value t/and)      (apply-arg-type-combine t/and      input-nodes)
     (t/value t/-)        (apply-arg-type-combine t/-        input-nodes)
     (t/value t/?)        (apply-arg-type-combine t/?        input-nodes)
+    (t/value t/ftype)    (apply-arg-type-combine t/ftype    input-nodes)
     (t/value t/run)      (apply-arg-type-combine t/run      input-nodes)
     (t/value t/ref)      (apply-arg-type-combine t/ref      input-nodes)
     (t/value t/unref)    (apply-arg-type-combine t/unref    input-nodes)

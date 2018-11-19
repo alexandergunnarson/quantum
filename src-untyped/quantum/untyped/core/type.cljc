@@ -63,7 +63,7 @@
                                 ProtocolType DirectProtocolType ClassType
                                 UnorderedType OrderedType
                                 ValueType
-                                FnType
+                                FnType AnonFn
                                 MetaType MetaOrType
                                 ReactiveType])]]
            [quantum.untyped.core.vars                  :as uvar
@@ -79,7 +79,7 @@
               ProtocolType ClassType
               UnorderedType OrderedType
               ValueType
-              FnType
+              FnType AnonFn
               MetaType MetaOrType
               ReactiveType])))
 
@@ -811,7 +811,7 @@
           (reduce (c/fn [classes' t'] (-type>classes t' include-classes-of-value-type? classes'))
             classes (utr/or-type>args t))
         (utr/fn-type? t)
-          (conj classes Object) ; it's not really a clojure.lang.IFn; the dynamic dispatch is though
+          (conj classes AnonFn) ; it's not really a clojure.lang.IFn; the dynamic dispatch is though
         (c/= t val?) ; TODO make this less ad-hoc
           (-type>classes val|by-class? include-classes-of-value-type? classes)
         :else
