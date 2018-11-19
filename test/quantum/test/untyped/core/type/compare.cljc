@@ -37,7 +37,7 @@
       :refer [deftest testing is is= throws]]
     [quantum.untyped.core.type                  :as t
       :refer [& | !]]
-    [quantum.untyped.core.type.compare          :as tcomp]
+    [quantum.untyped.core.type.compare          :as utcomp]
     [quantum.untyped.core.type.reifications     :as utr]))
 
 ;; Here, `NotType` labels on `testing` mean such *after* simplification
@@ -150,7 +150,8 @@
       (test-comparison >ident t/universal-set (! a)))
     (testing "+ OrType"
       (test-comparison >ident t/universal-set (| ><0 ><1)))
-    (testing "+ AndType")
+    (testing "+ AndType"
+      (test-comparison >ident t/universal-set (& i|><0 i|><1)))
     (testing "+ Expression")
     (testing "+ ProtocolType"
       (doseq [t protocol-types]
@@ -173,7 +174,8 @@
         (test-comparison <>ident t/empty-set (! (t/value 1)))))
     (testing "+ OrType"
       (test-comparison <>ident t/empty-set (| ><0 ><1)))
-    (testing "+ AndType")
+    (testing "+ AndType"
+      (test-comparison <>ident t/empty-set (& i|><0 i|><1)))
     (testing "+ Expression")
     (testing "+ ProtocolType"
       (doseq [t protocol-types]
@@ -526,7 +528,7 @@
       #_(testing "+ #{< > ><}")      ; impossible for `OrType`
       #_(testing "+ #{< > >< <>}")   ; impossible for `OrType`
       #_(testing "+ #{< > <>}")      ; impossible for `OrType`
-        (testing "+ #{<, ><}")
+        (testing "+ #{< ><}")
         (testing "+ #{< >< <>}")
         (testing "+ #{< <>}")
       #_(testing "+ #{=}")         ; impossible for `OrType`
@@ -546,7 +548,8 @@
         (testing "+ #{<>}"
           ;; comparisons:             <> <>    <>  <>
           (test-comparison <>ident (| a  b) (| ><0 ><1)))))
-    ;; TODO complete comparisons via `comparison-combinations`
+    ;; TODO complete comparisons
+    ;; NOTE don't eliminate symmetric comparisons here as they compare different types
     (testing "+ AndType"
       ;; Comparison annotations achieved by first comparing each element of the first/left to the
       ;; entire second/right, then comparing each element of the second/right to the entire
@@ -565,7 +568,7 @@
       #_(testing "+ #{< > ><}")      ; impossible for `AndType`
       #_(testing "+ #{< > >< <>}")   ; impossible for `AndType`
       #_(testing "+ #{< > <>}")      ; impossible for `AndType`
-        (testing "+ #{<, ><}")
+        (testing "+ #{< ><}")
         (testing "+ #{< >< <>}")
         (testing "+ #{< <>}")
       #_(testing "+ #{=}")         ; impossible for `AndType`
@@ -595,7 +598,7 @@
     #_(testing "#{< > ><}")      ; impossible for `OrType`
     #_(testing "#{< > >< <>}")   ; impossible for `OrType`
     #_(testing "#{< > <>}")      ; impossible for `OrType`
-      (testing "#{<, ><}")
+      (testing "#{< ><}")
       (testing "#{< >< <>}")
       (testing "#{< <>}")
     #_(testing "#{=}")         ; impossible for `OrType`
@@ -624,7 +627,7 @@
       #_(testing "+ #{< > ><}")      ; impossible for `AndType`
       #_(testing "+ #{< > >< <>}")   ; impossible for `AndType`
       #_(testing "+ #{< > <>}")      ; impossible for `AndType`
-        (testing "+ #{<, ><}"
+        (testing "+ #{< ><}"
           ;; comparisons:            >      >         <      <     ><
           (test-comparison >ident (| i|>a+b i|>a0) (& i|>a+b i|>a0 i|>a1))
           ;; comparisons:            >      >         <   ><
@@ -664,7 +667,7 @@
       #_(testing "+ #{< > ><}")      ; impossible for `AndType`
       #_(testing "+ #{< > >< <>}")   ; impossible for `AndType`
       #_(testing "+ #{< > <>}")      ; impossible for `AndType`
-        (testing "+ #{<, ><}")
+        (testing "+ #{< ><}")
         (testing "+ #{< >< <>}")
         (testing "+ #{< <>}")
       #_(testing "+ #{=}")         ; impossible for `AndType`
@@ -697,7 +700,7 @@
       #_(testing "+ #{< > ><}")      ; impossible for `AndType`
       #_(testing "+ #{< > >< <>}")   ; impossible for `AndType`
       #_(testing "+ #{< > <>}")      ; impossible for `AndType`
-        (testing "+ #{<, ><}"
+        (testing "+ #{< ><}"
           ;; comparisons:            >      <>         <   ><
           (test-comparison >ident (| i|>a+b t/nil?) (& i|a i|><1)))
         (testing "+ #{< >< <>}")
@@ -731,7 +734,7 @@
       #_(testing "+ #{< > ><}")      ; impossible for `AndType`
       #_(testing "+ #{< > >< <>}")   ; impossible for `AndType`
       #_(testing "+ #{< > <>}")      ; impossible for `AndType`
-        (testing "+ #{<, ><}")
+        (testing "+ #{< ><}")
         (testing "+ #{< >< <>}")
         (testing "+ #{< <>}")
       #_(testing "+ #{=}")         ; impossible for `AndType`
@@ -758,7 +761,7 @@
       ;; FIXME incorporate the below
       ;; - the comparisons need to be assessed
       ;; - non `i|`s should become `i|`s
-      (testing "#{<}"
+      #_(testing "#{<}"
         (testing "+ #{<+ ∅+}"
           ;; comparisons: ; [-1, 3], [-1, 3, 3]
           (test-comparison #_<>ident (| i|>a+b i|>a0)       (& i|>a+b             i|><0 i|><1))
@@ -870,11 +873,206 @@
           (test-comparison <>ident (t/value "a") (| t/byte? t/long?))
           (test-comparison <>ident (t/value 3)   (| (t/value 1) (t/value 2)))))))
   (testing "AndType"
-    (testing "+ AndType")
+    ;; TODO eliminate duplicate symmetric comparisons here
+    (testing "+ AndType"
+      (testing "#{<}"
+        (testing "+ #{<}"
+          )
+      #_(testing "+ #{< =}")         ; impossible for `AndType`
+      #_(testing "+ #{< = >}")       ; impossible for `AndType`
+      #_(testing "+ #{< = > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{< = > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{< = > <>}")    ; impossible for `AndType`
+      #_(testing "+ #{< = ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< = >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< = <>}")      ; impossible for `AndType`
+      #_(testing "+ #{< >}")         ; impossible for `AndType`
+      #_(testing "+ #{< > ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< > >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< > <>}")      ; impossible for `AndType`
+        (testing "+ #{< ><}")
+        (testing "+ #{< >< <>}")
+        (testing "+ #{< <>}")
+      #_(testing "+ #{=}")         ; impossible for `AndType`
+      #_(testing "+ #{= >}")       ; impossible for `AndType`
+      #_(testing "+ #{= > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{= > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{= > <>}")    ; impossible for `AndType`
+        (testing "+ #{= ><}")
+        (testing "+ #{= >< <>}")
+        (testing "+ #{= <>}")
+        (testing "+ #{>}")
+        (testing "+ #{> ><}")
+        (testing "+ #{> >< <>}")
+        (testing "+ #{> <>}")
+        (testing "+ #{><}")
+        (testing "+ #{>< <>}")
+        (testing "+ #{<>}"))
+    #_(testing "#{< =}")         ; impossible for `OrType`
+    #_(testing "#{< = >}")       ; impossible for `OrType`
+    #_(testing "#{< = > ><}")    ; impossible for `OrType`
+    #_(testing "#{< = > >< <>}") ; impossible for `OrType`
+    #_(testing "#{< = > <>}")    ; impossible for `OrType`
+    #_(testing "#{< = ><}")      ; impossible for `OrType`
+    #_(testing "#{< = >< <>}")   ; impossible for `OrType`
+    #_(testing "#{< = <>}")      ; impossible for `OrType`
+    #_(testing "#{< >}")         ; impossible for `OrType`
+    #_(testing "#{< > ><}")      ; impossible for `OrType`
+    #_(testing "#{< > >< <>}")   ; impossible for `OrType`
+    #_(testing "#{< > <>}")      ; impossible for `OrType`
+      (testing "#{< ><}")
+      (testing "#{< >< <>}")
+      (testing "#{< <>}")
+    #_(testing "#{=}")         ; impossible for `OrType`
+    #_(testing "#{= >}")       ; impossible for `OrType`
+    #_(testing "#{= > ><}")    ; impossible for `OrType`
+    #_(testing "#{= > >< <>}") ; impossible for `OrType`
+    #_(testing "#{= > <>}")    ; impossible for `OrType`
+      (testing "#{= ><}")
+      (testing "#{= >< <>}")
+      (testing "#{= <>}")
+      (testing "#{>}"
+        (testing "+ #{<}")
+      #_(testing "+ #{< =}")         ; impossible for `AndType`
+      #_(testing "+ #{< = >}")       ; impossible for `AndType`
+      #_(testing "+ #{< = > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{< = > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{< = > <>}")    ; impossible for `AndType`
+      #_(testing "+ #{< = ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< = >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< = <>}")      ; impossible for `AndType`
+      #_(testing "+ #{< >}")         ; impossible for `AndType`
+      #_(testing "+ #{< > ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< > >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< > <>}")      ; impossible for `AndType`
+        (testing "+ #{< ><}")
+        (testing "+ #{< >< <>}")
+        (testing "+ #{< <>}")
+      #_(testing "+ #{=}")         ; impossible for `AndType`
+      #_(testing "+ #{= >}")       ; impossible for `AndType`
+      #_(testing "+ #{= > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{= > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{= > <>}")    ; impossible for `AndType`
+        (testing "+ #{= ><}")
+        (testing "+ #{= >< <>}")
+        (testing "+ #{= <>}")
+        (testing "+ #{>}"
+          ;; comparisons:             >   >       >   >
+          (test-comparison =ident  (& i|a i|b) (& i|a i|b)))
+        (testing "+ #{> ><}")
+        (testing "+ #{> >< <>}")
+        (testing "+ #{> <>}")
+        (testing "+ #{><}")
+        (testing "+ #{>< <>}")
+        (testing "+ #{<>}"))
+      (testing "#{> ><}"
+        (testing "+ #{<}")
+      #_(testing "+ #{< =}")         ; impossible for `AndType`
+      #_(testing "+ #{< = >}")       ; impossible for `AndType`
+      #_(testing "+ #{< = > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{< = > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{< = > <>}")    ; impossible for `AndType`
+      #_(testing "+ #{< = ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< = >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< = <>}")      ; impossible for `AndType`
+      #_(testing "+ #{< >}")         ; impossible for `AndType`
+      #_(testing "+ #{< > ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< > >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< > <>}")      ; impossible for `AndType`
+        (testing "+ #{< ><}")
+        (testing "+ #{< >< <>}")
+        (testing "+ #{< <>}")
+      #_(testing "+ #{=}")         ; impossible for `AndType`
+      #_(testing "+ #{= >}")       ; impossible for `AndType`
+      #_(testing "+ #{= > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{= > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{= > <>}")    ; impossible for `AndType`
+        (testing "+ #{= ><}")
+        (testing "+ #{= >< <>}")
+        (testing "+ #{= <>}")
+        (testing "+ #{>}"
+          ;; comparisons:             >   >   ><        >   >
+          (test-comparison <ident  (& i|a i|b i|><0) (& i|a i|b)))
+        (testing "+ #{> ><}"
+          ;; comparisons:             >   ><        >   ><
+          (test-comparison ><ident (& i|a i|><0) (& i|a i|b)))
+        (testing "+ #{> >< <>}")
+        (testing "+ #{> <>}")
+        (testing "+ #{><}")
+        (testing "+ #{>< <>}")
+        (testing "+ #{<>}"))
+      (testing "#{> >< <>}")
+      (testing "#{> <>}"
+        (testing "+ #{<}")
+      #_(testing "+ #{< =}")         ; impossible for `AndType`
+      #_(testing "+ #{< = >}")       ; impossible for `AndType`
+      #_(testing "+ #{< = > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{< = > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{< = > <>}")    ; impossible for `AndType`
+      #_(testing "+ #{< = ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< = >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< = <>}")      ; impossible for `AndType`
+      #_(testing "+ #{< >}")         ; impossible for `AndType`
+      #_(testing "+ #{< > ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< > >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< > <>}")      ; impossible for `AndType`
+        (testing "+ #{< ><}")
+        (testing "+ #{< >< <>}")
+        (testing "+ #{< <>}")
+      #_(testing "+ #{=}")         ; impossible for `AndType`
+      #_(testing "+ #{= >}")       ; impossible for `AndType`
+      #_(testing "+ #{= > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{= > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{= > <>}")    ; impossible for `AndType`
+        (testing "+ #{= ><}")
+        (testing "+ #{= >< <>}")
+        (testing "+ #{= <>}")
+        (testing "+ #{>}")
+        (testing "+ #{> ><}")
+        (testing "+ #{> >< <>}")
+        (testing "+ #{> <>}")
+        (testing "+ #{><}")
+        (testing "+ #{>< <>}")
+        (testing "+ #{<>}"))
+      (testing "#{><}"
+        (testing "+ #{<}")
+      #_(testing "+ #{< =}")         ; impossible for `AndType`
+      #_(testing "+ #{< = >}")       ; impossible for `AndType`
+      #_(testing "+ #{< = > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{< = > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{< = > <>}")    ; impossible for `AndType`
+      #_(testing "+ #{< = ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< = >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< = <>}")      ; impossible for `AndType`
+      #_(testing "+ #{< >}")         ; impossible for `AndType`
+      #_(testing "+ #{< > ><}")      ; impossible for `AndType`
+      #_(testing "+ #{< > >< <>}")   ; impossible for `AndType`
+      #_(testing "+ #{< > <>}")      ; impossible for `AndType`
+        (testing "+ #{< ><}")
+        (testing "+ #{< >< <>}")
+        (testing "+ #{< <>}")
+      #_(testing "+ #{=}")         ; impossible for `AndType`
+      #_(testing "+ #{= >}")       ; impossible for `AndType`
+      #_(testing "+ #{= > ><}")    ; impossible for `AndType`
+      #_(testing "+ #{= > >< <>}") ; impossible for `AndType`
+      #_(testing "+ #{= > <>}")    ; impossible for `AndType`
+        (testing "+ #{= ><}")
+        (testing "+ #{= >< <>}")
+        (testing "+ #{= <>}")
+        (testing "+ #{>}")
+        (testing "+ #{> ><}")
+        (testing "+ #{> >< <>}")
+        (testing "+ #{> <>}")
+        (testing "+ #{><}")
+        (testing "+ #{>< <>}")
+        (testing "+ #{<>}"))
+      (testing "#{>< <>}")
+      (testing "#{<>}"))
     (testing "+ Expression")
     (testing "+ ProtocolType")
     (testing "+ ClassType"
       (testing "#{<}"
+        (test-comparison <ident i|a (& i|>a0 i|>a1))
         (testing "Boxed Primitive"
           (test-comparison <ident t/byte?        (& (t/isa? Number) tt/comparable?)))
         (testing "Final Concrete"
@@ -886,8 +1084,6 @@
                                   (& (t/isa? java.util.Map$Entry) (t/isa? java.io.Serializable))))
         (testing "Interface"
           (test-comparison <ident i|a           (& i|>a0 i|>a1))))
-      (testing "#{<}"
-        (test-comparison <ident i|a           (& i|>a0 i|>a1)))
     #_(testing "#{< =}")         ; impossible for `AndType`
     #_(testing "#{< = >}")       ; impossible for `AndType`
     #_(testing "#{< = > ><}")    ; impossible for `AndType`

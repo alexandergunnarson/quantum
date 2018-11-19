@@ -25,7 +25,7 @@
             [quantum.untyped.core.fn
               :refer [fn' fn1]]
             [quantum.untyped.core.logic
-              :refer [ifs]]
+              :refer [case-val ifs]]
             [quantum.untyped.core.reducers
               :refer [educe]]
             [quantum.untyped.core.spec              :as us]
@@ -66,13 +66,40 @@
 
 (def inverted (fn [f] (fn [t0 t1] (uset/invert-comparison (f t1 t0)))))
 
-;; ===== (Comparison) idents ===== ;;
+;; ===== (Comparison) idents and bit-sets ===== ;;
 
 (def- fn<  (fn' <ident))
 (def- fn=  (fn' =ident))
 (def- fn>  (fn' >ident))
 (def- fn>< (fn' ><ident))
 (def- fn<> (fn' <>ident))
+
+(def b<       (reduce ubit/conj ubit/empty [<ident]))
+(def b<|><    (reduce ubit/conj ubit/empty [<ident  ><ident]))
+(def b<|><|<> (reduce ubit/conj ubit/empty [<ident  ><ident <>ident]))
+(def b<|<>    (reduce ubit/conj ubit/empty [<ident  <>ident]))
+(def b=|><    (reduce ubit/conj ubit/empty [=ident  ><ident]))
+(def b=|><|<> (reduce ubit/conj ubit/empty [=ident  ><ident <>ident]))
+(def b=|<>    (reduce ubit/conj ubit/empty [=ident  <>ident]))
+(def b>       (reduce ubit/conj ubit/empty [>ident]))
+(def b>|><    (reduce ubit/conj ubit/empty [>ident  ><ident]))
+(def b>|><|<> (reduce ubit/conj ubit/empty [>ident  ><ident <>ident]))
+(def b>|<>    (reduce ubit/conj ubit/empty [>ident  <>ident]))
+(def b><      (reduce ubit/conj ubit/empty [><ident ><ident]))
+(def b><|<>   (reduce ubit/conj ubit/empty [><ident <>ident]))
+(def b<>      (reduce ubit/conj ubit/empty [<>ident]))
+
+(defn bit-set>set [x]
+  (cond-> #{}
+    (ubit/contains? x <ident)  (conj <ident)
+    (ubit/contains? x =ident)  (conj =ident)
+    (ubit/contains? x >ident)  (conj >ident)
+    (ubit/contains? x ><ident) (conj ><ident)
+    (ubit/contains? x <>ident) (conj <>ident)))
+
+(defn- comparison-err! [t0+t1 t1+t0]
+  (err! "comparison not thought through yet"
+        {:t0+t1 (bit-set>set t0+t1) :t1+t0 (bit-set>set t1+t0)}))
 
 ;; ===== Comparison Implementations ===== ;;
 
@@ -175,12 +202,12 @@
 
 (defns- compare|not+not [t0 not-type?, t1 not-type? > comparison?]
   (let [c (int (compare (utr/not-type>inner-type t0) (utr/not-type>inner-type t1)))]
-    (case c
-      0 =ident
-     -1 >ident
-      1 <ident
-      2 ><ident
-      3 ><ident)))
+    (case-val c
+      =ident  =ident
+      <ident  >ident
+      >ident  <ident
+      ><ident ><ident
+      <>ident ><ident)))
 
 (def- compare|not+or  compare|atomic+or)
 (def- compare|not+and compare|atomic+and)
@@ -214,6 +241,7 @@
 ;; TODO performance can be improved here by doing fewer comparisons
 ;; Possibly look at `quantum.untyped.core.type.defnt/compare-args-types` for reference?
 ;; Expected to handle possibly non-distinct types within `ts0` and `ts1`
+;; TODO follow the example of `compare|or+and`
 (defns- compare|or+or-like
   [ts0 _, ts1 _, <ts0 fn?, <ts1 fn?, <>ts1 fn? > comparison?]
   (let [l (->> ts0 (seq-and <ts1))
@@ -226,36 +254,42 @@
                 <>ident
                 ><ident)))))
 
+;; TODO follow the example of `compare|or+and`
 (defns- compare|or+or [^OrType t0 or-type?, ^OrType t1 or-type? > comparison?]
   (compare|or+or-like (.-args t0) (.-args t1) (fn1 < t0) (fn1 < t1) (fn1 <> t1)))
 
-;; TODO this might not actually be right
-;; TODO performance can be improved here
 (defns- compare|or+and [^OrType t0 or-type?, ^AndType t1 and-type? > comparison?]
   (let [t0+t1 (->> t0 .-args (uc/map+ #(compare % t1)) (educe ubit/conj ubit/empty))
         t1+t0 (->> t1 .-args (uc/map+ #(compare % t0)) (educe ubit/conj ubit/empty))]
-    (ifs (or (and (ubit/contains? t0+t1 >ident)
-                  (not (ubit/contains? t0+t1 <ident))
-                  (not (ubit/contains? t0+t1 ><ident)))
-             (and (ubit/contains? t1+t0 <ident)
-                  (not (ubit/contains? t1+t0 >ident))
-                  (not (ubit/contains? t1+t0 ><ident))))
-           >ident
-         (or (and (ubit/contains? t0+t1 <ident)
-                  (not (ubit/contains? t0+t1 >ident))
-                  (not (ubit/contains? t0+t1 ><ident)))
-             (and (ubit/contains? t1+t0 >ident)
-                  (not (ubit/contains? t1+t0 <ident))
-                  (not (ubit/contains? t1+t0 ><ident))))
-           <ident
-         (and (and (ubit/contains? t0+t1 ><ident)
-                   (not (ubit/contains? t0+t1 <ident))
-                   (not (ubit/contains? t0+t1 >ident)))
-              (and (ubit/contains? t1+t0 ><ident)
-                   (not (ubit/contains? t1+t0 <ident))
-                   (not (ubit/contains? t1+t0 >ident))))
-           ><ident
-         <>ident)))
+    (case-val t0+t1
+      (list b< b<|>< b<|><|<> b<|<> b=|>< b=|><|<> b=|<>)
+        (comparison-err! t0+t1 t1+t0)
+      b> (case-val t1+t0
+           b<    >ident
+           b<|>< >ident
+           (list b<|><|<> b<|<> b=|>< b=|><|<> b=|<> b> b>|>< b>|><|<> b>|<> b>< b><|<> b<>)
+             (comparison-err! t0+t1 t1+t0))
+      b>|><
+        (case-val t1+t0
+          b< >ident
+          (list b<|>< b<|><|<> b<|<> b=|>< b=|><|<> b=|<> b> b>|>< b>|><|<> b>|<> b>< b><|<> b<>)
+            (comparison-err! t0+t1 t1+t0))
+      b>|><|<>
+        (comparison-err! t0+t1 t1+t0)
+      b>|<>
+        (case-val t1+t0
+          b<    (comparison-err! t0+t1 t1+t0)
+          b<|>< >ident
+          (list b<|><|<> b<|<> b=|>< b=|><|<> b=|<> b> b>|>< b>|><|<> b>|<> b>< b><|<> b<>)
+            (comparison-err! t0+t1 t1+t0))
+      b>< (case-val t1+t0
+            (list b< b<|>< b<|><|<> b<|<> b=|>< b=|><|<> b=|<> b> b>|>< b>|><|<> b>|<>)
+              (comparison-err! t0+t1 t1+t0)
+            b>< ><ident
+            (list b><|<> b<>)
+              (comparison-err! t0+t1 t1+t0))
+      (list b><|<> b<>)
+        (comparison-err! t0+t1 t1+t0))))
 
 (def- compare|or+class     (inverted compare|atomic+or))
 (def- compare|or+unordered (inverted compare|atomic+or))
@@ -266,7 +300,24 @@
 ;; ----- AndType ----- ;;
 
 (defns- compare|and+and [^AndType t0 and-type?, ^AndType t1 and-type? > comparison?]
-  (TODO))
+  (let [t0+t1 (->> t0 .-args (uc/map+ #(compare % t1)) (educe ubit/conj ubit/empty))
+        t1+t0 (->> t1 .-args (uc/map+ #(compare % t0)) (educe ubit/conj ubit/empty))]
+    (case-val t0+t1
+      (list b< b<|>< b<|><|<> b<|<> b=|>< b=|><|<> b=|<>)
+        (comparison-err! t0+t1 t1+t0)
+      b> (case-val t1+t0
+           (list b< b<|>< b<|><|<> b<|<> b=|>< b=|><|<> b=|<>) (comparison-err! t0+t1 t1+t0)
+           b>                                                  =ident
+           b>|><                                               >ident
+           (list b>|><|<> b>|<> b>< b><|<> b<>)                (comparison-err! t0+t1 t1+t0))
+      b>|><
+        (case-val t1+t0
+          (list b< b<|>< b<|><|<> b<|<> b=|>< b=|><|<> b=|<>) (comparison-err! t0+t1 t1+t0)
+          b>                                                  <ident ; by symmetry
+          b>|><                                               ><ident
+          (list b>|><|<> b>|<> b>< b><|<> b<>)                (comparison-err! t0+t1 t1+t0))
+      (list b>|><|<> b>|<> b>< b><|<> b<>)
+        (comparison-err! t0+t1 t1+t0))))
 
 (def- compare|and+class     (inverted compare|atomic+and))
 (def- compare|and+unordered (inverted compare|atomic+and))
