@@ -800,16 +800,18 @@
           (cond-> classes
             include-classes-of-value-type? (conj (-> t utr/value-type>value c/type)))
         (c/= t universal-set)
-          #?(:clj  #{nil java.lang.Object}
+          #?(:clj  (conj classes nil java.lang.Object)
              :cljs (TODO "Not sure what to do in the case of universal CLJS set"))
         (c/= t empty-set)
-          #{}
+          classes
         (utr/and-type? t)
           (reduce (c/fn [classes' t'] (-type>classes t' include-classes-of-value-type? classes'))
             classes (utr/and-type>args t))
         (utr/or-type? t)
           (reduce (c/fn [classes' t'] (-type>classes t' include-classes-of-value-type? classes'))
             classes (utr/or-type>args t))
+        (utr/fn-type? t)
+          (conj classes Object) ; it's not really a clojure.lang.IFn; the dynamic dispatch is though
         (c/= t val?) ; TODO make this less ad-hoc
           (-type>classes val|by-class? include-classes-of-value-type? classes)
         :else

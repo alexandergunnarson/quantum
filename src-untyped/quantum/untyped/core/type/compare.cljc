@@ -219,11 +219,9 @@
 (defns- compare|not+class [t0 not-type?, t1 class-type? > comparison?]
   (compare|not+atomic t0 t1))
 
-(defns- compare|not+unordered [t0 not-type?, t1 class-type? > comparison?]
-  (compare|not+atomic t0 t1))
-
-(defns- compare|not+ordered [t0 not-type?, t1 class-type? > comparison?]
-  (compare|not+atomic t0 t1))
+(def- compare|not+fn        compare|not+atomic)
+(def- compare|not+unordered compare|not+atomic)
+(def- compare|not+ordered   compare|not+atomic)
 
 (defns- compare|not+value [t0 not-type?, t1 value-type? > comparison?]
   (let [t0|inner (utr/not-type>inner-type t0)]
@@ -291,7 +289,9 @@
       (list b><|<> b<>)
         (comparison-err! t0+t1 t1+t0))))
 
+(def- compare|or+protocol  (inverted compare|atomic+or))
 (def- compare|or+class     (inverted compare|atomic+or))
+(def- compare|or+fn        (inverted compare|atomic+or))
 (def- compare|or+unordered (inverted compare|atomic+or))
 (def- compare|or+ordered   (inverted compare|atomic+or))
 (def- compare|or+value     (inverted compare|value+type))
@@ -319,7 +319,9 @@
       (list b>|><|<> b>|<> b>< b><|<> b<>)
         (comparison-err! t0+t1 t1+t0))))
 
+(def- compare|and+protocol  (inverted compare|atomic+and))
 (def- compare|and+class     (inverted compare|atomic+and))
+(def- compare|and+fn        (inverted compare|atomic+and))
 (def- compare|and+unordered (inverted compare|atomic+and))
 (def- compare|and+ordered   (inverted compare|atomic+and))
 (def- compare|and+value     (inverted compare|value+type))
@@ -496,7 +498,7 @@
 
 ;; ----- FnType ----- ;;
 
-(defns compare|in [t0 utr/fn-type?, t1 utr/fn-type? > uset/comparison?]
+(defns compare|in [t0 utr/fn-type?, t1 utr/fn-type? > comparison?]
   (let [ct->overloads|t0 (utr/fn-type>arities t0)
         ct->overloads|t1 (utr/fn-type>arities t1)
         cts-only-in-t0   (uset/- (-> ct->overloads|t0 keys set) (-> ct->overloads|t1 keys set))
@@ -515,11 +517,13 @@
                           (-> t1 utr/fn-type>ored-input-types (get ct)))))))
            combine-comparisons))))
 
-(defns compare|out [t0 utr/fn-type?, t1 utr/fn-type? > uset/comparison?]
+(defns compare|out [t0 utr/fn-type?, t1 utr/fn-type? > comparison?]
   (compare (utr/fn-type>ored-output-type t0) (utr/fn-type>ored-output-type t1)))
 
 (defns- compare|fn+fn [t0 utr/fn-type?, t1 utr/fn-type? > comparison?]
   (combine-comparisons (compare|in t0 t1) (compare|out t0 t1)))
+
+(def- compare|fn+meta compare|non-meta+meta)
 
 ;; ----- UnorderedType ----- ;;
 
@@ -599,7 +603,7 @@
       Expression       fn>< ; TODO not entirely true
       ProtocolType     compare|not+protocol
       ClassType        compare|not+class
-      FnType           compare|todo
+      FnType           compare|not+fn
       UnorderedType    compare|not+unordered
       OrderedType      compare|not+ordered
       ValueType        compare|not+value
@@ -611,9 +615,9 @@
       OrType           compare|or+or
       AndType          compare|or+and
       Expression       fn>< ; TODO not entirely true
-      ProtocolType     compare|todo
+      ProtocolType     compare|or+protocol
       ClassType        compare|or+class
-      FnType           compare|todo
+      FnType           compare|or+fn
       UnorderedType    compare|or+unordered
       OrderedType      compare|or+ordered
       ValueType        compare|or+value
@@ -625,9 +629,9 @@
       OrType           (inverted compare|or+and)
       AndType          compare|and+and
       Expression       fn>< ; TODO not entirely true
-      ProtocolType     compare|todo
+      ProtocolType     compare|and+protocol
       ClassType        compare|and+class
-      FnType           compare|todo
+      FnType           compare|and+fn
       UnorderedType    compare|and+unordered
       OrderedType      compare|and+ordered
       ValueType        compare|and+value
@@ -651,12 +655,12 @@
      {UniversalSetType (inverted compare|universal+protocol)
       EmptySetType     (inverted compare|empty+protocol)
       NotType          (inverted compare|not+protocol)
-      OrType           compare|todo
-      AndType          compare|todo
+      OrType           (inverted compare|or+protocol)
+      AndType          (inverted compare|and+protocol)
       Expression       fn>< ; TODO not entirely true
       ProtocolType     compare|protocol+protocol
       ClassType        compare|protocol+class
-      FnType           compare|todo
+      FnType           fn><
       UnorderedType    compare|todo
       OrderedType      compare|todo
       ValueType        compare|protocol+value
@@ -670,7 +674,7 @@
       Expression       fn>< ; TODO not entirely true
       ProtocolType     (inverted compare|protocol+class)
       ClassType        compare|class+class
-      FnType           compare|todo
+      FnType           fn><
       UnorderedType    compare|class+unordered
       OrderedType      compare|class+ordered
       ValueType        compare|class+value
@@ -678,17 +682,17 @@
    FnType
      {UniversalSetType (inverted compare|universal+fn)
       EmptySetType     (inverted compare|empty+fn)
-      NotType          compare|todo
-      OrType           compare|todo
-      AndType          compare|todo
+      NotType          (inverted compare|not+fn)
+      OrType           (inverted compare|or+fn)
+      AndType          (inverted compare|and+fn)
       Expression       compare|todo
-      ProtocolType     compare|todo
-      ClassType        compare|todo
+      ProtocolType     fn>< ; TODO do `t/fn`s actually satisfy any protocols?
+      ClassType        fn>< ; TODO are `t/fn`s `clojure.lang.IFn`s? only dynamic dispatch really is
       FnType           compare|fn+fn
-      UnorderedType    compare|todo
-      OrderedType      compare|todo
-      ValueType        compare|todo
-      MetaType         compare|todo}
+      UnorderedType    fn><
+      OrderedType      fn><
+      ValueType        fn><
+      MetaType         compare|fn+meta}
    UnorderedType
      {UniversalSetType (inverted compare|universal+unordered)
       EmptySetType     (inverted compare|empty+unordered)
@@ -740,7 +744,7 @@
       Expression       (inverted compare|expr+meta)
       ProtocolType     (inverted compare|protocol+meta)
       ClassType        (inverted compare|class+meta)
-      FnType           compare|todo
+      FnType           (inverted compare|fn+meta)
       UnorderedType    (inverted compare|unordered+meta)
       OrderedType      (inverted compare|ordered+meta)
       ValueType        (inverted compare|value+meta)
@@ -814,12 +818,12 @@
   "Used in `t/compare|in` and `t/compare|out`. Might be used for other things too in the future.
    Commutative in the 2-ary arity.
    A `t/and`-style combination."
-  ([cs _ #_(seq-of uset/comparison?) > uset/comparison?]
+  ([cs _ #_(seq-of comparison?) > comparison?]
     ;; TODO it's possible to `reduced` early here depending
     (if (empty? cs)
         =ident
         (reduce (fn [c' c] (combine-comparisons c' c)) (first cs) (rest cs))))
-  ([c0 uset/comparison?, c1 uset/comparison? > uset/comparison?]
+  ([c0 comparison?, c1 comparison? > comparison?]
     (case (long c0)
       -1 (case (long c1) -1  <ident, 0  <ident, 1 ><ident, 2 ><ident, 3 <>ident)
        0 (case (long c1) -1  <ident, 0  =ident, 1  >ident, 2 ><ident, 3 <>ident)
@@ -828,7 +832,7 @@
        3 (case (long c1) -1 <>ident, 0 <>ident, 1 <>ident, 2 <>ident, 3 <>ident))))
 
 (defns compare-inputs
-  [arg-types0 _ #_(s/vec-of t/type?), arg-types1 _ #_(s/vec-of t/type?) > uset/comparison?]
+  [arg-types0 _ #_(s/vec-of t/type?), arg-types1 _ #_(s/vec-of t/type?) > comparison?]
   (let [ct-comparison (c/compare (count arg-types0) (count arg-types1))]
     (if (zero? ct-comparison)
         ;; TODO can use educers here
