@@ -406,13 +406,15 @@
    :repl-options
      {:init
        '(do (require
-              '[clj-java-decompiler.core :refer [decompile]]
-              '[no.disassemble :refer [disassemble]]
+              '[clj-java-decompiler.core :refer [decompile disassemble]]
               'quantum.untyped.core.error
               'quantum.untyped.core.meta.debug
               'quantum.untyped.core.print
               'quantum.untyped.core.print.prettier
               '[quantum.untyped.core.log :refer [prl!]])
+            ;; Otherwise `decompile` won't reliably print anything
+            (alter-var-root #'clj-java-decompiler.core/output
+              (constantly (com.strobel.decompiler.PlainTextOutput. *out*)))
             (quantum.untyped.core.print.prettier/extend-pretty-printing!)
             ;; For use with Atom's Proto-REPL
             ;; Interned in `clojure.core` in order to not be clobbered by `refresh`
@@ -830,8 +832,7 @@
              :resource-paths ["resources-dev"]
              :source-paths   ["src-dev"]
              :dependencies   '[[org.clojure/tools.nrepl                   "0.2.13"]
-                               [com.clojure-goes-fast/clj-java-decompiler "0.1.1"]]
-             :plugins        '[[lein-nodisassemble                        "0.1.3"]]}
+                               [com.clojure-goes-fast/clj-java-decompiler "0.1.1"]]}
           :test
             {:jvm-opts (>jvm-opts :test)}
           :prod
