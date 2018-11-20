@@ -81,22 +81,21 @@
                 (->> ^:val (java.lang.management.ManagementFactory/getRuntimeMXBean)
                            (.getName)))))
         expected
-        ($ (do (declare ~'pid)
-               [[0 0 false [] (t/or t/nil? t/string?)]]
+        ($ (do [[0 0 false [] (t/or t/nil? t/string?)]]
                (defmeta-from ~'pid
-                 (let* [~fs   (*<>|sized|macro 0)
-                        ~'f__ (new TypedFn
-                                {:quantum.core.type/type ...}
-                                pid|__!types ; defined/created within `t/defn`
-                                fs
-                                (fn* ([~ts ~fs] (. ~(aget* fs 0) ~'invoke))))]
+                 (let* [~fs    (*<>|sized|macro 0)
+                        ~'f__0 (new TypedFn
+                                 {:quantum.core.type/type pid|__type}
+                                 pid|__!types ; defined/created within `t/defn`
+                                 fs
+                                 (fn* ([~ts ~fs] (. ~(aget* fs 0) ~'invoke))))]
                    ~(aset* fs 0
-                      `(reify* [__O]
-                         (~(O 'invoke) [~'_0__]
-                           ~(ST (list '.
-                                  (tag "java.lang.management.RuntimeMXBean"
-                                       '(. java.lang.management.ManagementFactory getRuntimeMXBean))
-                                  'getName)))))
+                     `(reify* [__O]
+                        (~(O 'invoke) [~'_0__]
+                          ~(ST (list '.
+                                 (tag "java.lang.management.RuntimeMXBean"
+                                      '(. java.lang.management.ManagementFactory getRuntimeMXBean))
+                                 'getName)))))
                    f))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"

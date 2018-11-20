@@ -58,23 +58,10 @@ Legend:
 - [!] : refused
 
 - TODO implement the following:
-  [1] ^:inline
-      - if you do (Numeric/bitAnd a b) inline then bitAnd needs to know the primitive type so maybe
-        we do the `let*`-binding approach to typing vars?
-      - `let*` the vars but make it so it can auto-replace if it's just a symbol to symbol mapping
-      - A good example of inlining:
-        (t/def empty?|rf
-          (fn/aritoid
-            (t/fn [] true)
-            fn/identity
-            (t/fn [ret _, x _]      (dc/reduced false))
-            (t/fn [ret _, k _, v _] (dc/reduced false))))
-        (t/defn empty? > p/boolean?
-          ([x p/nil?] true)
-          ([xs dc/counted?] (-> xs count num/zero?))
-          ([xs (t/input-type educe :_ :_ :?)] (educe empty?|rf x)))
-      - Should we allow something like `^:analyze-impl` or something to mimic inline optimizations
-        but avoid actual inlining?
+  [-] t/fn
+      [ ] look at fn comparisons; really there's just <|=|> with <|=|> so 9 combos
+      [ ] add `t/fn` as a special form so we don't need to re-analyze its constituents
+  [ ] make local vars sanitary/safe by using more of the gensym feature
   [2] t/numerically : e.g. a double representing exactly what a float is able to represent
       - and variants thereof: `numerically-long?` etc.
       - t/numerically-integer?
@@ -110,7 +97,6 @@ Legend:
   [ ] replace `deref` with `ref/deref` in typed contexts? So we can do `@` still
   - Type Logic and Predicates
     - expressions (`quantum.untyped.core.analyze.expr`)
-    - comparison of `t/fn`s is probably possible
     - It is possible to check satisfaction of arities to an `t/ftype` at runtime even if the type
       meta is not stripped (well, at least the arity counts can be checked and primitive types in
       CLJ):
@@ -181,6 +167,20 @@ Legend:
     protocols can be extended
     - TODO CLJS needs to implement it better
   [-] Analysis/Optimization
+      [ ] ^:inline
+          - A good example of inlining:
+            (t/def empty?|rf
+              (fn/aritoid
+                (t/fn [] true)
+                fn/identity
+                (t/fn [ret _, x _]      (dc/reduced false))
+                (t/fn [ret _, k _, v _] (dc/reduced false))))
+            (t/defn empty? > p/boolean?
+              ([x p/nil?] true)
+              ([xs dc/counted?] (-> xs count num/zero?))
+              ([xs (t/input-type educe :_ :_ :?)] (educe empty?|rf x)))
+          - Should we allow something like `^:analyze-impl` or something to mimic inline optimizations
+            but avoid actual inlining?
       - maybe redefine `untyped.core.type` in a typed way? `t/def` doesn't realize certain things are `t/type?`
       - dead code elimination
         - in `let*`, we should elide variables that are unused and that have no side effects (or at
@@ -233,7 +233,6 @@ Legend:
         only bound within typed contexts.
   [ ] t/defrecord
   [ ] t/def-concrete-type (i.e. `t/deftype`)
-  [-] t/fn
   [-] t/ftype
       [ ] conditionally optional arities etc.
   [-] `t/defn`
