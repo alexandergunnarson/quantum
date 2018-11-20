@@ -497,7 +497,7 @@
                     (update :input-types >vec)
                     (set/rename-keys {:output-type-pair :output-type}))))))
 
-;; ----- FixedFn + ExtensibleFn (for FnType) ----- ;;
+;; ----- TypedFn (for FnType) ----- ;;
 ;; TODO figure out where this goes
 
 (defprotocol PTypedFn
@@ -570,14 +570,6 @@
      applyTo ([this ^clojure.lang.ISeq xs] (.applyTo dynf (cons ts (cons fs xs))))}
    ?Meta {meta      ([this] meta)
           with-meta ([this meta'] (TypedFn. meta' ts fs dynf))}})
-
-(udt/deftype ExtensibleFn
-  [;; the types for direct dispatch overloads
-   ^"[Ljava.lang.Object;"     ts
-   ;; the direct dispatch fn/`reify` overloads
-   ^:! ^"[Ljava.lang.Object;" fs
-   ;; the dynamic dispatch fn
-   ^clojure.lang.IFn          dynf])
 
 ;; ----- MetaOrType ----- ;;
 

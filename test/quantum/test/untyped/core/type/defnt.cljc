@@ -1057,13 +1057,13 @@
 
                  ;; [x tt/boolean? > (t/ref tt/boolean?)]
 
-                 (def ~(tag (cstr `boolean>Object) 'ref-output-type|__0)
-                   (reify* [boolean>Object] (~(O 'invoke) [~'_0__ ~(B 'x)] (new ~'Boolean ~'x))))
+                 (def ~(tag (cstr `B__O) 'ref-output-type|__0)
+                   (reify* [B__O] (~(O 'invoke) [~'_0__ ~(B 'x)] (new ~'Boolean ~'x))))
 
                  ;; [x tt/byte? > (t/ref tt/byte?)]
 
-                 (def ~(tag (cstr `byte>Object) 'ref-output-type|__1)
-                   (reify* [byte>Object] (~(O 'invoke) [~'_1__ ~(Y 'x)] (new ~'Byte ~'x))))
+                 (def ~(tag (cstr `Y__O) 'ref-output-type|__1)
+                   (reify* [Y__O] (~(O 'invoke) [~'_1__ ~(Y 'x)] (new ~'Byte ~'x))))
 
                  [[0 0 nil [(t/isa? Boolean)] (t/ref (t/isa? Boolean))]
                   [1 1 nil [(t/isa? Byte)]    (t/ref (t/isa? Byte))]]
@@ -1796,17 +1796,17 @@
 ;; ===== `extend-defn!` tests ===== ;;
 
 (def dependent-extensible|direct-dispatch|codelist
- `[(def ~(tag (cstr `boolean+byte+short+short>Object)     'dependent-extensible|__0)
-      (reify* [boolean+byte+short+short>Object]
+ `[(def ~(tag (cstr `boolean+byte+short+S__O)     'dependent-extensible|__0)
+      (reify* [boolean+byte+short+S__O]
         (~(O 'invoke) [~'_0__  ~(B 'a) ~(Y 'b) ~(S 'c) ~(S 'd)] 1)))
-   (def ~(tag (cstr `boolean+byte+short+char>Object)      'dependent-extensible|__1)
-     (reify* [boolean+byte+short+char>Object]
+   (def ~(tag (cstr `boolean+byte+short+C__O)      'dependent-extensible|__1)
+     (reify* [boolean+byte+short+C__O]
        (~(O 'invoke) [~'_1__  ~(B 'a) ~(Y 'b) ~(S 'c) ~(C 'd)] 1)))
    (def ~(tag (cstr `boolean+byte+short+Object>Object)    'dependent-extensible|__2)
      (reify* [boolean+byte+short+Object>Object]
        (~(O 'invoke) [~'_2__  ~(B 'a) ~(Y 'b) ~(S 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `boolean+byte+Object+char>Object)     'dependent-extensible|__3)
-     (reify* [boolean+byte+Object+char>Object]
+   (def ~(tag (cstr `boolean+byte+Object+C__O)     'dependent-extensible|__3)
+     (reify* [boolean+byte+Object+C__O]
        (~(O 'invoke) [~'_3__  ~(B 'a) ~(Y 'b) ~(O 'c) ~(C 'd)] 1)))
    (def ~(tag (cstr `boolean+byte+Object+Object>Object)   'dependent-extensible|__4)
      (reify* [boolean+byte+Object+Object>Object]
@@ -1814,14 +1814,14 @@
    (def ~(tag (cstr `boolean+byte+Object+Object>Object)   'dependent-extensible|__5)
      (reify* [boolean+byte+Object+Object>Object]
        (~(O 'invoke) [~'_5__  ~(B 'a) ~(Y 'b) ~(O 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `boolean+short+short+short>Object)    'dependent-extensible|__6)
-     (reify* [boolean+short+short+short>Object]
+   (def ~(tag (cstr `boolean+short+short+S__O)    'dependent-extensible|__6)
+     (reify* [boolean+short+short+S__O]
        (~(O 'invoke) [~'_6__  ~(B 'a) ~(S 'b) ~(S 'c) ~(S 'd)] 1)))
-   (def ~(tag (cstr `boolean+char+short+char>Object)      'dependent-extensible|__7)
-     (reify* [boolean+char+short+char>Object]
+   (def ~(tag (cstr `boolean+char+short+C__O)      'dependent-extensible|__7)
+     (reify* [boolean+char+short+C__O]
        (~(O 'invoke) [~'_7__  ~(B 'a) ~(C 'b) ~(S 'c) ~(C 'd)] 1)))
-   (def ~(tag (cstr `boolean+char+Object+char>Object)     'dependent-extensible|__8)
-     (reify* [boolean+char+Object+char>Object]
+   (def ~(tag (cstr `boolean+char+Object+C__O)     'dependent-extensible|__8)
+     (reify* [boolean+char+Object+C__O]
        (~(O 'invoke) [~'_8__  ~(B 'a) ~(C 'b) ~(O 'c) ~(C 'd)] 1)))
    (def ~(tag (cstr `boolean+Object+short+Object>Object)  'dependent-extensible|__9)
      (reify* [boolean+Object+short+Object>Object]
@@ -1832,17 +1832,17 @@
    (def ~(tag (cstr `boolean+Object+Object+Object>Object) 'dependent-extensible|__11)
      (reify* [boolean+Object+Object+Object>Object]
        (~(O 'invoke) [~'_11__ ~(B 'a) ~(O 'b) ~(O 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `byte+byte+short+short>Object)        'dependent-extensible|__12)
-     (reify* [byte+byte+short+short>Object]
+   (def ~(tag (cstr `byte+byte+short+S__O)        'dependent-extensible|__12)
+     (reify* [byte+byte+short+S__O]
        (~(O 'invoke) [~'_12__ ~(Y 'a) ~(Y 'b) ~(S 'c) ~(S 'd)] 1)))
-   (def ~(tag (cstr `byte+byte+short+char>Object)         'dependent-extensible|__13)
-     (reify* [byte+byte+short+char>Object]
+   (def ~(tag (cstr `byte+byte+short+C__O)         'dependent-extensible|__13)
+     (reify* [byte+byte+short+C__O]
        (~(O 'invoke) [~'_13__ ~(Y 'a) ~(Y 'b) ~(S 'c) ~(C 'd)] 1)))
    (def ~(tag (cstr `byte+byte+short+Object>Object)       'dependent-extensible|__14)
      (reify* [byte+byte+short+Object>Object]
        (~(O 'invoke) [~'_14__ ~(Y 'a) ~(Y 'b) ~(S 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `byte+byte+Object+char>Object)        'dependent-extensible|__15)
-     (reify* [byte+byte+Object+char>Object]
+   (def ~(tag (cstr `byte+byte+Object+C__O)        'dependent-extensible|__15)
+     (reify* [byte+byte+Object+C__O]
        (~(O 'invoke) [~'_15__ ~(Y 'a) ~(Y 'b) ~(O 'c) ~(C 'd)] 1)))
    (def ~(tag (cstr `byte+byte+Object+Object>Object)      'dependent-extensible|__16)
      (reify* [byte+byte+Object+Object>Object]
@@ -1850,14 +1850,14 @@
    (def ~(tag (cstr `byte+byte+Object+Object>Object)      'dependent-extensible|__17)
      (reify* [byte+byte+Object+Object>Object]
        (~(O 'invoke) [~'_17__ ~(Y 'a) ~(Y 'b) ~(O 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `short+short+short+short>Object)      'dependent-extensible|__18)
-     (reify* [short+short+short+short>Object]
+   (def ~(tag (cstr `short+short+short+S__O)      'dependent-extensible|__18)
+     (reify* [short+short+short+S__O]
        (~(O 'invoke) [~'_18__ ~(S 'a) ~(S 'b) ~(S 'c) ~(S 'd)] 1)))
-   (def ~(tag (cstr `char+char+short+char>Object)         'dependent-extensible|__19)
-     (reify* [char+char+short+char>Object]
+   (def ~(tag (cstr `char+char+short+C__O)         'dependent-extensible|__19)
+     (reify* [char+char+short+C__O]
        (~(O 'invoke) [~'_19__ ~(C 'a) ~(C 'b) ~(S 'c) ~(C 'd)] 1)))
-   (def ~(tag (cstr `char+char+Object+char>Object)        'dependent-extensible|__20)
-     (reify* [char+char+Object+char>Object]
+   (def ~(tag (cstr `char+char+Object+C__O)        'dependent-extensible|__20)
+     (reify* [char+char+Object+C__O]
        (~(O 'invoke) [~'_20__ ~(C 'a) ~(C 'b) ~(O 'c) ~(C 'd)] 1)))
    (def ~(tag (cstr `Object+Object+short+Object>Object)   'dependent-extensible|__21)
      (reify* [Object+Object+short+Object>Object]
@@ -1996,8 +1996,8 @@
             expected
               (case (env-lang)
                 :clj ($ (do (declare ~'extensible)
-                            (def ~(tag (cstr `double>Object) 'extensible|__0)
-                              (reify* [double>Object] (~(O 'invoke) [~'_0__ ~(D 'a)] nil)))
+                            (def ~(tag (cstr `D__O) 'extensible|__0)
+                              (reify* [D__O] (~(O 'invoke) [~'_0__ ~(D 'a)] nil)))
 
                             [{:id 0 :index 0 :arg-types [(t/isa? Double)] :output-type t/any?}]
 
@@ -2017,8 +2017,8 @@
                     ([a t/boolean?]))))
             expected
               (case (env-lang)
-                :clj ($ (do (def ~(tag (cstr `boolean>Object) 'extensible|__1)
-                              (reify* [boolean>Object]
+                :clj ($ (do (def ~(tag (cstr `B__O) 'extensible|__1)
+                              (reify* [B__O]
                                 (~(O 'invoke) [~'_0__ ~(B 'a)] nil)))
 
                             [{:id 1 :index 0 :arg-types [(t/isa? Boolean)] :output-type t/any?}
@@ -2181,8 +2181,8 @@
             expected
               (case (env-lang)
                 :clj ($ [(do (declare ~'simple-reactive-dependee)
-                             (def ~(tag (cstr `char>Object) 'simple-reactive-dependee|__0)
-                               (reify* [char>Object] (~(O 'invoke) [~'_0__ ~(C 'a)] 1)))
+                             (def ~(tag (cstr `C__O) 'simple-reactive-dependee|__0)
+                               (reify* [C__O] (~(O 'invoke) [~'_0__ ~(C 'a)] 1)))
                              [{:id 0 :index 0 :arg-types [(t/isa? Character)] :output-type t/any?}]
                              (defmeta ~'simple-reactive-dependee
                                {:quantum.core.type/type simple-reactive-dependee|__type}
@@ -2191,8 +2191,8 @@
                                       (. simple-reactive-dependee|__0 ~'invoke ~'x00__)
                                       (unsupported! `simple-reactive-dependee [~'x00__] 0))))))
                          (do (declare ~'simple-reactive-dependent)
-                             (def ~(tag (cstr `char>Object) 'simple-reactive-dependent|__0)
-                               (reify* [char>Object] (~(O 'invoke) [~'_0__ ~(C 'a)] "abc")))
+                             (def ~(tag (cstr `C__O) 'simple-reactive-dependent|__0)
+                               (reify* [C__O] (~(O 'invoke) [~'_0__ ~(C 'a)] "abc")))
                              [{:id 0 :index 0 :arg-types [(t/isa? Character)] :output-type t/any?}]
                              (defmeta ~'simple-reactive-dependent
                                {:quantum.core.type/type simple-reactive-dependent|__type}
@@ -2522,63 +2522,65 @@
             :clj
             ($ (do (declare ~'f0)
                    [[0 0 false [] (t/ftype tt/boolean? [tt/byte? :> (t/ftype [tt/char?])])]]
-(defmeta-from ~'f0
-  (let* [fs (*<>|sized|macro 2)
-         f  (new TypedFn
-              {:quantum.core.type/type ~'f0|__type}
-              (fn* ([~ts ~fs ~'x00__]
-                     (ifs (~(aget* (aget* ts 0) 0) ~'x00__)
-                          (. ~(aget* ts 0) ~'invoke ~'x00__)
-                          (~(aget* (aget* ts 1) 0) ~'x00__)
-                          (. ~(aget* ts 1) ~'invoke ~'x00__)
-                          (unsupported! `f0 [~'x00__] 0)))))]
-   ~(aset* fs 0
-     `(reify* [boolean>Object]
-        (~'invoke [~'_0__ ~(B 'a)]
-          ;; From `(self/fn [b ...])`
-          (self/>anon-fn
-            ;; TODO perhaps extern this (and parts thereof) whenever possible in `let*`
-            ;; statement on the very outside of the fn (so around the outer `reify*`) ?
-            (*<>|macro (*<>|macro (t/isa? Byte)) (*<>|macro (t/isa? Character)))
-            (*<>|macro
-              (reify* [byte>Object]
-                (~'invoke [~'_0__ ~(Y 'b)]
-                  ;; From `(self/fn [c ...])`
-                  (self/>anon-fn
-                    (*<>|macro (*<>|macro (t/isa? Boolean)) (*<>|macro (t/isa? Short)))
-                    (fn* [~(tag (cstr `AnonFn) 'this__)]
-                      (*<>|macro
-                        (reify* [boolean>Object]
-                          (~'invoke [~'_0__ (B 'c)]
-                            ~'b
-                            (. (tag (cstr `boolean>Object) (Array/get (.-fs ~'this__) 0)) ~'invoke ~'a)
-                            (. (tag (cstr `boolean>Object) (Array/get (.-fs ~'this__) 0)) ~'invoke ~'c)))
-                        (reify* [short>Object]
-                          (~'invoke [~'_0__ (S 'c)]
-                            ~'b
-                            (. (tag (cstr `boolean>Object) (Array/get (.-fs ~'this__) 0)) ~'invoke ~'a)
-                            (. (tag (cstr `short>Object)   (Array/get (.-fs ~'this__) 1)) ~'invoke ~'c)))))
-                    (fn* ([~(O<> 'types__) ~(O<> 'fs__) ~'x00]
-                           (ifs ((Array/get (Array/get ~'types__ 0) 0) ~'x00__)
-                                (. ~(tag (cstr `boolean>Object) `(Array/get ~'fs__ 0))
-                                   ~'invoke ~'x00__)
-                                ((Array/get (Array/get ~'types__ 1) 0) ~'x00__)
-                                (. ~(tag (cstr `short>Object)   `(Array/get ~'fs__ 1))
-                                   ~'invoke ~'x00__)
-                                (unsupported! [~'x00__] 0)))))))
-              (reify* [char>Object]
-                (~'invoke [~'_0__ ~(C 'a)] ...)))
-            (fn* ([~(O<> 'types__) ~(O<> 'fs__) ~'x00__]
-                   (ifs ((Array/get (Array/get ~'types__ 0) 0) ~'x00__)
-                        (. ~(tag (cstr `byte>Object) `(Array/get ~'fs__ 0)) ~'invoke ~'x00__)
-                        ((Array/get (Array/get ~'types__ 1) 0) ~'x00__)
-                        (. ~(tag (cstr `char>Object) `(Array/get ~'fs__ 1)) ~'invoke ~'x00__)
-                        (unsupported! [~'x00__] 0)))))))
-   ~(aset* fs 1
-     `(reify* [double>Object]
-        (~'invoke [~'_0__ ~(D 'a)] ...)))))
-
-)))]
+          (defmeta-from ~'f0
+            (let* [~fs    (*<>|sized|macro 2)
+                   ~'f__0 (new TypedFn
+                            {:quantum.core.type/type ~'f0|__type}
+                            (fn* ([~ts ~fs ~'x00__]
+                                   (ifs (~(aget* (aget* ts 0) 0) ~'x00__)
+                                        (. ~(aget* ts 0) ~'invoke ~'x00__)
+                                        (~(aget* (aget* ts 1) 0) ~'x00__)
+                                        (. ~(aget* ts 1) ~'invoke ~'x00__)
+                                        (unsupported! `f0 [~'x00__] 0)))))]
+             ~(aset* fs 0
+               `(reify* [B__O]
+                  (~'invoke [~'_0__ ~(B 'a)]
+                    ;; From `(self/fn [b ...])`
+                    (let* [~fs    (*<>|sized|macro 2)
+                           ~'f__1 (new TypedFn nil
+                                    ;; TODO perhaps extern this (and parts thereof) whenever
+                                    ;; possible in `let*` statement on the very outside of the fn
+                                    ;; (so around the outer `reify*`) ?
+                                    (*<>|macro (*<>|macro t/byte?) (*<>|macro t/char?))
+                                    ~fs
+                                    (fn* ([~ts ~fs ~'x00__]
+                                           (ifs (~(aget* (aget* ~ts 0) 0) ~'x00__)
+                                                (. ~(>Y__O (aget* fs 0)) ~'invoke ~'x00__)
+                                                (~(aget* (aget* ~ts 1) 0) ~'x00__)
+                                                (. ~(>C__O (aget* fs 1)) ~'invoke ~'x00__)
+                                                (unsupported! [~'x00__] 0)))))]
+                     ~(aset* fs 0
+                       `(reify* [Y__O]
+                          (~'invoke [~'_0__ ~(Y 'b)]
+                            ;; From `(self/fn [c ...])`
+                            (let* [~fs    (*<>|sized|macro 2)
+                                   ~'f__2 (new TypedFn nil
+                                            (*<>|macro (*<>|macro t/boolean?) (*<>|macro t/short?))
+                                            ~fs
+                                            (fn* ([~ts ~fs ~'x00]
+                                                   (ifs (~(aget* (aget* ts 0) 0) ~'x00__)
+                                                        (. ~(>B__O (aget* fs 0)) ~'invoke ~'x00__)
+                                                        (~(aget* (aget* ts 1) 0) ~'x00__)
+                                                        (. ~(>S__O (aget* fs 1)) ~'invoke ~'x00__)
+                                                        (unsupported! [~'x00__] 0))))))]
+                              ~(aset* fs 0
+                                `(reify* [B__O]
+                                   (~'invoke [~'_0__ (B 'c)]
+                                     ~'b
+                                     (. ~(>B__O (aget* fs 0)) ~'invoke ~'a)
+                                     (. ~(>B__O (aget* fs 0)) ~'invoke ~'c))))
+                              ~(aset* fs 1
+                                `(reify* [S__O]
+                                   (~'invoke [~'_0__ (S 'c)]
+                                     ~'b
+                                     (. ~(>B__O (aget* fs 0)) ~'invoke ~'a)
+                                     (. ~(>S__O (aget* fs 1)) ~'invoke ~'c)))))))
+                       ~(aset* fs 1
+                          (reify* [C__O]
+                            (~'invoke [~'_0__ ~(C 'a)] ...)))))))
+             ~(aset* fs 1
+               `(reify* [D__O]
+                  (~'invoke [~'_0__ ~(D 'a)] ...))))))))]
     ))
 
 
