@@ -26,7 +26,7 @@
     [quantum.untyped.core.vars
       :refer [defmeta]])
   (:import
-    [clojure.lang                    ASeq ISeq LazySeq Named Reduced Seqable]
+    [clojure.lang                    ASeq ISeq LazySeq Named Reduced RT Seqable]
     [quantum.core.data               Array]
     [quantum.core                    Numeric Primitive]
     [quantum.untyped.core.type.defnt AnonFn]))
@@ -51,37 +51,58 @@
 (defn O<> [form] (tag "[Ljava.lang.Object;" form))
 (defn ST  [form] (tag "java.lang.String"    form))
 
+(defn >B__B [form] (tag (-> 'B__B resolve str) form))
+(defn >Y__Y [form] (tag (-> 'Y__Y resolve str) form))
+(defn >S__S [form] (tag (-> 'S__S resolve str) form))
+(defn >C__C [form] (tag (-> 'C__C resolve str) form))
+(defn >I__I [form] (tag (-> 'I__I resolve str) form))
+(defn >L__L [form] (tag (-> 'L__L resolve str) form))
+(defn >F__F [form] (tag (-> 'F__F resolve str) form))
+(defn >D__D [form] (tag (-> 'D__D resolve str) form))
+(defn >O__O [form] (tag (-> 'O__O resolve str) form))
+
 (defn cstr [x]
   (if (-> x resolve class?)
       (str x)
       (str (core/namespace x) "." (core/name x))))
+
+(def ts (O<> 'ts__))
+(def fs (O<> 'fs__))
+
+(defn aget* [x i]   (list '. 'clojure.lang.RT 'aget x i))
+(defn aset* [x i v] (list '. 'clojure.lang.RT 'aset x i v))
 
 #?(:clj
 (deftest test|pid
   (let [actual
           (binding [self/*compilation-mode* :test]
             (macroexpand '
-              (self/defn pid|test [> (t/? t/string?)]
+              (self/defn pid [> (t/? t/string?)]
                 (->> ^:val (java.lang.management.ManagementFactory/getRuntimeMXBean)
                            (.getName)))))
         expected
-        ($ (do (declare ~'pid|test)
-               (def ~(tag (cstr `>Object) 'pid|test|__0)
-                 (reify* [>Object]
-                   (~(O 'invoke) [~'_0__]
-                     ~(ST (list '.
-                               (tag "java.lang.management.RuntimeMXBean"
-                                 '(. java.lang.management.ManagementFactory getRuntimeMXBean))
-                               'getName)))))
+        ($ (do (declare ~'pid)
                [[0 0 false [] (t/or t/nil? t/string?)]]
-               (defmeta ~'pid|test
-                 {:quantum.core.type/type pid|test|__type}
-                 (fn* ([] (. pid|test|__0 ~'invoke))))))]
+               (defmeta-from ~'pid
+                 (let* [~fs   (*<>|sized|macro 0)
+                        ~'f__ (new TypedFn
+                                {:quantum.core.type/type ...}
+                                pid|__!types ; defined/created within `t/defn`
+                                fs
+                                (fn* ([~ts ~fs] (. ~(aget* fs 0) ~'invoke))))]
+                   ~(aset* fs 0
+                      `(reify* [__O]
+                         (~(O 'invoke) [~'_0__]
+                           ~(ST (list '.
+                                  (tag "java.lang.management.RuntimeMXBean"
+                                       '(. java.lang.management.ManagementFactory getRuntimeMXBean))
+                                  'getName)))))
+                   f))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
-      (eval '(do (is (t/string? (pid|test)))
-                 (throws (pid|test 1))))))))
+      (eval '(do (is (t/string? (pid)))
+                 (throws (pid 1))))))))
 
 (deftest test|identity
   (let [actual
@@ -95,24 +116,24 @@
 
                    ;; [x t/any?]
 
-                   (def ~(tag (cstr `boolean>boolean) 'identity|__0)
-                     (reify* [boolean>boolean] (~(B 'invoke) [~'_0__ ~(B 'x)] ~'x)))
-                   (def ~(tag (cstr `byte>byte) 'identity|__1)
-                     (reify* [byte>byte]       (~(Y 'invoke) [~'_1__ ~(Y 'x)] ~'x)))
-                   (def ~(tag (cstr `short>short) 'identity|__2)
-                     (reify* [short>short]     (~(S 'invoke) [~'_2__ ~(S 'x)] ~'x)))
-                   (def ~(tag (cstr `char>char) 'identity|__3)
-                     (reify* [char>char]       (~(C 'invoke) [~'_3__ ~(C 'x)] ~'x)))
-                   (def ~(tag (cstr `int>int) 'identity|__4)
-                     (reify* [int>int]         (~(I 'invoke) [~'_4__ ~(I 'x)] ~'x)))
-                   (def ~(tag (cstr `long>long) 'identity|__5)
-                     (reify* [long>long]       (~(L 'invoke) [~'_5__ ~(L 'x)] ~'x)))
-                   (def ~(tag (cstr `float>float) 'identity|__6)
-                     (reify* [float>float]     (~(F 'invoke) [~'_6__ ~(F 'x)] ~'x)))
-                   (def ~(tag (cstr `double>double) 'identity|__7)
-                     (reify* [double>double]   (~(D 'invoke) [~'_7__ ~(D 'x)] ~'x)))
-                   (def ~(tag (cstr `Object>Object) 'identity|__8)
-                     (reify* [Object>Object]   (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
+                   (def ~(>B__B 'identity|__0)
+                     (reify* [B__B] (~(B 'invoke) [~'_0__ ~(B 'x)] ~'x)))
+                   (def ~(>Y__Y 'identity|__1)
+                     (reify* [Y__Y] (~(Y 'invoke) [~'_1__ ~(Y 'x)] ~'x)))
+                   (def ~(>S__S 'identity|__2)
+                     (reify* [S__S] (~(S 'invoke) [~'_2__ ~(S 'x)] ~'x)))
+                   (def ~(>C__C 'identity|__3)
+                     (reify* [C__C] (~(C 'invoke) [~'_3__ ~(C 'x)] ~'x)))
+                   (def ~(>I__I 'identity|__4)
+                     (reify* [I__I] (~(I 'invoke) [~'_4__ ~(I 'x)] ~'x)))
+                   (def ~(>L__L 'identity|__5)
+                     (reify* [L__L] (~(L 'invoke) [~'_5__ ~(L 'x)] ~'x)))
+                   (def ~(>F__F 'identity|__6)
+                     (reify* [F__F] (~(F 'invoke) [~'_6__ ~(F 'x)] ~'x)))
+                   (def ~(>D__D 'identity|__7)
+                     (reify* [D__D] (~(D 'invoke) [~'_7__ ~(D 'x)] ~'x)))
+                   (def ~(>O__O 'identity|__8)
+                     (reify* [O__O] (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
 
                    [[0 0 true [t/boolean?] t/boolean?]
                     [1 1 true [t/byte?]    t/byte?]
@@ -173,13 +194,13 @@
 
                  ;; [x t/string?]
 
-                 (def ~(tag (cstr `Object>Object) 'name|__0)
-                   (reify* [Object>Object] (~(O 'invoke) [~'_0__ ~(O 'x)] ~(ST 'x))))
+                 (def ~(>O__O 'name|__0)
+                   (reify* [O__O] (~(O 'invoke) [~'_0__ ~(O 'x)] ~(ST 'x))))
 
                  ;; [x (t/isa? Named)] > (t/run t/string?)
 
-                 (def ~(tag (cstr `Object>Object) 'name|__1)
-                   (reify* [Object>Object]
+                 (def ~(>O__O 'name|__1)
+                   (reify* [O__O]
                      (~(O 'invoke) [~'_1__ ~(O 'x)]
                        (t/validate ~(ST (list '. (tag "clojure.lang.Named" 'x) 'getName))
                                    ~'(t/run t/string?)))))
@@ -225,29 +246,29 @@
 
                  ;; [x t/nil?]
 
-                 (def ~(tag (cstr `Object>boolean) 'some?|__0)
-                   (reify* [Object>boolean] (~(B 'invoke) [~'_0__ ~(O 'x)] false)))
+                 (def ~(tag (cstr `O__B) 'some?|__0)
+                   (reify* [O__B] (~(B 'invoke) [~'_0__ ~(O 'x)] false)))
 
                  ;; [x t/any?]
 
-                 (def ~(tag (cstr `boolean>boolean) 'some?|__1)
-                   (reify* [boolean>boolean] (~(B 'invoke) [~'_1__ ~(B 'x)] true)))
-                 (def ~(tag (cstr `byte>boolean) 'some?|__2)
-                   (reify* [byte>boolean]    (~(B 'invoke) [~'_2__ ~(Y 'x)] true)))
-                 (def ~(tag (cstr `short>boolean) 'some?|__3)
-                   (reify* [short>boolean]   (~(B 'invoke) [~'_3__ ~(S 'x)] true)))
-                 (def ~(tag (cstr `char>boolean) 'some?|__4)
-                   (reify* [char>boolean]    (~(B 'invoke) [~'_4__ ~(C 'x)] true)))
-                 (def ~(tag (cstr `int>boolean) 'some?|__5)
-                   (reify* [int>boolean]     (~(B 'invoke) [~'_5__ ~(I 'x)] true)))
-                 (def ~(tag (cstr `long>boolean) 'some?|__6)
-                   (reify* [long>boolean]    (~(B 'invoke) [~'_6__ ~(L 'x)] true)))
-                 (def ~(tag (cstr `float>boolean) 'some?|__7)
-                   (reify* [float>boolean]   (~(B 'invoke) [~'_7__ ~(F 'x)] true)))
-                 (def ~(tag (cstr `double>boolean) 'some?|__8)
-                   (reify* [double>boolean]  (~(B 'invoke) [~'_8__ ~(D 'x)] true)))
-                 (def ~(tag (cstr `Object>boolean) 'some?|__9)
-                   (reify* [Object>boolean]  (~(B 'invoke) [~'_9__ ~(O 'x)] true)))
+                 (def ~(>B__B 'some?|__1)
+                   (reify* [B__B] (~(B 'invoke) [~'_1__ ~(B 'x)] true)))
+                 (def ~(>Y__B 'some?|__2)
+                   (reify* [Y__B] (~(B 'invoke) [~'_2__ ~(Y 'x)] true)))
+                 (def ~(>S__B 'some?|__3)
+                   (reify* [S__B] (~(B 'invoke) [~'_3__ ~(S 'x)] true)))
+                 (def ~(>C__B 'some?|__4)
+                   (reify* [C__B] (~(B 'invoke) [~'_4__ ~(C 'x)] true)))
+                 (def ~(>I__B 'some?|__5)
+                   (reify* [I__B] (~(B 'invoke) [~'_5__ ~(I 'x)] true)))
+                 (def ~(>L__B 'some?|__6)
+                   (reify* [L__B] (~(B 'invoke) [~'_6__ ~(L 'x)] true)))
+                 (def ~(>F__B 'some?|__7)
+                   (reify* [F__B] (~(B 'invoke) [~'_7__ ~(F 'x)] true)))
+                 (def ~(>D__B 'some?|__8)
+                   (reify* [D__B] (~(B 'invoke) [~'_8__ ~(D 'x)] true)))
+                 (def ~(>O__B 'some?|__9)
+                   (reify* [O__B] (~(B 'invoke) [~'_9__ ~(O 'x)] true)))
 
                  [{:id 0 :index 0 :arg-types [(t/value nil)]      :output-type (t/isa? Boolean)}
                   {:id 1 :index 1 :arg-types [(t/isa? Boolean)]   :output-type (t/isa? Boolean)}
@@ -303,15 +324,14 @@
               ($ (do ;; [x (t/isa? Reduced)]
 
                      (def ~'reduced?|test|__0|0
-                       (reify* [Object>boolean]
+                       (reify* [O__B]
                          (~(B 'invoke) [~'_0__ ~(O 'x)]
                            (let* [~(tag "clojure.lang.Reduced" 'x) ~'x] true))))
 
                      ;; [x t/any?]
 
                      (def ~'reduced?|test|__1|0
-                       (reify* [Object>boolean boolean>boolean byte>boolean short>boolean
-                                char>boolean int>boolean long>boolean float>boolean double>boolean]
+                       (reify* [O__B B__B Y__B S__B C__B I__B L__B F__B D__B]
                          (~(B 'invoke) [~'_1__ ~(O 'x)] false)
                          (~(B 'invoke) [~'_2__ ~(B 'x)] false)
                          (~(B 'invoke) [~'_3__ ~(Y 'x)] false)
@@ -365,7 +385,7 @@
                      (def ~(O<> '>boolean|__0|input0|types)
                        (*<> (t/isa? Boolean)))
                      (def ~'>boolean|__0|0
-                       (reify* [boolean>boolean]
+                       (reify* [B__B]
                          (~(B 'invoke) [~'_0__  ~(B 'x)] ~'x)))
 
                      ;; [x t/nil? -> (- t/nil? tt/boolean?)]
@@ -373,7 +393,7 @@
                      (def ~(O<> '>boolean|__1|input0|types)
                        (*<> (t/value nil)))
                      (def ~'>boolean|__1|0
-                       (reify* [Object>boolean]
+                       (reify* [O__B]
                          (~(B 'invoke) [~'_1__  ~(O 'x)] false)))
 
                      ;; [x t/any? -> (- t/any? t/nil? tt/boolean?)]
@@ -381,8 +401,7 @@
                      (def ~(O<> '>boolean|__2|input0|types)
                        (*<> t/any?))
                      (def ~'>boolean|__2|0
-                       (reify* [Object>boolean boolean>boolean byte>boolean short>boolean
-                                char>boolean int>boolean long>boolean float>boolean double>boolean]
+                       (reify* [O__B B__B Y__B S__B C__B I__B L__B F__B D__B]
                          (~(B 'invoke) [~'_2__  ~(O 'x)] true)
                          (~(B 'invoke) [~'_3__  ~(B 'x)] true)
                          (~(B 'invoke) [~'_4__  ~(Y 'x)] true)
@@ -401,12 +420,12 @@
                                ~'[t/any?])}
                        ([~'x00__]
                          (ifs ((Array/get ~'>boolean|__0|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (cstr `boolean>boolean) '>boolean|__0|0) ~'x00__)
+                                (.invoke ~(tag (cstr `B__B) '>boolean|__0|0) ~'x00__)
                               ((Array/get ~'>boolean|__1|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (cstr `Object>boolean)  '>boolean|__1|0) ~'x00__)
+                                (.invoke ~(tag (cstr `O__B)  '>boolean|__1|0) ~'x00__)
                               ;; TODO eliminate this check because it's not needed (`t/any?`)
                               ((Array/get ~'>boolean|__2|input0|types 0) ~'x00__)
-                                (.invoke ~(tag (cstr `Object>boolean)  '>boolean|__2|0) ~'x00__)
+                                (.invoke ~(tag (cstr `O__B)  '>boolean|__2|0) ~'x00__)
                               (unsupported! `>boolean [~'x00__] 0))))))
             :cljs
               ($ (do (defn ~'>boolean [~'x]
@@ -762,152 +781,152 @@
 
                  ;; [a t/comparable-primitive? b t/comparable-primitive? > tt/boolean?]
 
-                 (def ~(tag (cstr `byte+byte>boolean) '>|__0)
-                   (reify* [byte+byte>boolean]
+                 (def ~(tag (cstr `byte+Y__B) '>|__0)
+                   (reify* [byte+Y__B]
                      (~(B 'invoke) [~'_0__  ~(Y 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `byte+short>boolean) '>|__1)
-                   (reify* [byte+short>boolean]
+                 (def ~(tag (cstr `byte+S__B) '>|__1)
+                   (reify* [byte+S__B]
                      (~(B 'invoke) [~'_1__  ~(Y 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `byte+char>boolean) '>|__2)
-                   (reify* [byte+char>boolean]
+                 (def ~(tag (cstr `byte+C__B) '>|__2)
+                   (reify* [byte+C__B]
                      (~(B 'invoke) [~'_2__  ~(Y 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `byte+int>boolean) '>|__3)
-                   (reify* [byte+int>boolean]
+                 (def ~(tag (cstr `byte+I__B) '>|__3)
+                   (reify* [byte+I__B]
                      (~(B 'invoke) [~'_3__  ~(Y 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `byte+long>boolean) '>|__4)
-                   (reify* [byte+long>boolean]
+                 (def ~(tag (cstr `byte+L__B) '>|__4)
+                   (reify* [byte+L__B]
                      (~(B 'invoke) [~'_4__  ~(Y 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `byte+float>boolean) '>|__5)
-                   (reify* [byte+float>boolean]
+                 (def ~(tag (cstr `byte+F__B) '>|__5)
+                   (reify* [byte+F__B]
                      (~(B 'invoke) [~'_5__  ~(Y 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `byte+double>boolean) '>|__6)
-                   (reify* [byte+double>boolean]
+                 (def ~(tag (cstr `byte+D__B) '>|__6)
+                   (reify* [byte+D__B]
                      (~(B 'invoke) [~'_6__  ~(Y 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+byte>boolean) '>|__7)
-                   (reify* [short+byte>boolean]
+                 (def ~(tag (cstr `short+Y__B) '>|__7)
+                   (reify* [short+Y__B]
                      (~(B 'invoke) [~'_7__  ~(S 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+short>boolean) '>|__8)
-                   (reify* [short+short>boolean]
+                 (def ~(tag (cstr `short+S__B) '>|__8)
+                   (reify* [short+S__B]
                      (~(B 'invoke) [~'_8__  ~(S 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+char>boolean) '>|__9)
-                   (reify* [short+char>boolean]
+                 (def ~(tag (cstr `short+C__B) '>|__9)
+                   (reify* [short+C__B]
                      (~(B 'invoke) [~'_9__  ~(S 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+int>boolean) '>|__10)
-                   (reify* [short+int>boolean]
+                 (def ~(tag (cstr `short+I__B) '>|__10)
+                   (reify* [short+I__B]
                      (~(B 'invoke) [~'_10__ ~(S 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+long>boolean) '>|__11)
-                   (reify* [short+long>boolean]
+                 (def ~(tag (cstr `short+L__B) '>|__11)
+                   (reify* [short+L__B]
                      (~(B 'invoke) [~'_11__ ~(S 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+float>boolean) '>|__12)
-                   (reify* [short+float>boolean]
+                 (def ~(tag (cstr `short+F__B) '>|__12)
+                   (reify* [short+F__B]
                      (~(B 'invoke) [~'_12__ ~(S 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+double>boolean) '>|__13)
-                   (reify* [short+double>boolean]
+                 (def ~(tag (cstr `short+D__B) '>|__13)
+                   (reify* [short+D__B]
                      (~(B 'invoke) [~'_13__ ~(S 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+byte>boolean) '>|__14)
-                   (reify* [char+byte>boolean]
+                 (def ~(tag (cstr `char+Y__B) '>|__14)
+                   (reify* [char+Y__B]
                      (~(B 'invoke) [~'_14__ ~(C 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+short>boolean) '>|__15)
-                   (reify* [char+short>boolean]
+                 (def ~(tag (cstr `char+S__B) '>|__15)
+                   (reify* [char+S__B]
                      (~(B 'invoke) [~'_15__ ~(C 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+char>boolean) '>|__16)
-                   (reify* [char+char>boolean]
+                 (def ~(tag (cstr `char+C__B) '>|__16)
+                   (reify* [char+C__B]
                      (~(B 'invoke) [~'_16__ ~(C 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+int>boolean) '>|__17)
-                   (reify* [char+int>boolean]
+                 (def ~(tag (cstr `char+I__B) '>|__17)
+                   (reify* [char+I__B]
                      (~(B 'invoke) [~'_17__ ~(C 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+long>boolean) '>|__18)
-                   (reify* [char+long>boolean]
+                 (def ~(tag (cstr `char+L__B) '>|__18)
+                   (reify* [char+L__B]
                      (~(B 'invoke) [~'_18__ ~(C 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+float>boolean) '>|__19)
-                   (reify* [char+float>boolean]
+                 (def ~(tag (cstr `char+F__B) '>|__19)
+                   (reify* [char+F__B]
                      (~(B 'invoke) [~'_19__ ~(C 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+double>boolean) '>|__20)
-                   (reify* [char+double>boolean]
+                 (def ~(tag (cstr `char+D__B) '>|__20)
+                   (reify* [char+D__B]
                      (~(B 'invoke) [~'_20__ ~(C 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+byte>boolean) '>|__21)
-                   (reify* [int+byte>boolean]
+                 (def ~(tag (cstr `int+Y__B) '>|__21)
+                   (reify* [int+Y__B]
                      (~(B 'invoke) [~'_21__ ~(I 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+short>boolean) '>|__22)
-                   (reify* [int+short>boolean]
+                 (def ~(tag (cstr `int+S__B) '>|__22)
+                   (reify* [int+S__B]
                      (~(B 'invoke) [~'_22__ ~(I 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+char>boolean) '>|__23)
-                   (reify* [int+char>boolean]
+                 (def ~(tag (cstr `int+C__B) '>|__23)
+                   (reify* [int+C__B]
                      (~(B 'invoke) [~'_23__ ~(I 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+int>boolean) '>|__24)
-                   (reify* [int+int>boolean]
+                 (def ~(tag (cstr `int+I__B) '>|__24)
+                   (reify* [int+I__B]
                      (~(B 'invoke) [~'_24__ ~(I 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+long>boolean) '>|__25)
-                   (reify* [int+long>boolean]
+                 (def ~(tag (cstr `int+L__B) '>|__25)
+                   (reify* [int+L__B]
                      (~(B 'invoke) [~'_25__ ~(I 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+float>boolean) '>|__26)
-                   (reify* [int+float>boolean]
+                 (def ~(tag (cstr `int+F__B) '>|__26)
+                   (reify* [int+F__B]
                      (~(B 'invoke) [~'_26__ ~(I 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+double>boolean) '>|__27)
-                   (reify* [int+double>boolean]
+                 (def ~(tag (cstr `int+D__B) '>|__27)
+                   (reify* [int+D__B]
                      (~(B 'invoke) [~'_27__ ~(I 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+byte>boolean) '>|__28)
-                   (reify* [long+byte>boolean]
+                 (def ~(tag (cstr `long+Y__B) '>|__28)
+                   (reify* [long+Y__B]
                      (~(B 'invoke) [~'_28__ ~(L 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+short>boolean) '>|__29)
-                   (reify* [long+short>boolean]
+                 (def ~(tag (cstr `long+S__B) '>|__29)
+                   (reify* [long+S__B]
                      (~(B 'invoke) [~'_29__ ~(L 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+char>boolean) '>|__30)
-                   (reify* [long+char>boolean]
+                 (def ~(tag (cstr `long+C__B) '>|__30)
+                   (reify* [long+C__B]
                      (~(B 'invoke) [~'_30__ ~(L 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+int>boolean) '>|__31)
-                   (reify* [long+int>boolean]
+                 (def ~(tag (cstr `long+I__B) '>|__31)
+                   (reify* [long+I__B]
                      (~(B 'invoke) [~'_31__ ~(L 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+long>boolean) '>|__32)
-                   (reify* [long+long>boolean]
+                 (def ~(tag (cstr `long+L__B) '>|__32)
+                   (reify* [long+L__B]
                      (~(B 'invoke) [~'_32__ ~(L 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+float>boolean) '>|__33)
-                   (reify* [long+float>boolean]
+                 (def ~(tag (cstr `long+F__B) '>|__33)
+                   (reify* [long+F__B]
                      (~(B 'invoke) [~'_33__ ~(L 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+double>boolean) '>|__34)
-                   (reify* [long+double>boolean]
+                 (def ~(tag (cstr `long+D__B) '>|__34)
+                   (reify* [long+D__B]
                      (~(B 'invoke) [~'_34__ ~(L 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+byte>boolean) '>|__35)
-                   (reify* [float+byte>boolean]
+                 (def ~(tag (cstr `float+Y__B) '>|__35)
+                   (reify* [float+Y__B]
                      (~(B 'invoke) [~'_35__ ~(F 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+short>boolean) '>|__36)
-                   (reify* [float+short>boolean]
+                 (def ~(tag (cstr `float+S__B) '>|__36)
+                   (reify* [float+S__B]
                      (~(B 'invoke) [~'_36__ ~(F 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+char>boolean) '>|__37)
-                   (reify* [float+char>boolean]
+                 (def ~(tag (cstr `float+C__B) '>|__37)
+                   (reify* [float+C__B]
                      (~(B 'invoke) [~'_37__ ~(F 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+int>boolean) '>|__38)
-                   (reify* [float+int>boolean]
+                 (def ~(tag (cstr `float+I__B) '>|__38)
+                   (reify* [float+I__B]
                      (~(B 'invoke) [~'_38__ ~(F 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+long>boolean) '>|__39)
-                   (reify* [float+long>boolean]
+                 (def ~(tag (cstr `float+L__B) '>|__39)
+                   (reify* [float+L__B]
                      (~(B 'invoke) [~'_39__ ~(F 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+float>boolean) '>|__40)
-                   (reify* [float+float>boolean]
+                 (def ~(tag (cstr `float+F__B) '>|__40)
+                   (reify* [float+F__B]
                      (~(B 'invoke) [~'_40__ ~(F 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+double>boolean) '>|__41)
-                   (reify* [float+double>boolean]
+                 (def ~(tag (cstr `float+D__B) '>|__41)
+                   (reify* [float+D__B]
                      (~(B 'invoke) [~'_41__ ~(F 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+byte>boolean) '>|__42)
-                   (reify* [double+byte>boolean]
+                 (def ~(tag (cstr `double+Y__B) '>|__42)
+                   (reify* [double+Y__B]
                      (~(B 'invoke) [~'_42__ ~(D 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+short>boolean) '>|__43)
-                   (reify* [double+short>boolean]
+                 (def ~(tag (cstr `double+S__B) '>|__43)
+                   (reify* [double+S__B]
                      (~(B 'invoke) [~'_43__ ~(D 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+char>boolean) '>|__44)
-                   (reify* [double+char>boolean]
+                 (def ~(tag (cstr `double+C__B) '>|__44)
+                   (reify* [double+C__B]
                      (~(B 'invoke) [~'_44__ ~(D 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+int>boolean) '>|__45)
-                   (reify* [double+int>boolean]
+                 (def ~(tag (cstr `double+I__B) '>|__45)
+                   (reify* [double+I__B]
                      (~(B 'invoke) [~'_45__ ~(D 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+long>boolean) '>|__46)
-                   (reify* [double+long>boolean]
+                 (def ~(tag (cstr `double+L__B) '>|__46)
+                   (reify* [double+L__B]
                      (~(B 'invoke) [~'_46__ ~(D 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+float>boolean) '>|__47)
-                   (reify* [double+float>boolean]
+                 (def ~(tag (cstr `double+F__B) '>|__47)
+                   (reify* [double+F__B]
                      (~(B 'invoke) [~'_47__ ~(D 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+double>boolean) '>|__48)
-                   (reify* [double+double>boolean]
+                 (def ~(tag (cstr `double+D__B) '>|__48)
+                   (reify* [double+D__B]
                      (~(B 'invoke) [~'_48__ ~(D 'a) ~(D 'b)] ~'(. Numeric gt a b))))
 
                  ~>|types-form
@@ -2490,12 +2509,6 @@
                    ;: FIXME this contract is not being held up when returning nil
                    (self/defn f0 [a (t/or tt/boolean? tt/double?)
                                   > (t/ftype [tt/byte? :> (t/ftype [tt/char?])])]
-                     ;; TODO When outputting this anon fn, any consumer can call it dynamically just
-                     ;; fine but in order to call it directly, it needs to know its actual (not
-                     ;; declared) type to know what indices map to what overloads. This means that
-                     ;; it's not good enough for callers to know that `(t/ftype [tt/char?])` is
-                     ;; outputted; they need to know that a `[(t/or tt/byte? tt/char?) :> ...]` is
-                     ;; outputted.
                      ;; TODO this fits into a larger scheme of, should we have output types be
                      ;; `(t/and actual declared)` or should we just have them be `declared`? The
                      ;; latter is easier but it seems like the `t/fn` dispatch forces our hand
@@ -2508,59 +2521,102 @@
           (case (env-lang)
             :clj
             ($ (do (declare ~'f0)
+                   [[0 0 false [] (t/ftype tt/boolean? [tt/byte? :> (t/ftype [tt/char?])])]]
+(defmeta-from ~'f0
+  (let* [fs (*<>|sized|macro 2)
+         f  (new TypedFn
+              {:quantum.core.type/type ~'f0|__type}
+              (fn* ([~ts ~fs ~'x00__]
+                     (ifs (~(aget* (aget* ts 0) 0) ~'x00__)
+                          (. ~(aget* ts 0) ~'invoke ~'x00__)
+                          (~(aget* (aget* ts 1) 0) ~'x00__)
+                          (. ~(aget* ts 1) ~'invoke ~'x00__)
+                          (unsupported! `f0 [~'x00__] 0)))))]
+   ~(aset* fs 0
+     `(reify* [boolean>Object]
+        (~'invoke [~'_0__ ~(B 'a)]
+          ;; From `(self/fn [b ...])`
+          (self/>anon-fn
+            ;; TODO perhaps extern this (and parts thereof) whenever possible in `let*`
+            ;; statement on the very outside of the fn (so around the outer `reify*`) ?
+            (*<>|macro (*<>|macro (t/isa? Byte)) (*<>|macro (t/isa? Character)))
+            (*<>|macro
+              (reify* [byte>Object]
+                (~'invoke [~'_0__ ~(Y 'b)]
+                  ;; From `(self/fn [c ...])`
+                  (self/>anon-fn
+                    (*<>|macro (*<>|macro (t/isa? Boolean)) (*<>|macro (t/isa? Short)))
+                    (fn* [~(tag (cstr `AnonFn) 'this__)]
+                      (*<>|macro
+                        (reify* [boolean>Object]
+                          (~'invoke [~'_0__ (B 'c)]
+                            ~'b
+                            (. (tag (cstr `boolean>Object) (Array/get (.-fs ~'this__) 0)) ~'invoke ~'a)
+                            (. (tag (cstr `boolean>Object) (Array/get (.-fs ~'this__) 0)) ~'invoke ~'c)))
+                        (reify* [short>Object]
+                          (~'invoke [~'_0__ (S 'c)]
+                            ~'b
+                            (. (tag (cstr `boolean>Object) (Array/get (.-fs ~'this__) 0)) ~'invoke ~'a)
+                            (. (tag (cstr `short>Object)   (Array/get (.-fs ~'this__) 1)) ~'invoke ~'c)))))
+                    (fn* ([~(O<> 'types__) ~(O<> 'fs__) ~'x00]
+                           (ifs ((Array/get (Array/get ~'types__ 0) 0) ~'x00__)
+                                (. ~(tag (cstr `boolean>Object) `(Array/get ~'fs__ 0))
+                                   ~'invoke ~'x00__)
+                                ((Array/get (Array/get ~'types__ 1) 0) ~'x00__)
+                                (. ~(tag (cstr `short>Object)   `(Array/get ~'fs__ 1))
+                                   ~'invoke ~'x00__)
+                                (unsupported! [~'x00__] 0)))))))
+              (reify* [char>Object]
+                (~'invoke [~'_0__ ~(C 'a)] ...)))
+            (fn* ([~(O<> 'types__) ~(O<> 'fs__) ~'x00__]
+                   (ifs ((Array/get (Array/get ~'types__ 0) 0) ~'x00__)
+                        (. ~(tag (cstr `byte>Object) `(Array/get ~'fs__ 0)) ~'invoke ~'x00__)
+                        ((Array/get (Array/get ~'types__ 1) 0) ~'x00__)
+                        (. ~(tag (cstr `char>Object) `(Array/get ~'fs__ 1)) ~'invoke ~'x00__)
+                        (unsupported! [~'x00__] 0)))))))
+   ~(aset* fs 1
+     `(reify* [double>Object]
+        (~'invoke [~'_0__ ~(D 'a)] ...)))))
 
-(def ~'f0|__0
-  (reify* [boolean>Object]
-    (~'invoke [~'_0__ ~(B 'a)]
-      ;; From `(self/fn [b ...])`
-      (self/>anon-fn
-        ;; TODO perhaps extern this (and parts thereof) whenever possible in `let*`
-        ;; statement on the very outside of the fn (so around the outer `reify*`) ?
-        (*<>|macro (*<>|macro (t/isa? Byte)) (*<>|macro (t/isa? Character)))
-        (*<>|macro
-          (reify* [byte>Object]
-            (~'invoke [~'_0__ ~(Y 'b)]
-              ;; From `(self/fn [c ...])`
-              (self/>anon-fn
-                (*<>|macro (*<>|macro (t/isa? Boolean)) (*<>|macro (t/isa? Short)))
-                (fn* [~(tag (cstr `AnonFn) 'this__)]
-                  (*<>|macro
-                    (reify* [boolean>Object]
-                      (~'invoke [~'_0__ (B 'c)]
-                        ~'b
-                        (. (tag (cstr `boolean>Object) (Array/get (.-fs ~'this__) 0)) ~'invoke ~'a)
-                        (. (tag (cstr `boolean>Object) (Array/get (.-fs ~'this__) 0)) ~'invoke ~'c)))
-                    (reify* [short>Object]
-                      (~'invoke [~'_0__ (S 'c)]
-                        ~'b
-                        (. (tag (cstr `boolean>Object) (Array/get (.-fs ~'this__) 0)) ~'invoke ~'a)
-                        (. (tag (cstr `short>Object)   (Array/get (.-fs ~'this__) 1)) ~'invoke ~'c)))))
-                (fn* ([~(O<> 'types__) ~(O<> 'fs__) ~'x00]
-                       (ifs ((Array/get (Array/get ~'types__ 0) 0) ~'x00__)
-                            (. ~(tag (cstr `boolean>Object) `(Array/get ~'fs__ 0))
-                               ~'invoke ~'x00__)
-                            ((Array/get (Array/get ~'types__ 1) 0) ~'x00__)
-                            (. ~(tag (cstr `short>Object)   `(Array/get ~'fs__ 1))
-                               ~'invoke ~'x00__)
-                            (unsupported! [~'x00__] 0)))))))
-          (reify* [char>Object]
-            (~'invoke [~'_0__ ~(C 'a)] ...)))
-        (fn* ([~(O<> 'types__) ~(O<> 'fs__) ~'x00__]
-               (ifs ((Array/get (Array/get ~'types__ 0) 0) ~'x00__)
-                    (. ~(tag (cstr `byte>Object) `(Array/get ~'fs__ 0)) ~'invoke ~'x00__)
-                    ((Array/get (Array/get ~'types__ 1) 0) ~'x00__)
-                    (. ~(tag (cstr `char>Object) `(Array/get ~'fs__ 1)) ~'invoke ~'x00__)
-                    (unsupported! [~'x00__] 0)))))))
-(def ~'f0|__1
-  (reify* [double>Object]
-    (~'invoke [~'_0__ ~(D 'a)] ...)))
-[[0 0 false [] (t/ftype tt/boolean? [tt/byte? :> (t/ftype [tt/char?])])]]
-(defmeta ~'f0
-  {:quantum.core.type/type ~'f0|__type}
-  (fn* ([~'x00__]
-         (ifs ((Array/get f0|__0|types 0) ~'x00__)
-              (. f0|__0 ~'invoke ~'x00__)
-              ((Array/get f0|__1|types 0) ~'x00__)
-              (. f0|__1 ~'invoke ~'x00__)
-              (unsupported! `f0 [~'x00__] 0))))))))]
+)))]
     ))
+
+
+"
+FIXME the below can be fixed if each `t/fn` and/or `t/defn` was encapsulated by a concrete type,
+like AnonFn, that stored references to the types, overloads, etc.
+We should probably have standard overload indices for ftypes (maybe we already do? we should sort
+ftypes' overload-types in the same way that we sort `t/defn` overload-types. maybe that will make it
+standard) so direct dispatch can be performed even in the absence of an fn-name.
+
+We could do:
+`(. ^TheReifyType (aget (.-ts f) <index>) invoke <~@args>)`
+- This is all fine when `f` is `=` (perhaps `t/=`?) to the declared type, but when it's `t/<`, it
+  may allow for more than what the declared type requires, in which case it may have more and/or
+  different overloads. So do something like this:
+   (t/defn a [f (t/ftype [t/long?])] (f 1))
+   -> (def a|__0 (reify [_ ^TypedFn f ^int f|__i] (.invoke ^long>Object (RT/aget (.-overloads f) f|__i) 1)))
+   (t/defn b [x (t/or t/boolean? t/long?)] x)
+   (t/dotyped (a b))
+   -> (.invoke a|__0 b|__f 1) ; meaning, use the overload at index 1. If -1 then
+
+   This would require arglist expansion which is kind of a pain but stack allocation is always
+   cheaper than heap.
+
+TODO let's see what we can do with the expansion/inlining of `compf`. It may prove subtle/tricky?
+"
+{:message "No name found for typed fn corresponding to caller",
+ :data {:type (quantum.untyped.core.type/ftype
+               (quantum.untyped.core.type/isa?
+                java.lang.Boolean)
+               [(quantum.untyped.core.type/or
+                 (quantum.untyped.core.type/isa?
+                  java.lang.Number)
+                 (quantum.untyped.core.type/isa?
+                  java.lang.Character))
+                (quantum.untyped.core.type/or
+                 (quantum.untyped.core.type/isa?
+                  java.lang.Number)
+                 (quantum.untyped.core.type/isa?
+                  java.lang.Character))]),
+        :form numeric-compf}}

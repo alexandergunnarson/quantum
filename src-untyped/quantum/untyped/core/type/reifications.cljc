@@ -497,77 +497,87 @@
                     (update :input-types >vec)
                     (set/rename-keys {:output-type-pair :output-type}))))))
 
-(defprotocol PAnonFn
-  (setFs [this fs']))
+;; ----- FixedFn + ExtensibleFn (for FnType) ----- ;;
+;; TODO figure out where this goes
 
-;; TODO clean this up and figure out where it goes
-;; TODO CLJS
-#?(:clj
-(deftype AnonFn
-  [;; the types for direct dispatch overloads
-   ^"[Ljava.lang.Object;" types
-   ;; the direct dispatch fn/`reify` overloads
-   ^:unsynchronized-mutable ^"[Ljava.lang.Object;" fs
+(defprotocol PTypedFn
+  (setFs [this fs'])
+  (setTs [this ts']))
+
+(udt/deftype TypedFn
+  [meta
+   ;; the types for direct dispatch overloads
+   ^:! #?(:clj ^"[Ljava.lang.Object;" ts :cljs ^array ts)
+   ;; the direct dispatch fns / `reify` overloads
+   ^:! #?(:clj ^"[Ljava.lang.Object;" fs :cljs ^array fs)
    ;; the dynamic dispatch fn
-   ^clojure.lang.IFn      dynf]
-  PAnonFn
-    (setFs  [this fs'] (set! fs fs') this)
-  clojure.lang.IFn
-    (invoke [       this]
-      (.invoke dynf types fs))
-    (invoke [       this     x0]
-      (.invoke dynf types fs this x0))
-    (invoke [       this     x0 x1]
-      (.invoke dynf types fs x0 x1))
-    (invoke [       this     x0 x1 x2]
-      (.invoke dynf types fs x0 x1 x2))
-    (invoke [       this     x0 x1 x2 x3]
-      (.invoke dynf types fs x0 x1 x2 x3))
-    (invoke [       this     x0 x1 x2 x3 x4]
-      (.invoke dynf types fs x0 x1 x2 x3 x4))
-    (invoke [       this     x0 x1 x2 x3 x4 x5]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17
+   #?(:clj ^clojure.lang.IFn dynf :cljs dynf)]
+  {PTypedFn
+    {setTs ([this ts'] (set! ts ts') this)
+     setFs ([this fs'] (set! fs fs') this)}
+   clojure.lang.IFn
+    {invoke
+      (([              this]
+         (.invoke dynf ts fs))
+       ([              this  x0]
+         (.invoke dynf ts fs x0))
+       ([              this  x0 x1]
+         (.invoke dynf ts fs x0 x1))
+       ([              this  x0 x1 x2]
+         (.invoke dynf ts fs x0 x1 x2))
+       ([              this  x0 x1 x2 x3]
+         (.invoke dynf ts fs x0 x1 x2 x3))
+       ([              this  x0 x1 x2 x3 x4]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4))
+       ([              this  x0 x1 x2 x3 x4 x5]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5))
+       ([              this  x0 x1 x2 x3 x4 x5 x6]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6))
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6 x7))
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7 x8]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6 x7 x8))
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7 x8 x9]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9))
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10))
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11))
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12))
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13))
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14))
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15))
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16))
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17))
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17
                              (*<> x18)))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19]
-      (.invoke dynf types fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19]
+         (.invoke dynf ts fs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17
                              (*<> x18 x19)))
-    (invoke [       this     x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19
+       ([              this  x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x13 x14 x15 x16 x17 x18 x19
                              ^"[Ljava.lang.Object;" xs]
-      (.applyTo dynf (->> xs (cons x19) (cons x18) (cons x17) (cons x16) (cons x15) (cons x14)
-                             (cons x13) (cons x12) (cons x11) (cons x10) (cons x9)  (cons x8)
-                             (cons x7)  (cons x6)  (cons x5)  (cons x4)  (cons x3)  (cons x2)
-                             (cons x1)  (cons x0)  (cons fs)  (cons types))))
-    (applyTo [this ^clojure.lang.ISeq xs] (.applyTo dynf (cons types (cons fs xs))))))
+         (.applyTo dynf (->> xs (cons x19) (cons x18) (cons x17) (cons x16) (cons x15) (cons x14)
+                                (cons x13) (cons x12) (cons x11) (cons x10) (cons x9)  (cons x8)
+                                (cons x7)  (cons x6)  (cons x5)  (cons x4)  (cons x3)  (cons x2)
+                                (cons x1)  (cons x0)  (cons fs)  (cons ts)))))
+     applyTo ([this ^clojure.lang.ISeq xs] (.applyTo dynf (cons ts (cons fs xs))))}
+   ?Meta {meta      ([this] meta)
+          with-meta ([this meta'] (TypedFn. meta' ts fs dynf))}})
 
-(defn >anon-fn [types gen-fs dynf]
-  (let [f (AnonFn. types nil dynf)]
-    (.setFs f (gen-fs f))))
+(udt/deftype ExtensibleFn
+  [;; the types for direct dispatch overloads
+   ^"[Ljava.lang.Object;"     ts
+   ;; the direct dispatch fn/`reify` overloads
+   ^:! ^"[Ljava.lang.Object;" fs
+   ;; the dynamic dispatch fn
+   ^clojure.lang.IFn          dynf])
 
 ;; ----- MetaOrType ----- ;;
 
