@@ -3,6 +3,8 @@
             [array array?])
           (:require
             [clojure.core                        :as core]
+            [quantum.untyped.core.core
+              :refer [case-env]]
             [quantum.untyped.core.loops          :as uloop])
   #?(:clj (:import
             [quantum.core      Primitive]
@@ -11,6 +13,13 @@
 (defn array? [x]
   #?(:clj  (-> x class .isArray) ; must be reflective
      :cljs (core/array? x)))
+
+#?(:clj
+(defmacro *<>|sized|macro [n]
+  (case-env :clj  `(Array/newUninitialized1dObjectArray ~n)
+            :cljs `(let [arr# (cljs.core/array)]
+                     (set! (.-length arr#) ~n)
+                     arr#))))
 
 #?(:clj
 (defmacro *<>|macro
