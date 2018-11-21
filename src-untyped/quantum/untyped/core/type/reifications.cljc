@@ -506,11 +506,12 @@
 
 (udt/deftype TypedFn
   [meta
-   ;; the types for direct dispatch overloads
+   ;; The types for direct dispatch overloads
    ^:! #?(:clj ^"[Ljava.lang.Object;" ts :cljs ^array ts)
-   ;; the direct dispatch fns / `reify` overloads
+   ;; The direct dispatch fns / `reify` overloads
+   ;; Keys/indices are overload IDs, not dynamic overload-indices
    ^:! #?(:clj ^"[Ljava.lang.Object;" fs :cljs ^array fs)
-   ;; the dynamic dispatch fn
+   ;; The dynamic dispatch fn
    #?(:clj ^clojure.lang.IFn dynf :cljs dynf)]
   {PTypedFn
     {setTs ([this ts'] (set! ts ts') this)
