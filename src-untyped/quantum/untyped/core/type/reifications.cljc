@@ -504,6 +504,7 @@
   (setFs [this fs'])
   (setTs [this ts']))
 
+;; TODO should we provide one with no `^:!` metadata, for optimization purposes?
 (udt/deftype TypedFn
   [meta
    ;; The types for direct dispatch overloads
