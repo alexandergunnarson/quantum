@@ -869,10 +869,12 @@
 
 ;; TODO spec
 (defns unsupported!
-  ([args _ #_indexed?, i index?] (unsupported! nil args i)
+  ([args _ #_indexed?, i index?] (unsupported! nil args i))
   ([name- _ #_t/qualified-symbol?, args _ #_indexed?, i index?]
     (throw (ex-info "This function is unsupported for the type combination at the argument index."
-                    {:name (if (nil? name-) '#anonymous name-) :args args :arg-index i}))))
+                    {:name      (if (nil? name-) (symbol "#anonymous") name-)
+                     :args      args
+                     :arg-index i}))))
 
 (defns- >combinatoric-seq+
   [{:as fn|globals :keys [fn|ns-name _ fn|name _]} ::fn|globals
