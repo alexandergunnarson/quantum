@@ -26,10 +26,10 @@
     [quantum.untyped.core.vars
       :refer [defmeta]])
   (:import
-    [clojure.lang                    ASeq ISeq LazySeq Named Reduced RT Seqable]
-    [quantum.core.data               Array]
-    [quantum.core                    Numeric Primitive]
-    [quantum.untyped.core.type.defnt AnonFn]))
+    [clojure.lang                           ASeq ISeq LazySeq Named Reduced RT Seqable]
+    [quantum.core.data                      Array]
+    [quantum.core                           Numeric Primitive]
+    [quantum.untyped.core.type.reifications TypedFn]))
 
 ;; TODO test `:inline`
 
@@ -51,24 +51,23 @@
 (defn O<> [form] (tag "[Ljava.lang.Object;" form))
 (defn ST  [form] (tag "java.lang.String"    form))
 
-(defn >interface-str [sym]
-  (str (or (resolve form)
-           (str "quantum.test.untyped.core.type.defnt." sym))))
-
-(defn >B__B [form] (tag (>interface-str 'B__B) form))
-(defn >Y__Y [form] (tag (>interface-str 'Y__Y) form))
-(defn >S__S [form] (tag (>interface-str 'S__S) form))
-(defn >C__C [form] (tag (>interface-str 'C__C) form))
-(defn >I__I [form] (tag (>interface-str 'I__I) form))
-(defn >L__L [form] (tag (>interface-str 'L__L) form))
-(defn >F__F [form] (tag (>interface-str 'F__F) form))
-(defn >D__D [form] (tag (>interface-str 'D__D) form))
-(defn >O__O [form] (tag (>interface-str 'O__O) form))
-
 (defn cstr [x]
   (if (-> x resolve class?)
       (str x)
       (str (core/namespace x) "." (core/name x))))
+
+(defn csym [x] (-> x cstr symbol))
+
+(defn >B__B [form] (tag (cstr `B__B) form))
+(defn >Y__Y [form] (tag (cstr `Y__Y) form))
+(defn >S__S [form] (tag (cstr `S__S) form))
+(defn >C__C [form] (tag (cstr `C__C) form))
+(defn >I__I [form] (tag (cstr `I__I) form))
+(defn >L__L [form] (tag (cstr `L__L) form))
+(defn >F__F [form] (tag (cstr `F__F) form))
+(defn >D__D [form] (tag (cstr `D__D) form))
+(defn >O__F [form] (tag (cstr `O__F) form))
+(defn >O__O [form] (tag (cstr `O__O) form))
 
 (def ts (O<> 'ts__))
 (def fs (O<> 'fs__))
@@ -94,7 +93,7 @@
                                  fs
                                  (fn* ([~ts ~fs] (. ~(aget* fs 0) ~'invoke))))]
                    ~(aset* fs 0
-                     `(reify* [__O]
+                     `(reify* [~(csym `__O)]
                         (~(O 'invoke) [~'_0__]
                           ~(ST (list '.
                                  (tag "java.lang.management.RuntimeMXBean"
@@ -120,23 +119,23 @@
                    ;; [x t/any?]
 
                    (def ~(>B__B 'identity|__0)
-                     (reify* [B__B] (~(B 'invoke) [~'_0__ ~(B 'x)] ~'x)))
+                     (reify* [~(csym `B__B)] (~(B 'invoke) [~'_0__ ~(B 'x)] ~'x)))
                    (def ~(>Y__Y 'identity|__1)
-                     (reify* [Y__Y] (~(Y 'invoke) [~'_1__ ~(Y 'x)] ~'x)))
+                     (reify* [~(csym `Y__Y)] (~(Y 'invoke) [~'_1__ ~(Y 'x)] ~'x)))
                    (def ~(>S__S 'identity|__2)
-                     (reify* [S__S] (~(S 'invoke) [~'_2__ ~(S 'x)] ~'x)))
+                     (reify* [~(csym `S__S)] (~(S 'invoke) [~'_2__ ~(S 'x)] ~'x)))
                    (def ~(>C__C 'identity|__3)
-                     (reify* [C__C] (~(C 'invoke) [~'_3__ ~(C 'x)] ~'x)))
+                     (reify* [~(csym `C__C)] (~(C 'invoke) [~'_3__ ~(C 'x)] ~'x)))
                    (def ~(>I__I 'identity|__4)
-                     (reify* [I__I] (~(I 'invoke) [~'_4__ ~(I 'x)] ~'x)))
+                     (reify* [~(csym `I__I)] (~(I 'invoke) [~'_4__ ~(I 'x)] ~'x)))
                    (def ~(>L__L 'identity|__5)
-                     (reify* [L__L] (~(L 'invoke) [~'_5__ ~(L 'x)] ~'x)))
+                     (reify* [~(csym `L__L)] (~(L 'invoke) [~'_5__ ~(L 'x)] ~'x)))
                    (def ~(>F__F 'identity|__6)
-                     (reify* [F__F] (~(F 'invoke) [~'_6__ ~(F 'x)] ~'x)))
+                     (reify* [~(csym `F__F)] (~(F 'invoke) [~'_6__ ~(F 'x)] ~'x)))
                    (def ~(>D__D 'identity|__7)
-                     (reify* [D__D] (~(D 'invoke) [~'_7__ ~(D 'x)] ~'x)))
+                     (reify* [~(csym `D__D)] (~(D 'invoke) [~'_7__ ~(D 'x)] ~'x)))
                    (def ~(>O__O 'identity|__8)
-                     (reify* [O__O] (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
+                     (reify* [~(csym `O__O)] (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
 
                    [[0 0 true [t/boolean?] t/boolean?]
                     [1 1 true [t/byte?]    t/byte?]
@@ -198,12 +197,12 @@
                  ;; [x t/string?]
 
                  (def ~(>O__O 'name|__0)
-                   (reify* [O__O] (~(O 'invoke) [~'_0__ ~(O 'x)] ~(ST 'x))))
+                   (reify* [~(csym `O__O)] (~(O 'invoke) [~'_0__ ~(O 'x)] ~(ST 'x))))
 
                  ;; [x (t/isa? Named)] > (t/run t/string?)
 
                  (def ~(>O__O 'name|__1)
-                   (reify* [O__O]
+                   (reify* [~(csym `O__O)]
                      (~(O 'invoke) [~'_1__ ~(O 'x)]
                        (t/validate ~(ST (list '. (tag "clojure.lang.Named" 'x) 'getName))
                                    ~'(t/run t/string?)))))
@@ -250,28 +249,28 @@
                  ;; [x t/nil?]
 
                  (def ~(tag (cstr `O__B) 'some?|__0)
-                   (reify* [O__B] (~(B 'invoke) [~'_0__ ~(O 'x)] false)))
+                   (reify* [~(csym `O__B)] (~(B 'invoke) [~'_0__ ~(O 'x)] false)))
 
                  ;; [x t/any?]
 
                  (def ~(>B__B 'some?|__1)
-                   (reify* [B__B] (~(B 'invoke) [~'_1__ ~(B 'x)] true)))
+                   (reify* [~(csym `B__B)] (~(B 'invoke) [~'_1__ ~(B 'x)] true)))
                  (def ~(>Y__B 'some?|__2)
-                   (reify* [Y__B] (~(B 'invoke) [~'_2__ ~(Y 'x)] true)))
+                   (reify* [~(csym `Y__B)] (~(B 'invoke) [~'_2__ ~(Y 'x)] true)))
                  (def ~(>S__B 'some?|__3)
-                   (reify* [S__B] (~(B 'invoke) [~'_3__ ~(S 'x)] true)))
+                   (reify* [~(csym `S__B)] (~(B 'invoke) [~'_3__ ~(S 'x)] true)))
                  (def ~(>C__B 'some?|__4)
-                   (reify* [C__B] (~(B 'invoke) [~'_4__ ~(C 'x)] true)))
+                   (reify* [~(csym `C__B)] (~(B 'invoke) [~'_4__ ~(C 'x)] true)))
                  (def ~(>I__B 'some?|__5)
-                   (reify* [I__B] (~(B 'invoke) [~'_5__ ~(I 'x)] true)))
+                   (reify* [~(csym `I__B)] (~(B 'invoke) [~'_5__ ~(I 'x)] true)))
                  (def ~(>L__B 'some?|__6)
-                   (reify* [L__B] (~(B 'invoke) [~'_6__ ~(L 'x)] true)))
+                   (reify* [~(csym `L__B)] (~(B 'invoke) [~'_6__ ~(L 'x)] true)))
                  (def ~(>F__B 'some?|__7)
-                   (reify* [F__B] (~(B 'invoke) [~'_7__ ~(F 'x)] true)))
+                   (reify* [~(csym `F__B)] (~(B 'invoke) [~'_7__ ~(F 'x)] true)))
                  (def ~(>D__B 'some?|__8)
-                   (reify* [D__B] (~(B 'invoke) [~'_8__ ~(D 'x)] true)))
+                   (reify* [~(csym `D__B)] (~(B 'invoke) [~'_8__ ~(D 'x)] true)))
                  (def ~(>O__B 'some?|__9)
-                   (reify* [O__B] (~(B 'invoke) [~'_9__ ~(O 'x)] true)))
+                   (reify* [~(csym `O__B)] (~(B 'invoke) [~'_9__ ~(O 'x)] true)))
 
                  [{:id 0 :index 0 :arg-types [(t/value nil)]      :output-type (t/isa? Boolean)}
                   {:id 1 :index 1 :arg-types [(t/isa? Boolean)]   :output-type (t/isa? Boolean)}
@@ -327,14 +326,14 @@
               ($ (do ;; [x (t/isa? Reduced)]
 
                      (def ~'reduced?|test|__0|0
-                       (reify* [O__B]
+                       (reify* [~(csym `O__B)]
                          (~(B 'invoke) [~'_0__ ~(O 'x)]
                            (let* [~(tag "clojure.lang.Reduced" 'x) ~'x] true))))
 
                      ;; [x t/any?]
 
                      (def ~'reduced?|test|__1|0
-                       (reify* [O__B B__B Y__B S__B C__B I__B L__B F__B D__B]
+                       (reify* [~@(map csym `[O__B B__B Y__B S__B C__B I__B L__B F__B D__B])]
                          (~(B 'invoke) [~'_1__ ~(O 'x)] false)
                          (~(B 'invoke) [~'_2__ ~(B 'x)] false)
                          (~(B 'invoke) [~'_3__ ~(Y 'x)] false)
@@ -388,7 +387,7 @@
                      (def ~(O<> '>boolean|__0|input0|types)
                        (*<> (t/isa? Boolean)))
                      (def ~'>boolean|__0|0
-                       (reify* [B__B]
+                       (reify* [~(csym `B__B)]
                          (~(B 'invoke) [~'_0__  ~(B 'x)] ~'x)))
 
                      ;; [x t/nil? -> (- t/nil? tt/boolean?)]
@@ -396,7 +395,7 @@
                      (def ~(O<> '>boolean|__1|input0|types)
                        (*<> (t/value nil)))
                      (def ~'>boolean|__1|0
-                       (reify* [O__B]
+                       (reify* [~(csym `O__B)]
                          (~(B 'invoke) [~'_1__  ~(O 'x)] false)))
 
                      ;; [x t/any? -> (- t/any? t/nil? tt/boolean?)]
@@ -404,7 +403,7 @@
                      (def ~(O<> '>boolean|__2|input0|types)
                        (*<> t/any?))
                      (def ~'>boolean|__2|0
-                       (reify* [O__B B__B Y__B S__B C__B I__B L__B F__B D__B]
+                       (reify* [~@(map csym `[O__B B__B Y__B S__B C__B I__B L__B F__B D__B])]
                          (~(B 'invoke) [~'_2__  ~(O 'x)] true)
                          (~(B 'invoke) [~'_3__  ~(B 'x)] true)
                          (~(B 'invoke) [~'_4__  ~(Y 'x)] true)
@@ -445,7 +444,7 @@
                  (is= (>boolean 123)   (boolean 123)))))))
 
 ;; Let's say you have (t/| t/string? t/number?) in one `fnt` overload.
-;; This means that you *can't* have a reify with two Object>Object overloads and expect it to work
+;; This means that you *can't* have a reify with two O__O overloads and expect it to work
 ;; at all.
 ;; Therefore, each `fnt` overload necessarily has a one-to-many relationship with `reify`s.
 ;; Only the primitivized overloads belong grouped together in one `reify`.
@@ -473,25 +472,25 @@
                         (t/isa? java.lang.Float)
                         (t/isa? java.lang.Double)))
                  (def ~'>int*|__0|0
-                   (reify* [byte>int]
+                   (reify* [~(csym `Y__I)]
                      (~(I 'invoke) [~'_0__ ~(Y 'x)] ~'(. Primitive uncheckedIntCast x))))
                  (def ~'>int*|__0|1
-                   (reify* [short>int]
+                   (reify* [~(csym `S__I)]
                      (~(I 'invoke) [~'_1__ ~(S 'x)] ~'(. Primitive uncheckedIntCast x))))
                  (def ~'>int*|__0|2
-                   (reify* [char>int]
+                   (reify* [~(csym `C__I)]
                      (~(I 'invoke) [~'_2__ ~(C 'x)] ~'(. Primitive uncheckedIntCast x))))
                  (def ~'>int*|__0|3
-                   (reify* [int>int]
+                   (reify* [~(csym `I__I)]
                      (~(I 'invoke) [~'_3__ ~(I 'x)] ~'(. Primitive uncheckedIntCast x))))
                  (def ~'>int*|__0|4
-                   (reify* [long>int]
+                   (reify* [~(csym `L__I)]
                      (~(I 'invoke) [~'_4__ ~(L 'x)] ~'(. Primitive uncheckedIntCast x))))
                  (def ~'>int*|__0|5
-                   (reify* [float>int]
+                   (reify* [~(csym `F__I)]
                      (~(I 'invoke) [~'_5__ ~(F 'x)] ~'(. Primitive uncheckedIntCast x))))
                  (def ~'>int*|__0|6
-                   (reify* [double>int]
+                   (reify* [~(csym `D__I)]
                      (~(I 'invoke) [~'_6__ ~(D 'x)] ~'(. Primitive uncheckedIntCast x))))
 
                  ;; [x (t/ref (t/isa? Number))
@@ -500,7 +499,7 @@
                  (def ~(O<> '>int*|__1|input0|types)
                    (*<> (t/ref (t/isa? Number))))
                  (def ~'>int*|__1|0
-                   (reify* [Object>int]
+                   (reify* [~(csym `O__I)]
                      (~(I 'invoke) [~'_7__ ~(O 'x)]
                        (let* [~(tag "java.lang.Number" 'x) ~'x] ~'(. x intValue)))))
 
@@ -511,21 +510,21 @@
                            ~'[(t/ref (t/isa? Number))])}
                    ([~'x00__]
                      (ifs ((Array/get ~'>int*|__0|input0|types 0) ~'x00__)
-                            (.invoke ~(tag (cstr `byte>int)   '>int*|__0|0) ~'x00__)
+                            (.invoke ~(tag (cstr `Y__I)   '>int*|__0|0) ~'x00__)
                           ((Array/get ~'>int*|__0|input0|types 1) ~'x00__)
-                            (.invoke ~(tag (cstr `short>int)  '>int*|__0|1) ~'x00__)
+                            (.invoke ~(tag (cstr `S__I)  '>int*|__0|1) ~'x00__)
                           ((Array/get ~'>int*|__0|input0|types 2) ~'x00__)
-                            (.invoke ~(tag (cstr `char>int)   '>int*|__0|2) ~'x00__)
+                            (.invoke ~(tag (cstr `C__I)   '>int*|__0|2) ~'x00__)
                           ((Array/get ~'>int*|__0|input0|types 3) ~'x00__)
-                            (.invoke ~(tag (cstr `int>int)    '>int*|__0|3) ~'x00__)
+                            (.invoke ~(tag (cstr `I__I)    '>int*|__0|3) ~'x00__)
                           ((Array/get ~'>int*|__0|input0|types 4) ~'x00__)
-                            (.invoke ~(tag (cstr `long>int)   '>int*|__0|4) ~'x00__)
+                            (.invoke ~(tag (cstr `L__I)   '>int*|__0|4) ~'x00__)
                           ((Array/get ~'>int*|__0|input0|types 5) ~'x00__)
-                            (.invoke ~(tag (cstr `float>int)  '>int*|__0|5) ~'x00__)
+                            (.invoke ~(tag (cstr `F__I)  '>int*|__0|5) ~'x00__)
                           ((Array/get ~'>int*|__0|input0|types 6) ~'x00__)
-                            (.invoke ~(tag (cstr `double>int) '>int*|__0|6) ~'x00__)
+                            (.invoke ~(tag (cstr `D__I) '>int*|__0|6) ~'x00__)
                           ((Array/get ~'>int*|__1|input0|types 0) ~'x00__)
-                            (.invoke ~(tag (cstr `Object>int) '>int*|__1|0) ~'x00__)
+                            (.invoke ~(tag (cstr `O__I) '>int*|__1|0) ~'x00__)
                           (unsupported! `>int* [~'x00__] 0)))))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
@@ -784,152 +783,152 @@
 
                  ;; [a t/comparable-primitive? b t/comparable-primitive? > tt/boolean?]
 
-                 (def ~(tag (cstr `byte+Y__B) '>|__0)
-                   (reify* [byte+Y__B]
+                 (def ~(tag (cstr `YY__B) '>|__0)
+                   (reify* [~(csym ~YY__B)]
                      (~(B 'invoke) [~'_0__  ~(Y 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `byte+S__B) '>|__1)
-                   (reify* [byte+S__B]
+                 (def ~(tag (cstr `YS__B) '>|__1)
+                   (reify* [~(csym ~YS__B)]
                      (~(B 'invoke) [~'_1__  ~(Y 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `byte+C__B) '>|__2)
-                   (reify* [byte+C__B]
+                 (def ~(tag (cstr `YC__B) '>|__2)
+                   (reify* [~(csym ~YC__B)]
                      (~(B 'invoke) [~'_2__  ~(Y 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `byte+I__B) '>|__3)
-                   (reify* [byte+I__B]
+                 (def ~(tag (cstr `YI__B) '>|__3)
+                   (reify* [~(csym ~YI__B)]
                      (~(B 'invoke) [~'_3__  ~(Y 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `byte+L__B) '>|__4)
-                   (reify* [byte+L__B]
+                 (def ~(tag (cstr `YL__B) '>|__4)
+                   (reify* [~(csym ~YL__B)]
                      (~(B 'invoke) [~'_4__  ~(Y 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `byte+F__B) '>|__5)
-                   (reify* [byte+F__B]
+                 (def ~(tag (cstr `YF__B) '>|__5)
+                   (reify* [~(csym ~YF__B)]
                      (~(B 'invoke) [~'_5__  ~(Y 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `byte+D__B) '>|__6)
-                   (reify* [byte+D__B]
+                 (def ~(tag (cstr `YD__B) '>|__6)
+                   (reify* [~(csym ~YD__B)]
                      (~(B 'invoke) [~'_6__  ~(Y 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+Y__B) '>|__7)
-                   (reify* [short+Y__B]
+                 (def ~(tag (cstr `SY__B) '>|__7)
+                   (reify* [~(csym `SY__B)]
                      (~(B 'invoke) [~'_7__  ~(S 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+S__B) '>|__8)
-                   (reify* [short+S__B]
+                 (def ~(tag (cstr `SS__B) '>|__8)
+                   (reify* [~(csym `SS__B)]
                      (~(B 'invoke) [~'_8__  ~(S 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+C__B) '>|__9)
-                   (reify* [short+C__B]
+                 (def ~(tag (cstr `SC__B) '>|__9)
+                   (reify* [~(csym `SC__B)]
                      (~(B 'invoke) [~'_9__  ~(S 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+I__B) '>|__10)
-                   (reify* [short+I__B]
+                 (def ~(tag (cstr `SI__B) '>|__10)
+                   (reify* [~(csym `SI__B)]
                      (~(B 'invoke) [~'_10__ ~(S 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+L__B) '>|__11)
-                   (reify* [short+L__B]
+                 (def ~(tag (cstr `SL__B) '>|__11)
+                   (reify* [~(csym `SL__B)]
                      (~(B 'invoke) [~'_11__ ~(S 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+F__B) '>|__12)
-                   (reify* [short+F__B]
+                 (def ~(tag (cstr `SF__B) '>|__12)
+                   (reify* [~(csym `SF__B)]
                      (~(B 'invoke) [~'_12__ ~(S 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `short+D__B) '>|__13)
-                   (reify* [short+D__B]
+                 (def ~(tag (cstr `SD__B) '>|__13)
+                   (reify* [~(csym `SD__B)]
                      (~(B 'invoke) [~'_13__ ~(S 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+Y__B) '>|__14)
-                   (reify* [char+Y__B]
+                 (def ~(tag (cstr `CY__B) '>|__14)
+                   (reify* [~(csym `CY__B)]
                      (~(B 'invoke) [~'_14__ ~(C 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+S__B) '>|__15)
-                   (reify* [char+S__B]
+                 (def ~(tag (cstr `CS__B) '>|__15)
+                   (reify* [~(csym `CS__B)]
                      (~(B 'invoke) [~'_15__ ~(C 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+C__B) '>|__16)
-                   (reify* [char+C__B]
+                 (def ~(tag (cstr `CC__B) '>|__16)
+                   (reify* [~(csym `CC__B)]
                      (~(B 'invoke) [~'_16__ ~(C 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+I__B) '>|__17)
-                   (reify* [char+I__B]
+                 (def ~(tag (cstr `CI__B) '>|__17)
+                   (reify* [~(csym `CI__B)]
                      (~(B 'invoke) [~'_17__ ~(C 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+L__B) '>|__18)
-                   (reify* [char+L__B]
+                 (def ~(tag (cstr `CL__B) '>|__18)
+                   (reify* [~(csym `CL__B)]
                      (~(B 'invoke) [~'_18__ ~(C 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+F__B) '>|__19)
-                   (reify* [char+F__B]
+                 (def ~(tag (cstr `CF__B) '>|__19)
+                   (reify* [~(csym `CF__B)]
                      (~(B 'invoke) [~'_19__ ~(C 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `char+D__B) '>|__20)
-                   (reify* [char+D__B]
+                 (def ~(tag (cstr `CD__B) '>|__20)
+                   (reify* [~(csym `CD__B)]
                      (~(B 'invoke) [~'_20__ ~(C 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+Y__B) '>|__21)
-                   (reify* [int+Y__B]
+                 (def ~(tag (cstr `IY__B) '>|__21)
+                   (reify* [~(csym `IY__B)]
                      (~(B 'invoke) [~'_21__ ~(I 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+S__B) '>|__22)
-                   (reify* [int+S__B]
+                 (def ~(tag (cstr `IS__B) '>|__22)
+                   (reify* [~(csym `IS__B)]
                      (~(B 'invoke) [~'_22__ ~(I 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+C__B) '>|__23)
-                   (reify* [int+C__B]
+                 (def ~(tag (cstr `IC__B) '>|__23)
+                   (reify* [~(csym `IC__B)]
                      (~(B 'invoke) [~'_23__ ~(I 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+I__B) '>|__24)
-                   (reify* [int+I__B]
+                 (def ~(tag (cstr `II__B) '>|__24)
+                   (reify* [~(csym `II__B)]
                      (~(B 'invoke) [~'_24__ ~(I 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+L__B) '>|__25)
-                   (reify* [int+L__B]
+                 (def ~(tag (cstr `IL__B) '>|__25)
+                   (reify* [~(csym `IL__B)]
                      (~(B 'invoke) [~'_25__ ~(I 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+F__B) '>|__26)
-                   (reify* [int+F__B]
+                 (def ~(tag (cstr `IF__B) '>|__26)
+                   (reify* [~(csym `IF__B)]
                      (~(B 'invoke) [~'_26__ ~(I 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `int+D__B) '>|__27)
-                   (reify* [int+D__B]
+                 (def ~(tag (cstr `ID__B) '>|__27)
+                   (reify* [~(csym `ID__B)]
                      (~(B 'invoke) [~'_27__ ~(I 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+Y__B) '>|__28)
-                   (reify* [long+Y__B]
+                 (def ~(tag (cstr `LY__B) '>|__28)
+                   (reify* [~(csym `LY__B)]
                      (~(B 'invoke) [~'_28__ ~(L 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+S__B) '>|__29)
-                   (reify* [long+S__B]
+                 (def ~(tag (cstr `LS__B) '>|__29)
+                   (reify* [~(csym `LS__B)]
                      (~(B 'invoke) [~'_29__ ~(L 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+C__B) '>|__30)
-                   (reify* [long+C__B]
+                 (def ~(tag (cstr `LC__B) '>|__30)
+                   (reify* [~(csym `LC__B)]
                      (~(B 'invoke) [~'_30__ ~(L 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+I__B) '>|__31)
-                   (reify* [long+I__B]
+                 (def ~(tag (cstr `LI__B) '>|__31)
+                   (reify* [~(csym `LI__B)]
                      (~(B 'invoke) [~'_31__ ~(L 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+L__B) '>|__32)
-                   (reify* [long+L__B]
+                 (def ~(tag (cstr `LL__B) '>|__32)
+                   (reify* [~(csym `LL__B)]
                      (~(B 'invoke) [~'_32__ ~(L 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+F__B) '>|__33)
-                   (reify* [long+F__B]
+                 (def ~(tag (cstr `LF__B) '>|__33)
+                   (reify* [~(csym `LF__B)]
                      (~(B 'invoke) [~'_33__ ~(L 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `long+D__B) '>|__34)
-                   (reify* [long+D__B]
+                 (def ~(tag (cstr `LD__B) '>|__34)
+                   (reify* [~(csym `LD__B)]
                      (~(B 'invoke) [~'_34__ ~(L 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+Y__B) '>|__35)
-                   (reify* [float+Y__B]
+                 (def ~(tag (cstr `FY__B) '>|__35)
+                   (reify* [~(csym `FY__B)]
                      (~(B 'invoke) [~'_35__ ~(F 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+S__B) '>|__36)
-                   (reify* [float+S__B]
+                 (def ~(tag (cstr `FS__B) '>|__36)
+                   (reify* [~(csym `FS__B)]
                      (~(B 'invoke) [~'_36__ ~(F 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+C__B) '>|__37)
-                   (reify* [float+C__B]
+                 (def ~(tag (cstr `FC__B) '>|__37)
+                   (reify* [~(csym `FC__B)]
                      (~(B 'invoke) [~'_37__ ~(F 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+I__B) '>|__38)
-                   (reify* [float+I__B]
+                 (def ~(tag (cstr `FI__B) '>|__38)
+                   (reify* [~(csym `FI__B)]
                      (~(B 'invoke) [~'_38__ ~(F 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+L__B) '>|__39)
-                   (reify* [float+L__B]
+                 (def ~(tag (cstr `FL__B) '>|__39)
+                   (reify* [~(csym `FL__B)]
                      (~(B 'invoke) [~'_39__ ~(F 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+F__B) '>|__40)
-                   (reify* [float+F__B]
+                 (def ~(tag (cstr `FF__B) '>|__40)
+                   (reify* [~(csym `FF__B)]
                      (~(B 'invoke) [~'_40__ ~(F 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `float+D__B) '>|__41)
-                   (reify* [float+D__B]
+                 (def ~(tag (cstr `FD__B) '>|__41)
+                   (reify* [~(csym `FD__B)]
                      (~(B 'invoke) [~'_41__ ~(F 'a) ~(D 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+Y__B) '>|__42)
-                   (reify* [double+Y__B]
+                 (def ~(tag (cstr `DY__B) '>|__42)
+                   (reify* [~(csym `DY__B)]
                      (~(B 'invoke) [~'_42__ ~(D 'a) ~(Y 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+S__B) '>|__43)
-                   (reify* [double+S__B]
+                 (def ~(tag (cstr `DS__B) '>|__43)
+                   (reify* [~(csym `DS__B)]
                      (~(B 'invoke) [~'_43__ ~(D 'a) ~(S 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+C__B) '>|__44)
-                   (reify* [double+C__B]
+                 (def ~(tag (cstr `DC__B) '>|__44)
+                   (reify* [~(csym `DC__B)]
                      (~(B 'invoke) [~'_44__ ~(D 'a) ~(C 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+I__B) '>|__45)
-                   (reify* [double+I__B]
+                 (def ~(tag (cstr `DI__B) '>|__45)
+                   (reify* [~(csym `DI__B)]
                      (~(B 'invoke) [~'_45__ ~(D 'a) ~(I 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+L__B) '>|__46)
-                   (reify* [double+L__B]
+                 (def ~(tag (cstr `DL__B) '>|__46)
+                   (reify* [~(csym `DL__B)]
                      (~(B 'invoke) [~'_46__ ~(D 'a) ~(L 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+F__B) '>|__47)
-                   (reify* [double+F__B]
+                 (def ~(tag (cstr `DF__B) '>|__47)
+                   (reify* [~(csym `DF__B)]
                      (~(B 'invoke) [~'_47__ ~(D 'a) ~(F 'b)] ~'(. Numeric gt a b))))
-                 (def ~(tag (cstr `double+D__B) '>|__48)
-                   (reify* [double+D__B]
+                 (def ~(tag (cstr `DD__B) '>|__48)
+                   (reify* [~(csym `DD__B)]
                      (~(B 'invoke) [~'_48__ ~(D 'a) ~(D 'b)] ~'(. Numeric gt a b))))
 
                  ~>|types-form
@@ -964,39 +963,39 @@
 
                         ;; [x (t/- tt/primitive? tt/boolean?)]
 
-                        (def ~(tag (cstr `byte>long) '>long*|__0)
-                          (reify* [byte>long]
+                        (def ~(tag (cstr `Y__L) '>long*|__0)
+                          (reify* [~(csym `Y__L)]
                             (~(L 'invoke) [~'_0__ ~(Y             'x)]
                               ~'(. Primitive uncheckedLongCast x))))
-                        (def ~(tag (cstr `short>long) '>long*|__1)
-                          (reify* [short>long]
+                        (def ~(tag (cstr `S__L) '>long*|__1)
+                          (reify* [~(csym `S__L)]
                             (~(L 'invoke) [~'_1__ ~(S            'x)]
                               ~'(. Primitive uncheckedLongCast x))))
-                        (def ~(tag (cstr `char>long) '>long*|__2)
-                          (reify* [char>long]
+                        (def ~(tag (cstr `C__L) '>long*|__2)
+                          (reify* [~(csym `C__L)]
                             (~(L 'invoke) [~'_2__ ~(C             'x)]
                               ~'(. Primitive uncheckedLongCast x))))
-                        (def ~(tag (cstr `int>long) '>long*|__3)
-                          (reify* [int>long]
+                        (def ~(tag (cstr `I__L) '>long*|__3)
+                          (reify* [~(csym `I__L)]
                             (~(L 'invoke) [~'_3__ ~(I              'x)]
                               ~'(. Primitive uncheckedLongCast x))))
-                        (def ~(tag (cstr `long>long) '>long*|__4)
-                          (reify* [long>long]
+                        (def ~(tag (cstr `L__L) '>long*|__4)
+                          (reify* [~(csym `L__L)]
                             (~(L 'invoke) [~'_4__ ~(L             'x)]
                               ~'(. Primitive uncheckedLongCast x))))
-                        (def ~(tag (cstr `float>long) '>long*|__5)
-                          (reify* [float>long]
+                        (def ~(tag (cstr `F__L) '>long*|__5)
+                          (reify* [~(csym `F__L)]
                             (~(L 'invoke) [~'_5__ ~(F            'x)]
                               ~'(. Primitive uncheckedLongCast x))))
-                        (def ~(tag (cstr `double>long) '>long*|__6)
-                          (reify* [double>long]
+                        (def ~(tag (cstr `D__L) '>long*|__6)
+                          (reify* [~(csym `D__L)]
                             (~(L 'invoke) [~'_6__ ~(D           'x)]
                               ~'(. Primitive uncheckedLongCast x))))
 
                         ;; [x (t/ref (t/isa? Number))]
 
-                        (def ~(tag (cstr `Object>long) '>long*|__7)
-                          (reify* [Object>long]
+                        (def ~(tag (cstr `O__L) '>long*|__7)
+                          (reify* [~(csym `O__L)]
                             (~(L 'invoke) [~'_7__ ~(O 'x)]
                               (. ~(tag "java.lang.Number" 'x) ~'longValue))))
 
@@ -1061,12 +1060,12 @@
                  ;; [x tt/boolean? > (t/ref tt/boolean?)]
 
                  (def ~(tag (cstr `B__O) 'ref-output-type|__0)
-                   (reify* [B__O] (~(O 'invoke) [~'_0__ ~(B 'x)] (new ~'Boolean ~'x))))
+                   (reify* [~(csym `B__O)] (~(O 'invoke) [~'_0__ ~(B 'x)] (new ~'Boolean ~'x))))
 
                  ;; [x tt/byte? > (t/ref tt/byte?)]
 
                  (def ~(tag (cstr `Y__O) 'ref-output-type|__1)
-                   (reify* [Y__O] (~(O 'invoke) [~'_1__ ~(Y 'x)] (new ~'Byte ~'x))))
+                   (reify* [~(csym `Y__O)] (~(O 'invoke) [~'_1__ ~(Y 'x)] (new ~'Byte ~'x))))
 
                  [[0 0 nil [(t/isa? Boolean)] (t/ref (t/isa? Boolean))]
                   [1 1 nil [(t/isa? Byte)]    (t/ref (t/isa? Byte))]]
@@ -1121,35 +1120,35 @@
 
                         #_(def ~'>long|__0|input-types (*<> byte?))
                         (def ~'>long|__0
-                          (reify byte>long
+                          (reify Y__L
                             (~(L 'invoke) [_## ~(Y 'x)]
                               ;; Resolved from `(>long* x)`
                               (. >long*|__0 invoke ~'x))))
 
                         #_(def ~'>long|__1|input-types (*<> short?))
                         (def ~'>long|__1
-                          (reify short>long
+                          (reify S__L
                             (~(L 'invoke) [_## ~(C 'x)]
                               ;; Resolved from `(>long* x)`
                               (. >long*|__1 invoke ~'x))))
 
                         #_(def ~'>long|__2|input-types (*<> char?))
                         (def ~'>long|__2
-                          (reify char>long
+                          (reify C__L
                             (~(L 'invoke) [_## ~(S 'x)]
                               ;; Resolved from `(>long* x)`
                               (. >long*|__2 invoke ~'x))))
 
                         #_(def ~'>long|__3|input-types (*<> tt/int?))
                         (def ~'>long|__3
-                          (reify int>long
+                          (reify I__L
                             (~(L 'invoke) [_## ~(I 'x)]
                               ;; Resolved from `(>long* x)`
                               (. >long*|__3 invoke ~'x))))
 
                         #_(def ~'>long|__4|input-types (*<> tt/long?))
                         (def ~'>long|__4
-                          (reify long>long
+                          (reify L__L
                             (~(L 'invoke) [_## ~(L 'x)]
                               ;; Resolved from `(>long* x)`
                               (. >long*|__4 invoke ~'x))))
@@ -1163,7 +1162,7 @@
                                       (t/fn [x (t/or double? float?)]
                                         (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))))
                         (def ~'>long|__5
-                          (reify double>long
+                          (reify D__L
                             (~(L 'invoke) [_## ~(D 'x)]
                               ;; Resolved from `(>long* x)`
                               (. >long*|__6 invoke ~'x))))
@@ -1173,7 +1172,7 @@
                                       (t/fn [x (t/or double? float?)]
                                         (and (>= x Long/MIN_VALUE) (<= x Long/MAX_VALUE))))))
                         (def ~'>long|__6
-                          (reify float>long
+                          (reify F__L
                             (~(L 'invoke) [_## ~(F 'x)]
                               ;; Resolved from `(>long* x)`
                               (. >long*|__6 invoke ~'x))))
@@ -1185,7 +1184,7 @@
                           (*<> (t/and (t/isa? clojure.lang.BigInt)
                                       (t/fn [x (t/isa? clojure.lang.BigInt)] (t/nil? (.bipart x))))))
                         (def ~'>long|__7
-                          (reify Object>long
+                          (reify O__L
                             (~(L 'invoke) [_## ~(O 'x)]
                               (let* [~(tag "clojure.lang.BigInt" 'x) ~'x] ~'(.lpart x)))))
 
@@ -1196,7 +1195,7 @@
                           (*<> (t/and (t/isa? java.math.BigInteger)
                                       (t/fn [x (t/isa? java.math.BigInteger)] (< (.bitLength x) 64)))))
                         (def ~'>long|__8
-                          (reify Object>long
+                          (reify O__L
                             (~(L 'invoke) [_## ~(O 'x)]
                               (let* [~(tag "java.math.BigInteger" 'x) ~'x] ~'(.longValue x)))))
 
@@ -1207,7 +1206,7 @@
                         #_(def ~'>long|__9|conditions
                           (*<> (-> long|__8|input-types (core/get 0) utr/and-type>args (core/get 1))))
                         (def ~'>long|__9
-                          (reify Object>long
+                          (reify O__L
                             (~(L 'invoke) [_## ~(O 'x)]
                               (let* [~(tag "clojure.lang.Ratio" 'x) ~'x]
                                 ;; Resolved from `(>long (.bigIntegerValue x))`
@@ -1252,7 +1251,7 @@
                         #_(def ~'>long|__12|input-types
                           (*<> t/string?))
                         (def ~'>long|__12
-                          (reify Object>long
+                          (reify O__L
                             (~(L 'invoke) [_## ~(O 'x)]
                               ~'(Long/parseLong x))))
 
@@ -1261,7 +1260,7 @@
                         #_(def ~'>long|__13|input-types
                           (*<> t/string? tt/int?))
                         (def ~'>long|__13
-                          (reify Object+int>long
+                          (reify OI__L
                             (~(L 'invoke) [_## ~(O 'x) ~(I 'radix)]
                               ~'(Long/parseLong x radix))))
 
@@ -1320,14 +1319,14 @@
         expected
           (case (env-lang)
             :clj ($ (do (def ~'!str|__0|0
-                          (reify* [>Object]
+                          (reify* [~(csym `__O)]
                             (~(O 'invoke) [~'_0__]
                               ~(tag "java.lang.StringBuilder" '(new StringBuilder)))))
 
                         (def ~(O<> '!str|__1|input0|types)
                           (*<> (t/isa? java.lang.String)))
                         (def ~'!str|__1|0
-                          (reify* [Object>Object]
+                          (reify* [~(csym `O__O)]
                             (~(O 'invoke) [~'_1__ ~(O 'x)]
                               (let* [~(ST 'x) ~'x]
                                 ~(tag "java.lang.StringBuilder"
@@ -1337,14 +1336,14 @@
                           (*<> (t/isa? java.lang.CharSequence)
                                (t/isa? java.lang.Integer)))
                         (def ~'!str|__2|0
-                          (reify* [Object>Object]
+                          (reify* [~(csym `O__O)]
                             (~(O 'invoke) [~'_2__ ~(O 'x)]
                               (let* [~(tag "java.lang.CharSequence" 'x) ~'x]
                                 ~(tag "java.lang.StringBuilder"
                                       (list 'new 'StringBuilder
                                             (tag "java.lang.CharSequence" 'x)))))))
                         (def ~'!str|__2|1
-                          (reify* [int>Object]
+                          (reify* [~(csym `I__O)]
                             (~(O 'invoke) [~'_3__ ~(I 'x)]
                               ~(tag "java.lang.StringBuilder" '(new StringBuilder x)))))
 
@@ -1354,18 +1353,18 @@
                                   ~'[]
                                   ~'[t/string?]
                                   ~'[(t/or tt/char-seq? tt/int?)])}
-                          ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.>Object"
+                          ([] (.invoke ~(tag "quantum.core.test.defnt_equivalences.__O"
                                              '!str|__0|0)))
                           ([~'x00__]
                             (ifs
                               ((Array/get ~'!str|__1|input0|types 0) ~'x00__)
-                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.O__O"
                                                '!str|__1|0) ~'x00__)
                               ((Array/get ~'!str|__2|input0|types 0) ~'x00__)
-                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.Object>Object"
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.O__O"
                                                '!str|__2|0) ~'x00__)
                               ((Array/get ~'!str|__2|input0|types 1) ~'x00__)
-                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.int>Object"
+                                (.invoke ~(tag "quantum.core.test.defnt_equivalences.I__O"
                                                '!str|__2|1) ~'x00__)
                               (unsupported! `!str [~'x00__] 0)))))))]
     (testing "code equivalence" (is-code= actual expected))
@@ -1392,13 +1391,13 @@
                           ;; [> tt/double?]
 
                           (def ~'defn-self-reference|__0
-                            (reify* [>double]
+                            (reify* [~(csym `__D)]
                               (~(O 'invoke) [~'_0__] 2.0)))
 
                           ;; [x tt/long? > tt/double?]
 
                           (def ~'defn-self-reference|__1
-                            (reify* [long>double]
+                            (reify* [~(csym `L__D)]
                               (~(O 'invoke) [~'_1__ ~'x] (~'defn-self-reference))))
 
                           [{:id 0 :index 0 :arg-types []             :output-type (t/isa? Double)}
@@ -1426,7 +1425,7 @@
             (case (env-lang)
               :clj ($ (do (declare ~'defn-reference)
                           (def ~(tag (cstr `>long) 'defn-reference|__0)
-                            (reify* [>long] (~(L 'invoke) [~'_0__] ~'(>long* 1))))
+                            ( [>long] (~(L 'invoke) [~'_0__] ~'(>long* 1))))
 
                           [{:id 0 :index 0 :arg-types [] :output-type (t/isa? Long)}]
 
@@ -1474,22 +1473,22 @@
              :cljs t/val?)]))
 
      ~(case-env
-        :clj  `(do (def ^>Object !str|__0
-                     (reify >Object
+        :clj  `(do (def ^__O !str|__0
+                     (reify __O
                        (^java.lang.Object invoke [_#]
                          (StringBuilder.))))
                    ;; `t/string?`
-                   (def ^Object>Object !str|__1 ; `t/string?`
-                     (reify Object>Object
+                   (def ^O__O !str|__1 ; `t/string?`
+                     (reify O__O
                        (^java.lang.Object invoke [_# ^java.lang.Object ~'x]
                          (let* [^String x x] (StringBuilder. x)))))
                    ;; `(t/or t/char-seq? tt/int?)`
-                   (def ^Object>Object !str|__2 ; `t/char-seq?`
-                     (reify Object>Object
+                   (def ^O__O !str|__2 ; `t/char-seq?`
+                     (reify O__O
                        (^java.lang.Object invoke [_# ^java.lang.Object ~'x]
                          (let* [^CharSequence x x] (StringBuilder. x)))))
-                   (def ^int>Object !str|__3 ; `tt/int?`
-                     (reify int>Object (^java.lang.Object invoke [_# ^int ~'x]
+                   (def ^I__O !str|__3 ; `tt/int?`
+                     (reify I__O (^java.lang.Object invoke [_# ^int ~'x]
                        (StringBuilder. x))))
 
                    (defn !str ([  ] (.invoke !str|__0))
@@ -1527,11 +1526,11 @@
 
 `(do ~(case-env
         :clj  `(do (def str|__0
-                     (reify >Object       (^java.lang.Object invoke [_#                      ] "")))
+                     (reify __O       (^java.lang.Object invoke [_#                      ] "")))
                    (def str|__1 ; `nil?`
-                     (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'x] "")))
+                     (reify O__O (^java.lang.Object invoke [_# ^java.lang.Object ~'x] "")))
                    (def str|__2 ; `Object`
-                     (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'x] (.toString x))))
+                     (reify O__O (^java.lang.Object invoke [_# ^java.lang.Object ~'x] (.toString x))))
 
                    (defn str
                      {:quantum.core.type/type
@@ -1578,7 +1577,7 @@
 
      ~(case-env
         :clj  `(do ;; `array?`
-                   (def count|__0__1 (reify Object>int (^int invoke [_# ^java.lang.Object ~'xs] (Array/count ^"[B" xs))))
+                   (def count|__0__1 (reify O__I (^int invoke [_# ^java.lang.Object ~'xs] (Array/count ^"[B" xs))))
                    ...)
         :cljs `(do ...)))
 
@@ -1633,8 +1632,8 @@
           `(do ;; [t/nil?]
 
                (def seq|__0|input-types (*<> t/nil?))
-               (def ^Object>Object seq|__0
-                 (reify Object>Object
+               (def ^O__O seq|__0
+                 (reify O__O
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      ;; Notice, no casting for nil input
                      nil)))
@@ -1642,46 +1641,46 @@
                ;; [(t/isa? ASeq)]
 
                (def seq|__2|input-types (*<> (t/isa? ASeq)))
-               (def ^Object>Object seq|__2
-                 (reify Object>Object
+               (def ^O__O seq|__2
+                 (reify O__O
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      (let* [^ASeq xs xs] xs))))
 
                ;; [(t/or (t/isa? LazySeq) (t/isa? Seqable))]
 
                (def seq|__3|input-types (*<> (t/isa? LazySeq)))
-               (def ^Object>Object seq|__3
-                 (reify Object>Object
+               (def ^O__O seq|__3
+                 (reify O__O
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      (let* [^LazySeq xs xs] (.seq xs)))))
 
                (def seq|__4|input-types (*<> (t/isa? Seqable)))
-               (def ^Object>Object seq|__4
-                 (reify Object>Object
+               (def ^O__O seq|__4
+                 (reify O__O
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      (let* [^Seqable xs xs] (.seq xs)))))
 
                ;; [t/iterable?]
 
                (def seq|__5|input-types (*<> t/iterable?))
-               (def ^Object>Object seq|__5
-                 (reify Object>Object
+               (def ^O__O seq|__5
+                 (reify O__O
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      (let* [^Iterable xs xs] (clojure.lang.RT/chunkIteratorSeq (.iterator xs))))))
 
                ;; [t/char-seq?]
 
                (def seq|__6|input-types (*<> t/iterable?))
-               (def ^Object>Object seq|__6
-                 (reify Object>Object
+               (def ^O__O seq|__6
+                 (reify O__O
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      (let* [^CharSequence xs xs] (StringSeq/create xs)))))
 
                ;; [(t/isa? Map)]
 
                (def seq|__7|input-types (*<> (t/isa? Map)))
-               (def ^Object>Object seq|__7
-                 (reify Object>Object
+               (def ^O__O seq|__7
+                 (reify O__O
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      ;; This is after expansion; it's the first one that matches the overload
                      ;; If no overload is found it'll have to be dispatched at runtime (protocol or
@@ -1693,14 +1692,14 @@
                ;; TODO perhaps at some point figure out that it doesn't need to create any more
                ;; overloads here than just one?
                (def seq|__8|input-types (*<> (t/isa? (Class/forName "[Z"))))
-               (def ^Object>Object seq|__8
-                 (reify Object>Object
+               (def ^O__O seq|__8
+                 (reify O__O
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      (let* [^"[Z" xs xs] (ArraySeq/createFromObject xs)))))
 
                (def seq|__9|input-types (*<> (t/isa? (Class/forName "[B"))))
-               (def ^Object>Object seq|__9
-                 (reify Object>Object
+               (def ^O__O seq|__9
+                 (reify O__O
                    (^java.lang.Object invoke [_# ^java.lang.Object ~'xs]
                      (let* [^"[B" xs xs] (ArraySeq/createFromObject xs)))))
                ...
@@ -1799,77 +1798,77 @@
 ;; ===== `extend-defn!` tests ===== ;;
 
 (def dependent-extensible|direct-dispatch|codelist
- `[(def ~(tag (cstr `boolean+byte+short+S__O)     'dependent-extensible|__0)
-      (reify* [boolean+byte+short+S__O]
-        (~(O 'invoke) [~'_0__  ~(B 'a) ~(Y 'b) ~(S 'c) ~(S 'd)] 1)))
-   (def ~(tag (cstr `boolean+byte+short+C__O)      'dependent-extensible|__1)
-     (reify* [boolean+byte+short+C__O]
+ `[(def ~(tag (cstr `BYSS__O)     'dependent-extensible|__0)
+     (reify* [~(csym `BYSS__O)]
+       (~(O 'invoke) [~'_0__  ~(B 'a) ~(Y 'b) ~(S 'c) ~(S 'd)] 1)))
+   (def ~(tag (cstr `BYSC__O)      'dependent-extensible|__1)
+     (reify* [~(csym `BYSC__O)]
        (~(O 'invoke) [~'_1__  ~(B 'a) ~(Y 'b) ~(S 'c) ~(C 'd)] 1)))
-   (def ~(tag (cstr `boolean+byte+short+Object>Object)    'dependent-extensible|__2)
-     (reify* [boolean+byte+short+Object>Object]
+   (def ~(tag (cstr `BYSO__O)    'dependent-extensible|__2)
+     (reify* [~(csym `BYSO__O)]
        (~(O 'invoke) [~'_2__  ~(B 'a) ~(Y 'b) ~(S 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `boolean+byte+Object+C__O)     'dependent-extensible|__3)
-     (reify* [boolean+byte+Object+C__O]
+   (def ~(tag (cstr `BYOC__O)     'dependent-extensible|__3)
+     (reify* [~(csym `BYOC__O)]
        (~(O 'invoke) [~'_3__  ~(B 'a) ~(Y 'b) ~(O 'c) ~(C 'd)] 1)))
-   (def ~(tag (cstr `boolean+byte+Object+Object>Object)   'dependent-extensible|__4)
-     (reify* [boolean+byte+Object+Object>Object]
+   (def ~(tag (cstr `BYOO__O)   'dependent-extensible|__4)
+     (reify* [~(csym `BYOO__O)]
        (~(O 'invoke) [~'_4__  ~(B 'a) ~(Y 'b) ~(O 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `boolean+byte+Object+Object>Object)   'dependent-extensible|__5)
-     (reify* [boolean+byte+Object+Object>Object]
+   (def ~(tag (cstr `BYOO__O)   'dependent-extensible|__5)
+     (reify* [~(csym `BYOO__O)]
        (~(O 'invoke) [~'_5__  ~(B 'a) ~(Y 'b) ~(O 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `boolean+short+short+S__O)    'dependent-extensible|__6)
-     (reify* [boolean+short+short+S__O]
+   (def ~(tag (cstr `BSSS__O)    'dependent-extensible|__6)
+     (reify* [~(csym `BSSS__O)]
        (~(O 'invoke) [~'_6__  ~(B 'a) ~(S 'b) ~(S 'c) ~(S 'd)] 1)))
-   (def ~(tag (cstr `boolean+char+short+C__O)      'dependent-extensible|__7)
-     (reify* [boolean+char+short+C__O]
+   (def ~(tag (cstr `BCSC__O)      'dependent-extensible|__7)
+     (reify* [~(csym `BCSC__O)]
        (~(O 'invoke) [~'_7__  ~(B 'a) ~(C 'b) ~(S 'c) ~(C 'd)] 1)))
-   (def ~(tag (cstr `boolean+char+Object+C__O)     'dependent-extensible|__8)
-     (reify* [boolean+char+Object+C__O]
+   (def ~(tag (cstr `BCOC__O)     'dependent-extensible|__8)
+     (reify* [~(csym `BCOC__O)]
        (~(O 'invoke) [~'_8__  ~(B 'a) ~(C 'b) ~(O 'c) ~(C 'd)] 1)))
-   (def ~(tag (cstr `boolean+Object+short+Object>Object)  'dependent-extensible|__9)
-     (reify* [boolean+Object+short+Object>Object]
+   (def ~(tag (cstr `BOSO__O)  'dependent-extensible|__9)
+     (reify* [~(csym `BOSO__O)]
        (~(O 'invoke) [~'_9__ ~(B 'a) ~(O 'b) ~(S 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `boolean+Object+Object+Object>Object) 'dependent-extensible|__10)
-     (reify* [boolean+Object+Object+Object>Object]
+   (def ~(tag (cstr `BOOO__O) 'dependent-extensible|__10)
+     (reify* [~(csym `BOOO__O)]
        (~(O 'invoke) [~'_10__ ~(B 'a) ~(O 'b) ~(O 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `boolean+Object+Object+Object>Object) 'dependent-extensible|__11)
-     (reify* [boolean+Object+Object+Object>Object]
+   (def ~(tag (cstr `BOOO__O) 'dependent-extensible|__11)
+     (reify* [~(csym `BOOO__O)]
        (~(O 'invoke) [~'_11__ ~(B 'a) ~(O 'b) ~(O 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `byte+byte+short+S__O)        'dependent-extensible|__12)
-     (reify* [byte+byte+short+S__O]
+   (def ~(tag (cstr `YYSS__O)        'dependent-extensible|__12)
+     (reify* [~(csym `YYSS__O)]
        (~(O 'invoke) [~'_12__ ~(Y 'a) ~(Y 'b) ~(S 'c) ~(S 'd)] 1)))
-   (def ~(tag (cstr `byte+byte+short+C__O)         'dependent-extensible|__13)
-     (reify* [byte+byte+short+C__O]
+   (def ~(tag (cstr `YYSC__O)         'dependent-extensible|__13)
+     (reify* [~(csym `YYSC__O)]
        (~(O 'invoke) [~'_13__ ~(Y 'a) ~(Y 'b) ~(S 'c) ~(C 'd)] 1)))
-   (def ~(tag (cstr `byte+byte+short+Object>Object)       'dependent-extensible|__14)
-     (reify* [byte+byte+short+Object>Object]
+   (def ~(tag (cstr `YYSO__O)       'dependent-extensible|__14)
+     (reify* [~(csym `YYSO__O)]
        (~(O 'invoke) [~'_14__ ~(Y 'a) ~(Y 'b) ~(S 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `byte+byte+Object+C__O)        'dependent-extensible|__15)
-     (reify* [byte+byte+Object+C__O]
+   (def ~(tag (cstr `YYOC__O)        'dependent-extensible|__15)
+     (reify* [~(csym `YYOC__O)]
        (~(O 'invoke) [~'_15__ ~(Y 'a) ~(Y 'b) ~(O 'c) ~(C 'd)] 1)))
-   (def ~(tag (cstr `byte+byte+Object+Object>Object)      'dependent-extensible|__16)
-     (reify* [byte+byte+Object+Object>Object]
+   (def ~(tag (cstr `YYOO__O)      'dependent-extensible|__16)
+     (reify* [~(csym `YYOO__O)]
        (~(O 'invoke) [~'_16__ ~(Y 'a) ~(Y 'b) ~(O 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `byte+byte+Object+Object>Object)      'dependent-extensible|__17)
-     (reify* [byte+byte+Object+Object>Object]
+   (def ~(tag (cstr `YYOO__O)      'dependent-extensible|__17)
+     (reify* [~(csym `YYOO__O)]
        (~(O 'invoke) [~'_17__ ~(Y 'a) ~(Y 'b) ~(O 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `short+short+short+S__O)      'dependent-extensible|__18)
-     (reify* [short+short+short+S__O]
+   (def ~(tag (cstr `SSSS__O)      'dependent-extensible|__18)
+     (reify* [~(csym `SSSS__O)]
        (~(O 'invoke) [~'_18__ ~(S 'a) ~(S 'b) ~(S 'c) ~(S 'd)] 1)))
-   (def ~(tag (cstr `char+char+short+C__O)         'dependent-extensible|__19)
-     (reify* [char+char+short+C__O]
+   (def ~(tag (cstr `CCSC__O)         'dependent-extensible|__19)
+     (reify* [~(csym `CCSC__O)]
        (~(O 'invoke) [~'_19__ ~(C 'a) ~(C 'b) ~(S 'c) ~(C 'd)] 1)))
-   (def ~(tag (cstr `char+char+Object+C__O)        'dependent-extensible|__20)
-     (reify* [char+char+Object+C__O]
+   (def ~(tag (cstr `CCOC__O)        'dependent-extensible|__20)
+     (reify* [~(csym `CCOC__O)]
        (~(O 'invoke) [~'_20__ ~(C 'a) ~(C 'b) ~(O 'c) ~(C 'd)] 1)))
-   (def ~(tag (cstr `Object+Object+short+Object>Object)   'dependent-extensible|__21)
-     (reify* [Object+Object+short+Object>Object]
+   (def ~(tag (cstr `OOSO__O)   'dependent-extensible|__21)
+     (reify* [~(csym `OOSO__O)]
        (~(O 'invoke) [~'_21__ ~(O 'a) ~(O 'b) ~(S 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `Object+Object+Object+Object>Object)  'dependent-extensible|__22)
-     (reify* [Object+Object+Object+Object>Object]
+   (def ~(tag (cstr `OOOO__O)  'dependent-extensible|__22)
+     (reify* [~(csym `OOOO__O)]
        (~(O 'invoke) [~'_22__ ~(O 'a) ~(O 'b) ~(O 'c) ~(O 'd)] 1)))
-   (def ~(tag (cstr `Object+Object+Object+Object>Object)  'dependent-extensible|__23)
-     (reify* [Object+Object+Object+Object>Object]
+   (def ~(tag (cstr `OOOO__O)  'dependent-extensible|__23)
+     (reify* [~(csym `OOOO__O)]
        (~(O 'invoke) [~'_23__ ~(O 'a) ~(O 'b) ~(O 'c) ~(O 'd)] 1)))])
 
 (def dependent-extensible|fn|form
@@ -2000,7 +1999,7 @@
               (case (env-lang)
                 :clj ($ (do (declare ~'extensible)
                             (def ~(tag (cstr `D__O) 'extensible|__0)
-                              (reify* [D__O] (~(O 'invoke) [~'_0__ ~(D 'a)] nil)))
+                              ( [D__O] (~(O 'invoke) [~'_0__ ~(D 'a)] nil)))
 
                             [{:id 0 :index 0 :arg-types [(t/isa? Double)] :output-type t/any?}]
 
@@ -2021,7 +2020,7 @@
             expected
               (case (env-lang)
                 :clj ($ (do (def ~(tag (cstr `B__O) 'extensible|__1)
-                              (reify* [B__O]
+                              (reify* [~(csym `B__O)]
                                 (~(O 'invoke) [~'_0__ ~(B 'a)] nil)))
 
                             [{:id 1 :index 0 :arg-types [(t/isa? Boolean)] :output-type t/any?}
@@ -2185,7 +2184,7 @@
               (case (env-lang)
                 :clj ($ [(do (declare ~'simple-reactive-dependee)
                              (def ~(tag (cstr `C__O) 'simple-reactive-dependee|__0)
-                               (reify* [C__O] (~(O 'invoke) [~'_0__ ~(C 'a)] 1)))
+                               (reify* [~(csym `C__O)] (~(O 'invoke) [~'_0__ ~(C 'a)] 1)))
                              [{:id 0 :index 0 :arg-types [(t/isa? Character)] :output-type t/any?}]
                              (defmeta ~'simple-reactive-dependee
                                {:quantum.core.type/type simple-reactive-dependee|__type}
@@ -2195,7 +2194,7 @@
                                       (unsupported! `simple-reactive-dependee [~'x00__] 0))))))
                          (do (declare ~'simple-reactive-dependent)
                              (def ~(tag (cstr `C__O) 'simple-reactive-dependent|__0)
-                               (reify* [C__O] (~(O 'invoke) [~'_0__ ~(C 'a)] "abc")))
+                               (reify* [~(csym `C__O)] (~(O 'invoke) [~'_0__ ~(C 'a)] "abc")))
                              [{:id 0 :index 0 :arg-types [(t/isa? Character)] :output-type t/any?}]
                              (defmeta ~'simple-reactive-dependent
                                {:quantum.core.type/type simple-reactive-dependent|__type}
@@ -2310,7 +2309,7 @@
               (intern 'ns0 'abcde|__types|0
                 (overload-types>arg-types (rx/norx-deref ns0/abcde|__types) 0))))
     - Resulting in `abcde`'s runtime-emission code in CLJ as:
-      - (do (def abcde|__0 (reify* [int>long] (invoke ([x00__ a] ...))))
+      - (do (def abcde|__0 (reify* [~(csym `I__L)] (invoke ([x00__ a] ...))))
             (defn abcde [x00__]
               (ifs ((Array/get ns0/abcde|__types|0 0) x00__) ...
                    (unsupported! ...))))
@@ -2365,8 +2364,8 @@
               (intern 'ns1 'fghij|__types|0
                 (overload-types>arg-types (rx/norx-deref ns1/fghij|__types) 0))))
     - Resulting in `fghij`'s runtime-emission code in CLJ as:
-      - (do (def fghij|__0 (reify* [int>long]      (invoke ([x00__ b] ...))))
-            (def fghij|__1 (reify* [Object>Object] (invoke ([x00__ c] ...))))
+      - (do (def fghij|__0 (reify* [~(csym `I__L)]      (invoke ([x00__ b] ...))))
+            (def fghij|__1 (reify* [~(csym `O__O)] (invoke ([x00__ c] ...))))
             (defn fghij [x00__]
               (ifs ((Array/get ns0/fghij|__types|0 0) x00__) (. ns0/fghij|__0 invoke x00__)
                    (unsupported! ...))))
@@ -2536,7 +2535,7 @@
                                         (. ~(aget* ts 1) ~'invoke ~'x00__)
                                         (unsupported! `f0|test [~'x00__] 0)))))]
              ~(aset* fs 0
-               `(reify* [B__O]
+               `(reify* [~(csym `B__O)]
                   (~'invoke [~'_0__ ~(B 'a)]
                     ;; From `(self/fn [b ...])`
                     (let* [~fs    (*<>|sized|macro 2)
@@ -2553,7 +2552,7 @@
                                                 (. ~(>C__O (aget* fs 1)) ~'invoke ~'x00__)
                                                 (unsupported! [~'x00__] 0)))))]
                      ~(aset* fs 0
-                       `(reify* [Y__O]
+                       `(reify* [~(csym `Y__O)]
                           (~'invoke [~'_0__ ~(Y 'b)]
                             ;; From `(self/fn [c ...])`
                             (let* [~fs    (*<>|sized|macro 2)
@@ -2567,56 +2566,93 @@
                                                         (. ~(>S__O (aget* fs 1)) ~'invoke ~'x00__)
                                                         (unsupported! [~'x00__] 0))))))]
                               ~(aset* fs 0
-                                `(reify* [B__O]
+                                `(reify* [~(csym `B__O)]
                                    (~'invoke [~'_0__ (B 'c)]
                                      ~'b
                                      (. ~(>B__O (aget* fs 0)) ~'invoke ~'a)
                                      (. ~(>B__O (aget* fs 0)) ~'invoke ~'c))))
                               ~(aset* fs 1
-                                `(reify* [S__O]
+                                `(reify* [~(csym `S__O)]
                                    (~'invoke [~'_0__ (S 'c)]
                                      ~'b
                                      (. ~(>B__O (aget* fs 0)) ~'invoke ~'a)
                                      (. ~(>S__O (aget* fs 1)) ~'invoke ~'c))))
                               ~'f__2)))
                        ~(aset* fs 1
-                          (reify* [C__O]
+                          (reify* [~(csym `C__O)]
                             (~'invoke [~'_0__ ~(C 'a)] ...)))
                        ~'f__1))))
              ~(aset* fs 1
-               `(reify* [D__O]
+               `(reify* [~(csym `D__O)]
                   (~'invoke [~'_0__ ~(D 'a)] ...)))
              ~'f__0)))))])
   (let [actual (binding [self/*compilation-mode* :test]
                  (macroexpand '
-                   (self/defn g|test [f0 (t/ftype [tt/long?   :> tt/float?])
-                                      f1 (t/ftype [tt/byte?   :> tt/boolean?]
-                                                  [tt/string? :> tt/char?])
-                                      > tt/char?]
-                     (f0 7)
-                     (f1 "11"))))
+                   (do (self/defn g|test [f0 (t/ftype [tt/long? :> tt/float?]) > tt/float?]
+                         (f0 5))
+                       (self/defn h|test [f0 (t/ftype [tt/long?   :> tt/float?]
+                                                      [tt/string? :> tt/char?])
+                                          f1 (t/ftype [tt/byte?   :> tt/boolean?]
+                                                      [tt/long?   :> tt/char?]
+                                                      [tt/string? :> tt/char?])
+                                          > tt/char?]
+                         (f0 7)
+                         (g|test f0)
+                         (h|test f1 f0)
+                         (f1 "11")))))
         expected
           (case (env-lang)
             :clj
             ($ (do (declare ~'g|test)
+                   (defmeta-from ~'g|test
+                     (let* [~fs    (*<>|sized|macro 1)
+                            ~'f__0 (new TypedFn
+                                     {:quantum.core.type/type ~'g|__type}
+                                     (fn* ([~ts ~fs ~'x00]
+                                            (ifs (~(aget* (aget* ts 0) 0) ~'x00__)
+                                                 (. ~(aget* fs 0) ~'invoke ~'x00__)
+                                                 (unsupported! `g|test [~'x00__] 0)))))]
+                       ~(aset* fs 0
+                         `(reify [OI__F]
+                            (~'invoke [~'_0__ ~(O 'f0)
+                                       ~(I 'i__0)] ; overload ID of `f0` : `[tt/long?]`
+                              (. ~(>L__F (aget* `(.-fs ~'f0) 'i__0)) ~'invoke 5))))
+                       ~'f__0))
+                   (declare ~'h|test)
                    [[0 0 false [] (t/ftype [tt/long? :> tt/char?])]]
-       (defmeta-from ~'g|test
-         (let* [~fs    (*<>|sized|macro 2)
-                ~'f__0 (new TypedFn
-                         {:quantum.core.type/type ~'g|__type}
-                         (fn* ([~ts ~fs ~'x00__ ~'x01__]
-                                (ifs (~(aget* (aget* ts 0) 0) ~'x00__)
-                                     (ifs (~(aget* (aget* ts 0) 1) ~'x00__)
-                                          (. ~(aget* fs 0) ~'invoke ~'x00__ ~'x01__)
-                                          (unsupported! `g|test [~'x00__ ~'x01__] 1))
-                                     (unsupported! `g|test [~'x00__ ~'x01__] 0)))))]
-           ~(aset* fs 0
-             `(reify* [O__C]
-                (~'invoke [~'_0__ ~(O 'f0) ~(O 'f1)]
-                  (. ~(aget* `(.-fs ~'f0) ...) ~'invoke 7)
-                  (. ~(aget* `(.-fs ~'f1) ...) ~'invoke "11"))))
-           ~'f__0)))))]
-    ...))
+                   (let* [~'g|test|__ (deref ~(list 'var `g|test))] ; to avoid var indirection
+                     (defmeta-from ~'h|test
+                       (let* [~'h|test|__fs (*<>|sized|macro 1)
+                              ~'h|test|__f
+                                (new TypedFn
+                                  {:quantum.core.type/type ~'g|__type}
+                                  ...
+                                  ~fs
+                                  (fn* ([~ts ~fs ~'x00__ ~'x01__]
+                                         (ifs (~(aget* (aget* ts 0) 0) ~'x00__)
+                                              (ifs (~(aget* (aget* ts 0) 1) ~'x00__)
+                                                   (. ~(aget* fs 0) ~'invoke ~'x00__ ~'x01__)
+                                                   (unsupported! `h|test [~'x00__ ~'x01__] 1))
+                                              (unsupported! `h|test [~'x00__ ~'x01__] 0)))))]
+                         ~(aset* h|test|__fs 0
+                           `(reify* [~(csym `OOII__C)]
+                              (~'invoke [~'_0__ ~(O 'f0) ~(O 'f1)
+                                         ~(I 'i__0)  ; overload ID of `f0` : `[tt/long?]`
+                                         ~(I 'i__1)  ; overload ID of `f0` : ``
+                                         ~(I 'i__2)] ; overload ID of `f1` : ``
+                                (. ~(aget* `(.-fs ~'f0) 'i__0) ~'invoke 7)
+                                ;; It doesn't just refer to `g|test|__fs` or whatever because the
+                                ;; fn in question (`g|test`) is extensible. Otherwise it would skip
+                                ;; the ceremony of `(aget* `(.-fs ~'g|test|__) 0)` and just do e.g.
+                                ;; `g|test|__0`.
+                                (. ~(aget* `(.-fs ~'g|test|__) 0) ~'invoke ~'f0 i__1)
+                                ;; It doesn't just refer to `h|test|__fs` because the fn in question
+                                ;; (`h|test`) is extensible. Otherwise it would skip the ceremony of
+                                ;; `(aget* `(.-fs ~'h|test|__f) 0)` and just do e.g. `h|test|__0`.
+                                (. ~(aget* `(.-fs ~'h|test|__f) 0) ~'invoke ~'f0 ~'f1 ~'i__0 ~'i__2)
+                                (. ~(aget* `(.-fs ~'f1) 'i__1) ~'invoke "11"))))
+                         ~'f__0))))))]
+                ...))
 
 
 "
@@ -2626,7 +2662,7 @@ We could do:
   may allow for more than what the declared type requires, in which case it may have more and/or
   different overloads. So do something like this:
    (t/defn a [f (t/ftype [t/long?])] (f 1))
-   -> (def a|__0 (reify [_ ^TypedFn f ^int f|__i] (.invoke ^long>Object (RT/aget (.-overloads f) f|__i) 1)))
+   -> (def a|__0 (reify [_ ^TypedFn f ^int f|__i] (.invoke ^L__O (RT/aget (.-overloads f) f|__i) 1)))
    (t/defn b [x (t/or t/boolean? t/long?)] x)
    (t/dotyped (a b))
    -> (.invoke a|__0 b|__f 1) ; meaning, use the overload at index 1. If -1 then
