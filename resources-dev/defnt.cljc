@@ -61,6 +61,7 @@ Legend:
   [-] t/fn
       [ ] look at fn comparisons; really there's just <|=|> with <|=|> so 9 combos
       [ ] add `t/fn` as a special form so we don't need to re-analyze its constituents
+      [ ] t/ftype should automatically split types, while perhaps t/ftype* should just assume they're split (for use by e.g. `t/fn` and `t/defn`)
   [ ] make local vars sanitary/safe by using more of the gensym feature
   [2] t/numerically : e.g. a double representing exactly what a float is able to represent
       - and variants thereof: `numerically-long?` etc.

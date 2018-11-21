@@ -51,15 +51,19 @@
 (defn O<> [form] (tag "[Ljava.lang.Object;" form))
 (defn ST  [form] (tag "java.lang.String"    form))
 
-(defn >B__B [form] (tag (-> 'B__B resolve str) form))
-(defn >Y__Y [form] (tag (-> 'Y__Y resolve str) form))
-(defn >S__S [form] (tag (-> 'S__S resolve str) form))
-(defn >C__C [form] (tag (-> 'C__C resolve str) form))
-(defn >I__I [form] (tag (-> 'I__I resolve str) form))
-(defn >L__L [form] (tag (-> 'L__L resolve str) form))
-(defn >F__F [form] (tag (-> 'F__F resolve str) form))
-(defn >D__D [form] (tag (-> 'D__D resolve str) form))
-(defn >O__O [form] (tag (-> 'O__O resolve str) form))
+(defn >interface-str [sym]
+  (str (or (resolve form)
+           (str "quantum.test.untyped.core.type.defnt." sym))))
+
+(defn >B__B [form] (tag (>interface-str 'B__B) form))
+(defn >Y__Y [form] (tag (>interface-str 'Y__Y) form))
+(defn >S__S [form] (tag (>interface-str 'S__S) form))
+(defn >C__C [form] (tag (>interface-str 'C__C) form))
+(defn >I__I [form] (tag (>interface-str 'I__I) form))
+(defn >L__L [form] (tag (>interface-str 'L__L) form))
+(defn >F__F [form] (tag (>interface-str 'F__F) form))
+(defn >D__D [form] (tag (>interface-str 'D__D) form))
+(defn >O__O [form] (tag (>interface-str 'O__O) form))
 
 (defn cstr [x]
   (if (-> x resolve class?)
@@ -2573,23 +2577,48 @@
                                    (~'invoke [~'_0__ (S 'c)]
                                      ~'b
                                      (. ~(>B__O (aget* fs 0)) ~'invoke ~'a)
-                                     (. ~(>S__O (aget* fs 1)) ~'invoke ~'c)))))))
+                                     (. ~(>S__O (aget* fs 1)) ~'invoke ~'c))))
+                              ~'f__2)))
                        ~(aset* fs 1
                           (reify* [C__O]
-                            (~'invoke [~'_0__ ~(C 'a)] ...)))))))
+                            (~'invoke [~'_0__ ~(C 'a)] ...)))
+                       ~'f__1))))
              ~(aset* fs 1
                `(reify* [D__O]
-                  (~'invoke [~'_0__ ~(D 'a)] ...))))))))]
-    ))
+                  (~'invoke [~'_0__ ~(D 'a)] ...)))
+             ~'f__0)))))])
+  (let [actual (binding [self/*compilation-mode* :test]
+                 (macroexpand '
+                   (self/defn g [f0 (t/ftype [tt/long?   :> tt/float?])
+                                 f1 (t/ftype [tt/byte?   :> tt/boolean?]
+                                             [tt/string? :> tt/char?])
+                                 > tt/char?]
+                     (f0 7)
+                     (f1 "11"))))
+        expected
+          (case (env-lang)
+            :clj
+            ($ (do (declare ~'g)
+                   [[0 0 false [] (t/ftype [tt/long? :> tt/char?])]]
+       (defmeta-from ~'g
+         (let* [~fs    (*<>|sized|macro 2)
+                ~'f__0 (new TypedFn
+                         {:quantum.core.type/type ~'g|__type}
+                         (fn* ([~ts ~fs ~'x00__ ~'x01__]
+                                (ifs (~(aget* (aget* ts 0) 0) ~'x00__)
+                                     (ifs (~(aget* (aget* ts 0) 1) ~'x00__)
+                                          (. ~(aget* ts 0) ~'invoke ~'x00__ ~'x01__)
+                                          (unsupported! `g [~'x00__ ~'x01__] 1))
+                                     (unsupported! `g [~'x00__ ~'x01__] 0)))))]
+           ~(aset* fs 0
+             `(reify* [O__C]
+                (~'invoke [~'_0__ ~(B 'a)]
+                  ...)))
+           ~'f__0)))))]
+    ...))
 
 
 "
-FIXME the below can be fixed if each `t/fn` and/or `t/defn` was encapsulated by a concrete type,
-like AnonFn, that stored references to the types, overloads, etc.
-We should probably have standard overload indices for ftypes (maybe we already do? we should sort
-ftypes' overload-types in the same way that we sort `t/defn` overload-types. maybe that will make it
-standard) so direct dispatch can be performed even in the absence of an fn-name.
-
 We could do:
 `(. ^TheReifyType (aget (.-ts f) <index>) invoke <~@args>)`
 - This is all fine when `f` is `=` (perhaps `t/=`?) to the declared type, but when it's `t/<`, it
