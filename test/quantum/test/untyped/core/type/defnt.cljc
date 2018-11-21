@@ -2510,31 +2510,31 @@
   (let [actual (binding [self/*compilation-mode* :test]
                  (macroexpand '
                    ;: FIXME this contract is not being held up when returning nil
-                   (self/defn f0 [a (t/or tt/boolean? tt/double?)
-                                  > (t/ftype [tt/byte? :> (t/ftype [tt/char?])])]
+                   (self/defn f0|test [a (t/or tt/boolean? tt/double?)
+                                       > (t/ftype [tt/byte? :> (t/ftype [tt/char?])])]
                      ;; TODO this fits into a larger scheme of, should we have output types be
                      ;; `(t/and actual declared)` or should we just have them be `declared`? The
                      ;; latter is easier but it seems like the `t/fn` dispatch forces our hand
                      ;; towards the former. We need to think about this more.
                      (self/fn [b (t/or tt/byte? tt/char?)
                                > (t/ftype [(t/or (t/type a) tt/short?)])]
-                       (self/fn f1 [c (t/or (t/type a) tt/short?)]
-                         b (f1 a) (f1 c))))))
+                       (self/fn f1|test [c (t/or (t/type a) tt/short?)]
+                         b (f1|test a) (f1|test c))))))
         expected
           (case (env-lang)
             :clj
-            ($ (do (declare ~'f0)
+            ($ (do (declare ~'f0|test)
                    [[0 0 false [] (t/ftype tt/boolean? [tt/byte? :> (t/ftype [tt/char?])])]]
-          (defmeta-from ~'f0
+          (defmeta-from ~'f0|test
             (let* [~fs    (*<>|sized|macro 2)
                    ~'f__0 (new TypedFn
-                            {:quantum.core.type/type ~'f0|__type}
+                            {:quantum.core.type/type ~'f0|test|__type}
                             (fn* ([~ts ~fs ~'x00__]
                                    (ifs (~(aget* (aget* ts 0) 0) ~'x00__)
                                         (. ~(aget* ts 0) ~'invoke ~'x00__)
                                         (~(aget* (aget* ts 1) 0) ~'x00__)
                                         (. ~(aget* ts 1) ~'invoke ~'x00__)
-                                        (unsupported! `f0 [~'x00__] 0)))))]
+                                        (unsupported! `f0|test [~'x00__] 0)))))]
              ~(aset* fs 0
                `(reify* [B__O]
                   (~'invoke [~'_0__ ~(B 'a)]
@@ -2589,31 +2589,32 @@
              ~'f__0)))))])
   (let [actual (binding [self/*compilation-mode* :test]
                  (macroexpand '
-                   (self/defn g [f0 (t/ftype [tt/long?   :> tt/float?])
-                                 f1 (t/ftype [tt/byte?   :> tt/boolean?]
-                                             [tt/string? :> tt/char?])
-                                 > tt/char?]
+                   (self/defn g|test [f0 (t/ftype [tt/long?   :> tt/float?])
+                                      f1 (t/ftype [tt/byte?   :> tt/boolean?]
+                                                  [tt/string? :> tt/char?])
+                                      > tt/char?]
                      (f0 7)
                      (f1 "11"))))
         expected
           (case (env-lang)
             :clj
-            ($ (do (declare ~'g)
+            ($ (do (declare ~'g|test)
                    [[0 0 false [] (t/ftype [tt/long? :> tt/char?])]]
-       (defmeta-from ~'g
+       (defmeta-from ~'g|test
          (let* [~fs    (*<>|sized|macro 2)
                 ~'f__0 (new TypedFn
                          {:quantum.core.type/type ~'g|__type}
                          (fn* ([~ts ~fs ~'x00__ ~'x01__]
                                 (ifs (~(aget* (aget* ts 0) 0) ~'x00__)
                                      (ifs (~(aget* (aget* ts 0) 1) ~'x00__)
-                                          (. ~(aget* ts 0) ~'invoke ~'x00__ ~'x01__)
-                                          (unsupported! `g [~'x00__ ~'x01__] 1))
-                                     (unsupported! `g [~'x00__ ~'x01__] 0)))))]
+                                          (. ~(aget* fs 0) ~'invoke ~'x00__ ~'x01__)
+                                          (unsupported! `g|test [~'x00__ ~'x01__] 1))
+                                     (unsupported! `g|test [~'x00__ ~'x01__] 0)))))]
            ~(aset* fs 0
              `(reify* [O__C]
-                (~'invoke [~'_0__ ~(B 'a)]
-                  ...)))
+                (~'invoke [~'_0__ ~(O 'f0) ~(O 'f1)]
+                  (. ~(aget* `(.-fs ~'f0) ...) ~'invoke 7)
+                  (. ~(aget* `(.-fs ~'f1) ...) ~'invoke "11"))))
            ~'f__0)))))]
     ...))
 
