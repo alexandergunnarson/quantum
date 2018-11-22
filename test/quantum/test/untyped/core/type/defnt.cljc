@@ -2610,64 +2610,62 @@
           expected
             (case (env-lang)
               :clj
-              ($ (do (defmeta-from ~'g|test
-                       (let* [~'g|test|__fs (*<>|sized|macro 1)
-                              ~'g|test
-                                (new TypedFn
-                                  {:quantum.core.type/type ~'g|__type}
-                                  (fn* ([~&ts ~&fs ~'x00]
-                                         (ifs (~(aget* (aget* &ts 0) 0) ~'x00__)
-                                              (. ~(aget* &fs 0) ~'invoke ~'x00__)
-                                              (unsupported! `g|test [~'x00__] 0)))))]
-                         ~(aset* g|test|__fs 0
-                           `(reify [OI__F]
-                              (~'invoke [~&this ~(O 'f0)
-                                         ~(I 'i__0)] ; overload ID of `f0` : `[tt/long?]`
-                                (. ~(>L__F (aget* `(. ~'f0 ~'fs) 'i__0)) ~'invoke 5))))
-                         ~'g|test))
-                     (let* [~'g|test|__ (deref ~(list 'var `g|test))] ; to avoid var indirection
-                       (defmeta-from ~'h|test
-                         (let* [~'h|test|__fs (*<>|sized|macro 1)
-                                ~'h|test|__f
-                                  (new TypedFn
-                                    {:quantum.core.type/type ~'g|__type}
-                                    ...
-                                    ~'h|test|__fs
-                                    (fn* ([~&ts ~&fs ~'x00__ ~'x01__]
-                                           (ifs (~(aget* (aget* &ts 0) 0) ~'x00__)
-                                                (ifs (~(aget* (aget* &ts 0) 1) ~'x00__)
-                                                     (. ~(aget* &fs 0) ~'invoke ~'x00__ ~'x01__)
-                                                     (unsupported! `h|test [~'x00__ ~'x01__] 1))
-                                                (unsupported! `h|test [~'x00__ ~'x01__] 0)))))]
-                          ;; TODO if a reify overload ever gets redefined (same ID) then the
-                          ;; interface might be different... ugh...
-                          ~(aset* h|test|__fs 0
-                           `(reify* [~(csym `OOII__C)]
-                              (~'invoke [~&this ~(O 'f0) ~(O 'f1)
-                                         ~(I 'i__0)  ; overload ID of `f0` : `[tt/long?]`
-                                         ~(I 'i__1)  ; overload ID of `f1` : `[tt/long?]`
-                                         ~(I 'i__2)] ; overload ID of `f1` : `[tt/string?]`
-                                ;; This `let*` is here to save on how many arguments need to be
-                                ;; allocated to the stack, and to avoid having to rewrite these
-                                ;; bindings in the body. Hopefully the bindings will be optimized
-                                ;; away by the JVM.
-                                (let* [~'i__2 ~'i__1
-                                       ~'i__3 ~'i__0
-                                       ~'i__4 ~'i__2]
-                                  (. ~(aget* `(. ~'f0 ~'fs) 'i__0) ~'invoke 7)
-                                  ;; It doesn't just refer to `g|test|__fs` or whatever because the
-                                  ;; fn in question (`g|test`) is extensible. Otherwise it would
-                                  ;; skip the ceremony of `(aget* `(. ~'g|test|__ ~'fs) 0)` and just
-                                  ;; do e.g. `g|test|__0`.
-                                  (. ~(aget* `(. ~'g|test|__ ~'fs) 0) ~'invoke ~'f0 ~'i__1)
-                                  ;; It doesn't just refer to `h|test|__fs` because the fn in
-                                  ;; question (`h|test`) is extensible. Otherwise it would skip the
-                                  ;; ceremony of `(aget* `(. ~'h|test|__f ~'fs) 0)` and just do e.g.
-                                  ;; `h|test|__0`.
-                                  (. ~(aget* `(. ~'h|test|__f ~'fs) 0) ~'invoke ~'f1 ~'f0 ~'i__2 ~'i__3)
-                                  (. ~(aget* `(. ~'f1 ~'fs) 'i__4) ~'invoke "11")))))
-                           ~'h|test|__f))))))]
-                  ...)))
+          ($ (do (defmeta-from ~'g|test
+                   (let* [~'g|test|__fs (*<>|sized|macro 1)
+                          ~'g|test
+                            (new TypedFn
+                              {:quantum.core.type/type ~'g|__type}
+                              (fn* ([~&ts ~&fs ~'x00]
+                                     (ifs (~(aget* (aget* &ts 0) 0) ~'x00__)
+                                          (. ~(aget* &fs 0) ~'invoke ~'x00__)
+                                          (unsupported! `g|test [~'x00__] 0)))))]
+                     ~(aset* g|test|__fs 0
+                       `(reify [OI__F]
+                          (~'invoke [~&this ~(O 'f0)
+                                     ~(I 'i__0)] ; overload ID of `f0` : `[tt/long?]`
+                            (. ~(>L__F (aget* `(. ~'f0 ~'fs) 'i__0)) ~'invoke 5))))
+                     ~'g|test))
+                 (let* [~'g|test|__ (deref ~(list 'var `g|test))] ; to avoid var indirection
+                   (defmeta-from ~'h|test
+                     (let* [~'h|test|__fs (*<>|sized|macro 1)
+                            ~'h|test|__f
+                              (new TypedFn
+                                {:quantum.core.type/type ~'g|__type}
+                                ...
+                                ~'h|test|__fs
+                                (fn* ([~&ts ~&fs ~'x00__ ~'x01__]
+                                       (ifs (~(aget* (aget* &ts 0) 0) ~'x00__)
+                                            (ifs (~(aget* (aget* &ts 0) 1) ~'x00__)
+                                                 (. ~(aget* &fs 0) ~'invoke ~'x00__ ~'x01__)
+                                                 (unsupported! `h|test [~'x00__ ~'x01__] 1))
+                                            (unsupported! `h|test [~'x00__ ~'x01__] 0)))))]
+                      ;; TODO if a reify overload ever gets redefined (same ID) then the interface
+                      ;; might be different... ugh...
+                      ~(aset* h|test|__fs 0
+                       `(reify* [~(csym `OOII__C)]
+                          (~'invoke [~&this ~(O 'f0) ~(O 'f1)
+                                     ~(I 'i__0)  ; overload ID of `f0` : `[tt/long?]`
+                                     ~(I 'i__1)  ; overload ID of `f1` : `[tt/long?]`
+                                     ~(I 'i__2)] ; overload ID of `f1` : `[tt/string?]`
+                            ;; This `let*` is here to save on how many arguments need to be
+                            ;; allocated to the stack, and to avoid having to rewrite these bindings
+                            ;; in the body. Hopefully the bindings will be optimized away by the JVM
+                            (let* [~'i__2 ~'i__1
+                                   ~'i__3 ~'i__0
+                                   ~'i__4 ~'i__2]
+                              (. ~(aget* `(. ~'f0 ~'fs) 'i__0) ~'invoke 7)
+                              ;; It doesn't just refer to `g|test|__fs` or whatever because the fn
+                              ;; in question (`g|test`) is extensible. Otherwise it would skip the
+                              ;; ceremony of `(aget* `(. ~'g|test|__ ~'fs) 0)` and just do e.g.
+                              ;; `g|test|__0`.
+                              (. ~(aget* `(. ~'g|test|__ ~'fs) 0) ~'invoke ~'f0 ~'i__1)
+                              ;; It doesn't just refer to `h|test|__fs` because the fn in question
+                              ;; (`h|test`) is extensible. Otherwise it would skip the ceremony of
+                              ;; `(aget* `(. ~'h|test|__f ~'fs) 0)` and just do e.g. `h|test|__0`.
+                              (. ~(aget* `(. ~'h|test|__f ~'fs) 0) ~'invoke ~'f1 ~'f0 ~'i__2 ~'i__3)
+                              (. ~(aget* `(. ~'f1 ~'fs) 'i__4) ~'invoke "11")))))
+                       ~'h|test|__f))))))]
+              ...)))
 
 
 "
