@@ -847,18 +847,11 @@
                            {:overload-types-decl
                               (>overload-types-decl opts fn|globals type-decl-datum fn|types)
                             :reify (overload>reify overload opts fn|globals id)})))
-                declare-form-seq
-                  (when-let [hinted-names
-                               (->> direct-dispatch-data-seq
-                                    (uc/lmap (fn-> :reify :hinted-name))
-                                    seq)]
-                    [(list* `declare hinted-names)])
-                form (concat declare-form-seq
-                             (->> direct-dispatch-data-seq
-                                  (uc/mapcat
-                                    (c/fn [{:as direct-dispatch-data :keys [overload-types-decl]}]
-                                      [(:form overload-types-decl)
-                                       (-> direct-dispatch-data :reify :form)]))))]
+                form (->> direct-dispatch-data-seq
+                          (uc/mapcat
+                            (c/fn [{:as direct-dispatch-data :keys [overload-types-decl]}]
+                              [(:form overload-types-decl)
+                               (-> direct-dispatch-data :reify :form)])))]
             (kw-map form direct-dispatch-data-seq))
     :cljs (TODO)))
 
@@ -1229,9 +1222,7 @@
           (let [direct-dispatch  (>direct-dispatch              opts fn|globals fn|types)
                 dynamic-dispatch (>dynamic-dispatch-fn|codelist opts fn|globals fn|types)
                 fn-codelist
-                  (->> `[;; For recursion
-                         ~@(when (= kind :defn) [`(declare ~(:fn|name fn|globals))])
-                         ~@(:form direct-dispatch)
+                  (->> `[~@(:form direct-dispatch)
                          ~@dynamic-dispatch]
                        (remove nil?))]
             (case kind

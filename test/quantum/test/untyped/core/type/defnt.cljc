@@ -2620,7 +2620,7 @@
                                           (. ~(aget* &fs 0) ~'invoke ~'x00__)
                                           (unsupported! `g|test [~'x00__] 0)))))]
                      ~(aset* g|test|__fs 0
-                       `(reify [OI__F]
+                       `(reify* [~(csym `OI__F)]
                           (~'invoke [~&this ~(O 'f0)
                                      ~(I 'i__0)] ; overload ID of `f0` : `[tt/long?]`
                             (. ~(>L__F (aget* `(. ~'f0 ~'fs) 'i__0)) ~'invoke 5))))
