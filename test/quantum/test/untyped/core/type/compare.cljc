@@ -1350,42 +1350,66 @@
      to behave.
      "
   ;; [0 1 2] means t/compare|input is 0, t/compare|output is 1, and t/compare is 2
-    "Liskov’s Substitution Principle
-     Contract satisfaction ('Growth') is `t/<=|input` (you cannot require more) and `t/>=|output`
-     (you cannot guarantee less)
-     - Inputs
-       - I require an animal and you give me a sheep:
-         - `(t/<= sheep? animal?)`
-       - If I require an animal and you give me a sheep and some wheat, it has to be in an
-         acceptable open container of some sort (generally a map) because the caller is not
-         guaranteed to know how to handle it otherwise:
-         - `(t/<> (t/tuple sheep? wheat?) animal?)
-         - `(t/<> (t/map :requirement sheep? :extra0 wheat?) animal?)
-         - `(t/<= (t/closed-map :requirement sheep? :extra0 wheat?)
-                  (t/merge (t/closed-map :requirement animal?) (t/map-of id/keyword? t/any?)))
-         - `(t/<= (t/map :requirement sheep? :extra0 wheat?)
-                  (t/map :requirement animal?))
-     - Outputs
-       - I guarantee an animal and I provide a sheep:
-         - `(t/<= sheep? animal?)`
-       - If I guarantee an animal and I provide a sheep and some wheat, it has to be in an
-         acceptable open container of some sort (generally a map) because the caller is not
-         guaranteed to know how to handle it otherwise:
-         - `(t/<> (t/tuple sheep? wheat?) animal?)
-         - `(t/<> (t/map :guarantee sheep? :extra0 wheat?) animal?)
-         - `(t/<= (t/closed-map :guarantee sheep? :extra0 wheat?)
-                  (t/merge (t/closed-map :requirement animal?) (t/map-of id/keyword? t/any?)))
-     Contract non-satisfaction ('Breakage') is `>=|input` (input covariance) and `t/<=|output`
-     (output contravariance)
-     - Inputs
-       - I require an animal but you give me any old organism
-     - Outputs
-       - I guarantee an animal but I provide any old organism
-       - I guarantee a sheep and some wheat but I provide only a sheep
-         - (t/?? (t/map :guarantee))"
+    "Contract satisfaction / 'Growth' (which is the opposite of contract non-satisfaction /
+     'Breakage') is:
+     - For inputs:
+       - In the language of the type system:
+         - `t/<=`       for inputs w.r.t. declared input type
+         - `t/>=|input` for fns    w.r.t. declared type of an fn-input
+       - In the language of Liskov’s Substitution Principle:
+         - preconditions cannot be strengthened
+         - contravariance of input types
+       - In the language of 'Growth vs. Breakage':
+         - you cannot require more, but you can accept more
+       - Examples
+         - Comparing inputs directly
+           - We require a grain and we are provided a wheat          (<)      : good
+           - We require a grain and we are provided any edible thing (> / ><) : bad
+           - We require a grain and we are provided a sheep          (<>)     : bad
+         - Comparing inputs of contracts / fns (note that 'old contract' also works for 'declared
+           type of fn-input' and 'new contract' also works for 'actual type of fn-input')
+           - Old contract requires grain; new contract requires wheat            (<)  : bad
+           - Old contract requires grain; new contract requires any edible thing (>)  : good
+           - Old contract requires grain; new contract requires a sheep          (<>) : bad
+     - For outputs:
+       - In the language of the type system:
+         - `t/<=`        for outputs w.r.t. declared output type
+         - `t/<=|output` for fns     w.r.t. declared type of an fn-input
+       - In the language of Liskov’s Substitution Principle:
+         - postconditions cannot be weakened
+         - covariance of output types
+       - In the language of 'Growth vs. Breakage':
+         - you cannot guarantee less, but you can provide more
+       - Examples
+         - Comparing outputs directly
+           - We guarantee a grain and we provide a wheat          (<)      : good
+           - We guarantee a grain and we provide any edible thing (> / ><) : bad
+           - We guarantee a grain and we provide a sheep          (<>)     : bad
+           - Intuitively, if the contract says, output a grain, and it outputs a wheat and a sheep,
+             that seems good but is it? What does it mean to 'output a wheat and a sheep'?
+             - Is it `(t/unordered wheat? sheep?)`? If so, `(t/unordered wheat? sheep?)` is not `t/<`
+               `(t/unordered grain?)` and so that's bad.
+             - Is it `(t/map :grain wheat? :sheep sheep?)` (an 'open container')? If so, then *that*
+               is `t/<` `(t/map :grain wheat?)` and so that's good.
+               - This 'open container' is partially what the Growth vs. Breakage talk is referring to.
+                 If I require a grain and you provide a wheat and a sheep, it has to be in an
+                 acceptable open container of some sort (generally a map) because the consumer is not
+                 guaranteed to know how to handle it otherwise.
+               - If we don't deal in open containers, that's like if you require a grain (and only
+                 have space for a grain, and no availability/means to acquire more space or make it
+                 someone else's problem) but someone leaves a wheat and 200 sheep on your doorstep,
+                 that's not great. Yes, you got what you asked for, but you have nowhere to put the
+                 sheep and no time to deal with the problem.
+         - Comparing outputs of contracts / fns (note that 'old contract' also works for 'declared
+           type of fn-input' and 'new contract' also works for 'actual type of fn-input')
+           - Old contract guarantees grain; new contract guarantees wheat            (<)  : good
+           - Old contract guarantees grain; new contract guarantees any edible thing (>)  : bad
+           - Old contract guarantees grain; new contract guarantees a sheep          (<>) : bad"
   (testing "input arities <"
     (testing "same-arity input types <"
       (testing "output <"
+        ;; it accepts  fewer (<) things than it is required (>=) to accept  — bad
+        ;; it provides fewer (<) things than it is allowed  (<=) to provide — good
         (test-comparison|fn [ <ident  <ident]
           (t/ftype                 [t/boolean? :> t/boolean?])
           (t/ftype []              [t/any?     :> t/long?])))
