@@ -2768,15 +2768,15 @@
     >  (t/ftype [:> (t/output f0)])]
     (self/fn ([>  (t/output f0)]                         (f0))))
   ([f0 (t/ftype [])
-    f1 (t/ftype [t/any?])
+    f1 (t/ftype [t/none?])
     >  (t/ftype [:> (t/output f0)]
                 [:> (t/output f1 :_)])]
     (self/fn ([>  (t/output f0)]                         (f0))
              ([x0 (t/input  f1 :?)
                >  (t/output f1 (t/type x0))]             (f1 x0))))
   ([f0 (t/ftype [])
-    f1 (t/ftype [t/any?])
-    f2 (t/ftype [t/any? t/any?])
+    f1 (t/ftype [t/none?])
+    f2 (t/ftype [t/none? t/none?])
     >  (t/ftype [:> (t/output f0)]
                 [:> (t/output f1 :_)]
                 [:> (t/output f2 :_ :_)])]
@@ -2786,6 +2786,29 @@
              ([x0 (t/input  f2 :?          :_)
                x1 (t/input  f2 (t/type x0) :?)
                >  (t/output f1 (t/type x0) (t/type x1))] (f2 x0 x1)))))
+
+"
+So `f1`'s declared type is `(t/ftype [t/any?])`, meaning, it has to at least accept one arg which is
+`t/<=` `t/any?`.
+Then really we're just doing arity checking here. Input and output type checks become kind of
+meaningless unless you know the actual input type.
+
+
+
+
+To fix this passed fn specificity problem, we could leverage a global map of the comparison of all
+types to all types (`O(n^2)` worst case space, but I think we can do it in less).
+
+Let's say fimpl is (t/ftype [p/byte? (t/and p/string? whatever)]
+                            [p/byte? p/string?])
+How do we get `(f a)` to recognize that it needs to go to overload 0, not 1?
+We could have some sort of interval tree, or perhaps a map sorted by comparisons, in which we can
+have log-time access to the right thing — like if you hand it the hash of `p/byte?` `p/string?` then
+it goes to the first thing matching that. That way we don't have to rely on dynamism absolutely
+everywhere.
+
+This still doesn't get around other issues seen in `aritoid` and `comp`. TODO
+"
 
 "
 We could do:
@@ -2819,3 +2842,25 @@ TODO let's see what we can do with the expansion/inlining of `compf`. It may pro
                  (quantum.untyped.core.type/isa?
                   java.lang.Character))]),
         :form numeric-compf}}
+
+;; ===== Failed approaches ===== ;;
+"
+To fix this passed fn specificity problem, we could leverage either inheritance or a global map of
+the comparison of all types to all types (`O(n^2)` worst case space, but I think we can do it in
+less).
+
+For instance,
+(t/defn a [f (t/ftype [p/byte? p/string?])]
+  (f a))
+
+F = (t/ftype [p/byte? (t/and p/string? (fn-> count (= 5)))])
+- `p/byte?`'s hash is -627458773 and `(t/and p/string? (fn-> count (= 5))`'s hash is -123456
+So FClass implements _-627458773_-123456
+
+G = (t/ftype [p/byte? p/string?])
+- `p/byte?`'s hash is -627458773 and `p/string?`'s hash is -1854681952
+So GClass implements _-627458773_-1854681952
+
+But now _-627458773_-123456 needs to extend _-627458773_-1854681952, which requires a rewrite of all
+things that use it... so I don't think inheritance is our answer.
+"
