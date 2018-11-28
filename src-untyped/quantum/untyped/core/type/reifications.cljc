@@ -328,7 +328,7 @@
 ;; ----- UnorderedType ----- ;;
 
 (defn- satisfies-unordered-type? [xs data]
-  (and (seqable? xs) ; TODO we should rather use `(t/input-type reduce :_ :_ :?)`
+  (and (seqable? xs) ; TODO we should rather use `(t/input reduce :_ :_ :?)`
        (let [!frequencies (! {})
              each-input-matches-one-type-not-exceeding-frequency?
                (->> xs

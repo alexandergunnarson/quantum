@@ -74,7 +74,7 @@ Legend:
           - numeric ranges
           - numeric characteristics
   [ ] Probably should disallow recursive type references, including:
-      `(t/defn f [x (t/input-type f ...)])`
+      `(t/defn f [x (t/input f ...)])`
   [ ] Perhaps it's the case that we can't actually have type bases but rather reactive splits.
       In the case of `narrowest`, it expects a split and fails without it:
       `[a (t/- integer? int?), b integer? > (narrowest (t/type a) (t/type b))]`
@@ -181,7 +181,7 @@ Legend:
             (t/defn empty? > p/boolean?
               ([x p/nil?] true)
               ([xs dc/counted?] (-> xs count num/zero?))
-              ([xs (t/input-type educe :_ :_ :?)] (educe empty?|rf x)))
+              ([xs (t/input educe :_ :_ :?)] (educe empty?|rf x)))
           - Should we allow something like `^:analyze-impl` or something to mimic inline optimizations
             but avoid actual inlining?
       - maybe redefine `untyped.core.type` in a typed way? `t/def` doesn't realize certain things are `t/type?`
@@ -265,7 +265,7 @@ Legend:
   [ ] t/deftype
   [-] t/extend-defn!
       [ ] Ability to add output type restriction after the fact?
-  [ ] lazy compilation especially around `t/input-type`
+  [ ] lazy compilation especially around `t/input`
   [ ] equivalence of typed predicates (i.e. that which is t/<= `(t/ftype [x t/any? :> p/boolean?])`)
       to types:
       - [xs (t/fn [x (t/isa? clojure.lang.Range)] ...)]

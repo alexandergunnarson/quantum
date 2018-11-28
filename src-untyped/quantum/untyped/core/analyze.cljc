@@ -806,11 +806,11 @@
             _                  (uref/set! !!dependent? true)
             t (case (name caller|form)
                 "input-type"  (if (-> env :opts :split-types?)
-                                  (t/input-type|meta-or  caller|t unvalued-arg-types)
-                                  (t/input-type|or       caller|t unvalued-arg-types))
+                                  (t/input|meta-or  caller|t unvalued-arg-types)
+                                  (t/input|or       caller|t unvalued-arg-types))
                 "output-type" (if (-> env :opts :split-types?)
-                                  (t/output-type|meta-or caller|t unvalued-arg-types)
-                                  (t/output-type|or      caller|t unvalued-arg-types))
+                                  (t/output|meta-or caller|t unvalued-arg-types)
+                                  (t/output|or      caller|t unvalued-arg-types))
                 "type"        caller|t)]
         (uast/call-node
           {:env             env

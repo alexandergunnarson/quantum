@@ -324,23 +324,23 @@
 #?(:clj ([a numeric?               , b (t/ref c?/icomparable?)] (.compareTo (box a) b))))
 
 (t/extend-defn! c?/comp<
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]
+  ([a (t/input c?/compare :? :_), b (t/input c?/compare [= (t/type a)] :?)]
     (c?/<  (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp<=
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]
+  ([a (t/input c?/compare :? :_), b (t/input c?/compare [= (t/type a)] :?)]
     (c?/<= (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp=
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]
+  ([a (t/input c?/compare :? :_), b (t/input c?/compare [= (t/type a)] :?)]
     (c?/=  (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp>=
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]
+  ([a (t/input c?/compare :? :_), b (t/input c?/compare [= (t/type a)] :?)]
     (c?/>= (c?/compare a b) 0)))
 
 (t/extend-defn! c?/comp>
-  ([a (t/input-type c?/compare :? :_), b (t/input-type c?/compare [= (t/type a)] :?)]
+  ([a (t/input c?/compare :? :_), b (t/input c?/compare [= (t/type a)] :?)]
     (c?/>  (c?/compare a b) 0)))
 
 ;; TODO come back to this
@@ -360,10 +360,10 @@
 #_(t/defn narrowest
   "Based on max/min safe integer value."
   > t/type?
-  ([t0 (t/and (t/input-type >min-safe-integer-value [:? t/>= t/type?])
-              (t/input-type >max-safe-integer-value [:? t/>= t/type?]))
-    t1 (t/and (t/input-type >min-safe-integer-value [:? t/>= t/type?])
-              (t/input-type >max-safe-integer-value [:? t/>= t/type?]))]
+  ([t0 (t/and (t/input >min-safe-integer-value [:? t/>= t/type?])
+              (t/input >max-safe-integer-value [:? t/>= t/type?]))
+    t1 (t/and (t/input >min-safe-integer-value [:? t/>= t/type?])
+              (t/input >max-safe-integer-value [:? t/>= t/type?]))]
     (let [t0-min (>min-safe-integer-value t0)
           t1-min (>min-safe-integer-value t1)
           t0-max (>max-safe-integer-value t0)

@@ -448,7 +448,7 @@
      :cljs (TODO)))
 
 ;; This is used to make comparisons work with `UnorderedType` and `OrderedType`.
-;; TODO we should not be using `seqable?` but rather `(t/input-type reduce :_ :_ :?)`. See also the
+;; TODO we should not be using `seqable?` but rather `(t/input reduce :_ :_ :?)`. See also the
 ;; implementations of `UnorderedType` and `OrderedType`.
 (def- seqable-except-array?
   (OrType.

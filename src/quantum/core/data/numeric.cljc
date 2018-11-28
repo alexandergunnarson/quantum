@@ -191,29 +191,29 @@
 #?(:clj ([a bigdec?
           b bigdec?] (c?/comp= a b)))
 #?(:clj ([a bigdec?
-          b (t/- (t/input-type >bigdec :?) bigdec? java-bigint? clj-bigint? ratio?)]
+          b (t/- (t/input >bigdec :?) bigdec? java-bigint? clj-bigint? ratio?)]
           (c?/= a (>bigdec b))))
-#?(:clj ([a (t/- (t/input-type >bigdec :?) bigdec? java-bigint? clj-bigint? ratio?)
+#?(:clj ([a (t/- (t/input >bigdec :?) bigdec? java-bigint? clj-bigint? ratio?)
           b bigdec?] (c?/= (>bigdec a) b)))
 #?(:clj ([a java-bigint?
           b java-bigint?] (.equals a b)))
 #?(:clj ([a java-bigint?
-          b (t/- (t/input-type >java-bigint :?) java-bigint? clj-bigint? ratio?)]
+          b (t/- (t/input >java-bigint :?) java-bigint? clj-bigint? ratio?)]
           (c?/= a (>java-bigint b))))
-#?(:clj ([a (t/- (t/input-type >java-bigint :?) java-bigint? clj-bigint? ratio?)
+#?(:clj ([a (t/- (t/input >java-bigint :?) java-bigint? clj-bigint? ratio?)
           b java-bigint?] (c?/= (>java-bigint a) b)))
 #?(:clj ([a clj-bigint?
           b clj-bigint?] (.equals a b)))
 #?(:clj ([a clj-bigint?
-          b (t/- (t/input-type >clj-bigint :?) clj-bigint? ratio?)] (c?/= a (>clj-bigint b))))
-#?(:clj ([a (t/- (t/input-type >clj-bigint :?) clj-bigint? ratio?)
+          b (t/- (t/input >clj-bigint :?) clj-bigint? ratio?)] (c?/= a (>clj-bigint b))))
+#?(:clj ([a (t/- (t/input >clj-bigint :?) clj-bigint? ratio?)
           b clj-bigint?] (c?/= (>clj-bigint a) b)))
 #?(:clj ([a ratio?
           b ratio?] (and (c?/= ^:val (.numerator   a) ^:val (.numerator   b))
                          (c?/= ^:val (.denominator a) ^:val (.denominator b)))))
 #?(:clj ([a ratio?
-          b (t/- (t/input-type >ratio :?) ratio?)] (c?/= a (>ratio b))))
-#?(:clj ([a (t/- (t/input-type >ratio :?) ratio?)
+          b (t/- (t/input >ratio :?) ratio?)] (c?/= a (>ratio b))))
+#?(:clj ([a (t/- (t/input >ratio :?) ratio?)
           b ratio?] (c?/= (>ratio a) b))))
 
 (t/def numeric-comparator? (t/ftype p/boolean? [numeric? numeric?]))
@@ -225,20 +225,20 @@
           b bigdec?] (compf a b)))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
           a bigdec?
-          b (t/- (t/input-type >bigdec :?) bigdec? java-bigint? clj-bigint? ratio?)]
+          b (t/- (t/input >bigdec :?) bigdec? java-bigint? clj-bigint? ratio?)]
           (numeric-compf a (>bigdec b))))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
-          a (t/- (t/input-type >bigdec :?) bigdec? java-bigint? clj-bigint? ratio?)
+          a (t/- (t/input >bigdec :?) bigdec? java-bigint? clj-bigint? ratio?)
           b bigdec?] (numeric-compf (>bigdec a) b)))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
           a java-bigint?
           b java-bigint?] (compf a b)))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
           a java-bigint?
-          b (t/- (t/input-type >java-bigint :?) java-bigint? clj-bigint? ratio?)]
+          b (t/- (t/input >java-bigint :?) java-bigint? clj-bigint? ratio?)]
           (numeric-compf a (>java-bigint b))))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
-          a (t/- (t/input-type >java-bigint :?) java-bigint? clj-bigint? ratio?)
+          a (t/- (t/input >java-bigint :?) java-bigint? clj-bigint? ratio?)
           b java-bigint?] (numeric-compf (>java-bigint a) b)))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
           a clj-bigint?
@@ -247,10 +247,10 @@
                              (compf         (>java-bigint a) (>java-bigint b)))))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
           a clj-bigint?
-          b (t/- (t/input-type >clj-bigint :?) clj-bigint? ratio?)]
+          b (t/- (t/input >clj-bigint :?) clj-bigint? ratio?)]
           (numeric-compf a (>clj-bigint b))))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
-          a (t/- (t/input-type >clj-bigint :?) clj-bigint? ratio?)
+          a (t/- (t/input >clj-bigint :?) clj-bigint? ratio?)
           b clj-bigint?] (numeric-compf (>clj-bigint a) b)))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
           a ratio?
@@ -259,33 +259,33 @@
                       ^:val (.multiply ^:val (.denominator a) ^:val (.denominator b)))))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
           a ratio?
-          b (t/- (t/input-type >ratio :?) ratio?)] (numeric-compf a (>ratio b))))
+          b (t/- (t/input >ratio :?) ratio?)] (numeric-compf a (>ratio b))))
 #?(:clj ([numeric-compf numeric-comparator?, compf c?/boolean-comparator?
-          a (t/- (t/input-type >ratio :?) ratio?)
+          a (t/- (t/input >ratio :?) ratio?)
           b ratio?] (numeric-compf (>ratio a) b))))
 
 (t/extend-defn! c?/<
-  ([x (t/input-type numeric-compare :?)] (numeric-compare x))
-  ([a (t/input-type numeric-compare :_ :_ :?             :_)
-    b (t/input-type numeric-compare :_ :_ [= (t/type a)] :?)]
+  ([x (t/input numeric-compare :?)] (numeric-compare x))
+  ([a (t/input numeric-compare :_ :_ :?             :_)
+    b (t/input numeric-compare :_ :_ [= (t/type a)] :?)]
     (numeric-compare c?/<  c?/comp<  a b)))
 
 (t/extend-defn! c?/<=
-  ([x (t/input-type numeric-compare :?)] (numeric-compare x))
-  ([a (t/input-type numeric-compare :_ :_ :?             :_)
-    b (t/input-type numeric-compare :_ :_ [= (t/type a)] :?)]
+  ([x (t/input numeric-compare :?)] (numeric-compare x))
+  ([a (t/input numeric-compare :_ :_ :?             :_)
+    b (t/input numeric-compare :_ :_ [= (t/type a)] :?)]
     (numeric-compare c?/<= c?/comp<= a b)))
 
 (t/extend-defn! c?/>
-  ([x (t/input-type numeric-compare :?)] (numeric-compae x))
-  ([a (t/input-type numeric-compare :_ :_ :?             :_)
-    b (t/input-type numeric-compare :_ :_ [= (t/type a)] :?)]
+  ([x (t/input numeric-compare :?)] (numeric-compae x))
+  ([a (t/input numeric-compare :_ :_ :?             :_)
+    b (t/input numeric-compare :_ :_ [= (t/type a)] :?)]
     (numeric-compare c?/>  c?/comp>  a b)))
 
 (t/extend-defn! c?/>=
-  ([x (t/input-type numeric-compare :?)] (numeric-compare x))
-  ([a (t/input-type numeric-compare :_ :_ :?             :_)
-    b (t/input-type numeric-compare :_ :_ [= (t/type a)] :?)]
+  ([x (t/input numeric-compare :?)] (numeric-compare x))
+  ([a (t/input numeric-compare :_ :_ :?             :_)
+    b (t/input numeric-compare :_ :_ [= (t/type a)] :?)]
     (numeric-compare c?/>= c?/comp>= a b)))
 
 ;; TODO `c?/compare`

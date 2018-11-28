@@ -620,7 +620,7 @@
                                 seq)
                            (reduced nil)))))))))
 
-(defn- input-or-output-type-handle-reactive [f t args]
+(defn- input-or-output-handle-reactive [f t args]
   (if (utr/rx-type? t)
       (if (seq-or utr/rx-type? args)
           (rx (f @t (map utr/deref-when-reactive args)))
@@ -629,7 +629,7 @@
           (rx (f t (map utr/deref-when-reactive args)))
           (f t args))))
 
-(defn- input-type|meta-or|norx [t match-spec #_::match-spec]
+(defn- input|meta-or|norx [t match-spec #_::match-spec]
   (let [i|? (->> match-spec (reducei (c/fn [_ t i] (when (find-spec? t) (reduced i))) nil))
         type-args
           (->> match-spec
@@ -637,62 +637,62 @@
                (uc/map (c/fn [{:keys [input-types]}] (get input-types i|?))))]
     (with-expand-meta-ors type-args meta-or)))
 
-(defns input-type|meta-or
+(defns input|meta-or
   [t (us/or* utr/fn-type? utr/rx-type?), match-spec _ #_::match-spec
    | (->> match-spec (filter find-spec?) count (c/= 1))
    > type?]
-  (input-or-output-type-handle-reactive input-type|meta-or|norx t match-spec))
+  (input-or-output-handle-reactive input|meta-or|norx t match-spec))
 
-(defn- input-type|or|norx [t match-spec]
-  (let [t' (input-type|meta-or|norx t match-spec)]
+(defn- input|or|norx [t match-spec]
+  (let [t' (input|meta-or|norx t match-spec)]
     (cond-> t' (utr/meta-or-type? t') (->> utr/meta-or-type>types (apply or)))))
 
-(defns input-type|or
+(defns input|or
   "Outputs the type of a specified input to a typed fn."
   [t (us/or* utr/fn-type? utr/rx-type?), match-spec _ #_::match-spec
    | (->> match-spec (filter find-spec?) count (c/= 1))
    > type?]
-  (input-or-output-type-handle-reactive input-type|or|norx t match-spec))
+  (input-or-output-handle-reactive input|or|norx t match-spec))
 
-(defn input-type
+(defn input
   "Usage in arglist contexts:
-   - `(t/input-type >namespace :?)`
+   - `(t/input >namespace :?)`
      - Outputs a reactive type embodying the union of the possible types of the first input to
        `>namespace`.
-   - `(t/input-type reduce :_ :_ :?)`
+   - `(t/input reduce :_ :_ :?)`
      - Outputs a reactive type embodying the union of the possible types of the third input to
        `reduce`.
-   - `(t/input-type reduce :? :_ string?)`
+   - `(t/input reduce :? :_ string?)`
      - Outputs a reactive type embodying the union of the possible types of the first input to
        `reduce` when the third input satisfies `string?`."
-  ([t & args] (err! "Can't use `input-type` outside of arglist contexts")))
+  ([t & args] (err! "Can't use `input` outside of arglist contexts")))
 
-(defn- output-type|meta-or|norx [t match-spec]
+(defn- output|meta-or|norx [t match-spec]
   (let [type-args (->> match-spec (match-spec>type-data-seq t) (uc/map :output-type))]
     (with-expand-meta-ors type-args meta-or)))
 
-(defns output-type|meta-or
+(defns output|meta-or
   [t (us/or* utr/fn-type? utr/rx-type?) args (us/seq-of (us/or* #{:_} type?)) > type?]
-  (input-or-output-type-handle-reactive output-type|meta-or|norx t args))
+  (input-or-output-handle-reactive output|meta-or|norx t args))
 
-(defn- output-type|or|norx [t args]
-  (let [t' (output-type|meta-or|norx t args)]
+(defn- output|or|norx [t args]
+  (let [t' (output|meta-or|norx t args)]
     (cond-> t' (utr/meta-or-type? t') (->> utr/meta-or-type>types (apply or)))))
 
-(defns output-type|or
+(defns output|or
   "Outputs the output type of a typed fn."
   [t (us/or* utr/fn-type? utr/rx-type?) args (us/seq-of (us/or* #{:_} type?)) > type?]
-  (input-or-output-type-handle-reactive output-type|or|norx t args))
+  (input-or-output-handle-reactive output|or|norx t args))
 
-(defn output-type
+(defn output
   "Usage in arglist contexts:
-   - `(t/output-type >namespace :any)`
+   - `(t/output >namespace :any)`
      - (TODO) Outputs a reactive type embodying the union of the possible output types of
        `>namespace` given any valid inputs at all
-   - `(t/output-type reduce [:_ :_ string?])`
+   - `(t/output reduce [:_ :_ string?])`
      - Outputs a reactive type embodying the union of the possible output types of `reduce` when
        the third input satisfies `string?`."
-  ([t & args] (err! "Can't use `output-type` outside of arglist contexts")))
+  ([t & args] (err! "Can't use `output` outside of arglist contexts")))
 
 ;; ===== Dependent types ===== ;;
 

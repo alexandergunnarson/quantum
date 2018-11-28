@@ -190,7 +190,7 @@
                   -> ERROR `a` not in environment and `a` already in queue; circular
                            dependency detected"
       (throws (self/analyze-arg-syms '{a (t/type b) b (t/type c) c (t/type a)} 't/any?)))
-    (testing "Complex test for `t/type` and simple test for `t/input-type`"
+    (testing "Complex test for `t/type` and simple test for `t/input`"
       ;; This test overview was put up in ~30 minutes on 9/30/2018 during a seemingly random walk of
       ;; thoughts without any testing or research whatsoever that happened to actually coalesce
       ;; into a working, clear, simple algorithm for handling dependent types. Not sure if
@@ -426,17 +426,17 @@
          (is= (-> (self/analyze-arg-syms
                     '{a (t/or tt/boolean? (t/type b))
                       b (t/or tt/byte? (t/type d))
-                      c (t/input-type dummy :?)
+                      c (t/input dummy :?)
                       d (let [b (t/- tt/char? tt/long?)]
                           (t/or tt/char? (t/type b) (t/type c)))}
                     '(t/or (t/type b) (t/type d)))
                   transform-ana)
               ret)))
     ;; TODO add multiple tests for this (`input-types-combine`)
-    (testing "`t/input-type` + `t/type`"
+    (testing "`t/input` + `t/type`"
       (is= (-> (self/analyze-arg-syms
-                 '{a (t/or  (t/input-type input-types-combine :? (t/type c)) tt/string?)
-                   b (t/and (t/input-type input-types-combine :? (t/type c)) tt/long?)
+                 '{a (t/or  (t/input input-types-combine :? (t/type c)) tt/string?)
+                   b (t/and (t/input input-types-combine :? (t/type c)) tt/long?)
                    c (t/or tt/byte? tt/char?)}
                  'tt/int?)
                transform-ana)
@@ -472,12 +472,12 @@
               'b t/none?
               'c (t/isa? Character)}
              (t/isa? Integer)]]))
-   (testing "input to `t/input-type` depends on another `t/input-type`; `t/output-type` depends on
-             other `t/input-type`s"
+   (testing "input to `t/input` depends on another `t/input`; `t/output` depends on
+             other `t/input`s"
      (is= (-> (self/analyze-arg-syms
-                '{a (t/input-type tt/fake-compare :?         :_)
-                  b (t/input-type tt/fake-compare (t/type a) :?)}
-                '(t/output-type tt/fake-compare (t/type a) (t/type b)))
+                '{a (t/input tt/fake-compare :?         :_)
+                  b (t/input tt/fake-compare (t/type a) :?)}
+                '(t/output tt/fake-compare (t/type a) (t/type b)))
               transform-ana)
           [;; Directly from `[t/long? t/long?]`
            [{'a (t/isa? Long)                 'b (t/isa? Long)}                 (t/isa? Integer)]
@@ -491,9 +491,9 @@
            ;; Directly from `[(t/ref t/val?) t/nil?]`
            [{'a (t/ref (t/not (t/value nil))) 'b (t/value nil)}                 (t/isa? Integer)]])
      (is= (-> (self/analyze-arg-syms
-                '{a (t/input-type tt/fake-compare :?             :_)
-                  b (t/input-type tt/fake-compare [= (t/type a)] :?)}
-                '(t/output-type tt/fake-compare (t/type a) (t/type b)))
+                '{a (t/input tt/fake-compare :?             :_)
+                  b (t/input tt/fake-compare [= (t/type a)] :?)}
+                '(t/output tt/fake-compare (t/type a) (t/type b)))
               transform-ana)
           [;; Directly from `[t/long? t/long?]`
            [{'a (t/isa? Long)                 'b (t/isa? Long)}                 (t/isa? Integer)]
@@ -538,14 +538,14 @@
                    b (t/or tt/byte? (t/type d))
                    c (t/or tt/short? tt/char?)
                    d (let [b (t/- tt/char? tt/long?)]
-                       (t/or tt/char? (t/type b) (t/input-type >long-checked :?) (t/type c)))}
+                       (t/or tt/char? (t/type b) (t/input >long-checked :?) (t/type c)))}
                  '(t/or (t/type b) (t/type d))
                  false)
                transform-ana)
            (let [c (t/or tt/short? tt/char?)
                  d (t/or tt/char?
                          (t/value (t/- tt/char? tt/long?))
-                         (t/rx (t/input-type*
+                         (t/rx (t/input*
                                  (-> #'>long-checked meta :quantum.core.type/type deref) [:?]))
                          c)
                  b (t/or tt/byte? d)

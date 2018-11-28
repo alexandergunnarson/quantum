@@ -548,12 +548,12 @@
                                  [ifn? t/any? java-set? :> comparable?]))
 
 (deftest test|input-type|meta-or
-  (is= (t/input-type|meta-or
+  (is= (t/input|meta-or
          (-> #'fake-compare meta :quantum.core.type/type deref)
          [(t/not (t/value nil)) :?])
        ;; i.e., not `long?`
        (t/meta-or [(t/value nil)]))
-  (is= (t/input-type|meta-or
+  (is= (t/input|meta-or
          (-> #'fake-compare meta :quantum.core.type/type deref)
          [long? :?])
        (t/meta-or
@@ -561,20 +561,20 @@
           ;; `[(t/ref t/val?) t/nil?]`
          [(t/value nil)
           long?]))
-  (is= (t/input-type|meta-or
+  (is= (t/input|meta-or
          (-> #'fake-compare meta :quantum.core.type/type deref)
          [[= long?] :?])
        (t/meta-or [long?])))
 
 (deftest test|input-type|or
-  (is= (t/or string? symbol?)   (t/input-type|or >namespace|type [:?]))
-  (is= (t/or string? java-set?) (t/input-type|or reduce|type     [:_ :_ :?])))
-  (is= fn?                      (t/input-type|or reduce|type     [:? :_ string?]))
+  (is= (t/or string? symbol?)   (t/input|or >namespace|type [:?]))
+  (is= (t/or string? java-set?) (t/input|or reduce|type     [:_ :_ :?])))
+  (is= fn?                      (t/input|or reduce|type     [:? :_ string?]))
 
 (deftest test|output-type|or
-  (is= string?                      (t/output-type|or >namespace|type))
-  (is= (t/or char-seq? comparable?) (t/output-type|or reduce|type))
-  (is= char-seq?                    (t/output-type|or reduce|type [:_ :_ string?])))
+  (is= string?                      (t/output|or >namespace|type))
+  (is= (t/or char-seq? comparable?) (t/output|or reduce|type))
+  (is= char-seq?                    (t/output|or reduce|type [:_ :_ string?])))
 
 (deftest test|rx
   (testing "="
