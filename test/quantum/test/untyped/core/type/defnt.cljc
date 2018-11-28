@@ -87,7 +87,7 @@
         expected
         ($ (do [[0 0 false [] (t/or t/nil? t/string?)]]
                (defmeta-from ~'pid
-                 (let* [~pid|__fs (*<>|sized|macro 0)
+                 (let* [~pid|__fs (*<>|sized|macro 1)
                         ~'pid (new TypedFn
                                 {:quantum.core.type/type pid|__type}
                                 pid|__!types ; defined/created within `t/defn`
@@ -1449,11 +1449,11 @@
 
 (deftest dependent-type-test
   (testing "t/type") ;; tested in `extend-defn!` test
-  (testing "t/input-type"
+  (testing "t/input"
     (let [actual
             (macroexpand '
               (self/defn input-type-test
-                [> (t/output-type >long-checked [t/string?])] 1))
+                [> (t/output >long-checked [t/string?])] 1))
           expected
             (case (env-lang)
               :clj
@@ -2179,7 +2179,7 @@
                          (self/defn simple-reactive-dependee ([a tt/char?] 1)))
                        (macroexpand '
                          (self/defn simple-reactive-dependent
-                           ([a (t/input-type simple-reactive-dependee :?)] "abc")))])
+                           ([a (t/input simple-reactive-dependee :?)] "abc")))])
                     eval)
             expected
               (case (env-lang)
@@ -2209,7 +2209,7 @@
               (binding [self/*compilation-mode* :test]
                 (macroexpand '
                   (self/defn reactive-extensible
-                    ([a (t/input-type dependent-extensible :?)]))))])))
+                    ([a (t/input dependent-extensible :?)]))))])))
   ;; TODO make this into an actual test
   (doto (macroexpand '(self/extend-defn! dependent-extensible ([] 5)))
         eval))
@@ -2233,25 +2233,25 @@
                 (t/or tt/byte?
                       (t/arglist-type
                         (t/or tt/char?
-                              (t/- @(t/input-type* abcde :?) tt/long?)
+                              (t/- @(t/input* abcde :?) tt/long?)
                               (t/arglist-type (t/or tt/short? tt/string?))))))))
     b (t/rx (t/or tt/byte?
               (t/arglist-type
                 (t/or tt/char?
-                      (t/- @(t/input-type* abcde :?) tt/long?)
+                      (t/- @(t/input* abcde :?) tt/long?)
                       (t/arglist-type (t/or tt/short? tt/string?))))))
     c (t/or tt/short? tt/string?)
     d (t/rx (t/or tt/char?
-                  (t/- @(t/input-type* abcde :?) tt/long?)
+                  (t/- @(t/input* abcde :?) tt/long?)
                   (t/arglist-type (t/or tt/short? tt/string?))))
     > (t/rx (t/or (t/arglist-type
                     (t/or tt/byte?
                           (t/arglist-type
                             (t/or tt/char?
-                                  (t/- @(t/input-type* abcde :?) tt/long?)
+                                  (t/- @(t/input* abcde :?) tt/long?)
                                   (t/arglist-type (t/or tt/short? tt/string?))))))
                   (t/or tt/char?
-                        (t/- @(t/input-type* abcde :?) tt/long?)
+                        (t/- @(t/input* abcde :?) tt/long?)
                         (t/arglist-type (t/or tt/short? tt/string?)))))]))
 
 - Suppose you have:
@@ -2324,7 +2324,7 @@
                    (unsupported! ...))))
   - (t/defn fghij ; in `ns1`
       ([b t/string? > (t/type b)] ...)
-      ([c (t/input-type ns0/abcde :?) > (t/output-type ns0/abcde (t/type c))] ...))
+      ([c (t/input ns0/abcde :?) > (t/output ns0/abcde (t/type c))] ...))
     - Resulting in `fghij`'s compile-time-emission code (assuming no :test mode) as:
       - (do (intern 'ns1 'fghij|__bases
               (rx/! {:norx-prev nil
@@ -2340,16 +2340,16 @@
                            :body-codelist     [...]
                            :dependent?        true
                            :reactive?         false})
-                        (let [t0 (t/rx (t/input-type* @ns0/abcde|__type :?))]
+                        (let [t0 (t/rx (t/input* @ns0/abcde|__type :?))]
                           {:ns                'ns1
                            ;; This is only present when there is at least one dependent type in the
                            ;; arglist / output
-                           :args-form         (om 'c '(t/input-type ns0/abcde :?))
+                           :args-form         (om 'c '(t/input ns0/abcde :?))
                            :arg-types-basis   [t0]
                            ;; This is only present when there is at least one dependent type in the
                            ;; arglist / output
-                           :output-type|form  '(t/output-type ns0/abcde (t/type c))
-                           :output-type|basis (t/rx (t/output-type* @ns0/abcde|__type @t0))
+                           :output-type|form  '(t/output ns0/abcde (t/type c))
+                           :output-type|basis (t/rx (t/output* @ns0/abcde|__type @t0))
                            :body-codelist     [...]
                            :dependent?        true
                            :reactive?         true})]}))
@@ -2597,15 +2597,33 @@
                    (macroexpand '
                      (do (self/defn g|test [f0 (t/ftype [tt/long? :> tt/float?]) > tt/float?]
                            (f0 5))
-                         (self/defn h|test [f0 (t/ftype [tt/long?   :> tt/float?]
-                                                        [tt/string? :> tt/char?])
-                                            f1 (t/ftype [tt/byte?   :> tt/boolean?]
-                                                        [tt/long?   :> tt/char?]
-                                                        [tt/string? :> tt/char?])
-                                            > tt/char?]
+                         (self/defn h|test [f0 (t/ftype [tt/string? :> tt/char?]) > (t/type f0)]
+                           f0)
+                         ;; This won't compile
+                       #_(self/defn i|test [f0 (t/ftype  [tt/string? :> tt/char?])
+                                            >  (t/ftype' [tt/string? :> tt/char?])]
+                           f0)
+                         (self/defn i|test [f0 (t/ftype' [tt/string? :> tt/char?]) > (t/type f0)]
+                           f0)
+                         (self/defn j|test [f0 (t/ftype  [tt/long?   :> tt/float?]
+                                                         [tt/string? :> tt/char?])
+                                            f1 (t/ftype  [tt/byte?   :> tt/boolean?]
+                                                         [tt/long?   :> tt/char?]
+                                                         [tt/string? :> tt/char?])
+                                            f2 (t/ftype' [tt/long?   :> tt/float?])
+                                            >  tt/char?]
                            (f0 7)
+                           (f1 21)
                            (g|test f0)
-                           (h|test f1 f0)
+                           ((h|test f0) "63")
+                           ;; This won't compile
+                         #_((i|test f0) "98")
+                           ((i|test ^:wrap f0) "98")
+                           (j|test f1 f0)
+                           ;; FIXME for `t/ftype` comparison: what if `f1` also has the overload
+                           ;; `[(t/and tt/string? (fn-> count (= 2))) :> tt/double?]`?
+                           ;; Then yes `f1` accepts at least `tt/string?`, which outputs no more
+                           ;; than `tt/boolean?`, but it's not clear whether `tt/double?` or `tt/char?` gets output
                            (f1 "11")))))
           expected
             (case (env-lang)
@@ -2615,58 +2633,159 @@
                           ~'g|test
                             (new TypedFn
                               {:quantum.core.type/type ~'g|__type}
+                              ...
+                              ~'g|test|__fs
                               (fn* ([~&ts ~&fs ~'x00]
                                      (ifs (~(aget* (aget* &ts 0) 0) ~'x00__)
                                           (. ~(aget* &fs 0) ~'invoke ~'x00__)
                                           (unsupported! `g|test [~'x00__] 0)))))]
                      ~(aset* g|test|__fs 0
                        `(reify* [~(csym `OI__F)]
-                          (~'invoke [~&this ~(O 'f0)
-                                     ~(I 'i__0)] ; overload ID of `f0` : `[tt/long?]`
-                            (. ~(>L__F (aget* `(. ~'f0 ~'fs) 'i__0)) ~'invoke 5))))
+                          (~'invoke [~&this ~(O 'f0)] (~'f0 5))))
                      ~'g|test))
-                 (let* [~'g|test|__ (deref ~(list 'var `g|test))] ; to avoid var indirection
-                   (defmeta-from ~'h|test
-                     (let* [~'h|test|__fs (*<>|sized|macro 1)
-                            ~'h|test|__f
+                 (defmeta-from ~'h|test
+                   (let* [~'h|test|__fs (*<>|sized|macro 1)
+                          ~'h|test
+                            (new TypedFn
+                              {:quantum.core.type/type ~'h|__type}
+                              ...
+                              ~'h|test|__fs
+                              (fn* ([~&ts ~&fs ~'x00]
+                                     (ifs (~(aget* (aget* &ts 0) 0) ~'x00__)
+                                          (. ~(aget* &fs 0) ~'invoke ~'x00__)
+                                          (unsupported! `h|test [~'x00__] 0)))))]
+                     ~(aset* h|test|__fs 0
+                       `(reify* [~(csym `O__O)]
+                          (~'invoke [~&this ~(O 'f0)] f0)))
+                     ~'h|test))
+                 (defmeta-from ~'i|test
+                   (let* [~'i|test|__fs (*<>|sized|macro 1)
+                          ~'i|test
+                            (new TypedFn
+                              {:quantum.core.type/type ~'i|__type}
+                              ...
+                              ~'i|test|__fs
+                              (fn* ([~&ts ~&fs ~'x00]
+                                     (ifs (~(aget* (aget* &ts 0) 0) ~'x00__)
+                                          (. ~(aget* &fs 0) ~'invoke ~'x00__)
+                                          (unsupported! `i|test [~'x00__] 0)))))]
+                     ~(aset* i|test|__fs 0
+                       `(reify* [~(csym `O__O)]
+                          (~'invoke [~&this ~(O 'f0)] f0)))
+                     ~'i|test))
+                       ;; to avoid var indirection
+                 (let* [~'g|test|__ (deref ~(list 'var `g|test))
+                        ~'h|test|__ (deref ~(list 'var `h|test))
+                        ~'i|test|__ (deref ~(list 'var `i|test))]
+                   (defmeta-from ~'j|test
+                     (let* [~'j|test|__fs (*<>|sized|macro 1)
+                            ~'j|test
                               (new TypedFn
-                                {:quantum.core.type/type ~'g|__type}
+                                {:quantum.core.type/type ~'j|__type}
                                 ...
-                                ~'h|test|__fs
+                                ~'j|test|__fs
                                 (fn* ([~&ts ~&fs ~'x00__ ~'x01__]
                                        (ifs (~(aget* (aget* &ts 0) 0) ~'x00__)
                                             (ifs (~(aget* (aget* &ts 0) 1) ~'x00__)
                                                  (. ~(aget* &fs 0) ~'invoke ~'x00__ ~'x01__)
-                                                 (unsupported! `h|test [~'x00__ ~'x01__] 1))
-                                            (unsupported! `h|test [~'x00__ ~'x01__] 0)))))]
-                      ;; TODO if a reify overload ever gets redefined (same ID) then the interface
-                      ;; might be different... ugh...
-                      ~(aset* h|test|__fs 0
-                       `(reify* [~(csym `OOII__C)]
-                          (~'invoke [~&this ~(O 'f0) ~(O 'f1)
-                                     ~(I 'i__0)  ; overload ID of `f0` : `[tt/long?]`
-                                     ~(I 'i__1)  ; overload ID of `f1` : `[tt/long?]`
-                                     ~(I 'i__2)] ; overload ID of `f1` : `[tt/string?]`
-                            ;; This `let*` is here to save on how many arguments need to be
-                            ;; allocated to the stack, and to avoid having to rewrite these bindings
-                            ;; in the body. Hopefully the bindings will be optimized away by the JVM
-                            (let* [~'i__2 ~'i__1
-                                   ~'i__3 ~'i__0
-                                   ~'i__4 ~'i__2]
-                              (. ~(aget* `(. ~'f0 ~'fs) 'i__0) ~'invoke 7)
-                              ;; It doesn't just refer to `g|test|__fs` or whatever because the fn
-                              ;; in question (`g|test`) is extensible. Otherwise it would skip the
-                              ;; ceremony of `(aget* `(. ~'g|test|__ ~'fs) 0)` and just do e.g.
-                              ;; `g|test|__0`.
-                              (. ~(aget* `(. ~'g|test|__ ~'fs) 0) ~'invoke ~'f0 ~'i__1)
-                              ;; It doesn't just refer to `h|test|__fs` because the fn in question
-                              ;; (`h|test`) is extensible. Otherwise it would skip the ceremony of
-                              ;; `(aget* `(. ~'h|test|__f ~'fs) 0)` and just do e.g. `h|test|__0`.
-                              (. ~(aget* `(. ~'h|test|__f ~'fs) 0) ~'invoke ~'f1 ~'f0 ~'i__2 ~'i__3)
-                              (. ~(aget* `(. ~'f1 ~'fs) 'i__4) ~'invoke "11")))))
-                       ~'h|test|__f))))))]
+                                                 (unsupported! `j|test [~'x00__ ~'x01__] 1))
+                                            (unsupported! `j|test [~'x00__ ~'x01__] 0)))))]
+                      ;; NOTE we could accommodate for the situation in which a reify overload gets
+                      ;; redefined (same ID): to ensure the interface stays the same, we could
+                      ;; ensure that each interface has (arbitrarily) up to 10 extra params, with an
+                      ;; int array as the last extra param which is then unpacked. However, this
+                      ;; would not accommodate for the facts that 1) the meaning of each int param
+                      ;; could change, and even if this were able to be controlled, 2) existing call
+                      ;; sites using that overload would either have too many or few params. Of
+                      ;; course, we could add a default interface implementation for every supported
+                      ;; arity, each one of which would curry in the params to the actually
+                      ;; implemented arity (there are other ways too probably). But it just seems
+                      ;; like a lot of overhead with not too much gain.
+                      ;; (reify* [~(csym `OOIII__C)]
+                      ;;   (~'invoke [~&this ~(O 'f0) ~(O 'f1)
+                      ;;              ~(I 'i__0)  ; overload ID of `f0` : `[tt/long?]`
+                      ;;              ~(I 'i__2)  ; overload ID of `f1` : `[tt/long?]`
+                      ;;              ~(I 'i__5)] ; overload ID of `f1` : `[tt/string?]`
+                      ;;     ...))
+                      ~(aset* j|test|__fs 0
+                       `(reify* [~(csym `OO__C)]
+                          (~'invoke [~&this ~(O 'f0) ~(O 'f1)]
+                            (~'f0 7)
+                            (. ~(aget* `(. ~'f2 ~'fs) 0) ~'invoke 21)
+                            ;; - It doesn't just refer to `g|test|__fs` or whatever because the fn
+                            ;;   in question (`g|test`) is extensible. Otherwise it would skip the
+                            ;;   ceremony of `(aget* `(. ~'g|test|__ ~'fs) 0)` and just do e.g.
+                            ;;   `g|test|__0`.
+                            (. ~(aget* `(. ~'g|test|__ ~'fs) 0) ~'invoke ~'f0)
+                            ;; We need to know how to call the resulting fn and the callee can't
+                            ;; provide that information to all callers. So we have to make this call
+                            ;; dynamic, sadly.
+                            ((. ~(aget* `(. ~'h|test|__ ~'fs) 0) ~'invoke ~'f0) "63")
+                            (. ~(aget* `(. ~(aget* `(. ~'i|test|__ ~'fs) 0) ~'invoke
+                                           ;; Two arrays (`ts` — two arrays, `fs` — two `reify`s),
+                                           ;; one `TypedFunction` object. Not super cheap
+                                           (self/fn ([~'x0__ tt/long?   ~'> tt/float?] (f0 x0__))
+                                                    ([~'x0__ tt/string? ~'> tt/char?]  (f0 x0__))))
+                                       1)
+                               ~'invoke "98")
+                            ;; - It doesn't just refer to `j|test|__fs` because the fn in question
+                            ;;   (`j|test`) is extensible. Otherwise it would skip the ceremony of
+                            ;;   `(aget* `(. ~'j|test|__f ~'fs) 0)` and just do e.g. `j|test|__0`.
+                            (. ~(aget* `(. ~'j|test ~'fs) 0) ~'invoke ~'f1 ~'f0)
+                            ;; - Knows that calling `f1` with `["11"]` means:
+                            ;;   - We need to know overload ID of `f1` with input types
+                            ;;     `[tt/string?]`
+                            (f1 "11"))))
+                       ~'j|test))))))]
               ...)))
 
+;; Now *this* is where type inference would come in handy...
+(self/defn comp
+  (^:inline [...] identity)
+  (^:inline [f0 t/tfn? > (t/type f0)] f0)
+  ([f0 (t/ftype [(t/output f1 :any)]), f1 t/tfn?]
+    (self/fn
+      ([]
+        (f0 (f1)))
+      ([x0 (t/input f1 :?)]
+        (f0 (f1 x0)))
+      ([x0 (t/input f1 :? :_), x1 (t/input g (t/type x0) :?)]
+        (f0 (f1 x0 x1)))
+      ([x0 (t/input f1 :?          :_          :_)
+        x1 (t/input f1 (t/type x0) :?          :_)
+        x2 (t/input f1 (t/type x0) (t/type x1) :?)]
+        (f0 (f1 x0 x1 x2)))
+      ([x0 (t/input f1 :?                         :&)
+        x1 (t/input f1 (t/type x0) :?             :&)
+        x2 (t/input f1 (t/type x0) (t/type x1) :? :&)
+        & xs (t/input f1 (t/type x0) (t/type x1) (t/type x2) :?&)]
+        (f0 (apply f1 x0 x1 x2 xs)))))
+  ([f0 f1 & fs] (reduce1 comp (list* f0 f1 fs))))
+
+;; TODO this works better as a macro I think
+(self/defn aritoid
+  ([f0 (t/ftype [])
+    >  (t/ftype [:> (t/output f0)])]
+    (self/fn ([>  (t/output f0)]                         (f0))))
+  ([f0 (t/ftype [])
+    f1 (t/ftype [t/any?])
+    >  (t/ftype [:> (t/output f0)]
+                [:> (t/output f1 :_)])]
+    (self/fn ([>  (t/output f0)]                         (f0))
+             ([x0 (t/input  f1 :?)
+               >  (t/output f1 (t/type x0))]             (f1 x0))))
+  ([f0 (t/ftype [])
+    f1 (t/ftype [t/any?])
+    f2 (t/ftype [t/any? t/any?])
+    >  (t/ftype [:> (t/output f0)]
+                [:> (t/output f1 :_)]
+                [:> (t/output f2 :_ :_)])]
+    (self/fn ([>  (t/output f0)]                         (f0))
+             ([x0 (t/input  f1 :?)
+               >  (t/output f1 (t/type x0))]             (f1 x0))
+             ([x0 (t/input  f2 :?          :_)
+               x1 (t/input  f2 (t/type x0) :?)
+               >  (t/output f1 (t/type x0) (t/type x1))] (f2 x0 x1)))))
 
 "
 We could do:
