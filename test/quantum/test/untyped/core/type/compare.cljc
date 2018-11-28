@@ -1501,7 +1501,12 @@
       (testing "output ><")
       (testing "output <>"))
     (testing "same-arity input types >"
-      (testing "output <")
+      (testing "output <"
+        ;; it accepts  more  (>) things than it is required (>=) to accept  — good
+        ;; it provides fewer (<) things than it is allowed  (<=) to provide — good
+        (test-comparison|fn [ >ident  <ident]
+          (t/ftype [t/any? :> t/boolean?])
+          (t/ftype [t/boolean?])))
       (testing "output =")
       (testing "output >")
       (testing "output ><")
