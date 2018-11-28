@@ -1405,6 +1405,9 @@
            - Old contract guarantees grain; new contract guarantees wheat            (<)  : good
            - Old contract guarantees grain; new contract guarantees any edible thing (>)  : bad
            - Old contract guarantees grain; new contract guarantees a sheep          (<>) : bad"
+  ;; We can think of the first `ftype` input to `test-comparison|fn` as the "new contract" or
+  ;; actual type of fn-input", and the second `ftype` input as the "old contract" or "declared type
+  ;; of fn-input".
   (testing "input arities <"
     (testing "same-arity input types <"
       (testing "output <"
@@ -1415,6 +1418,8 @@
           (t/ftype []              [t/any?     :> t/long?])))
       (testing "output =")
       (testing "output >"
+        ;; it accepts  fewer (<) things than it is required (>=) to accept  — bad
+        ;; it provides more  (>) things than it is allowed  (<=) to provide — bad
         (test-comparison|fn [ <ident  >ident]
           (t/ftype                 [t/boolean?])
           (t/ftype [:> t/boolean?] [t/any? :> t/boolean?])))
@@ -1426,6 +1431,8 @@
           (t/ftype [:> t/boolean?])
           (t/ftype []              [t/any?])))
       (testing "output ="
+        ;; it accepts  fewer    (<) things than it is required (>=) to accept  — bad
+        ;; it provides the same (=) things as   it is allowed  (<=) to provide — good
         (test-comparison|fn [ <ident  =ident]
           (t/ftype [])
           (t/ftype []              [t/any?])))
