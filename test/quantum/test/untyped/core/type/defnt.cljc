@@ -3020,6 +3020,20 @@ B -> (let* [f inc, xs [1]]
 
 ;; TODO Lazy compilation? Maybe just before the typed context when it gets used is when it can be compiled
 
+;; TODO let's see how this is able to be unrolled
+(t/defn map+ [f t/tfn?]
+  (t/fn [rf ?]
+    (t/fn
+      ([] (rf))
+      ([result ?] (rf result))
+      ([result ?, input ?]
+         (rf result (f input))))))
+
+(t/defn reduce ...)
+
+(t/dotyped (->> [1 2] (map+ inc) (reduce conj)))
+-> ...
+
 ;; =========================
 
 "
