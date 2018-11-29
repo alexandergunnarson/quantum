@@ -3021,18 +3021,216 @@ B -> (let* [f inc, xs [1]]
 ;; TODO Lazy compilation? Maybe just before the typed context when it gets used is when it can be compiled
 
 ;; TODO let's see how this is able to be unrolled
-(t/defn map+ [f t/tfn?]
+(t/defn map|transducer [f t/tfn?]
   (t/fn [rf ?]
-    (t/fn
+    (^:inline t/fn
       ([] (rf))
-      ([result ?] (rf result))
-      ([result ?, input ?]
-         (rf result (f input))))))
+      ([ret ?] (rf ret))
+      ([ret ?, input ?]
+        (rf ret (f input))))))
 
-(t/defn reduce ...)
+(t/defn reduce
+  (^:inline [rf rf?, init t/ref?, xs (t/isa? IReduce)]
+    (.reduce xs rf init))) ; .reduce on IReduce will be handled specially
 
-(t/dotyped (->> [1 2] (map+ inc) (reduce conj)))
--> ...
+(t/defn transduce [xf ?, rf ?, init ?, xs ?]
+  (let [f   (xf rf)
+        ret (reduce f init xs)]
+   (f ret)))
+
+(t/dotyped (transduce (map|transducer inc) conj [1 2]))
+-> (transduce
+     ;; inner expansion
+     (let* [f inc]
+       ;; `?` are resolved
+       (t/fn [rf (t/ftype [] [t/any?] [t/any? (t/input f :?)])]
+         (^:inline t/fn
+           ;; We avoid resolving `?` return types since the body may change
+           ([] (rf))
+           ([ret (t/input rf :?)] (rf ret))
+           ([ret (t/input rf :? (t/output f (t/type x))), x (t/input f :?)]
+             (rf ret (f x))))))
+     conj
+     []
+     [1 2])
+-> ;; inner expansion
+   (let* [xf (let* [f inc]
+               (t/fn [rf (t/ftype [] [t/any?] [t/any? (t/input f :?)])]
+                 (^:inline t/fn
+                   ([] (rf))
+                   ([ret (t/input rf :?)] (rf ret))
+                   ([ret (t/input rf :? (t/output f (t/type x))), x (t/input f :?)]
+                     (rf ret (f x))))))
+          rf   conj
+          init []
+          xs   [1 2]]
+     (let* [f   (xf rf)
+            ret (reduce f init xs)]
+       (f ret)))
+-> (let* [xf (let* [f inc]
+               (t/fn [rf (t/ftype [] [t/any?] [t/any? (t/input f :?)])]
+                 (^:inline t/fn
+                   ([] (rf))
+                   ([ret (t/input rf :?)] (rf ret))
+                   ([ret (t/input rf :? (t/output f (t/type x))), x (t/input f :?)]
+                     (rf ret (f x))))))
+          rf   conj
+          init []
+          xs   [1 2]]
+     (let* [f   ;; inner expansion
+                (let* [f inc]
+                  ;; elides isobindings so no additional `let*`
+                  (^:inline t/fn
+                    ([] (rf))
+                    ([ret (t/input rf :?)] (rf ret))
+                    ([ret (t/input rf :? (t/output f (t/type x))), x (t/input f :?)]
+                      (rf ret (f x)))))
+            ret (reduce f init xs)]
+       (f ret)))
+-> (let* [xf (let* [f inc]
+               (t/fn [rf (t/ftype [] [t/any?] [t/any? (t/input f :?)])]
+                 (^:inline t/fn
+                   ([] (rf))
+                   ([ret (t/input rf :?)] (rf ret))
+                   ([ret (t/input rf :? (t/output f (t/type x))), x (t/input f :?)]
+                     (rf ret (f x))))))
+          rf   conj
+          init []
+          xs   [1 2]]
+     (let* [f   (let* [f inc]
+                  (^:inline t/fn
+                    ([] []) ; expanded from `(conj)`
+                    ([ret (t/input rf :?)] ret) ; expanded from `(conj ret)`
+                    ([ret (t/input rf :? (t/output f (t/type x))), x (t/input f :?)]
+                      (rf ret (f x)))))
+            ret (.reduce xs f init)] ; inlined; elides isobindings so no `let*`
+       (f ret)))
+-> (let* [xf (let* [f inc]
+               (t/fn [rf (t/ftype [] [t/any?] [t/any? (t/input f :?)])]
+                 (^:inline t/fn
+                   ([] (rf))
+                   ([ret (t/input rf :?)] (rf ret))
+                   ([ret (t/input rf :? (t/output f (t/type x))), x (t/input f :?)]
+                     (rf ret (f x))))))
+          rf   conj
+          init []
+          xs   [1 2]]
+     (let* [f   (let* [f inc]
+                  (^:inline t/fn
+                    ([] [])
+                    ([ret (t/input rf :?)] ret)
+                    ([ret (t/input rf :? (t/output f (t/type x)))
+                      x   (t/and (t/input f :?) (t/element xs))] ; throw if `t/none?` results
+                      ;; because the class of `x` was determined
+                      (let* [x (. Numbers uncheckedLongCast x)]
+                        (rf ret (. Numbers inc x))))))
+            ;; `.reduce` is handled specially and does type checking ahead of time on `f` to avoid
+            ;; runtime checks as much as possible
+            ret (.reduce xs
+                  (c/fn [ret x]
+                    (let* [x (. Numbers uncheckedLongCast x)]
+                      (rf ret (. Numbers inc x))))
+                  init)]
+       (f ret)))
+-> (let* [xf (let* [f inc]
+               (t/fn [rf (t/ftype [] [t/any?] [t/any? (t/input f :?)])]
+                 (^:inline t/fn
+                   ([] (rf))
+                   ([ret (t/input rf :?)] (rf ret))
+                   ([ret (t/input rf :? (t/output f (t/type x))), x (t/input f :?)]
+                     (rf ret (f x))))))
+          rf   conj
+          init []
+          xs   [1 2]]
+     (let* [f   (let* [f inc]
+                  (^:inline t/fn
+                    ([] [])
+                    ([ret (t/input rf :?)] ret)
+                    ([ret (t/input rf :? (t/output f (t/type x)))
+                      x   (t/and (t/input f :?) (t/element xs))] ; throw if `t/none?` results
+                      ;; because the class of `x` was determined
+                      (let* [x (. Numbers uncheckedLongCast x)]
+                        (rf ret (. Numbers inc x))))))
+            ;; `.reduce` is handled specially and does type checking ahead of time on `f` to avoid
+            ;; runtime checks as much as possible
+            ret (.reduce xs
+                  (c/fn [ret x]
+                    (let* [x (. Numbers uncheckedLongCast x)]
+                      (rf ret (. Numbers inc x))))
+                  init)]
+       ret))
+-> (let* [xf (let* [f inc]
+               (t/fn [rf (t/ftype [] [t/any?] [t/any? (t/input f :?)])]
+                 (^:inline t/fn
+                   ([] (rf))
+                   ([ret (t/input rf :?)] (rf ret))
+                   ([ret (t/input rf :? (t/output f (t/type x))), x (t/input f :?)]
+                     (rf ret (f x))))))
+          rf   conj
+          init []
+          xs   [1 2]]
+     (let* [f   (let* [f inc]
+                  ;; TODO need to analyze this as if we're doing:
+                  ;; (loop [i 0, ret init]
+                  ;;   (if (>= i (count xs))
+                  ;;       ret
+                  ;;       (let* [x (nth xs)] (recur (below-fn ret x)))))
+                  (^:inline t/fn
+                    ([] [])
+                    ([;; throws if `t/none?` results
+                      ret (t/and (t/input rf :?)
+                                 ...)] ret)
+                    ([;; throws if `t/none?` results
+                      ret (t/and (t/input rf :? (t/output f (t/type x)))
+                                 (t/or (t/type init)
+                                       ...))
+                      ;; throws if `t/none?` results
+                      x   (t/and (t/input f :?) (t/element xs))]
+                      ;; because the class of `x` was determined
+                      (let* [x (. Numbers uncheckedLongCast x)]
+                        (rf ret (. Numbers inc x))))))]
+       (.reduce xs
+         (c/fn [ret x]
+           (let* [x (. Numbers uncheckedLongCast x)]
+             (. conj|__0 invoke ret (. Numbers inc x))))
+         init)))
+-> (let* [xf (let* [f inc]
+               (t/fn [rf (t/ftype [] [t/any?] [t/any? (t/input f :?)])]
+                 (^:inline t/fn
+                   ([] (rf))
+                   ([ret (t/input rf :?)] (rf ret))
+                   ([ret (t/input rf :? (t/output f (t/type x))), x (t/input f :?)]
+                     (rf ret (f x))))))
+          rf   conj
+          init []
+          xs   [1 2]]
+     (.reduce xs
+       (c/fn [ret x]
+         (let* [x (. Numbers uncheckedLongCast x)]
+           (rf ret (. Numbers inc x))))
+       init))
+-> (let* [init []
+          xs   [1 2]]
+     (.reduce xs
+       (c/fn [ret x]
+         (let* [x (. Numbers uncheckedLongCast x)]
+           (. conj|__0 invoke ret (. Numbers inc x))))
+       init))
+-> (let* [transduce|expanded__0
+            (reify* [O__O]
+              (invoke [&this init xs]
+                (.reduce xs
+                  (c/fn [ret x]
+                    (let* [x (. Numbers uncheckedLongCast x)]
+                      (. conj|__0 invoke ret (. Numbers inc x))))
+                  init)))]
+     (. transduce|expanded__0 invoke [] [1 2]))
+;; So, did this actually help? Yes; we were able to elide a lot of checks/dynamism/overhead. Should
+;; we use it in all occasions? Unclear. It's a lot of work to implement and the compilation might be
+;; slow. It may be best to leave for an "advanced compilation" enhancement later. We can afford
+;; dynamism as long as it's 'fast enough' — e.g. instead of `(t/boolean? x)` we expand to
+;; `(instance? Boolean x)`. Clojure has this kind of dynamism with pretty much everything anyway.
+;; The real issue is when we dynamically invoke an fn that does some more complex checks.
 
 ;; =========================
 
