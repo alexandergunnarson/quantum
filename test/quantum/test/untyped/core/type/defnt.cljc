@@ -3231,6 +3231,10 @@ B -> (let* [f inc, xs [1]]
 ;; dynamism as long as it's 'fast enough' — e.g. instead of `(t/boolean? x)` we expand to
 ;; `(instance? Boolean x)`. Clojure has this kind of dynamism with pretty much everything anyway.
 ;; The real issue is when we dynamically invoke an fn that does some more complex checks.
+;; We should be able to have configurable levels of dynamism:
+;; 1) advanced : eliminate as much dynamism as possible
+;; 2) normal   : eliminate as much dynamism as possible for global fns only
+;; 3) dynamic  : make everything dynamic, for faster compilation and thought processes
 
 ;; =========================
 
