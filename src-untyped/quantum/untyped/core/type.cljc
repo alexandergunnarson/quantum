@@ -1008,7 +1008,7 @@
   (isa?|direct #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
 
 ;; Used by `quantum.untyped.core.analyze` via `t/callable?`
-(def* fnt? (and fn? (>expr (fn-> c/meta :quantum.core.type/type type?))))
+(def* tfn? (and fn? (>expr (fn-> c/meta :quantum.core.type/type type?))))
 
 ;; TODO should we allow java.lang.Runnable, java.util.concurrent.Callable, and other
 ;; functional interfaces to be `callable?`?
@@ -1016,7 +1016,7 @@
 (uvar/def callable?
   "The set of all objects that are able to called/invoked by being in functor position
    (first element of an unquoted list) within a typed context."
-  (or fn? ifn? fnt?))
+  (or fn? ifn? tfn?))
 
 ;; ===== Metadata ===== ;;
 

@@ -2739,9 +2739,87 @@
                        ~'j|test))))))]
               ...)))
 
+;; Automatically analyzes the body of `tfn?`s which have at least one input of `t/fn?`
+;; Meaning, the body is analyzed as if inline, but if not marked `inline`, will intern a separate fn
+;; for the purpose
+(t/defn- apply* [f (t/meta-or t/tfn? t/fn?), !xs !alist?]
+  (case (count !xs)
+    0  (f !xs)
+    1  (f (get !xs 0))
+    2  (f (get !xs 0)  (get !xs 1))
+    3  (f (get !xs 0)  (get !xs 1)  (get !xs 2))
+    4  (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3))
+    5  (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4))
+    6  (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5))
+    7  (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6))
+    8  (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7))
+    9  (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 8))
+    10 (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 8)  (get !xs 9))
+    11 (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 8)  (get !xs 9)
+          (get !xs 10))
+    12 (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 8)  (get !xs 9)
+          (get !xs 10) (get !xs 11))
+    13 (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 9)  (get !xs 10)
+          (get !xs 10) (get !xs 11) (get !xs 12))
+    14 (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 9)  (get !xs 10)
+          (get !xs 10) (get !xs 11) (get !xs 12) (get !xs 13))
+    15 (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 9)  (get !xs 10)
+          (get !xs 10) (get !xs 11) (get !xs 12) (get !xs 13) (get !xs 14))
+    16 (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 9)  (get !xs 10)
+          (get !xs 10) (get !xs 11) (get !xs 12) (get !xs 13) (get !xs 14)
+          (get !xs 15))
+    17 (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 9)  (get !xs 10)
+          (get !xs 10) (get !xs 11) (get !xs 12) (get !xs 13) (get !xs 14)
+          (get !xs 15) (get !xs 16))
+    18 (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 9)  (get !xs 10)
+          (get !xs 10) (get !xs 11) (get !xs 12) (get !xs 13) (get !xs 14)
+          (get !xs 15) (get !xs 16) (get !xs 17))
+    19 (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 9)  (get !xs 10)
+          (get !xs 10) (get !xs 11) (get !xs 12) (get !xs 13) (get !xs 14)
+          (get !xs 15) (get !xs 16) (get !xs 17) (get !xs 18))
+    20 (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 8)  (get !xs 9)
+          (get !xs 10) (get !xs 11) (get !xs 12) (get !xs 13) (get !xs 14)
+          (get !xs 15) (get !xs 16) (get !xs 17) (get !xs 18) (get !xs 19))
+    (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+       (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 8)  (get !xs 9)
+       (get !xs 10) (get !xs 11) (get !xs 12) (get !xs 13) (get !xs 14)
+       (get !xs 15) (get !xs 16) (get !xs 17) (get !xs 18) (get !xs 19)
+       (let [variadic-ct (-> !xs count (- 20))
+             !variadics  (<>*|ct variadic-ct)]
+         (loops/dotimes [i variadic-ct]
+           (assoc! !variadics i (get !xs i)))))))
+
+;; Assuming collections.core is available
+(t/defn ^:inline apply
+  ([f fn?, xs reducible?]
+    (apply* f (>!alist xs)))
+  ([f fn?, x0 ?,                    xs reducible?]
+    (apply* f (join! (!alist x0)          xs)))
+  ([f fn?, x0 ?, x1 ?,              xs reducible?]
+    (apply* f (join! (!alist x0 x1)       xs)))
+  ([f fn?, x0 ?, x1 ?, x2 ?,        xs reducible?]
+    (apply* f (join! (!alist x0 x1 x2)    xs)))
+  ([f fn?, x0 ?, x1 ?, x2 ?, x3 ? & xs reducible?]
+    (apply* f (join! (!alist x0 x1 x2 x3) xs))))
+
 ;; Now *this* is where type inference would come in handy...
 (self/defn comp
-  (^:inline [...] identity)
+  (^:inline [> (t/value identity)] identity)
   (^:inline [f0 t/tfn? > (t/type f0)] f0)
   ([f0 (t/ftype [(t/output f1 :any)]), f1 t/tfn?]
     (self/fn
@@ -2762,18 +2840,29 @@
         (f0 (apply f1 x0 x1 x2 xs)))))
   ([f0 f1 & fs] (reduce1 comp (list* f0 f1 fs))))
 
-;; TODO this works better as a macro I think
+(self/defn comp
+  ;; `> ?` is everywhere implied
+  (^:inline [] identity)
+  (^:inline [f0 t/tfn?] f0)
+  ([f0 ?, f1 ?]
+    (self/fn
+      ([]                       (f0       (f1)))
+      ([x0 ?]                   (f0       (f1 x0)))
+      ([x0 ?, x1 ?]             (f0       (f1 x0 x1)))
+      ([x0 ?, x1 ?, x2 ?]       (f0       (f1 x0 x1 x2)))
+      ([x0 ?, x1 ?, x2 ?, xs ?] (f0 (apply f1 x0 x1 x2 xs))))))
+
 (self/defn aritoid
   ([f0 (t/ftype [])
     >  (t/ftype [:> (t/output f0)])]
-    (self/fn ([>  (t/output f0)]                         (f0))))
+    (self/fn ([>  (t/output f0)] (f0))))
   ([f0 (t/ftype [])
-    f1 (t/ftype [t/none?])
+    f1 (t/ftype [t/eps?]) ; needs to be `t/eps?` meaning just an 'epsilon' above `t/none?` in order to be a valid input, but still `t/<` w.r.t. everything else
     >  (t/ftype [:> (t/output f0)]
                 [:> (t/output f1 :_)])]
-    (self/fn ([>  (t/output f0)]                         (f0))
+    (self/fn ([>  (t/output f0)]             (f0))
              ([x0 (t/input  f1 :?)
-               >  (t/output f1 (t/type x0))]             (f1 x0))))
+               >  (t/output f1 (t/type x0))] (f1 x0))))
   ([f0 (t/ftype [])
     f1 (t/ftype [t/none?])
     f2 (t/ftype [t/none? t/none?])
@@ -2787,9 +2876,62 @@
                x1 (t/input  f2 (t/type x0) :?)
                >  (t/output f1 (t/type x0) (t/type x1))] (f2 x0 x1)))))
 
+(self/defn aritoid
+  ;; `> ?` is everywhere implied
+  ([f0 ?]
+    (self/fn ([] (f0))))
+  ([f0 ?, f1 ?]
+    (self/fn ([]     (f0))
+             ([x0 ?] (f1 x0))))
+  ([f0 ?, f1 ?, f2 ?]
+    (self/fn ([]           (f0))
+             ([x0 ?]       (f1 x0))
+             ([x0 ?, x1 ?] (f2 x0 x1)))))
+
+;; =========================
+
+(t/dotyped (apply inc [1]))
+-> (let* [f inc, xs [1]]
+     (apply* f (>!alist xs)))
+-> (let* [f inc, xs [1]]
+     (apply* f (>!alist xs)))
+-> (let* [f inc, xs [1]]
+     (let* [!xs (>!alist xs)]
+       ;; This part isn't really analyzed; just `(count !xs)` first
+       (case (count !xs) ; figures out that the count is 1
+         0  (f !xs)
+         1  (f (get !xs 0))
+         ...)))
+-> (let* [f inc, xs [1]]
+     (let* [f f, !xs (>!alist xs)]
+       (f (get !xs 0)))) ; maybe it could figure out that `(get !xs 0)` yields `1`?
+A -> (let* [f inc, xs [1]]
+       (let* [f f, !xs (>!alist xs)]
+         (f (.get !xs 0))))
+B -> (let* [f inc, xs [1]]
+       (let* [f f, !xs (>!alist xs)] ; eliminate unused, non-side-effecting (since fn `>!alist` not marked with `:!`) param (`!xs`). Don't warn about unused param since this is only in an "inner expansion"
+         (f 1)))
+     -> (let* [f inc, xs [1]]
+          (let* [f f] ; eliminate iso-binding
+            (f 1)))
+     -> (let* [f inc, xs [1]] (f 1)) ; eliminate unused, non-side-effecting (since fn `>!alist` not marked with `:!`) binding (`xs`). Don't warn about unused param since this is only in an "inner expansion"
+     -> (inc 1)
+     -> 2
+
+(t/defn test|apply [xs reducible?]
+  (apply inc xs))
+-> (t/defn test|apply [xs reducible?]
+     (let* [f inc, xs xs]
+       (apply* inc (>!alist xs))))
+-> Not analyzed because `reducible?` (type of `xs`) is not `t/<` `reducible?` (type of `apply*.xs`)
+Maybe we should always analyze in this case? That's a lot of analyzing code paths but still... maybe it'll be nice for "advanced compilation" and we can do dynamic dispatch otherwise?
+- Lazy compilation? Maybe just before the typed context when it gets used is when it can be compiled
+
+;; =========================
+
 "
-So `f1`'s declared type is `(t/ftype [t/any?])`, meaning, it has to at least accept one arg which is
-`t/<=` `t/any?`.
+So `f1`'s declared type is `(t/ftype [t/eps?])`, meaning, it has to at least accept 1 input, whose
+type is `t/>=` `t/eps?`.
 Then really we're just doing arity checking here. Input and output type checks become kind of
 meaningless unless you know the actual input type.
 
