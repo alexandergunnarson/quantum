@@ -2888,16 +2888,14 @@
              ([x0 ?]       (f1 x0))
              ([x0 ?, x1 ?] (f2 x0 x1)))))
 
-;; =========================
+;; ===== Inner expansion ===== ;;
 
 (t/dotyped (apply inc [1]))
 -> (let* [f inc, xs [1]]
      (apply* f (>!alist xs)))
 -> (let* [f inc, xs [1]]
-     (apply* f (>!alist xs)))
--> (let* [f inc, xs [1]]
      (let* [!xs (>!alist xs)]
-       ;; This part isn't really analyzed; just `(count !xs)` first
+       ;; This part isn't really analyzed in whole; just `(count !xs)` first
        (case (count !xs) ; figures out that the count is 1
          0  (f !xs)
          1  (f (get !xs 0))
@@ -2918,14 +2916,109 @@ B -> (let* [f inc, xs [1]]
      -> (inc 1)
      -> 2
 
+(t/dotyped (apply + (range 25)))
+-> (apply + (clojure.lang.LongRange/create 25)) ; retains metadata about count, etc.
+-> (let* [f +, xs (clojure.lang.LongRange/create 25)]
+     (apply* f (>!alist xs))) ; expanded because `(t/type f)` `t/<` `(t/type apply.f)`
+-> (let* [f +, xs (clojure.lang.LongRange/create 25)]
+     (let* [!xs (>!alist xs)]
+       ;; This part isn't really analyzed in whole; just `(count !xs)` first
+       (case (count !xs) ; figures out that the count is 25
+         ...
+         ;; This is not supposed to be inlined, just held out
+         (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+            (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 8)  (get !xs 9)
+            (get !xs 10) (get !xs 11) (get !xs 12) (get !xs 13) (get !xs 14)
+            (get !xs 15) (get !xs 16) (get !xs 17) (get !xs 18) (get !xs 19)
+            (let [variadic-ct (-> !xs count (- 20))
+                  !variadics  (<>*|ct variadic-ct)]
+              (loops/dotimes [i variadic-ct]
+                (assoc! !variadics i (get !xs i))))))))
+-> (let* [f +, xs (clojure.lang.LongRange/create 25)]
+     (let* [!xs (>!alist xs)] ; knows the count is 25
+       ;; This is not supposed to be inlined, just held out
+       (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 8)  (get !xs 9)
+          (get !xs 10) (get !xs 11) (get !xs 12) (get !xs 13) (get !xs 14)
+          (get !xs 15) (get !xs 16) (get !xs 17) (get !xs 18) (get !xs 19)
+          (let [variadic-ct (-> 25 (- 20))
+                !variadics  (<>*|ct variadic-ct)]
+            (loops/dotimes [i variadic-ct]
+              (assoc! !variadics i (get !xs i)))))))
+-> (let* [f +, xs (clojure.lang.LongRange/create 25)]
+     (let* [!xs (>!alist xs)] ; knows the count is 25
+       ;; This is not supposed to be inlined, just held out
+       (f (get !xs 0)  (get !xs 1)  (get !xs 2)  (get !xs 3)  (get !xs 4)
+          (get !xs 5)  (get !xs 6)  (get !xs 7)  (get !xs 8)  (get !xs 9)
+          (get !xs 10) (get !xs 11) (get !xs 12) (get !xs 13) (get !xs 14)
+          (get !xs 15) (get !xs 16) (get !xs 17) (get !xs 18) (get !xs 19)
+          (let [variadic-ct 5
+                !variadics  (<>*|ct variadic-ct)]
+            (loops/dotimes [i variadic-ct]
+              (assoc! !variadics i (get !xs i)))))))
+-> (let* [f +, xs (clojure.lang.LongRange/create 25)]
+     (let* [!xs (>!alist xs)] ; knows the count is 25
+       ;; - This is not supposed to be inlined, just held out
+       ;; - Splices in the inlined fns here
+       (f (. !xs get 0)  (. !xs get 1)  (. !xs get 2)  (. !xs get 3)  (. !xs get 4)
+          (. !xs get 5)  (. !xs get 6)  (. !xs get 7)  (. !xs get 8)  (. !xs get 9)
+          (. !xs get 10) (. !xs get 11) (. !xs get 12) (. !xs get 13) (. !xs get 14)
+          (. !xs get 15) (. !xs get 16) (. !xs get 17) (. !xs get 18) (. !xs get 19)
+          (let [variadic-ct 5
+                !variadics  (<>*|ct variadic-ct)]
+            (loops/dotimes [i variadic-ct] ; this will of course be expanded too
+              (let* [!xs !variadics]
+                (do (. RT aset !xs i (. !xs get i))
+                    !xs)))))))
+;; Assumes it's at a top-level place in the ns since `dotyped` was invoked in an untyped context
+-> (let* [apply*|expansion|__0
+            (reify* [OO__O]
+              (invoke [&this f !xs]
+                (let* [^ArrayList !xs !xs]
+                  (f (. !xs get 0)  (. !xs get 1)  (. !xs get 2)  (. !xs get 3)  (. !xs get 4)
+                     (. !xs get 5)  (. !xs get 6)  (. !xs get 7)  (. !xs get 8)  (. !xs get 9)
+                     (. !xs get 10) (. !xs get 11) (. !xs get 12) (. !xs get 13) (. !xs get 14)
+                     (. !xs get 15) (. !xs get 16) (. !xs get 17) (. !xs get 18) (. !xs get 19)
+                     (let [variadic-ct 5
+                           !variadics  (<>*|ct variadic-ct)]
+                       (loops/dotimes [i variadic-ct] ; this will of course be expanded too
+                         (let* [!xs !variadics]
+                           (do (. RT aset !xs i (. !xs get i))
+                               !xs))))))))]
+     (let* [f +, xs (clojure.lang.LongRange/create 25)]
+       (let* [!xs (>!alist xs)]
+         (. apply*|expansion|__0 invoke f !xs))))
+
+(t/fn [] (apply + (range 25)))
+->       ;; because nothing is "higher" than the `t/fn`
+         ;; TODO what if it's defined in an untyped context not in the ns?
+   (let* [apply*|expansion|__0 ...]
+     (reify* [...]
+       (invoke [...]
+         (let* [f +, xs (clojure.lang.LongRange/create 25)]
+           (let* [!xs (>!alist xs)]
+             (. apply*|expansion|__0 invoke f !xs))))))
+
+(t/defn abc [] (t/fn [] (apply + (range 25))))
+->       ;; derives from a queue-like collection of expansions found while analyzing `abc`
+   (let* [apply*|expansion|__0 ...]
+     ...
+     (reify* [...]
+       (invoke [...]
+         (t/fn []
+           (let* [f +, xs (clojure.lang.LongRange/create 25)]
+             (let* [!xs (>!alist xs)]
+               (. apply*|expansion|__0 invoke f !xs)))))))
+
+
 (t/defn test|apply [xs reducible?]
   (apply inc xs))
 -> (t/defn test|apply [xs reducible?]
      (let* [f inc, xs xs]
        (apply* inc (>!alist xs))))
 -> Not analyzed because `reducible?` (type of `xs`) is not `t/<` `reducible?` (type of `apply*.xs`)
-Maybe we should always analyze in this case? That's a lot of analyzing code paths but still... maybe it'll be nice for "advanced compilation" and we can do dynamic dispatch otherwise?
-- Lazy compilation? Maybe just before the typed context when it gets used is when it can be compiled
+
+;; TODO Lazy compilation? Maybe just before the typed context when it gets used is when it can be compiled
 
 ;; =========================
 
