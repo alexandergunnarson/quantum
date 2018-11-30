@@ -164,6 +164,8 @@
 
 ;; ----- End reflection support ----- ;;
 
+(def ^:dynamic *analyzing?* false)
+
 (defonce !!analyze-arg-syms|iter (>!thread-local 0)) ; `nneg-fixint?`
 
 (defonce !!analyze-depth (>!thread-local 0))
@@ -610,6 +612,10 @@
                 (err! "Expected var, but found" {:form form :resolved resolved})
               (uast/var* env (list 'var (uid/>symbol resolved)) resolved (t/value resolved))))))
 
+(defns- analyze-seq|tfn
+  [env ::env form ...]
+  )
+
 (defn- filter-dynamic-dispatchable-overload-types
   "An example of dynamic dispatch:
    - When we call `seq` on an input of type `(t/? (t/isa? java.util.Set))`, direct dispatch will
@@ -940,6 +946,8 @@
     (quantum.untyped.core.type.defnt/dotyped quantum.core.type/dotyped)
       (analyze-seq|do    env (list* 'do (rest form)))
     fn*      (TODO "fn*"      {:form form})
+    (quantum.core.type.defnt/fn
+     quantum.untyped.core.type.defnt/fn) (analyze-seq|tfn env form)
     if       (analyze-seq|if    env form)
     let*     (analyze-seq|let*  env form)
     new      (analyze-seq|new   env form)
@@ -968,7 +976,11 @@
         (analyze-seq|call env form))))
 
 (defns- analyze-seq [env ::env, form _]
-  (let [expanded-form (binding [*ns* (or (-> env :opts :ns) *ns*)] (ufeval/macroexpand form))]
+  (let [expanded-form (case (first form)
+                        (quantum.core.type.defnt/fn
+                         quantum.untyped.core.type.defnt/fn)
+                          form ; will be analyzed in `analyze-seq*`
+                        (binding [*ns* (or (-> env :opts :ns) *ns*)] (ufeval/macroexpand form)))]
     (if-let [no-expansion? (ucomp/== form expanded-form)]
       (analyze-seq* env expanded-form)
       (let [expanded-form' (cond-> expanded-form
@@ -1079,7 +1091,7 @@
   ([form _] (analyze {} form))
   ([env ::env, form _]
     (uref/set! !!analyze-depth 0)
-    (analyze* env form)))
+    (binding [*analyzing?* true] (analyze* env form))))
 
 ;; ===== Arglist analysis ===== ;;
 

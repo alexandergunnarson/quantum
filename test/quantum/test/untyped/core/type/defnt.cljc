@@ -2852,6 +2852,7 @@
       ([x0 ?, x1 ?, x2 ?]       (f0       (f1 x0 x1 x2)))
       ([x0 ?, x1 ?, x2 ?, xs ?] (f0 (apply f1 x0 x1 x2 xs))))))
 
+;; Type inference would come in handy here too
 (self/defn aritoid
   ([f0 (t/ftype [])
     >  (t/ftype [:> (t/output f0)])]
@@ -3020,7 +3021,6 @@ B -> (let* [f inc, xs [1]]
 
 ;; TODO Lazy compilation? Maybe just before the typed context when it gets used is when it can be compiled
 
-;; TODO let's see how this is able to be unrolled
 (t/defn map|transducer [f t/tfn?]
   (t/fn [rf ?]
     (^:inline t/fn

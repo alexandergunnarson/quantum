@@ -59,13 +59,19 @@ Legend:
 
 - TODO implement the following:
   [-] t/fn
-      [ ] look at fn comparisons; really there's just <|=|> with <|=|> so 9 combos
       [ ] add `t/fn` as a special form so we don't need to re-analyze its constituents
       [ ] t/ftype should automatically split types, while perhaps t/ftype* should just assume
           they're split (for use by e.g. `t/fn` and `t/defn`)
       [ ] test t/fn to make sure meta 'sticks' : `(t/fn {...} [] ...)`
-  [ ] make local vars sanitary/safe by using more of the gensym feature
-  [2] t/numerically : e.g. a double representing exactly what a float is able to represent
+  [2] `?` : type inference
+      - use logic programming and variable unification e.g. `?1` `?2` ?
+      - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
+        ([n dn/std-integer?, xs dc/counted?] (count xs))
+        ([n dn/std-integer?, xs ?] ...)
+      - [ ] No trailing `>` means `> ?`
+  [3] inner expansion (see tests to see how this could work)
+  [4] make local vars sanitary/safe by making better use of the gensym feature
+  [5] t/numerically : e.g. a double representing exactly what a float is able to represent
       - and variants thereof: `numerically-long?` etc.
       - t/numerically-integer?
       - Primitive conversions not requiring checks can go in data.primitive
@@ -87,12 +93,6 @@ Legend:
       - `[x with-metable?, meta' meta? > (t/run with-metable?) #_(TODO TYPED (t/value-of x))]`
   [ ] (comp/t== x)
        - dependent type such that the passed input must be identical to x
-  [ ] `?` : type inference
-      - use logic programming and variable unification e.g. `?1` `?2` ?
-      - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
-        ([n dn/std-integer?, xs dc/counted?] (count xs))
-        ([n dn/std-integer?, xs ?] ...)
-      - [ ] No trailing `>` means `> ?`f
   [ ] Non-boxed (primitive) `t/def`s: `(var/def- min-float  (Numeric/negate Float/MAX_VALUE))`
       - direct linking doesn't help with this; the way around this is seems to be to do `let` bindings for all captured non-dynamic vars, and unbox the var-values that are primitive
   [ ] `(t/validate x (t/run t/string?))` for `(t/run t/string?)` needs to be more performant
