@@ -14,7 +14,7 @@
            :refer [transient?]]
          [quantum.untyped.core.data
            :refer [val?]]
-         [quantum.untyped.core.data.array
+         [quantum.untyped.core.data.array  :as uarr
            :refer [array?]]
          [quantum.untyped.core.data.map    :as umap]
          [quantum.untyped.core.data.vector :as uvec]
@@ -320,6 +320,18 @@
 (defn >vec [xs] (ur/join xs))
 
 (defn >set [xs] (if (set? xs) xs (ur/join #{} xs)))
+
+(def >array|rf
+  (aritoid uvec/alist
+           (fn [!xs] #?(:clj (.toArray ^java.util.ArrayList !xs) :cljs !xs))
+           uvec/alist-conj!))
+
+(defn >array [xs]
+  (ifs (nil?                           xs) (uarr/*<>)
+       (instance? java.util.Collection xs) (.toArray ^java.util.Collection xs)
+       (ur/transformer?                xs) (educe >array|rf xs)
+       (array?                         xs) xs
+       (uerr/not-supported! `>array xs)))
 
 (def ensure-set
   (condf1
