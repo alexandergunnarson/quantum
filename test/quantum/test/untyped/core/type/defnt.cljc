@@ -2739,10 +2739,10 @@
                        ~'j|test))))))]
               ...)))
 
-;; Automatically analyzes the body of `tfn?`s which have at least one input of `t/fn?`
+;; Automatically analyzes the body of `fnt?`s which have at least one input of `t/fn?`
 ;; Meaning, the body is analyzed as if inline, but if not marked `inline`, will intern a separate fn
 ;; for the purpose
-(t/defn- apply* [f (t/meta-or t/tfn? t/fn?), !xs !alist?]
+(t/defn- apply* [f (t/meta-or t/fnt? t/fn?), !xs !alist?]
   (case (count !xs)
     0  (f !xs)
     1  (f (get !xs 0))
@@ -2820,8 +2820,8 @@
 ;; Now *this* is where type inference would come in handy...
 (self/defn comp
   (^:inline [> (t/value identity)] identity)
-  (^:inline [f0 t/tfn? > (t/type f0)] f0)
-  ([f0 (t/ftype [(t/output f1 :any)]), f1 t/tfn?]
+  (^:inline [f0 t/fnt? > (t/type f0)] f0)
+  ([f0 (t/ftype [(t/output f1 :any)]), f1 t/fnt?]
     (self/fn
       ([]
         (f0 (f1)))
@@ -2843,7 +2843,7 @@
 (self/defn comp
   ;; `> ?` is everywhere implied
   (^:inline [] identity)
-  (^:inline [f0 t/tfn?] f0)
+  (^:inline [f0 t/fnt?] f0)
   ([f0 ?, f1 ?]
     (self/fn
       ([]                       (f0       (f1)))
@@ -3021,7 +3021,7 @@ B -> (let* [f inc, xs [1]]
 
 ;; TODO Lazy compilation? Maybe just before the typed context when it gets used is when it can be compiled
 
-(t/defn map|transducer [f t/tfn?]
+(t/defn map|transducer [f t/fnt?]
   (t/fn [rf ?]
     (^:inline t/fn
       ([] (rf))
