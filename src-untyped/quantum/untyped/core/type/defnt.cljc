@@ -11,7 +11,7 @@
           [quantum.core.type.defs                     :as tdef]
           [quantum.untyped.core.analyze               :as uana]
           [quantum.untyped.core.analyze.ast           :as uast]
-          [quantum.untyped.core.core
+          [quantum.untyped.core.core                  :as ucore
             :refer [istr sentinel]] ; TODO use quantum.untyped.core.string/istr instead
           [quantum.untyped.core.defnt
             :refer [defns defns- fns]]
@@ -65,10 +65,65 @@
           [quantum.core.data Array])))
 
 ;; TODO move
+(def index? #(and (integer? %) (>= % 0)))
+(def count? index?)
+
+(defonce *fn->type (atom {}))
+
+(defonce *interfaces (atom {}))
+
+;; ===== Effects management ===== ;;
+
+(defonce !global-overload-queue (uvec/alist)) ; (t/!seq-of ::types-decl-datum-with-overload)
+
+(uvar/defonce !global-rollback-queue
+  "To ensure that side-effects are as atomic as possible in the case of a failure in `defn` or
+   `extend-defn!`."
+  (uvec/alist)) ; (t/!seq-of (t/ftype []))
+
+(defns- intern-with-rollback! [!rollback-queue _, ns-sym simple-symbol?, sym simple-symbol?, v _]
+  (let [var-val (resolve (uid/qualify ns-sym sym))
+        !value  (atom nil)]
+    (when var-val (reset! !value (var-get var-val)))
+    (intern ns-sym sym v)
+    (alist-conj! !rollback-queue
+      #(if var-val
+           (intern ns-sym sym @!value)
+           (uvar/unintern! ns-sym sym)))))
+
+(defn- drain-rollback-queue!
+  "Rolls back already-executed effects in reverse order."
+  [!rollback-queue]
+  (->> !rollback-queue
+       reverse
+       (uc/run!
+         (c/fn [rollback-fn]
+           (uerr/catch-all (rollback-fn)
+             rollback-err
+             (err! nil "Unable to roll back all effects" {:failed-rollback-fn rollback-fn}
+                   nil rollback-err))))))
+
+(defns- with-rollback! [!overload-queue _, !rollback-queue _, f fn?]
+  (uerr/catch-all
+    (f)
+    e
+    (do (ulog/ppr :error e)
+        (drain-rollback-queue! !rollback-queue)
+        (err! nil "Exception; rolled back successfully" nil nil e))
+    (do (uvec/alist-empty! !rollback-queue)
+        (uvec/alist-empty! !overload-queue))))
+
+(defns- analyze-with-rollback! [unanalyzed-form _]
+  (with-rollback! !global-overload-queue !global-rollback-queue
+    #(-> % unanalyzed-form uana/analyze :form)))
+
+;; ===== Macros ===== ;;
+
+;; TODO move
 #?(:clj
 (defmacro dotyped
   "Like `do`, but evaluates `args` in a typed context."
-  [& args] (-> `(do ~@args) uana/analyze :form)))
+  [& args] (analyze-with-rollback! `(dotyped ~@args))))
 
 ;; TODO move
 #?(:clj
@@ -84,16 +139,18 @@
         (list 'quantum.untyped.core.type.defnt/def sym doc-or-meta nil          v)
         (list 'quantum.untyped.core.type.defnt/def sym nil          doc-or-meta v)))
   ([sym doc meta-val v]
-    (list 'def
-      (if (or doc meta-val)
-          (update-meta sym merge
-            (-> meta-val (cond-> doc (assoc :doc doc)) uana/analyze :form))
-          sym)
-      (let [node (uana/analyze v)]
-        (if (and (-> node :type utr/value-type?)
-                 (-> node :type t/unvalue t/type?))
-            `(utr/with-name ~(:form node) '~(uid/qualify *ns* sym))
-            (:form node)))))))
+    (with-rollback! !global-overload-queue !global-rollback-queue
+      (c/fn []
+        (list 'def
+          (if (or doc meta-val)
+              (update-meta sym merge
+                (-> meta-val (cond-> doc (assoc :doc doc)) uana/analyze :form))
+              sym)
+          (let [node (uana/analyze v)]
+            (if (and (-> node :type utr/value-type?)
+                     (-> node :type t/unvalue t/type?))
+                `(utr/with-name ~(:form node) '~(uid/qualify *ns* sym))
+                (:form node)))))))))
 
 #?(:clj
 (defmacro def-
@@ -105,9 +162,88 @@
   ([sym doc meta-val v] (list 'quantum.untyped.core.type.defnt/def
                           (update-meta sym merge {:private true}) doc meta-val v))))
 
-;; TODO move
-(def index? #(and (integer? %) (>= % 0)))
-(def count? index?)
+
+#?(:clj
+(defmacro fn
+  "With `t/fn`, protocols, interfaces, and multimethods become unnecessary. The preferred method of
+   dispatch becomes the function alone.
+
+   `t/fn` is intended to catch many runtime errors at compile time, but cannot catch all of them.
+
+   `t/fn`, along with `t/defn`, `t/dotyped`, and others, creates a typed context in which its
+   internal forms are analyzed, type-consistency is checked, and type-dispatch is resolved at
+   compile time inasmuch as possible, and at runtime only when necessary.
+
+   Recommendations for the type system:
+   - Primitives are always preferred to boxed values. All values that can be primitives (i.e. ones
+     that are `t/<=` w.r.t. a `(t/isa? <boxed-primitive-class>)`) are treated as primitives unless
+     specifically marked otherwise with the `t/ref` metadata-adding directive.
+   - One could imagine a dynamic set of types corresponding to a given predicate, e.g. `decimal?`.
+     Say someone comes up with a new `decimal?`-like class and wants to redefine `decimal?` to
+     accommodate. One could define `decimal?` as a reactive/extensible type to do this. However, it
+     is preferable to instead define a marker protocol called `PDecimal` or some such and put that
+     on the defined `deftype` itself, and incorporate `PDecimal` into `decimal?` from the start. In
+     this way fewer reactive changes have to happen and less compilation occurs.
+
+   Compile-Time (Direct) Dispatch characteristics
+   - Any input, if its type is `t/<=` a non-nil primitive (boxed or not) class, it will be marked
+     as a primitive in the corresponding `reify`.
+   - If an input is a nilable primitive, its nilability will not result in only one `reify`
+     overload with a boxed input, but rather will result in two `reify` overloads — one
+     corresponding to a nil input and another for the primitive input.
+
+   Runtime (Dynamic) Dispatch characteristics
+   - Compile-Time Dispatch is preferred to Runtime Dispatch in all but the following situations, in
+     which Compile-Time Dispatch is not possible:
+     - When a typed function (or a typed object with function-like characteristics such as a
+       `t/deftype`) is referenced outside of a typed context.
+
+   Metadata directives special to all typed contexts include:
+   - `:val` : If `true` and attached as metadata to a form, it will cause that form's type to be
+              `t/and`ed with `t/val?`.
+   - `:dyn` : If `true` and attached as metadata to a form corresponding with a typed fn in functor
+              position, it will cause that typed fn to be called dynamically if no direct dispatch
+              is found at compile time.
+              - For instance, `(name (read ...))` fails at compile-time; we want it to at least try
+                at runtime. So we annotate like `(^:dyn name (read ...))`, which tells the compiler
+                to figure out at runtime whether a call to `name` will succeed.
+
+   Metadata directives special to `t/fn`/`t/defn` include:
+   - `:inline` : If `true` and attached as metadata to the arglist of an overload, will cause that
+                 overload to be inlined if possible:
+                 - `(t/defn abc (^:inline [] ...))`
+                 If `true` and attached as metadata to the whole `t/defn` or `t/fn`, will cause
+                 every one of its overloads to be inlined if possible. Overloads added to a `t/defn`
+                 with `:inline` `true` will inherit this inline directive unless `:inline` is false
+                 for the overload or `:unline` is true:
+                 - `(t/defn ^:inline abc ([] ...) ([...] ...))`
+                 - `(t/defn ^:inline abc (^{:inline false} [] ...) ([...] ...))`
+                 - `(t/defn ^:inline abc ([] ...) (^:unline [...] ...))`
+                 Note:
+                 - Inlining is possible only in typed contexts.
+                 - If the metadata for an overload changes via `extend-defn!` from designating it as
+                   inline to designating it as non-inline, or vice versa, unexpected behavior may
+                   occur.
+
+   `t/fn` only works fully in contexts in which the metalanguage (compiler language) is the same as
+   the object language. Otherwise, while the compiler could still analyze types symbolically to an
+   extent, it could not actually run evaluated type-predicates on inputs to determine type-satisfaction.
+   - Consumers wishing to use the full-featured `t/fn` in ClojureScript must either use
+     bootstrapped ClojureScript or transpile ClojureScript via the JavaScript implementation of
+     the Google Closure Compiler. Consumers for whom the version of `t/fn` with purely symbolic
+     analysis is acceptable may use the standard approach of transpiling ClojureScript via the Java
+     implementation of the Google Closure Compiler."
+  [& args] (analyze-with-rollback! `(fn ~@args))))
+
+#?(:clj
+(defmacro defn
+  "A `defn` with an empty body is like using `declare`."
+  [& args] (analyze-with-rollback! `(defn ~@args))))
+
+#?(:clj
+(defmacro extend-defn!
+  "Currently undefining overloads is not possible."
+  [& args] (analyze-with-rollback! `(extend-defn! ~@args))))
 
 ;; ===== `t/extend-defn!` specs ===== ;;
 
@@ -120,46 +256,7 @@
           (uss/fn-like|postchecks|gen :quantum.core.defnt/overloads)
           :quantum.core.defnt/postchecks))
 
-;; ===== End `t/extend-defn!` specs ===== ;;
-
-(defonce *fn->type (atom {}))
-
-(defonce defnt-cache (atom {})) ; TODO For now — but maybe lock-free concurrent hash map to come
-
-(defonce *interfaces (atom {}))
-
-(defonce !overload-queue (uvec/alist)) ; (t/!seq-of ::types-decl-datum-with-overload)
-
-(uvar/defonce !rollback-queue
-  "To ensure that side-effects are as atomic as possible in the case of a failure in `defn` or
-   `extend-defn!`."
-  (uvec/alist)) ; (t/!seq-of (t/ftype []))
-
-(defns- intern-with-rollback! [ns-sym simple-symbol?, sym simple-symbol?, v _]
-  (let [var-val (resolve (uid/qualify ns-sym sym))
-        !value  (atom nil)]
-    (when var-val (reset! !value (var-get var-val)))
-    (intern ns-sym sym v)
-    (alist-conj! !rollback-queue
-      #(if var-val
-           (intern ns-sym sym @!value)
-           (uvar/unintern! ns-sym sym)))))
-
-(defn- drain-rollback-queue!
-  "Rolls back already-executed effects in reverse order."
-  []
-  (->> !rollback-queue
-       reverse
-       (uc/run!
-         (c/fn [rollback-fn]
-           (uerr/catch-all (rollback-fn)
-             rollback-err
-             (err! nil "Unable to roll back all effects" {:failed-rollback-fn rollback-fn}
-                   nil rollback-err))))))
-
 ;; ==== Internal specs ===== ;;
-
-(us/def ::lang #{:clj :cljs})
 
 (def ^:dynamic *compilation-mode* :normal)
 
@@ -170,7 +267,6 @@
 (us/def ::opts
   (us/kv {:compilation-mode ::compilation-mode
           :gen-gensym       t/fn?
-          :lang             ::lang
           :kind             ::kind}))
 
 ;; "global" because they apply to the whole `t/fn`
@@ -215,6 +311,7 @@
           :reactive?               boolean?
           :inline?                 boolean?}))
 
+;; Interned as `!overload-bases`
 (us/def ::overload-bases-data
   (us/kv {:prev-norx (us/nilable (us/vec-of ::overload-basis|norx))
           :current   (us/vec-of ::overload-basis)}))
@@ -247,7 +344,7 @@
           :arglist-code|fn|hinted      (us/vec-of simple-symbol?)
           :arglist-code|hinted         (us/vec-of simple-symbol?)
           :arglist-code|reify|unhinted (us/vec-of simple-symbol?)
-          :body-form                   t/any?
+          :body-node                   uast/node?
           :output-class                (us/nilable class?)
           :output-type                 t/type?
           :positional-args-ct          count?
@@ -291,15 +388,11 @@
           :body-codelist       (us/vec-of t/any?)
           :inline?             boolean?}))
 
+;; Interned as `!fn|types`
 (us/def ::fn|types
   (us/kv {:fn|output-type-norx t/type?
           :fn|type-norx        t/type?
           :overload-types      (us/vec-of ::types-decl-datum)}))
-
-#_(:clj
-(c/defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
-  (cond (not= k :spec) java.lang.Object; default class
-        (symbol? spec) (pred->class lang spec))))
 
 (c/defn >with-runtime-output-type [body output-type|form] `(t/validate ~body ~output-type|form))
 
@@ -366,6 +459,8 @@
 
 (defonce thing (atom nil))
 
+(uvar/def- ^:const min-int-value -2147483648)
+
 (c/defn sort-overload-types
   "A naïve implementation would do an aggregate compare on the arg-types vectors, but the resulting
    comparator would not be transitive due to the behavior of `<>` and `><`, and the arg-types
@@ -395,9 +490,8 @@
                              (uc/group-deep-by-into max-arity
                                (c/fn [i x] (let [t (-> x kf (get i))]
                                              (if-let [c (uana/sort-guide t)]
-                                               ;; Min int value to ensure sort-guide ones always
-                                               ;; come first
-                                               (+ -2147483648 c)
+                                               ;; To ensure sort-guide ones always come first
+                                               (+ min-int-value c)
                                                (hash t))))
                                (c/fn ([] (umap/>!sorted-map))
                                      ([ret] (->> ret uc/vals+ uc/cat+ (educe alist-conj!)))
@@ -437,9 +531,10 @@
 (defns- unanalyzed-overload>overload
   "Given an `::unanalyzed-overload`, performs type analysis on the body and computes a resulting
    `t/fn` overload, which is the foundation for one `reify`."
-  [{:as opts       :keys [lang _, kind _]} ::opts
+  [{:as opts       :keys [kind _]} ::opts
    {:as fn|globals :keys [fn|globals-name _, fn|name _, fn|ns-name _, fn|output-type _
                           fn|overload-types-name _]} ::fn|globals
+   env ::uana/env
    {:as unanalyzed-overload
     :keys [arg-classes _, arg-types _, arglist-code|hinted _, arglist-code|reify|unhinted _,
            arglist-form|unanalyzed _, args-form _, body-codelist _ output-type|form _
@@ -452,7 +547,7 @@
   (let [;; Not sure if `nil` is the right approach for the value
         recursive-ast-node-reference
           (when (= kind :defn) (uast/symbol {} fn|name nil fn|type))
-        env          (->> (zipmap (keys args-form) arg-types)
+        local-env    (->> (zipmap (keys args-form) arg-types)
                           (uc/map' (c/fn [[arg-binding arg-type]]
                                      [arg-binding (uast/unbound nil arg-binding arg-type)]))
                           ;; To support recursion
@@ -461,34 +556,35 @@
                                        recursive-ast-node-reference
                                        (uid/qualify fn|ns-name fn|overload-types-name)
                                        fn|overload-types))))
-        body-node    (uana/analyze
-                       (assoc env :opts {:ns (-> unanalyzed-overload :ns-name the-ns)})
-                       (ufgen/?wrap-do body-codelist))
-        hint-arg|fn  (c/fn [i arg-binding]
-                       (ufth/with-type-hint arg-binding
-                         (ufth/>fn-arglist-tag
-                           (uc/get arg-classes i)
-                           lang
-                           (uc/count args-form)
-                           variadic?)))
+        env'         (-> env
+                         (merge local-env)
+                         (assoc-in [:opts :ns] (-> unanalyzed-overload :ns-name the-ns)))
+        body-node    (uana/analyze env' (ufgen/?wrap-do body-codelist))
         output-type  (with-validate-output-type declared-output-type body-node)
         output-class (type>class output-type)
-        body-form
-          (-> (:form body-node)
+        body-node
+          (-> body-node
               (cond-> (t/run? output-type)
                 ;; TODO here the output type is being re-created each time (unless the fn's overall
                 ;;      output type is being preferred) because it could reference inputs, but we
                 ;;      should probably analyze to determine whether it references inputs so we can,
                 ;;      in the 90% case, extern the output type
-                (>with-runtime-output-type
+                (update :form >with-runtime-output-type
                   (or output-type|form
                       `(?norx-deref (:fn|output-type ~(uid/qualify fn|ns-name fn|globals-name)))))))
         positional-args-ct (count args-form)
+        hint-arg|fn  (c/fn [i arg-binding]
+                       (ufth/with-type-hint arg-binding
+                         (ufth/>fn-arglist-tag
+                           (uc/get arg-classes i)
+                           ucore/lang
+                           (uc/count args-form)
+                           variadic?)))
         arglist-code|fn|hinted
           (cond-> (->> args-form keys (uc/map-indexed hint-arg|fn))
             variadic? (conj '& (-> varargs-form keys first)))]
       (kw-map arglist-form|unanalyzed arg-classes arg-types arglist-code|fn|hinted
-              arglist-code|reify|unhinted arglist-code|hinted body-form positional-args-ct
+              arglist-code|reify|unhinted arglist-code|hinted body-node positional-args-ct
               output-type output-class variadic?))))
 
 (defns- class>interface-part-name [c class? > string?]
@@ -527,7 +623,7 @@
 #?(:clj
 (defns overload>reify
   [{:as   overload
-    :keys [arg-classes _, arglist-code|reify|unhinted _, body-form _, output-class _]} ::overload
+    :keys [arg-classes _, arglist-code|reify|unhinted _, body-node _, output-class _]} ::overload
    {:as opts :keys [gen-gensym _]} ::opts
    {:keys [fn|name _]} ::fn|globals
    overload|id ::overload|id
@@ -554,7 +650,7 @@
                 (reify* [~(-> interface >name >symbol)]
                   (~(ufth/with-type-hint uana/direct-dispatch-method-sym
                       (ufth/>arglist-embeddable-tag output-class|reify))
-                    ~arglist-code ~body-form)))]
+                    ~arglist-code ~(:form body-node))))]
     {:form        form
      :hinted-name reify|name
      :interface   interface
@@ -604,16 +700,17 @@
 (defns- >overload-types-decl
   "The evaluated `form` of each overload-types-decl is an array of non-primitivized types that the
    dynamic dispatch uses to dispatch off input types."
-  [{:as opts :keys [compilation-mode _, lang _]} ::opts
+  [{:as opts :keys [compilation-mode _]} ::opts
    {:as fn|globals :keys [fn|ns-name _, fn|name _, fn|overload-types-name _]} ::fn|globals
    {:as types-decl-datum :keys [id _, index _] ns-name- [:ns-name _]} ::types-decl-datum
    fn|types ::fn|types
    > ::overload-types-decl]
   (let [decl-name (-> (>overload-types-decl|name fn|name id)
                       (ufth/with-type-hint "[Ljava.lang.Object;"))
-        form      (if (or (not= compilation-mode :test) (= lang :clj))
+        form      (if (or (not= compilation-mode :test) (= ucore/lang :clj))
                       (let [arg-types (overload-types>arg-types fn|types index)]
-                        (do (intern-with-rollback! ns-name- decl-name arg-types)
+                        (do (intern-with-rollback!
+                              !global-rollback-queue ns-name- decl-name arg-types)
                             nil))
                       `(def ~decl-name
                          (overload-types>arg-types
@@ -747,10 +844,10 @@
            (err! "Duplicate input types for overload"
                  (umap/om :arglist-form-0 (:arglist-form|unanalyzed prev-overload)
                           :arg-types-0    (:arg-types prev-overload)
-                          :body-0         (:body-form prev-overload)
+                          :body-0         (-> prev-overload :body-node :form)
                           :arglist-form-1 (:arglist-form|unanalyzed overload)
                           :arg-types-1    (:arg-types overload)
-                          :body-1         (:body-form overload)))))))
+                          :body-1         (-> overload :body-node :form)))))))
 
 (defns- overload-bases-data>fn|types
   "Each overload type is structurally (`=`) unique and if an overload is introduced which is `t/=`
@@ -760,6 +857,8 @@
    opts                ::opts
    {:as   fn|globals
     :keys [fn|name _, fn|ns-name _, fn|output-type _, fn|overload-types-name _]} ::fn|globals
+   env             _
+   !overload-queue _
    > ::fn|types]
   (establish-dependency-relations-on-new-overload-bases! fn|output-type overload-bases-data)
   (let [fn|output-type-norx|prev (:fn|output-type-norx existing-fn-types)
@@ -817,7 +916,7 @@
                    (uc/map-indexed
                      (c/fn [i x]
                        (let [id (+ i first-current-overload-id)]
-                         (unanalyzed-overload>overload opts fn|globals x id
+                         (unanalyzed-overload>overload opts fn|globals env x id
                            overload-types-with-replacing-ids fn|type-norx)))))
             overload-types
               (->> overload-types-with-replacing-ids
@@ -835,11 +934,12 @@
 ;; ----- Direct dispatch ----- ;;
 
 (defns- >direct-dispatch
-  [{:as opts :keys [gen-gensym _, lang _, kind _]} ::opts
-   fn|globals ::fn|globals
-   fn|types   ::fn|types
+  [{:as opts :keys [gen-gensym _, kind _]} ::opts
+   fn|globals      ::fn|globals
+   fn|types        ::fn|types
+   !overload-queue _
    > ::direct-dispatch]
-  (case lang
+  (case ucore/lang
     :clj  (let [direct-dispatch-data-seq
                   (->> !overload-queue
                        (uc/map
@@ -914,7 +1014,7 @@
           (>combinatoric-seq+ fn|globals overload-types-for-arity arglist)))))
 
 (defns- >dynamic-dispatch-fn|codelist
-  [{:as opts       :keys [compilation-mode _, gen-gensym _, lang _, kind _]} ::opts
+  [{:as opts       :keys [compilation-mode _, gen-gensym _, kind _]} ::opts
    {:as fn|globals :keys [fn|meta _, fn|ns-name _, fn|name _, fn|output-type _
                           fn|overload-types-name _, fn|type-name _]} ::fn|globals
    fn|types ::fn|types]
@@ -1117,11 +1217,12 @@
                    :current (incorporate-overload-bases current new-overload-bases)}]
             (with-optional-validate-overload-bases overload-bases')
             (let [prev-overload-bases (norx-deref !overload-bases)]
-              (alist-conj! !rollback-queue
+              (alist-conj! !global-rollback-queue
                 #(uref/set! !overload-bases prev-overload-bases))
               (uref/set! !overload-bases overload-bases'))))
         (with-do-let [!overload-bases (urx/! {:prev-norx nil :current new-overload-bases})]
-          (intern-with-rollback! fn|ns-name fn|overload-bases-name !overload-bases)))))
+          (intern-with-rollback!
+            !global-rollback-queue fn|ns-name fn|overload-bases-name !overload-bases)))))
 
 (defns- >!fn|types
   "`!fn|types` is a reaction which depends on the `!overload-bases` atom and all reactive types
@@ -1132,17 +1233,20 @@
    what they'll be for the lifetime of the function."
   [{:as opts       :keys [kind _]} ::opts
    {:as fn|globals :keys [fn|ns-name _, fn|overload-types-name _, fn|type-name _]} ::fn|globals
-   !overload-bases urx/reactive?]
+   env             ::uana/env
+   !overload-bases urx/reactive?
+   !overload-queue _]
   (if (= kind :extend-defn!)
       (-> (uid/qualify fn|ns-name fn|overload-types-name) resolve var-get)
       (with-do-let [!fn|types (doto (urx/!rx @!overload-bases)
                                     (uref/add-interceptor! :the-interceptor
                                       (c/fn [_ _ old-overload-types overload-bases-data]
                                         ;; `opts` and `fn|globals` are closed over
-                                        (overload-bases-data>fn|types
-                                          overload-bases-data old-overload-types opts fn|globals)))
+                                        (overload-bases-data>fn|types overload-bases-data
+                                          old-overload-types opts fn|globals env !overload-queue)))
                                     norx-deref)]
-        (intern-with-rollback! fn|ns-name fn|overload-types-name !fn|types))))
+        (intern-with-rollback!
+          !global-rollback-queue fn|ns-name fn|overload-types-name !fn|types))))
 
 (defns- >!fn|type
   [{:as opts       :keys [kind _]} ::opts
@@ -1151,31 +1255,31 @@
   (if (= kind :extend-defn!)
       (-> (uid/qualify fn|ns-name fn|type-name) resolve var-get)
       (with-do-let [!fn|type (t/rx* (urx/>!rx #(:fn|type-norx @!fn|types) {:eq-fn t/=}) nil)]
-        (intern-with-rollback! fn|ns-name fn|type-name !fn|type))))
+        (intern-with-rollback! !global-rollback-queue fn|ns-name fn|type-name !fn|type))))
 
 ;; ===== `opts` + `fn|globals` ===== ;;
 
 (defns- >fn|opts
   "`opts` are per invocation of `t/defn` and/or `extend-defn!`, while `globals` persist for as long
    as the `t/defn` does."
-  [kind ::kind, lang ::lang, compilation-mode ::compilation-mode > ::opts]
+  [kind ::kind, compilation-mode ::compilation-mode > ::opts]
   (let [gen-gensym-base (ufgen/>reproducible-gensym|generator)
         gen-gensym      (c/fn [x] (symbol (str (gen-gensym-base x) "__")))]
-    (kw-map compilation-mode gen-gensym kind lang)))
+    (kw-map compilation-mode gen-gensym kind)))
 
 (defns- >fn|globals+?overload-bases-form
   "`opts` are per invocation of `t/defn` and/or `extend-defn!`, while `globals` persist for as long
    as the `t/defn` does."
-  [kind ::kind, args _ > (us/kv {:fn|globals ::fn|globals :overload-bases-form t/any?})]
-  (let [{:as args'
-         :keys [:quantum.core.specs/fn|name
+  [kind ::kind, unanalyzed-form _ > (us/kv {:fn|globals ::fn|globals :overload-bases-form t/any?})]
+  (let [{:keys [:quantum.core.specs/fn|name
                 :quantum.core.defnt/fn|extended-name
                 :quantum.core.defnt/output-spec]
          overload-bases-form :quantum.core.defnt/overloads
          fn|meta :quantum.core.specs/meta}
-          (us/validate args (case kind :defn         :quantum.core.defnt/defnt
-                                       :fn           :quantum.core.defnt/fnt
-                                       :extend-defn! :quantum.core.defnt/extend-defn!))
+          (us/validate (rest unanalyzed-form)
+            (case kind :defn         :quantum.core.defnt/defnt
+                       :fn           :quantum.core.defnt/fnt
+                       :extend-defn! :quantum.core.defnt/extend-defn!))
         fn|var          (when (= kind :extend-defn!)
                               (or (uvar/resolve *ns* fn|extended-name)
                           (err! "Could not resolve fn name to extend"
@@ -1187,132 +1291,82 @@
                             (-> fn|extended-name >name symbol)
                             fn|name)
         fn|globals-name (symbol (str fn|name "|__globals"))]
-      (if (= kind :extend-defn!)
-          {:fn|globals          (-> (uid/qualify fn|ns-name fn|globals-name) resolve var-get)
-           :overload-bases-form overload-bases-form}
-          (let [fn|inline?             (if (nil? (:inline fn|meta))
-                                           false
-                                           (us/validate (:inline fn|meta) t/boolean?))
-                fn|meta                (dissoc fn|meta :inline)
-                fn|output-type|form    (or (second output-spec) `t/any?)
-                ;; TODO this needs to be analyzed for dependent types referring to local vars
-                fn|output-type         (eval fn|output-type|form)
-                fn|overload-bases-name (symbol (str fn|name "|__bases"))
-                fn|overload-types-name (symbol (str fn|name "|__types"))
-                fn|type-name           (symbol (str fn|name "|__type"))
-                fn|globals
-                  (kw-map fn|globals-name fn|inline? fn|meta fn|name fn|ns-name fn|output-type|form
-                          fn|output-type fn|overload-bases-name fn|overload-types-name
-                          fn|type-name)]
-            (intern-with-rollback! fn|ns-name fn|globals-name fn|globals)
-            (kw-map fn|globals overload-bases-form)))))
+    (if (= kind :extend-defn!)
+        {:fn|globals          (-> (uid/qualify fn|ns-name fn|globals-name) resolve var-get)
+         :overload-bases-form overload-bases-form}
+        (let [fn|inline?             (if (nil? (:inline fn|meta))
+                                         false
+                                         (us/validate (:inline fn|meta) t/boolean?))
+              fn|meta                (dissoc fn|meta :inline)
+              fn|output-type|form    (or (second output-spec) `t/any?)
+              ;; TODO this needs to be analyzed for dependent types referring to local vars
+              fn|output-type         (eval fn|output-type|form)
+              fn|overload-bases-name (symbol (str fn|name "|__bases"))
+              fn|overload-types-name (symbol (str fn|name "|__types"))
+              fn|type-name           (symbol (str fn|name "|__type"))
+              fn|globals
+                (kw-map fn|globals-name fn|inline? fn|meta fn|name fn|ns-name fn|output-type|form
+                        fn|output-type fn|overload-bases-name fn|overload-types-name
+                        fn|type-name)]
+          (intern-with-rollback! !global-rollback-queue fn|ns-name fn|globals-name fn|globals)
+          (kw-map fn|globals overload-bases-form)))))
 
 ;; ===== Whole `t/(de)fn` creation ===== ;;
 
-(defns fn|code [kind ::kind, lang ::lang, compilation-mode ::compilation-mode, args _]
-  (uerr/catch-all
-    (let [opts (>fn|opts kind lang compilation-mode)
-          {:keys [fn|globals overload-bases-form]} (>fn|globals+?overload-bases-form kind args)
-          !overload-bases (>!overload-bases opts fn|globals overload-bases-form)
-          !fn|types       (>!fn|types       opts fn|globals !overload-bases)
-          fn|types        (norx-deref !fn|types)
-          !fn|type        (>!fn|type        opts fn|globals !fn|types)]
-      (if (empty? (norx-deref !overload-bases))
-          `(declare ~(:fn|name fn|globals))
-          (let [direct-dispatch  (>direct-dispatch              opts fn|globals fn|types)
-                dynamic-dispatch (>dynamic-dispatch-fn|codelist opts fn|globals fn|types)
-                fn-codelist
-                  (->> `[~@(:form direct-dispatch)
-                         ~@dynamic-dispatch]
-                       (remove nil?))]
-            (case kind
-              :fn                   (TODO "Haven't done t/fn yet")
-              (:defn :extend-defn!) `(do ~@fn-codelist)))))
-    e
-    (do (ulog/ppr :error e)
-        (drain-rollback-queue!)
-        (err! nil "Exception; rolled back successfully" nil nil e))
-    (do (uvec/alist-empty! !rollback-queue)
-        (uvec/alist-empty! !overload-queue))))
+(defns analyze-fn [env ::uana/env, form _]
+  (TODO))
 
-#?(:clj
-(defmacro fn
-  "With `t/fn`, protocols, interfaces, and multimethods become unnecessary. The preferred method of
-   dispatch becomes the function alone.
+(reset! uana/!!analyze-fnt analyze-fn)
 
-   `t/fn` is intended to catch many runtime errors at compile time, but cannot catch all of them.
+;; TODO lazily and incrementally analyze this; maybe we want to do code transformations which don't
+;; require analysis, as shown in tests
+(defns- analyze-defn* [kind #{:defn :extend-defn!}, env ::uana/env, unanalyzed-form _ > uast/node?]
+  (let [opts            (>fn|opts kind *compilation-mode*)
+        !overload-queue !global-overload-queue
+        {:keys [fn|globals overload-bases-form]
+         {:keys [fn|ns-name fn|name fn|meta fn|globals-name]} :fn|globals}
+          (>fn|globals+?overload-bases-form kind unanalyzed-form)
+        !overload-bases (>!overload-bases opts fn|globals overload-bases-form)
+        !fn|types       (>!fn|types       opts fn|globals env !overload-bases !overload-queue)
+        fn|types        (norx-deref !fn|types)
+        !fn|type        (>!fn|type        opts fn|globals !fn|types)
+        {:keys [form overloads]}
+          (if (empty? (norx-deref !overload-bases))
+              {:form      `(declare ~(:fn|name fn|globals))
+               :overloads []}
+              (let [direct-dispatch
+                      (>direct-dispatch opts fn|globals fn|types !overload-queue)
+                    dynamic-dispatch (>dynamic-dispatch-fn|codelist opts fn|globals fn|types)
+                    fn-codelist
+                      (->> `[~@(:form direct-dispatch)
+                             ~@dynamic-dispatch]
+                           (remove nil?))]
+                {:form `(do ~@fn-codelist)
+                 :overloads (->> direct-dispatch
+                                 :direct-dispatch-data-seq
+                                 (uc/map+ (fn-> :reify :overload))
+                                 (uc/map
+                                   (c/fn [overload]
+                                     {:type      (:output-type overload)
+                                      :arg-types (:arg-types   overload)
+                                      :body      (:body-node   overload)})))}))
+        ast-basis
+          {:env             env
+           :unanalyzed-form unanalyzed-form
+           :name            fn|name
+           :meta            fn|meta
+           :overloads       overloads
+           :form            form
+                            ;; TODO is `norx-deref` the right approach?
+           :type            (norx-deref !fn|type)}]
+    (case kind
+      :defn         (uast/defnt-node        ast-basis)
+      :extend-defn! (uast/extend-defnt-node ast-basis))))
 
-   `t/fn`, along with `t/defn`, `t/dotyped`, and others, creates a typed context in which its
-   internal forms are analyzed, type-consistency is checked, and type-dispatch is resolved at
-   compile time inasmuch as possible, and at runtime only when necessary.
+(defns analyze-defn [env ::uana/env, form _ > uast/node?] (analyze-defn* :defn env form))
 
-   Recommendations for the type system:
-   - Primitives are always preferred to boxed values. All values that can be primitives (i.e. ones
-     that are `t/<=` w.r.t. a `(t/isa? <boxed-primitive-class>)`) are treated as primitives unless
-     specifically marked otherwise with the `t/ref` metadata-adding directive.
-   - One could imagine a dynamic set of types corresponding to a given predicate, e.g. `decimal?`.
-     Say someone comes up with a new `decimal?`-like class and wants to redefine `decimal?` to
-     accommodate. One could define `decimal?` as a reactive/extensible type to do this. However, it
-     is preferable to instead define a marker protocol called `PDecimal` or some such and put that
-     on the defined `deftype` itself, and incorporate `PDecimal` into `decimal?` from the start. In
-     this way fewer reactive changes have to happen and less compilation occurs.
+(reset! uana/!!analyze-defnt analyze-defn)
 
-   Compile-Time (Direct) Dispatch characteristics
-   - Any input, if its type is `t/<=` a non-nil primitive (boxed or not) class, it will be marked
-     as a primitive in the corresponding `reify`.
-   - If an input is a nilable primitive, its nilability will not result in only one `reify`
-     overload with a boxed input, but rather will result in two `reify` overloads — one
-     corresponding to a nil input and another for the primitive input.
+(defns analyze-extend-defn [env ::uana/env, form _] (analyze-defn* :extend-defn! env form))
 
-   Runtime (Dynamic) Dispatch characteristics
-   - Compile-Time Dispatch is preferred to Runtime Dispatch in all but the following situations, in
-     which Compile-Time Dispatch is not possible:
-     - When a typed function (or a typed object with function-like characteristics such as a
-       `t/deftype`) is referenced outside of a typed context.
-
-   Metadata directives special to all typed contexts include:
-   - `:val` : If `true` and attached as metadata to a form, it will cause that form's type to be
-              `t/and`ed with `t/val?`.
-   - `:dyn` : If `true` and attached as metadata to a form corresponding with a typed fn in functor
-              position, it will cause that typed fn to be called dynamically if no direct dispatch
-              is found at compile time.
-              - For instance, `(name (read ...))` fails at compile-time; we want it to at least try
-                at runtime. So we annotate like `(^:dyn name (read ...))`, which tells the compiler
-                to figure out at runtime whether a call to `name` will succeed.
-
-   Metadata directives special to `t/fn`/`t/defn` include:
-   - `:inline` : If `true` and attached as metadata to the arglist of an overload, will cause that
-                 overload to be inlined if possible:
-                 - `(t/defn abc (^:inline [] ...))`
-                 If `true` and attached as metadata to the whole `t/defn` or `t/fn`, will cause
-                 every one of its overloads to be inlined if possible. Overloads added to a `t/defn`
-                 with `:inline` `true` will inherit this inline directive unless `:inline` is false
-                 for the overload or `:unline` is true:
-                 - `(t/defn ^:inline abc ([] ...) ([...] ...))`
-                 - `(t/defn ^:inline abc (^{:inline false} [] ...) ([...] ...))`
-                 - `(t/defn ^:inline abc ([] ...) (^:unline [...] ...))`
-                 Note:
-                 - Inlining is possible only in typed contexts.
-                 - If the metadata for an overload changes via `extend-defn!` from designating it as
-                   inline to designating it as non-inline, or vice versa, unexpected behavior may
-                   occur.
-
-   `t/fn` only works fully in contexts in which the metalanguage (compiler language) is the same as
-   the object language. Otherwise, while the compiler could still analyze types symbolically to an
-   extent, it could not actually run evaluated type-predicates on inputs to determine type-satisfaction.
-   - Consumers wishing to use the full-featured `t/fn` in ClojureScript must either use
-     bootstrapped ClojureScript or transpile ClojureScript via the JavaScript implementation of
-     the Google Closure Compiler. Consumers for whom the version of `t/fn` with purely symbolic
-     analysis is acceptable may use the standard approach of transpiling ClojureScript via the Java
-     implementation of the Google Closure Compiler."
-  [& args] (fn|code :fn (ufeval/env-lang) *compilation-mode* args)))
-
-#?(:clj
-(defmacro defn
-  "A `defn` with an empty body is like using `declare`."
-  [& args] (fn|code :defn (ufeval/env-lang) *compilation-mode* args)))
-
-#?(:clj
-(defmacro extend-defn!
-  "Currently undefining overloads is not possible."
-  [& args] (fn|code :extend-defn! (ufeval/env-lang) *compilation-mode* args)))
+(reset! uana/!!analyze-extend-defnt analyze-extend-defn)
