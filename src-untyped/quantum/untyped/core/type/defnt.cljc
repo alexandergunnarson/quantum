@@ -1363,7 +1363,7 @@
                 {:form      (if overload-types|form
                                 `(do ~overload-types|form
                                      ~defmeta-form)
-                                defmeta-form)
+                                `(do ~defmeta-form))
                  :overloads (->> direct-dispatch-seq
                                  (uc/map
                                    (c/fn [{:keys [overload]}]
