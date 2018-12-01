@@ -361,7 +361,7 @@
    unanalyzed-form #_::t/form
    form            #_::t/form
    arg             #_::node
-   type            #_t/nil?]
+   type            #_(t/value t/none?)]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
@@ -371,3 +371,44 @@
 (defn throw-node [m] (map->ThrowNode m))
 
 (defn throw-node? [x] (instance? ThrowNode x))
+
+(defrecord TypedDefnNode
+  [env             #_::env
+   unanalyzed-form #_::t/form
+   name            #_simple-symbol?
+   meta            #_meta?
+   overloads       #_(t/vec-of (t/kv {:arg-types (t/vec-of t/type?)
+                                      :type      t/type?
+                                      :body      node?}))
+   form            #_::t/form
+   type            #_t/type?]
+  INode
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] (list `defnt-node (std-print-structure this))))
+
+;; Not type hinted because it's inferred
+(defn defnt-node [m] (map->TypedDefnNode m))
+
+(defn defnt-node? [x] (instance? TypedDefnNode x))
+
+(defrecord ExtendTypedDefnNode
+  [env             #_::env
+   unanalyzed-form #_::t/form
+   name            #_simple-symbol?
+   meta            #_meta?
+                   ;; The extensions, not the original overloads (which data will have been lost)
+   overloads       #_(t/vec-of (t/kv {:arg-types (t/vec-of t/type?)
+                                      :type      t/type?
+                                      :body      node?}))
+   form            #_::t/form
+   type            #_t/type?] ; of the extended fn
+  INode
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] (list `defnt-node (std-print-structure this))))
+
+;; Not type hinted because it's inferred
+(defn extend-defnt-node [m] (map->ExtendTypedDefnNode m))
+
+(defn extend-defnt-node? [x] (instance? ExtendTypedDefnNode x))
