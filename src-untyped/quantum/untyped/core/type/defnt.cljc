@@ -115,7 +115,7 @@
 
 (defns- analyze-with-rollback! [unanalyzed-form _]
   (with-rollback! !global-overload-queue !global-rollback-queue
-    #(-> % unanalyzed-form uana/analyze :form)))
+    (c/fn [] (-> unanalyzed-form uana/analyze :form))))
 
 ;; ===== Macros ===== ;;
 

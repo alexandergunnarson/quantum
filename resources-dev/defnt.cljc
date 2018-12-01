@@ -166,6 +166,8 @@ Legend:
           - (t/seq vector? [   [0 (t/value :a)]    [1 (t/value :b)]     [2 (t/value :c)]])
           - (t/kv  vector? { 0 [0 (t/value :a)]  1 [1 (t/value :b)]   2 [2 (t/value :c)]})
         - and so on ad infinitum. Therefore we reserve `t/kv` for `(t/and t/lookup? (t/not indexed?))`.
+  - TODO why are there two overloads in this case??
+    (uana/pr! (uana/analyze `(defn ~'abcde [])))
   - Probably comparing a protocol with something else should be a matter for reactivity since
     protocols can be extended
     - TODO CLJS needs to implement it better
