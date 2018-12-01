@@ -7,9 +7,9 @@
       :refer [dotyped]]
     [quantum.test.untyped.core.type         :as tt]
     [quantum.untyped.core.type.defnt        :as self
-      :refer [unsupported!]]
+      :refer [aget* aset* unsupported!]]
     [quantum.untyped.core.data.array
-      :refer [*<> *<>|macro]]
+      :refer [*<>]]
     [quantum.untyped.core.form
       :refer [$ code=]]
     [quantum.untyped.core.form.evaluate
@@ -73,9 +73,6 @@
 (def &fs (O<> 'fs__))
 (def &this '&this)
 
-(defn aget* [x i]   (list '. 'clojure.lang.RT 'aget x i))
-(defn aset* [x i v] (list '. 'clojure.lang.RT 'aset x i v))
-
 #?(:clj
 (deftest test|pid
   (let [actual
@@ -87,20 +84,20 @@
         expected
         ($ (do [[0 0 false [] (t/or t/nil? t/string?)]]
                (defmeta-from ~'pid
-                 (let* [~pid|__fs (*<>|sized|macro 1)
+                 (let* [~'pid|__fs (*<>|sized 1)
                         ~'pid (new TypedFn
                                 {:quantum.core.type/type pid|__type}
-                                pid|__!types ; defined/created within `t/defn`
-                                pid|__fs
+                                pid|__types ; defined/created within `t/defn`
+                                ~'pid|__fs
                                 (fn* ([~&ts ~&fs] (. ~(aget* &fs 0) ~'invoke))))]
-                   ~(aset* pid|__fs 0
+                   ~(aset* 'pid|__fs 0
                      `(reify* [~(csym `__O)]
                         (~(O 'invoke) [~&this]
                           ~(ST (list '.
                                  (tag "java.lang.management.RuntimeMXBean"
                                       '(. java.lang.management.ManagementFactory getRuntimeMXBean))
                                  'getName)))))
-                   f))))]
+                   ~'pid))))]
     (testing "code equivalence" (is-code= actual expected))
     (testing "functionality"
       (eval actual)
@@ -2526,7 +2523,7 @@
               :clj
               ($ (do [[0 0 false [] (t/ftype tt/boolean? [tt/byte? :> (t/ftype [tt/char?])])]]
             (defmeta-from ~'f0|test
-              (let* [~'f0|test|__fs (*<>|sized|macro 2)
+              (let* [~'f0|test|__fs (*<>|sized 2)
                      ~'f0|test
                        (new TypedFn
                          {:quantum.core.type/type ~'f0|test|__type}
@@ -2542,13 +2539,13 @@
                  `(reify* [~(csym `B__O)]
                     (~'invoke [~&this ~(B 'a)]
                       ;; From `(self/fn [b ...])`
-                      (let* [~'f__0|__fs (*<>|sized|macro 2)
+                      (let* [~'f__0|__fs (*<>|sized 2)
                              ~'f__0
                                (new TypedFn nil
                                  ;; TODO perhaps extern this (and parts thereof) whenever
                                  ;; possible in `let*` statement on the very outside of the fn
                                  ;; (so around the outer `reify*`) ?
-                                 (*<>|macro (*<>|macro t/byte?) (*<>|macro t/char?))
+                                 (*<> (*<> t/byte?) (*<> t/char?))
                                  ~'f__0|__fs
                                  (fn* ([~&ts ~&fs ~'x00__]
                                         (ifs (~(aget* (aget* ~&ts 0) 0) ~'x00__)
@@ -2560,10 +2557,10 @@
                          `(reify* [~(csym `Y__O)]
                             (~'invoke [~'_0__ ~(Y 'b)]
                               ;; From `(self/fn [c ...])`
-                              (let* [~'f1|test|__fs (*<>|sized|macro 2)
+                              (let* [~'f1|test|__fs (*<>|sized 2)
                                      ~'f1|test
                                        (new TypedFn nil
-                                         (*<>|macro (*<>|macro t/boolean?) (*<>|macro t/short?))
+                                         (*<> (*<> t/boolean?) (*<> t/short?))
                                          ~'f1|test|__fs
                                          (fn* ([~&ts ~&fs ~'x00]
                                                 (ifs (~(aget* (aget* &ts 0) 0) ~'x00__)
@@ -2629,7 +2626,7 @@
             (case (env-lang)
               :clj
           ($ (do (defmeta-from ~'g|test
-                   (let* [~'g|test|__fs (*<>|sized|macro 1)
+                   (let* [~'g|test|__fs (*<>|sized 1)
                           ~'g|test
                             (new TypedFn
                               {:quantum.core.type/type ~'g|__type}
@@ -2644,7 +2641,7 @@
                           (~'invoke [~&this ~(O 'f0)] (~'f0 5))))
                      ~'g|test))
                  (defmeta-from ~'h|test
-                   (let* [~'h|test|__fs (*<>|sized|macro 1)
+                   (let* [~'h|test|__fs (*<>|sized 1)
                           ~'h|test
                             (new TypedFn
                               {:quantum.core.type/type ~'h|__type}
@@ -2659,7 +2656,7 @@
                           (~'invoke [~&this ~(O 'f0)] f0)))
                      ~'h|test))
                  (defmeta-from ~'i|test
-                   (let* [~'i|test|__fs (*<>|sized|macro 1)
+                   (let* [~'i|test|__fs (*<>|sized 1)
                           ~'i|test
                             (new TypedFn
                               {:quantum.core.type/type ~'i|__type}
@@ -2678,7 +2675,7 @@
                         ~'h|test|__ (deref ~(list 'var `h|test))
                         ~'i|test|__ (deref ~(list 'var `i|test))]
                    (defmeta-from ~'j|test
-                     (let* [~'j|test|__fs (*<>|sized|macro 1)
+                     (let* [~'j|test|__fs (*<>|sized 1)
                             ~'j|test
                               (new TypedFn
                                 {:quantum.core.type/type ~'j|__type}
@@ -3315,3 +3312,5 @@ So GClass implements _-627458773_-1854681952
 But now _-627458773_-123456 needs to extend _-627458773_-1854681952, which requires a rewrite of all
 things that use it... so I don't think inheritance is our answer.
 "
+
+;; TODO quantum.test.untyped.core.defnt should be incorporated here — includes some destructuring

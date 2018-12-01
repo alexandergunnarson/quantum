@@ -15,14 +15,15 @@
      :cljs (core/array? x)))
 
 #?(:clj
-(defmacro *<>|sized|macro [n]
+(defmacro *<>|sized [n]
   (case-env :clj  `(Array/newUninitialized1dObjectArray ~n)
             :cljs `(let [arr# (cljs.core/array)]
                      (set! (.-length arr#) ~n)
                      arr#))))
 
-#?(:clj
-(defmacro *<>|macro
+(defn *<>|sized|fn [#?(:clj ^long n :cljs ^number n)] (*<>|sized n))
+
+(defn *<>|code
   ([]
     #?(:clj  `(Array/newUninitialized1dObjectArray 0)
        :cljs `(core/array)))
@@ -65,21 +66,23 @@
                   ~@(for [[i x] (->> (concat [x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10] xs)
                                      (map-indexed vector))]
                       `(Array/set ~arr-sym (Primitive/box ~x) ~i))))
-       :cljs `(core/array ~x0 ~x1 ~x2 ~x3 ~x4 ~x5 ~x6 ~x7 ~x8 ~x9 ~x10 ~@xs)))))
+       :cljs `(core/array ~x0 ~x1 ~x2 ~x3 ~x4 ~x5 ~x6 ~x7 ~x8 ~x9 ~x10 ~@xs))))
 
-(defn ^"[Ljava.lang.Object;" *<>
-  ([]                                  (*<>|macro))
-  ([x0]                                (*<>|macro x0))
-  ([x0 x1]                             (*<>|macro x0 x1))
-  ([x0 x1 x2]                          (*<>|macro x0 x1 x2))
-  ([x0 x1 x2 x3]                       (*<>|macro x0 x1 x2 x3))
-  ([x0 x1 x2 x3 x4]                    (*<>|macro x0 x1 x2 x3 x4))
-  ([x0 x1 x2 x3 x4 x5]                 (*<>|macro x0 x1 x2 x3 x4 x5))
-  ([x0 x1 x2 x3 x4 x5 x6]              (*<>|macro x0 x1 x2 x3 x4 x5 x6))
-  ([x0 x1 x2 x3 x4 x5 x6 x7]           (*<>|macro x0 x1 x2 x3 x4 x5 x6 x7))
-  ([x0 x1 x2 x3 x4 x5 x6 x7 x8]        (*<>|macro x0 x1 x2 x3 x4 x5 x6 x7 x8))
-  ([x0 x1 x2 x3 x4 x5 x6 x7 x8 x9]     (*<>|macro x0 x1 x2 x3 x4 x5 x6 x7 x8 x9))
-  ([x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10] (*<>|macro x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10))
+#?(:clj (defmacro *<> [& xs] (apply *<>|code xs)))
+
+(defn ^"[Ljava.lang.Object;" *<>|fn
+  ([]                                  (*<>))
+  ([x0]                                (*<> x0))
+  ([x0 x1]                             (*<> x0 x1))
+  ([x0 x1 x2]                          (*<> x0 x1 x2))
+  ([x0 x1 x2 x3]                       (*<> x0 x1 x2 x3))
+  ([x0 x1 x2 x3 x4]                    (*<> x0 x1 x2 x3 x4))
+  ([x0 x1 x2 x3 x4 x5]                 (*<> x0 x1 x2 x3 x4 x5))
+  ([x0 x1 x2 x3 x4 x5 x6]              (*<> x0 x1 x2 x3 x4 x5 x6))
+  ([x0 x1 x2 x3 x4 x5 x6 x7]           (*<> x0 x1 x2 x3 x4 x5 x6 x7))
+  ([x0 x1 x2 x3 x4 x5 x6 x7 x8]        (*<> x0 x1 x2 x3 x4 x5 x6 x7 x8))
+  ([x0 x1 x2 x3 x4 x5 x6 x7 x8 x9]     (*<> x0 x1 x2 x3 x4 x5 x6 x7 x8 x9))
+  ([x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10] (*<> x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10))
   ([x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 & xs]
     #?(:clj  (let [arr (Array/newUninitialized1dObjectArray (+ 11 (count xs)))]
                (Array/set arr x0  0)
