@@ -1,3 +1,8 @@
+;; TODO look at this for type-checked Spec implementation: https://github.com/arohner/spectrum/blob/master/src/spectrum/conform.clj
+;; TODO look at this thread for useful discussion on potential type systems in Clojure: https://groups.google.com/forum/#!topic/clojure/Dxk-rCVL5Ss
+;; - Reach out to mikera and let him know about the type system when it's done since he was working on something vaguely similar
+;; TODO look at HM impl : https://github.com/ericnormand/hindley-milner
+
 Note that for anything built-in js/<whatever>, the `t/isa?` predicates might need some special help
 
 ;; TO MOVE
@@ -59,7 +64,8 @@ Legend:
 
 - TODO implement the following:
   [-] t/fn
-      [ ] add `t/fn` as a special form so we don't need to re-analyze its constituents
+      [-] Get `t/defn` working with `let*` + TypedFn way of doing things
+      [ ] Sketch out `defnt/analyze-fn` using tests as a guide
       [ ] t/ftype should automatically split types, while perhaps t/ftype* should just assume
           they're split (for use by e.g. `t/fn` and `t/defn`)
       [ ] test t/fn to make sure meta 'sticks' : `(t/fn {...} [] ...)`
@@ -268,6 +274,8 @@ Legend:
   [-] t/extend-defn!
       [ ] Ability to add output type restriction after the fact?
   [ ] lazy compilation especially around `t/input`
+      - Let's say you write a `t/defn` with a signature of [t/indexed? t/indexed? t/indexed?]. This
+        would generate thousands of possibilities if eagerly loaded, but instead it is lazily loaded.
   [ ] equivalence of typed predicates (i.e. that which is t/<= `(t/ftype [x t/any? :> p/boolean?])`)
       to types:
       - [xs (t/fn [x (t/isa? clojure.lang.Range)] ...)]
@@ -1804,6 +1812,7 @@ Legend:
     - :todo #{<todo-string>}
     - :attribution <github-username-symbol | string-description>
     - :doc <string-documentation>
+    - :performance <string-documentation>
     - :incorporated (t/or (t/set-of (t/or <namespace-or-class-symbol> <function-or-method-symbol>))
                           (t/map-of (t/or <namespace-or-class-symbol> <function-or-method-symbol>)
                                     date))
