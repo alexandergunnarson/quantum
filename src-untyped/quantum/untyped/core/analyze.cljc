@@ -987,7 +987,9 @@
 
 (defns- analyze-seq [env ::env, form _]
   (let [expanded-form (case (first form)
-                        (quantum.core.type.defnt/fn
+                        (quantum.core.type.defnt/dotyped
+                         quantum.untyped.core.type.defnt/dotyped
+                         quantum.core.type.defnt/fn
                          quantum.untyped.core.type.defnt/fn
                          quantum.core.type.defnt/defn
                           quantum.untyped.core.type.defnt/defn)
