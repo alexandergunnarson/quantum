@@ -6,10 +6,8 @@
     [quantum.core.type
       :refer [dotyped]]
     [quantum.test.untyped.core.type         :as tt]
-    [quantum.untyped.core.type.defnt        :as self
-      :refer [aget* aset* unsupported!]]
     [quantum.untyped.core.data.array
-      :refer [*<>]]
+      :refer [*<> *<>|sized]]
     [quantum.untyped.core.form
       :refer [$ code=]]
     [quantum.untyped.core.form.evaluate
@@ -22,9 +20,11 @@
     [quantum.untyped.core.test              :as utest
       :refer [deftest is is= is-code= testing throws]]
     [quantum.untyped.core.type              :as t]
+    [quantum.untyped.core.type.defnt        :as self
+      :refer [aget* aset* unsupported!]]
     [quantum.untyped.core.type.reifications :as utr]
     [quantum.untyped.core.vars
-      :refer [defmeta]])
+      :refer [defmeta defmeta-from]])
   (:import
     [clojure.lang                           ASeq ISeq LazySeq Named Reduced RT Seqable]
     [quantum.core.data                      Array]
@@ -38,6 +38,8 @@
 (do (require '[orchestra.spec.test :as st])
     (orchestra.spec.test/unstrument)
     (orchestra.spec.test/instrument))
+
+(do
 
 (defn B   [form] (tag "boolean"             form))
 (defn Y   [form] (tag "byte"                form))
@@ -58,6 +60,7 @@
 
 (defn csym [x] (-> x cstr symbol))
 
+(defn >__O  [form] (tag (cstr `__O)  form))
 (defn >B__B [form] (tag (cstr `B__B) form))
 (defn >Y__Y [form] (tag (cstr `Y__Y) form))
 (defn >S__S [form] (tag (cstr `S__S) form))
@@ -69,9 +72,11 @@
 (defn >O__F [form] (tag (cstr `O__F) form))
 (defn >O__O [form] (tag (cstr `O__O) form))
 
-(def &ts (O<> 'ts__))
-(def &fs (O<> 'fs__))
+(def &ts (O<> 'ts0__))
+(def &fs (O<> 'fs0__))
 (def &this '&this)
+
+)
 
 #?(:clj
 (deftest test|pid
@@ -87,12 +92,12 @@
                  (let* [~'pid|__fs (*<>|sized 1)
                         ~'pid (new TypedFn
                                 {:quantum.core.type/type pid|__type}
-                                pid|__types ; defined/created within `t/defn`
+                                pid|__ts ; defined/created within `t/defn`
                                 ~'pid|__fs
-                                (fn* ([~&ts ~&fs] (. ~(aget* &fs 0) ~'invoke))))]
+                                (fn* ([~&ts ~&fs] (. ~(>__O (aget* &fs 0)) ~'invoke))))]
                    ~(aset* 'pid|__fs 0
                      `(reify* [~(csym `__O)]
-                        (~(O 'invoke) [~&this]
+                        (~(O 'invoke) [~'_0__]
                           ~(ST (list '.
                                  (tag "java.lang.management.RuntimeMXBean"
                                       '(. java.lang.management.ManagementFactory getRuntimeMXBean))

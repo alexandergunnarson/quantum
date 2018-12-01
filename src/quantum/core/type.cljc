@@ -22,8 +22,8 @@
   ? run, isa? isa?|direct
   ; fn ; TODO TYPED rename
   ftype
-  input-type  input-type|meta-or  input-type|or
-  output-type output-type|meta-or output-type|or
+  input  input|meta-or  input|or
+  output output|meta-or output|or
   unordered ordered
   value unvalue
   ;; Combinators

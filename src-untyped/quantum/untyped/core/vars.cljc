@@ -74,6 +74,13 @@
              (vary-meta x merge meta-val)
              x))))
 
+#?(:clj
+(defmacro defmeta-from
+  "Like `defmeta-from`, but gets the metadata from the bound object."
+  [sym x]
+  `(do (def ~sym ~x)
+       (alter-meta! (var ~sym) merge (meta ~sym)))))
+
 ;; ===== Aliases ===== ;;
 
 #?(:clj (ucore/defaliases ucore defalias defaliases defaliases'))

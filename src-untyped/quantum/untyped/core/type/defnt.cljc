@@ -375,16 +375,22 @@
           :pre-type    (us/nilable t/type?)
           :output-type t/type?}))
 
+(def types-decl-datum-kv-basis
+  {:id                  ::overload|id
+   :index               index? ; overload-index (position in the overall types-decl)
+   :ns-name             simple-symbol?
+   :interface           class?
+   :arglist-code|hinted (us/vec-of simple-symbol?)
+   :arg-types           (us/vec-of t/type?)
+   :output-type         t/type?
+   :body-codelist       (us/vec-of t/any?)
+   :inline?             boolean?})
+
+(us/def ::types-decl-datum-without-interface
+  (us/kv (dissoc types-decl-datum-kv-basis :interface)))
+
 (us/def ::types-decl-datum
-  (us/kv {:id                  ::overload|id
-          :index               index? ; overload-index (position in the overall types-decl)
-          :ns-name             simple-symbol?
-          :interface           class?
-          :arglist-code|hinted (us/vec-of simple-symbol?)
-          :arg-types           (us/vec-of t/type?)
-          :output-type         t/type?
-          :body-codelist       (us/vec-of t/any?)
-          :inline?             boolean?}))
+  (us/kv types-decl-datum-kv-basis))
 
 ;; Interned as `!fn|types`
 (us/def ::fn|types
@@ -529,16 +535,20 @@
 ;; ===== `unanalyzed-overload>overload` ===== ;;
 
 (defns- class>interface-part-name [c class? > string?]
-  (if (= c java.lang.Object)
-      "Object"
-      (let [illegal-pattern #"\|\+"]
-        (if (->> c >name (re-find illegal-pattern))
-            (err! "Class cannot contain pattern" {:class c :pattern illegal-pattern})
-            (-> c >name (str/replace "." "|"))))))
+  (case (>name c)
+    "java.lang.Object" "O"
+    "boolean"          "B"
+    "byte"             "Y"
+    "short"            "S"
+    "char"             "C"
+    "int"              "I"
+    "long"             "L"
+    "float"            "F"
+    "double"           "D"))
 
 (defns- overload-classes>interface-sym [args-classes (us/seq-of class?), out-class class? > symbol?]
-  (>symbol (str (->> args-classes (uc/lmap class>interface-part-name) (str/join "+"))
-                ">" (class>interface-part-name out-class))))
+  (>symbol (str (->> args-classes (uc/lmap class>interface-part-name) (apply str))
+                "__" (class>interface-part-name out-class))))
 
 (defns- overload-classes>interface
   [args-classes (us/vec-of class?), out-class class?, gen-gensym fn?]
@@ -564,7 +574,7 @@
            varargs-form _, variadic? _]
     declared-output-type [:output-type _]} ::unanalyzed-overload
    overload|id       index?
-   fn|overload-types (us/vec-of ::types-decl-datum)
+   fn|overload-types (us/vec-of ::types-decl-datum-without-interface)
    fn|type           (us/nilable t/type?)
    > ::overload]
   (let [;; Not sure if `nil` is the right approach for the value
@@ -616,7 +626,7 @@
                                gen-gensym))))
               (uc/get interface-k))]
       (kw-map arg-classes arg-classes|reify arg-types arglist-code|fn|hinted arglist-code|hinted
-              arglist-code|reify|unhinted arglist-form|unanalyzed body-node output-class
+              arglist-code|reify|unhinted arglist-form|unanalyzed body-node interface output-class
               output-class|reify output-type positional-args-ct variadic?))))
 
 ;; ===== Direct dispatch ===== ;;
@@ -938,10 +948,10 @@
      :cljs (list                     'cljs.core/aset x i v)))
 
 (defns >direct-dispatch|reify-call
-  [overload|id ::overload|id, reify|interface class?
-   [ts|sym simple-symbol? :as args-codelist] (us/seq-of t/any?)]
-  `(. ~(ufth/with-type-hint (aget* ts|sym overload|id) (>name reify|interface))
-      ~uana/direct-dispatch-method-sym ~@args-codelist))
+  [overload|id ::overload|id, reify|interface class?, fs|name simple-symbol?
+   relevant-arglist (us/vec-of simple-symbol?)]
+  `(. ~(ufth/with-type-hint (aget* fs|name overload|id) (>name reify|interface))
+      ~uana/direct-dispatch-method-sym ~@relevant-arglist))
 
 ;; TODO spec
 (defns unsupported!
@@ -955,45 +965,50 @@
 (defns- >combinatoric-seq+
   [{:as fn|globals :keys [fn|ns-name _ fn|name _]} ::fn|globals
    overload-types-for-arity (us/vec-of ::types-decl-datum)
-   arglist                  (us/vec-of simple-symbol?)] ; exclusively the non `ts`/`fs` args
-  (let [[ts|name fs|name & _] arglist]
+   ts|name                  simple-symbol?
+   fs|name                  simple-symbol?
+   relevant-arglist         (us/vec-of simple-symbol?)]
+  (let []
     (->> overload-types-for-arity
          (uc/map+
            (c/fn [{:as types-decl-datum :keys [arg-types id interface] ns-name- :ns-name}]
-             [(>direct-dispatch|reify-call id interface arglist)
+             [(>direct-dispatch|reify-call id interface fs|name relevant-arglist)
               (->> arg-types
                    (uc/map-indexed
                      (c/fn [i|arg arg-type]
                        {:i    i|arg
                         :t    arg-type
                         :getf `(~(aget* (with-array-type-hint (aget* ts|name id)) i|arg)
-                                 ~(get arglist i|arg))})))])))))
+                                 ~(get relevant-arglist i|arg))})))])))))
 
 (defns- >dynamic-dispatch|body-for-arity
   [{:as fn|globals :keys [fn|ns-name _, fn|name _]} ::fn|globals
    overload-types-for-arity (us/vec-of ::types-decl-datum)
    arglist (us/vec-of simple-symbol?)]
-  (if (empty? arglist)
-      (let [{:as types-decl-datum :keys [id interface]} (first overload-types-for-arity)]
-        (>direct-dispatch|reify-call id interface arglist))
-      (let [!!i|arg (atom 0)
-            combinef
-              (c/fn
-                ([] (transient [`ifs]))
-                ([ret]
-                  (-> ret (conj! `(unsupported! '~(uid/qualify fn|ns-name fn|name)
-                                                ~arglist ~(deref !!i|arg)))
-                          persistent!
-                          seq))
-                ([ret getf x i]
-                  (reset! !!i|arg i)
-                  (uc/conj! ret getf x)))]
-        (uc/>combinatoric-tree (count arglist)
-          (c/fn [a b] (t/= (:t a) (:t b)))
-          (aritoid combinef combinef (c/fn [x [{:keys [getf i]} group]] (combinef x getf group i)))
-          uc/conj!|rf
-          (aritoid combinef combinef (c/fn [x [k [{:keys [getf i]}]]] (combinef x getf k i)))
-          (>combinatoric-seq+ fn|globals overload-types-for-arity arglist)))))
+  (let [[ts|name fs|name & relevant-arglist] arglist
+        relevant-arglist (>vec relevant-arglist)]
+    (if (empty? relevant-arglist)
+        (let [{:as types-decl-datum :keys [id interface]} (first overload-types-for-arity)]
+          (>direct-dispatch|reify-call id interface fs|name relevant-arglist))
+        (let [!!i|arg (atom 0)
+              combinef
+                (c/fn
+                  ([] (transient [`ifs]))
+                  ([ret]
+                    (-> ret (conj! `(unsupported! '~(uid/qualify fn|ns-name fn|name)
+                                                  ~relevant-arglist ~(deref !!i|arg)))
+                            persistent!
+                            seq))
+                  ([ret getf x i]
+                    (reset! !!i|arg i)
+                    (uc/conj! ret getf x)))]
+          (uc/>combinatoric-tree (count relevant-arglist)
+            (c/fn [a b] (t/= (:t a) (:t b)))
+            (aritoid combinef combinef (c/fn [x [{:keys [getf i]} group]] (combinef x getf group i)))
+            uc/conj!|rf
+            (aritoid combinef combinef (c/fn [x [k [{:keys [getf i]}]]] (combinef x getf k i)))
+            (>combinatoric-seq+
+              fn|globals overload-types-for-arity ts|name fs|name relevant-arglist))))))
 
 (defns- >dynamic-dispatch
   [{:as opts       :keys [compilation-mode _, gen-gensym _, kind _]} ::opts
@@ -1334,10 +1349,11 @@
                       (>direct-dispatch-seq opts fn|globals fn|types !overload-queue)
                     dynamic-dispatch
                       (>dynamic-dispatch opts fn|globals fn|types)
+                    qualified-ts-name (uid/qualify fn|ns-name fn|ts-name)
                     defmeta-form
                       `(uvar/defmeta-from ~fn|name
                          (let* [~fn|fs-name (uarr/*<>|sized 1)
-                                ~fn|name    (new TypedFn ~fn|meta ~fn|ts-name ~fn|fs-name
+                                ~fn|name    (new TypedFn ~fn|meta ~qualified-ts-name ~fn|fs-name
                                                          ~(:form dynamic-dispatch))]
                            ~@(->> direct-dispatch-seq
                                   (map (c/fn [{:as reify-data :keys [id form]}]
