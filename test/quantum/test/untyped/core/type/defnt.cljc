@@ -24,7 +24,7 @@
       :refer [aget* aset* unsupported!]]
     [quantum.untyped.core.type.reifications :as utr]
     [quantum.untyped.core.vars
-      :refer [defmeta defmeta-from]])
+      :refer [defmeta-from]])
   (:import
     [clojure.lang                           ASeq ISeq LazySeq Named Reduced RT Seqable]
     [quantum.core.data                      Array]
@@ -117,30 +117,7 @@
         expected
           (case (env-lang)
             :clj
-            ($ (do (declare ~'identity)
-
-                   ;; [x t/any?]
-
-                   (def ~(>B__B 'identity|__0)
-                     (reify* [~(csym `B__B)] (~(B 'invoke) [~'_0__ ~(B 'x)] ~'x)))
-                   (def ~(>Y__Y 'identity|__1)
-                     (reify* [~(csym `Y__Y)] (~(Y 'invoke) [~'_1__ ~(Y 'x)] ~'x)))
-                   (def ~(>S__S 'identity|__2)
-                     (reify* [~(csym `S__S)] (~(S 'invoke) [~'_2__ ~(S 'x)] ~'x)))
-                   (def ~(>C__C 'identity|__3)
-                     (reify* [~(csym `C__C)] (~(C 'invoke) [~'_3__ ~(C 'x)] ~'x)))
-                   (def ~(>I__I 'identity|__4)
-                     (reify* [~(csym `I__I)] (~(I 'invoke) [~'_4__ ~(I 'x)] ~'x)))
-                   (def ~(>L__L 'identity|__5)
-                     (reify* [~(csym `L__L)] (~(L 'invoke) [~'_5__ ~(L 'x)] ~'x)))
-                   (def ~(>F__F 'identity|__6)
-                     (reify* [~(csym `F__F)] (~(F 'invoke) [~'_6__ ~(F 'x)] ~'x)))
-                   (def ~(>D__D 'identity|__7)
-                     (reify* [~(csym `D__D)] (~(D 'invoke) [~'_7__ ~(D 'x)] ~'x)))
-                   (def ~(>O__O 'identity|__8)
-                     (reify* [~(csym `O__O)] (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
-
-                   [[0 0 true [t/boolean?] t/boolean?]
+            ($ (do [[0 0 true [t/boolean?] t/boolean?]
                     [1 1 true [t/byte?]    t/byte?]
                     [2 2 true [t/short?]   t/short?]
                     [3 3 true [t/char?]    t/char?]
@@ -149,32 +126,58 @@
                     [6 6 true [t/float?]   t/float?]
                     [7 7 true [t/double?]  t/double?]
                     [8 8 true [t/any?]     t/any?]]
+                   (defmeta-from ~'identity
+                     (let* [~'identity|__fs (*<>|sized 9)
+                            ~'identity
+                              (new TypedFn
+                                {:quantum.core.type/type identity|__type}
+                                identity|__ts
+                                ~'identity|__fs
+                                (fn* ([~&ts ~&fs ~'x00__]
+                                       (ifs (~(aget* (O<> (aget* &ts 0)) 0) ~'x00__)
+                                              (. ~(>B__B (aget* &fs 0)) ~'invoke ~'x00__)
+                                            (~(aget* (O<> (aget* &ts 1)) 0) ~'x00__)
+                                              (. ~(>Y__Y (aget* &fs 1)) ~'invoke ~'x00__)
+                                            (~(aget* (O<> (aget* &ts 2)) 0) ~'x00__)
+                                              (. ~(>S__S (aget* &fs 2)) ~'invoke ~'x00__)
+                                            (~(aget* (O<> (aget* &ts 3)) 0) ~'x00__)
+                                              (. ~(>C__C (aget* &fs 3)) ~'invoke ~'x00__)
+                                            (~(aget* (O<> (aget* &ts 4)) 0) ~'x00__)
+                                              (. ~(>I__I (aget* &fs 4)) ~'invoke ~'x00__)
+                                            (~(aget* (O<> (aget* &ts 5)) 0) ~'x00__)
+                                              (. ~(>L__L (aget* &fs 5)) ~'invoke ~'x00__)
+                                            (~(aget* (O<> (aget* &ts 6)) 0) ~'x00__)
+                                              (. ~(>F__F (aget* &fs 6)) ~'invoke ~'x00__)
+                                            (~(aget* (O<> (aget* &ts 7)) 0) ~'x00__)
+                                              (. ~(>D__D (aget* &fs 7)) ~'invoke ~'x00__)
+                                            (~(aget* (O<> (aget* &ts 8)) 0) ~'x00__)
+                                              (. ~(>O__O (aget* &fs 8)) ~'invoke ~'x00__)
+                                            ;; TODO no need for `unsupported!` because it will
+                                            ;;      always get a valid  branch
+                                            (unsupported! `identity [~'x00__] 0)))))]
+                       ~(aset* 'identity|__fs 0
+                          `(reify* []))
+                       ;; [x t/any?]
 
-                   (defmeta ~'identity
-                     {:quantum.core.type/type identity|__type}
-                     (fn* ([~'x00__]
-                            (ifs
-                               ((Array/get identity|__0|types 0) ~'x00__)
-                                 (. identity|__0 ~'invoke ~'x00__)
-                               ((Array/get identity|__1|types 0) ~'x00__)
-                                 (. identity|__1 ~'invoke ~'x00__)
-                               ((Array/get identity|__2|types 0) ~'x00__)
-                                 (. identity|__2 ~'invoke ~'x00__)
-                               ((Array/get identity|__3|types 0) ~'x00__)
-                                 (. identity|__3 ~'invoke ~'x00__)
-                               ((Array/get identity|__4|types 0) ~'x00__)
-                                 (. identity|__4 ~'invoke ~'x00__)
-                               ((Array/get identity|__5|types 0) ~'x00__)
-                                 (. identity|__5 ~'invoke ~'x00__)
-                               ((Array/get identity|__6|types 0) ~'x00__)
-                                 (. identity|__6 ~'invoke ~'x00__)
-                               ((Array/get identity|__7|types 0) ~'x00__)
-                                 (. identity|__7 ~'invoke ~'x00__)
-                               ((Array/get identity|__8|types 0) ~'x00__)
-                                 (. identity|__8 ~'invoke ~'x00__)
-                                 ;; TODO no need for `unsupported!` because it will always get a valid
-                                 ;; branch
-                                 (unsupported! `identity [~'x00__] 0)))))))
+                       ~(aset* 'identity 0
+                          `(reify* [~(csym `B__B)] (~(B 'invoke) [~'_0__ ~(B 'x)] ~'x)))
+                       ~(aset* 'identity 1
+                          `(reify* [~(csym `Y__Y)] (~(Y 'invoke) [~'_1__ ~(Y 'x)] ~'x)))
+                       ~(aset* 'identity 2
+                          `(reify* [~(csym `S__S)] (~(S 'invoke) [~'_2__ ~(S 'x)] ~'x)))
+                       ~(aset* 'identity 3
+                          `(reify* [~(csym `C__C)] (~(C 'invoke) [~'_3__ ~(C 'x)] ~'x)))
+                       ~(aset* 'identity 4
+                          `(reify* [~(csym `I__I)] (~(I 'invoke) [~'_4__ ~(I 'x)] ~'x)))
+                       ~(aset* 'identity 5
+                          `(reify* [~(csym `L__L)] (~(L 'invoke) [~'_5__ ~(L 'x)] ~'x)))
+                       ~(aset* 'identity 6
+                          `(reify* [~(csym `F__F)] (~(F 'invoke) [~'_6__ ~(F 'x)] ~'x)))
+                       ~(aset* 'identity 7
+                          `(reify* [~(csym `D__D)] (~(D 'invoke) [~'_7__ ~(D 'x)] ~'x)))
+                       ~(aset* 'identity 8
+                          `(reify* [~(csym `O__O)] (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
+                       ~'identity))))
             :cljs
             ;; Direct dispatch will be simple functions, not `reify`s
             ($ (do (defn ~'identity [~'x] ~'x))))]

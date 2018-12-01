@@ -1352,7 +1352,7 @@
                     qualified-ts-name (uid/qualify fn|ns-name fn|ts-name)
                     defmeta-form
                       `(uvar/defmeta-from ~fn|name
-                         (let* [~fn|fs-name (uarr/*<>|sized 1)
+                         (let* [~fn|fs-name (uarr/*<>|sized ~(-> fn|types :overload-types count))
                                 ~fn|name    (new TypedFn ~fn|meta ~qualified-ts-name ~fn|fs-name
                                                          ~(:form dynamic-dispatch))]
                            ~@(->> direct-dispatch-seq
