@@ -164,7 +164,17 @@
 
 ;; ----- End reflection support ----- ;;
 
-(def ^:dynamic *analyzing?* false)
+(def ^:dynamic *analyzing?*   false)
+
+;; Will define later in `quantum.untyped.core.type.defnt`
+(defonce !!analyze-fnt
+  (atom (fn [env form] (throw (ex-info "`analyze-fnt` has not been defined yet" {})))))
+
+(defonce !!analyze-defnt
+  (atom (fn [env form] (throw (ex-info "`analyze-defnt` has not been defined yet" {})))))
+
+(defonce !!analyze-extend-defnt
+  (atom (fn [env form] (throw (ex-info "`analyze-extend-defnt!` has not been defined yet" {})))))
 
 (defonce !!analyze-arg-syms|iter (>!thread-local 0)) ; `nneg-fixint?`
 
@@ -612,10 +622,6 @@
                 (err! "Expected var, but found" {:form form :resolved resolved})
               (uast/var* env (list 'var (uid/>symbol resolved)) resolved (t/value resolved))))))
 
-(defns- analyze-seq|tfn
-  [env ::env form ...]
-  )
-
 (defn- filter-dynamic-dispatchable-overload-types
   "An example of dynamic dispatch:
    - When we call `seq` on an input of type `(t/? (t/isa? java.util.Set))`, direct dispatch will
@@ -939,15 +945,19 @@
   [env ::env, [caller|form _ & body _ :as form] _ > uast/node?]
   (case caller|form
     .        (analyze-seq|dot   env form)
+    (quantum.core.type/def quantum.untyped.core.type.defnt/def)
+      (TODO "t/def" {:form form})
     def      (TODO "def"      {:form form})
     deftype* (TODO "deftype*" {:form form})
     do       (analyze-seq|do    env form)
     ;; To avoid having to re-analyze
-    (quantum.untyped.core.type.defnt/dotyped quantum.core.type/dotyped)
-      (analyze-seq|do    env (list* 'do (rest form)))
+    (quantum.core.type/dotyped quantum.untyped.core.type.defnt/dotyped)
+      (analyze-seq|do env (list* 'do (rest form)))
     fn*      (TODO "fn*"      {:form form})
-    (quantum.core.type.defnt/fn
-     quantum.untyped.core.type.defnt/fn) (analyze-seq|tfn env form)
+    (quantum.core.type.defnt/fn quantum.untyped.core.type.defnt/fn)
+      (@!!analyze-fnt env form)
+    (quantum.core.type.defnt/defn quantum.untyped.core.type.defnt/defn)
+      (@!!analyze-defnt env form)
     if       (analyze-seq|if    env form)
     let*     (analyze-seq|let*  env form)
     new      (analyze-seq|new   env form)
@@ -978,7 +988,9 @@
 (defns- analyze-seq [env ::env, form _]
   (let [expanded-form (case (first form)
                         (quantum.core.type.defnt/fn
-                         quantum.untyped.core.type.defnt/fn)
+                         quantum.untyped.core.type.defnt/fn
+                         quantum.core.type.defnt/defn
+                          quantum.untyped.core.type.defnt/defn)
                           form ; will be analyzed in `analyze-seq*`
                         (binding [*ns* (or (-> env :opts :ns) *ns*)] (ufeval/macroexpand form)))]
     (if-let [no-expansion? (ucomp/== form expanded-form)]
