@@ -155,27 +155,25 @@
                                             ;; TODO no need for `unsupported!` because it will
                                             ;;      always get a valid  branch
                                             (unsupported! `identity [~'x00__] 0)))))]
-                       ~(aset* 'identity|__fs 0
-                          `(reify* []))
                        ;; [x t/any?]
 
-                       ~(aset* 'identity 0
+                       ~(aset* 'identity|__fs 0
                           `(reify* [~(csym `B__B)] (~(B 'invoke) [~'_0__ ~(B 'x)] ~'x)))
-                       ~(aset* 'identity 1
+                       ~(aset* 'identity|__fs 1
                           `(reify* [~(csym `Y__Y)] (~(Y 'invoke) [~'_1__ ~(Y 'x)] ~'x)))
-                       ~(aset* 'identity 2
+                       ~(aset* 'identity|__fs 2
                           `(reify* [~(csym `S__S)] (~(S 'invoke) [~'_2__ ~(S 'x)] ~'x)))
-                       ~(aset* 'identity 3
+                       ~(aset* 'identity|__fs 3
                           `(reify* [~(csym `C__C)] (~(C 'invoke) [~'_3__ ~(C 'x)] ~'x)))
-                       ~(aset* 'identity 4
+                       ~(aset* 'identity|__fs 4
                           `(reify* [~(csym `I__I)] (~(I 'invoke) [~'_4__ ~(I 'x)] ~'x)))
-                       ~(aset* 'identity 5
+                       ~(aset* 'identity|__fs 5
                           `(reify* [~(csym `L__L)] (~(L 'invoke) [~'_5__ ~(L 'x)] ~'x)))
-                       ~(aset* 'identity 6
+                       ~(aset* 'identity|__fs 6
                           `(reify* [~(csym `F__F)] (~(F 'invoke) [~'_6__ ~(F 'x)] ~'x)))
-                       ~(aset* 'identity 7
+                       ~(aset* 'identity|__fs 7
                           `(reify* [~(csym `D__D)] (~(D 'invoke) [~'_7__ ~(D 'x)] ~'x)))
-                       ~(aset* 'identity 8
+                       ~(aset* 'identity|__fs 8
                           `(reify* [~(csym `O__O)] (~(O 'invoke) [~'_8__ ~(O 'x)] ~(O 'x))))
                        ~'identity))))
             :cljs
