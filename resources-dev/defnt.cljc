@@ -69,6 +69,8 @@ Legend:
       [ ] t/ftype should automatically split types, while perhaps t/ftype* should just assume
           they're split (for use by e.g. `t/fn` and `t/defn`)
       [ ] test t/fn to make sure meta 'sticks' : `(t/fn {...} [] ...)`
+      [ ] support `ts` and `types` referring to closed-over local vars
+          - Should do e.g. `(OrType. ... [t/boolean? (AndType. ...)])` to have minimal overhead
   [2] `?` : type inference
       - use logic programming and variable unification e.g. `?1` `?2` ?
       - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
@@ -76,8 +78,7 @@ Legend:
         ([n dn/std-integer?, xs ?] ...)
       - [ ] No trailing `>` means `> ?`
   [3] inner expansion (see tests to see how this could work)
-  [4] make local vars sanitary/safe by making better use of the gensym feature
-  [5] t/numerically : e.g. a double representing exactly what a float is able to represent
+  [4] t/numerically : e.g. a double representing exactly what a float is able to represent
       - and variants thereof: `numerically-long?` etc.
       - t/numerically-integer?
       - Primitive conversions not requiring checks can go in data.primitive

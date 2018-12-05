@@ -372,6 +372,26 @@
 
 (defn throw-node? [x] (instance? ThrowNode x))
 
+(defrecord TypedFnNode
+  [env             #_::env
+   unanalyzed-form #_::t/form
+   name            #_simple-symbol?
+   meta            #_meta?
+   overloads       #_(t/vec-of (t/kv {:arg-types (t/vec-of t/type?)
+                                      :type      t/type?
+                                      :body      node?}))
+   form            #_::t/form
+   type            #_t/type?]
+  INode
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] (list `fnt-node (std-print-structure this))))
+
+;; Not type hinted because it's inferred
+(defn fnt-node [m] (map->TypedFnNode m))
+
+(defn fnt-node? [x] (instance? TypedFnNode x))
+
 (defrecord TypedDefnNode
   [env             #_::env
    unanalyzed-form #_::t/form
