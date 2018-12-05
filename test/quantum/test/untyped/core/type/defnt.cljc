@@ -2528,7 +2528,7 @@
           expected
            (case (env-lang)
              :clj
-             ($ (defmeta-from ~'f0|test
+             ($ (do (defmeta-from ~'f0|test
                   (let* [~'f0|test|__fs (*<>|sized 2)
                          ~'f0|test
                            (new TypedFn
@@ -2545,21 +2545,21 @@
                      `(reify* [~(csym `B__O)]
                         (~'invoke [~&this ~(B 'a)]
                           ;; From `(self/fn [b ...])`
-                          (let* [~'f__0|__fs (*<>|sized 2)
-                                 ~'f__0
+                          (let* [~'__anon0__|__fs (*<>|sized 2)
+                                 ~'__anon0__
                                    (new TypedFn nil
                                      ;; TODO perhaps extern this (and parts thereof) whenever
                                      ;; possible in `let*` statement on the very outside of the fn
                                      ;; (so around the outer `reify*`) ?
                                      (*<> (*<> t/byte?) (*<> t/char?))
-                                     ~'f__0|__fs
+                                     ~'__anon0__|__fs
                                      (fn* ([~&ts ~&fs ~'x00__]
                                             (ifs (~(aget* (aget* ~&ts 0) 0) ~'x00__)
                                                  (. ~(>Y__O (aget* &fs 0)) ~'invoke ~'x00__)
                                                  (~(aget* (aget* ~&ts 1) 0) ~'x00__)
                                                  (. ~(>C__O (aget* &fs 1)) ~'invoke ~'x00__)
                                                  (unsupported! [~'x00__] 0)))))]
-                           ~(aset* 'f__0|__fs 0
+                           ~(aset* '__anon0__|__fs 0
                              `(reify* [~(csym `Y__O)]
                                 (~'invoke [~'_0__ ~(Y 'b)]
                                   ;; From `(self/fn [c ...])`
@@ -2587,10 +2587,10 @@
                                            (. ~(>B__O (aget* 'f1|test|__fs 0)) ~'invoke ~'a)
                                            (. ~(>S__O (aget* 'f1|test|__fs 1)) ~'invoke ~'c))))
                                     ~'f1|test)))
-                             ~(aset* 'f__0|__fs 1
+                             ~(aset* '__anon0__|__fs 1
                                 (reify* [~(csym `C__O)]
                                   (~'invoke [~&this ~(C 'a)] ...)))
-                             ~'f__0))))
+                             ~'__anon0__))))
                    ~(aset* 'f0|test|__fs 1
                      `(reify* [~(csym `D__O)]
                         (~'invoke [~&this ~(D 'a)] ...)))
@@ -2739,7 +2739,7 @@
                             ;;   - We need to know overload ID of `f1` with input types
                             ;;     `[tt/string?]`
                             (f1 "11"))))
-                       ~'j|test))))))]
+                       ~'j|test)))))))]
               ...)))
 
 ;; Automatically analyzes the body of `fnt?`s which have at least one input of `t/fn?`

@@ -108,21 +108,19 @@
                (err! nil "Unable to roll back all effects" {:failed-rollback-fn rollback-fn}
                      nil rollback-err)))))))
 
-(defns- with-rollback! [!overload-queue _, !rollback-queue _, f fn?]
+(defns- with-rollback! [!rollback-queue _, f fn?]
   (uerr/catch-all
     (f)
     e
     (do (ulog/ppr :error e)
         (drain-rollback-queue! !rollback-queue)
         (err! nil "Exception; rolled back successfully" nil nil e))
-    (do (uvec/alist-empty! !rollback-queue)
-        (uvec/alist-empty! !overload-queue))))
+    (do (uvec/alist-empty! !rollback-queue))))
 
 (defns- analyze-with-rollback!
-  ([unanalyzed-form _]
-    (analyze-with-rollback! !global-overload-queue !global-rollback-queue unanalyzed-form))
-  ([!overload-queue _, !rollback-queue _, unanalyzed-form _]
-    (with-rollback! !overload-queue !rollback-queue
+  ([unanalyzed-form _] (analyze-with-rollback! !global-rollback-queue unanalyzed-form))
+  ([!rollback-queue _, unanalyzed-form _]
+    (with-rollback! !rollback-queue
       (c/fn [] (-> unanalyzed-form uana/analyze :form)))))
 
 ;; ===== Macros ===== ;;
@@ -574,7 +572,7 @@
    `t/fn` overload, which is the foundation for one `reify`."
   [{:as opts       :keys [gen-gensym _, kind _]} ::opts
    {:as fn|globals :keys [fn|globals-name _, fn|name _, fn|ns-name _, fn|output-type _
-                          fn|overload-types-name _]} ::fn|globals
+                          fn|overload-types-name|local _]} ::fn|globals
    env ::uana/env
    {:as unanalyzed-overload
     :keys [arg-classes _, arg-types _, arglist-code|hinted _, arglist-code|reify|unhinted _,
@@ -587,19 +585,18 @@
    > ::overload]
   (let [;; Not sure if `nil` is the right approach for the value
         ?recursive-ast-node-reference
-          (when (and fn|name (not= kind :extend-defn!)) (uast/symbol {} fn|name nil fn|type))
+          (when fn|name (uast/symbol {} fn|name nil fn|type))
         local-env    (->> (zipmap (keys args-form) arg-types)
                           (uc/map' (c/fn [[arg-binding arg-type]]
                                      [arg-binding (uast/unbound nil arg-binding arg-type)]))
                           ;; To support recursion
-                          (<- (cond->
-                                (and fn|name (not= kind :extend-defn!))
-                                  (assoc fn|name
-                                         ?recursive-ast-node-reference
-                                         ;; TODO maybe there's a better way for fns
-                                         (uid/qualify fn|ns-name fn|overload-types-name)
-                                         (uast/var-value fn|overload-types-name fn|overload-types
-                                           (t/value fn|overload-types))))))
+                          (<- (cond-> fn|name
+                                (assoc fn|name
+                                       ?recursive-ast-node-reference
+                                       ;; TODO maybe there's a better way for `t/fn`s
+                                       (uid/qualify fn|ns-name fn|overload-types-name|local)
+                                       (uast/var-value fn|overload-types-name|local fn|overload-types
+                                         (t/value fn|overload-types))))))
         env'         (-> env
                          (merge local-env)
                          (assoc-in [:opts :ns] (-> unanalyzed-overload :ns-name the-ns)))
@@ -677,8 +674,7 @@
   (apply uarr/*<>|fn (-> ?!fn|types ?norx-deref :overload-types (get overload-index) :arg-types)))
 
 (c/defn overload-types>ftype
-  [fn|ns-name     #_simple-symbol?
-   fn|name|global #_simple-symbol?
+  [{:as opts :keys [fn|name|local fn|ns-name]} #_::opts
    overload-types #_(vec-of ::type-datum)
    fn|output-type #_t/type?]
   (let [overload-types' (->> overload-types
@@ -686,7 +682,7 @@
                                         (cond-> arg-types
                                           pre-type    (conj :| pre-type)
                                           output-type (conj :> output-type)))))]
-    (apply t/ftype (uid/qualify fn|ns-name fn|name|global) fn|output-type overload-types')))
+    (apply t/ftype (uid/qualify fn|ns-name fn|name|local) fn|output-type overload-types')))
 
 (c/defn- dedupe-overload-types-data [fn|ns-name fn|name types-decl-data]
   (->> types-decl-data
@@ -841,7 +837,7 @@
    existing-fn-types   (us/nilable ::fn|types)
    {:as opts :keys [kind _]} ::opts
    {:as   fn|globals
-    :keys [fn|name _, fn|name|global _, fn|ns-name _, fn|output-type _, fn|overload-types-name _]}
+    :keys [fn|name _, fn|name|local _, fn|ns-name _, fn|output-type _, fn|overload-types-name _]}
    ::fn|globals
    env ::uana/env
    > ::fn|types]
@@ -859,7 +855,7 @@
                           fn|globals env overload-bases-data existing-overload-types))]
       (or existing-fn-types
           {:fn|output-type-norx fn|output-type-norx
-           :fn|type-norx        (t/ftype (uid/qualify fn|ns-name fn|name|global) fn|output-type-norx)
+           :fn|type-norx        (t/ftype (uid/qualify fn|ns-name fn|name|local) fn|output-type-norx)
            :overload-types      []})
       (let [sorted-changed-unanalyzed-overloads
               (->> changed-unanalyzed-overloads
@@ -891,8 +887,7 @@
                        (uc/map-indexed (c/fn [i datum] (assoc datum :index i)))))
             ;; Partially for recursive purposes
             fn|type-norx
-              (overload-types>ftype
-                fn|ns-name fn|name|global overload-types-with-replacing-ids fn|output-type-norx)
+              (overload-types>ftype fn|globals overload-types-with-replacing-ids fn|output-type-norx)
             ;; We should analyze everything first in order to figure out body-dependent input types
             ;; before we can compare them against each other, but we're ignoring body-dependent input
             ;; types for now
@@ -1245,11 +1240,13 @@
 (defns- >fn|opts
   "`opts` are per invocation of `t/defn` and/or `extend-defn!`, while `globals` persist for as long
    as the `t/defn` does."
-  [kind ::kind, compilation-mode ::compilation-mode > ::opts]
-  (let [gen-gensym-base (if (= compilation-mode :test)
-                            (ufgen/>reproducible-gensym|generator)
-                            gensym)
-        gen-gensym      (c/fn [x] (symbol (str (gen-gensym-base x) "__")))]
+  [env ::uana/env, kind ::kind, compilation-mode ::compilation-mode > ::opts]
+  (let [gen-gensym (or (-> env :opts :gen-gensym)
+                       (let [gen-gensym-base
+                              (if (= compilation-mode :test)
+                                  (ufgen/>reproducible-gensym|generator)
+                                  gensym)]
+                       (c/fn [x] (symbol (str (gen-gensym-base x) "__")))))]
     (kw-map compilation-mode gen-gensym kind)))
 
 (defns- >fn|globals+?overload-bases-form
@@ -1279,26 +1276,29 @@
         fn|name|global  (if (= kind :fn)
                             (symbol (str fn|name (when fn|name "|") (gen-gensym "__anon")))
                             fn|name)
+        fn|name|local   (or fn|name fn|name|global)
         fn|globals-name (symbol (str fn|name|global "|__globals"))]
     (if (= kind :extend-defn!)
         {:fn|globals          (-> (uid/qualify fn|ns-name fn|globals-name) resolve var-get)
          :overload-bases-form overload-bases-form}
-        (let [fn|inline?             (if (nil? (:inline fn|meta))
-                                         false
-                                         (us/validate (:inline fn|meta) t/boolean?))
-              fn|meta                (dissoc fn|meta :inline)
-              fn|output-type|form    (or (second output-spec) `t/any?)
+        (let [fn|inline?                   (if (nil? (:inline fn|meta))
+                                               false
+                                               (us/validate (:inline fn|meta) t/boolean?))
+              fn|meta                      (dissoc fn|meta :inline)
+              fn|output-type|form          (or (second output-spec) `t/any?)
               ;; TODO this needs to be analyzed for dependent types referring to local vars
-              fn|output-type         (eval fn|output-type|form)
-              fn|overload-bases-name (symbol (str fn|name|global "|__bases"))
-              fn|overload-types-name (symbol (str fn|name|global "|__types"))
-              fn|type-name           (symbol (str fn|name|global "|__type"))
-              fn|ts-name             (symbol (str fn|name|global "|__ts"))
-              fn|fs-name             (symbol (str fn|name|global "|__fs"))
+              fn|output-type               (eval fn|output-type|form)
+              fn|overload-bases-name       (symbol (str fn|name|global "|__bases"))
+              fn|overload-types-name       (symbol (str fn|name|global "|__types"))
+              fn|overload-types-name|local (symbol (str fn|name|local  "|__types"))
+              fn|type-name                 (symbol (str fn|name|global "|__type"))
+              fn|ts-name                   (symbol (str fn|name|global "|__ts"))
+              fn|fs-name                   (symbol (str fn|name|local  "|__fs"))
               fn|globals ; TODO use record here
                 (kw-map fn|fs-name fn|globals-name fn|inline? fn|meta fn|name fn|name|global
-                        fn|ns-name fn|output-type|form fn|output-type fn|overload-bases-name
-                        fn|overload-types-name fn|ts-name fn|type-name)]
+                        fn|name|local fn|ns-name fn|output-type|form fn|output-type
+                        fn|overload-bases-name fn|overload-types-name fn|overload-types-name|local
+                        fn|ts-name fn|type-name)]
           (when-not (= kind :fn) (intern-with-rollback! fn|ns-name fn|globals-name fn|globals))
           (kw-map fn|globals overload-bases-form)))))
 
@@ -1325,62 +1325,67 @@
 ;; require analysis, as shown in tests
 (defns- analyze-fn*
   [kind #{:defn :extend-defn! :fn}, env ::uana/env, unanalyzed-form _ > uast/node?]
-  (let [opts            (>fn|opts kind *compilation-mode*)
-        {:keys [fn|globals overload-bases-form]
-         {:keys [fn|fs-name fn|globals-name fn|meta fn|name fn|name|global fn|ns-name fn|ts-name
-                 fn|type-name]}
-         :fn|globals}
-          (>fn|globals+?overload-bases-form opts unanalyzed-form)
-        !overload-bases (>!overload-bases opts fn|globals env overload-bases-form)
-        !fn|types       (>!fn|types       opts fn|globals env !overload-bases)
-        fn|types        (norx-deref !fn|types)
-        fn|ts           (>fn|ts           opts fn|globals fn|types)
-        !fn|type        (>!fn|type        opts fn|globals !fn|types)
-        {:keys [form overloads]}
-          (if (empty? (norx-deref !overload-bases))
-              (if (= kind :defn)
-                  {:form      `(declare ~(:fn|name|global fn|globals))
-                   :overloads []}
-                  (err! "Overloads cannot be empty for non-`t/defn`s." {:form unanalyzed-form}))
-              (let [fn|meta (cond-> fn|meta
-                              (not= kind :fn) (merge {:quantum.core.type/type
-                                                       (uid/qualify fn|ns-name fn|type-name)}))
-                    direct-dispatch-seq (>direct-dispatch-seq opts fn|globals fn|types)
-                    dynamic-dispatch    (>dynamic-dispatch    opts fn|globals fn|types)
-                    qualified-ts-name   (uid/qualify fn|ns-name fn|ts-name)
-                    fn-form
-                      `(let* [~fn|fs-name     (uarr/*<>|sized ~(-> fn|types :overload-types count))
-                              ~fn|name|global (new TypedFn ~fn|meta ~qualified-ts-name ~fn|fs-name
-                                                           ~(:form dynamic-dispatch))]
-                         ~@(->> direct-dispatch-seq
-                                (map (c/fn [{:as reify-data :keys [id form]}]
-                                       (aset* fn|fs-name id form))))
-                         ~fn|name|global)]
-                {:form      (case kind
-                               :fn         fn-form
-                               :defn       `(uvar/defmeta-from ~fn|name|global ~fn-form)
-                               ;; FIXME extend-defn should redefine the fs, ts, and dynamic dispatch of the existing TypedFn object
-                               :extend-fn! (TODO))
-                 :overloads (->> direct-dispatch-seq
-                                 (uc/map
-                                   (c/fn [{:keys [overload]}]
-                                     {:type      (:output-type overload)
-                                      :arg-types (:arg-types   overload)
-                                      :body      (:body-node   overload)})))}))
-        ast-basis
-          {:env             env
-           :unanalyzed-form unanalyzed-form
-           :name            fn|name
-           :meta            fn|meta
-           :overloads       overloads
-           :form            form
-                            ;; TODO is `norx-deref` the right approach? What if something else refers
-                            ;; to the defn that then is extended? Will that not happen correctly?
-           :type            (norx-deref !fn|type)}]
-    (case kind
-      :fn           (uast/fnt-node          ast-basis)
-      :defn         (uast/defnt-node        ast-basis)
-      :extend-defn! (uast/extend-defnt-node ast-basis))))
+  (try
+    (let [opts            (>fn|opts env kind *compilation-mode*)
+          env             (assoc-in env [:opts :gen-gensym] (:gen-gensym opts))
+          {:keys [fn|globals overload-bases-form]
+           {:keys [fn|fs-name fn|globals-name fn|meta fn|name fn|name|global fn|ns-name fn|ts-name
+                   fn|type-name]}
+           :fn|globals}
+            (>fn|globals+?overload-bases-form opts unanalyzed-form)
+          !overload-bases (>!overload-bases opts fn|globals env overload-bases-form)
+          !fn|types       (>!fn|types       opts fn|globals env !overload-bases)
+          fn|types        (norx-deref !fn|types)
+          fn|ts           (>fn|ts           opts fn|globals fn|types)
+          !fn|type        (>!fn|type        opts fn|globals !fn|types)
+          {:keys [form overloads]}
+            (if (empty? (norx-deref !overload-bases))
+                (if (= kind :defn)
+                    {:form      `(declare ~(:fn|name|global fn|globals))
+                     :overloads []}
+                    (err! "Overloads cannot be empty for non-`t/defn`s." {:form unanalyzed-form}))
+                (let [fn|meta (cond-> fn|meta
+                                (not= kind :fn) (merge {:quantum.core.type/type
+                                                         (uid/qualify fn|ns-name fn|type-name)}))
+                      direct-dispatch-seq (>direct-dispatch-seq opts fn|globals fn|types)
+                      dynamic-dispatch    (>dynamic-dispatch    opts fn|globals fn|types)
+                      qualified-ts-name   (uid/qualify fn|ns-name fn|ts-name)
+                      fn-form
+                        `(let* [~fn|fs-name     (uarr/*<>|sized ~(-> fn|types :overload-types count))
+                                ~fn|name|global (new TypedFn ~fn|meta ~qualified-ts-name ~fn|fs-name
+                                                             ~(:form dynamic-dispatch))]
+                           ~@(->> direct-dispatch-seq
+                                  (map (c/fn [{:as reify-data :keys [id form]}]
+                                         (aset* fn|fs-name id form))))
+                           ~fn|name|global)]
+                  {:form      (case kind
+                                 :fn           fn-form
+                                 :defn         `(do (uvar/defmeta-from ~fn|name|global ~fn-form))
+                                 ;; FIXME extend-defn should redefine the fs, ts, and dynamic
+                                 ;; dispatch of the existing TypedFn object
+                                 :extend-defn! (TODO))
+                   :overloads (->> direct-dispatch-seq
+                                   (uc/map
+                                     (c/fn [{:keys [overload]}]
+                                       {:type      (:output-type overload)
+                                        :arg-types (:arg-types   overload)
+                                        :body      (:body-node   overload)})))}))
+          ast-basis
+            {:env             env
+             :unanalyzed-form unanalyzed-form
+             :name            fn|name
+             :meta            fn|meta
+             :overloads       overloads
+             :form            form
+                              ;; TODO is `norx-deref` the right approach? What if something else
+                              ;; refers to the defn that then is extended? Will that not happen
+                              ;; correctly?
+             :type            (norx-deref !fn|type)}]
+      (case kind
+        :fn           (uast/fnt-node          ast-basis)
+        :defn         (uast/defnt-node        ast-basis)
+        :extend-defn! (uast/extend-defnt-node ast-basis)))
+    (finally (uvec/alist-empty! !global-overload-queue))))
 
 (defns analyze-fn [env ::uana/env, form _] (analyze-fn* :fn env form))
 
