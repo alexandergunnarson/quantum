@@ -215,7 +215,10 @@
 
 (us/def ::opts (us/map-of keyword? t/any?))
 
-(us/def ::env (us/map-of (us/or* symbol? #(= % :opts)) t/any?))
+(us/def ::env
+  (us/map-of (us/or* symbol? #(= % :opts))
+             ;; Technically this should change based on the key spec
+             (us/or* uast/node? map?)))
 
 (declare analyze* analyze-arg-syms*)
 
@@ -326,7 +329,7 @@
                   ;; the others
                   :type            (-> body uc/last :type)}))))
 
-(defns analyze-seq|let*|bindings [env ::env, bindings|form _]
+(defns- analyze-seq|let*|bindings [env ::env, bindings|form _]
   (->> bindings|form
        (uc/partition-all+ 2)
        (reduce (fn [{env' :env !bindings :form :keys [bindings-map]} [sym form :as binding|form]]
@@ -337,7 +340,7 @@
          {:env env :form (transient []) :bindings-map {}})
        (<- (update :form (fn-> persistent! (add-file-context-from bindings|form))))))
 
-(defns analyze-seq|let*
+(defns- analyze-seq|let*
   [env ::env, [_ _, bindings|form _ & body|form _ :as form] _ > uast/let*?]
   (let [{env' :env bindings|form' :form :keys [bindings-map]}
           (analyze-seq|let*|bindings env bindings|form)
@@ -689,8 +692,8 @@
   [env ::env, caller|node uast/node?, caller|type _, inputs-ct _]
   (if-let [fn|name (utr/fn-type>fn-name caller|type)]
     (let [overload-types-name (symbol (namespace fn|name) (str (name fn|name) "|__types"))]
-      (if-let [fn|types (get env overload-types-name)]
-        (->> fn|types (uc/filter #(-> % :arg-types count (= inputs-ct))))
+      (if-let [fn|types-node (get env overload-types-name)]
+        (->> fn|types-node :value (uc/filter #(-> % :arg-types count (= inputs-ct))))
         (if-let [fn|types-var (uvar/resolve (or (-> env :opts :ns) *ns*) overload-types-name)]
           (->> fn|types-var var-get urx/norx-deref :overload-types
                (uc/filter #(-> % :arg-types count (= inputs-ct))))
@@ -942,8 +945,8 @@
 (defns- analyze-seq*
   "Analyze a seq after it has been macro-expanded.
    The ->`form` is post- incremental macroexpansion."
-  [env ::env, [caller|form _ & body _ :as form] _ > uast/node?]
-  (case caller|form
+  [env ::env, [caller|form _ & body _ :as form] _, expanded-caller-sym symbol? > uast/node?]
+  (case expanded-caller-sym
     .        (analyze-seq|dot   env form)
     (quantum.core.type/def quantum.untyped.core.type.defnt/def)
       (TODO "t/def" {:form form})
@@ -969,34 +972,37 @@
     var      (analyze-seq|var   env form)
     (if (-> env :opts :arglist-context?)
         (if-let [caller-form-dependent-type-call?
-                   (and (symbol? caller|form)
-                        (when-let [sym (some->
-                                         (uvar/resolve (or (-> env :opts :ns) *ns*) caller|form)
-                                         uid/>symbol)]
-                          (case sym
-                            (quantum.core.type/type
-                             quantum.untyped.core.type/type
-                             quantum.core.type/input-type
-                             quantum.untyped.core.type/input-type
-                             quantum.core.type/output-type
-                             quantum.untyped.core.type/output-type) true
-                            false)))]
+                   (case expanded-caller-sym
+                     (quantum.core.type/type
+                      quantum.untyped.core.type/type
+                      quantum.core.type/input-type
+                      quantum.untyped.core.type/input-type
+                      quantum.core.type/output-type
+                      quantum.untyped.core.type/output-type) true
+                     false)]
           (analyze-seq|dependent-type-call env form)
           (analyze-seq|call env form))
         (analyze-seq|call env form))))
 
 (defns- analyze-seq [env ::env, form _]
-  (let [expanded-form (case (first form)
+  (let [ns-val              (or (-> env :opts :ns) *ns*)
+        caller|form         (first form)
+        expanded-caller-sym (if (symbol? caller|form)
+                                (or (some->> caller|form (uvar/resolve ns-val) uid/>symbol)
+                                    caller|form)
+                                caller|form)
+        expanded-form (case expanded-caller-sym
                         (quantum.core.type.defnt/dotyped
                          quantum.untyped.core.type.defnt/dotyped
                          quantum.core.type.defnt/fn
                          quantum.untyped.core.type.defnt/fn
                          quantum.core.type.defnt/defn
-                          quantum.untyped.core.type.defnt/defn)
+                         quantum.untyped.core.type.defnt/defn)
                           form ; will be analyzed in `analyze-seq*`
-                        (binding [*ns* (or (-> env :opts :ns) *ns*)] (ufeval/macroexpand form)))]
+                        (binding [*ns* ns-val]
+                          (ufeval/macroexpand form)))]
     (if-let [no-expansion? (ucomp/== form expanded-form)]
-      (analyze-seq* env expanded-form)
+      (analyze-seq* env expanded-form expanded-caller-sym)
       (let [expanded-form' (cond-> expanded-form
                              (uvar/with-metable? expanded-form) (update-meta merge (meta form)))
             expanded (analyze* env expanded-form')]
@@ -1008,19 +1014,18 @@
            :expanded        expanded
            :type            (:type expanded)})))))
 
-(defns- ?resolve [env ::env, sym symbol?]
+(defns- ?resolve
+  [env ::env, sym symbol? > (us/nilable (us/kv {:resolved some? :resolved-via keyword?}))]
   (if-let [[_ local] (or (find env sym)
                          (and (-> env :opts :arglist-context?)
                               (-> env :opts :arg-env deref (find sym))))]
     {:resolved local :resolved-via :env}
-    (let [resolved (uvar/resolve (or (-> env :opts :ns) *ns*) sym)]
-      (ifs resolved
-             {:resolved resolved :resolved-via :resolve}
-           (some->> sym namespace symbol (uvar/resolve (or (-> env :opts :ns) *ns*)) class?)
-             {:resolved     (analyze-seq|dot
-                              env (list '. (-> sym namespace symbol) (-> sym name symbol)))
-              :resolved-via :dot}
-           nil))))
+    (if-let [resolved (uvar/resolve (or (-> env :opts :ns) *ns*) sym)]
+      {:resolved resolved :resolved-via :resolve}
+      (when (some->> sym namespace symbol (uvar/resolve (or (-> env :opts :ns) *ns*)) class?)
+        {:resolved     (analyze-seq|dot
+                         env (list '. (-> sym namespace symbol) (-> sym name symbol)))
+         :resolved-via :dot}))))
 
 (defns- analyze-symbol|arglist-context
   "Handles forward dependent-type dependencies e.g. `[a (type b) b t/any?]`"
@@ -1104,6 +1109,7 @@
   > uast/node?
   ([form _] (analyze {} form))
   ([env ::env, form _]
+    (when (and (-> env (dissoc :opts) empty?) (-> form first name (= "fn"))) (throw (Exception.)))
     (uref/set! !!analyze-depth 0)
     (binding [*analyzing?* true] (analyze* env form))))
 
@@ -1118,6 +1124,13 @@
   (binding [quantum.untyped.core.analyze.ast/*print-env?* false
             quantum.untyped.core.print/*collapse-symbols?* true
             *print-meta*  true
+            *print-level* 10]
+    (quantum.untyped.core.print/ppr x)))
+
+(defn pr-no-meta! [x]
+  (binding [quantum.untyped.core.analyze.ast/*print-env?* false
+            quantum.untyped.core.print/*collapse-symbols?* true
+            *print-meta*  false
             *print-level* 10]
     (quantum.untyped.core.print/ppr x)))
 
@@ -1233,10 +1246,11 @@
     > (us/vec-of (us/kv {:env ::env :output-type-node uast/node?}))]
     (uref/set! !!analyze-arg-syms|iter 0)
     (uref/set! !!dependent?            false)
-    (try (analyze-arg-syms*
-           {:opts (merge (:opts env)
-                    (>analyze-arg-syms|opts env arg-sym->arg-type-form output-type-or-form
-                      split-types?))})
+    (try (binding [*analyzing?* true]
+           (analyze-arg-syms*
+             {:opts (merge (:opts env)
+                      (>analyze-arg-syms|opts env arg-sym->arg-type-form output-type-or-form
+                        split-types?))}))
       (catch Throwable t
         (if (and (uerr/error-map? t) (-> t :ident (= ::arg-syms-analyzed)))
             (-> t :data :result)

@@ -276,7 +276,7 @@
           :fn|inline?             boolean?
           :fn|meta                (us/nilable :quantum.core.specs/meta)
           :fn|ns-name             simple-symbol?
-          :fn|name                ::uss/fn|name
+          :fn|name                (us/nilable ::uss/fn|name)
           :fn|output-type         t/type?
           :fn|output-type|form    t/any?
           :fn|overload-bases-name simple-symbol?
@@ -579,16 +579,18 @@
    > ::overload]
   (let [;; Not sure if `nil` is the right approach for the value
         recursive-ast-node-reference
-          (when (= kind :defn) (uast/symbol {} fn|name nil fn|type))
+          (when (not= kind :extend-defn!) (uast/symbol {} fn|name nil fn|type))
         local-env    (->> (zipmap (keys args-form) arg-types)
                           (uc/map' (c/fn [[arg-binding arg-type]]
                                      [arg-binding (uast/unbound nil arg-binding arg-type)]))
                           ;; To support recursion
-                          (<- (cond-> (not= kind :extend-defn!)
-                                (assoc fn|name
-                                       recursive-ast-node-reference
-                                       (uid/qualify fn|ns-name fn|overload-types-name)
-                                       fn|overload-types))))
+                          (<- (cond->
+                                (and fn|name (not= kind :extend-defn!))
+                                  (assoc fn|name recursive-ast-node-reference)
+                                (= kind :defn)
+                                  (assoc (uid/qualify fn|ns-name fn|overload-types-name)
+                                         (uast/var-value fn|overload-types-name fn|overload-types
+                                           (t/value fn|overload-types))))))
         env'         (-> env
                          (merge local-env)
                          (assoc-in [:opts :ns] (-> unanalyzed-overload :ns-name the-ns)))
@@ -701,9 +703,9 @@
 
 (defns- overload-basis-data>types+
   "Split and primitivized; not yet sorted."
-  [{:keys [fn|output-type _]} ::fn|globals, ns-name-val _, args-form _, output-type|form _
-   body-codelist _]
-  (->> (uana/analyze-arg-syms {:opts {:ns (the-ns ns-name-val)}}
+  [{:keys [fn|output-type _]} ::fn|globals, env ::uana/env, ns-name-val _, args-form _
+   output-type|form _, body-codelist _]
+  (->> (uana/analyze-arg-syms (assoc-in env [:opts :ns] (the-ns ns-name-val))
           args-form (or output-type|form fn|output-type) true)
        (uc/map+ (c/fn [{:keys [env output-type-node]}]
                   (let [arg-env     (->> env :opts :arg-env deref)
@@ -786,6 +788,7 @@
    `n` is the size of the existing overload types. 'Cheap' because only a `=` check is performed `n`
    times for each `m`. All other computations are done only once for each `m`."
   [fn|globals ::fn|globals
+   env        ::uana/env
    {:keys [prev-norx _, current _]} ::overload-bases-data
    existing-overload-types (us/nilable (us/vec-of ::types-decl-datum))
    > (us/vec-of ::unanalyzed-overload)]
@@ -804,9 +807,8 @@
                            (seq-or #(and (= output-type (:output-type %))
                                          (= arg-types   (:arg-types   %)))
                                    existing-overload-types))]
-                   (->> (or types|split (overload-basis-data>types+
-                                          fn|globals (:ns-name basis) args-form output-type|form
-                                          body-codelist|unanalyzed))
+                   (->> (or types|split (overload-basis-data>types+ fn|globals env (:ns-name basis)
+                                          args-form output-type|form body-codelist|unanalyzed))
                         (cond->> (and (not new-overload-basis?)
                                       (= (:body-codelist basis) (:body-codelist prev-basis)))
                           (uc/remove+ type-signature-equal-to-existing?))
@@ -839,7 +841,7 @@
    opts                ::opts
    {:as   fn|globals
     :keys [fn|name _, fn|ns-name _, fn|output-type _, fn|overload-types-name _]} ::fn|globals
-   env             _
+   env             ::uana/env
    !overload-queue _
    > ::fn|types]
   (establish-dependency-relations-on-new-overload-bases! fn|output-type overload-bases-data)
@@ -853,7 +855,7 @@
              :fn|output-type|new  fn|output-type-norx}))
     (if-not-let [changed-unanalyzed-overloads
                    (seq (>changed-unanalyzed-overloads
-                          fn|globals overload-bases-data existing-overload-types))]
+                          fn|globals env overload-bases-data existing-overload-types))]
       (or existing-fn-types
           {:fn|output-type-norx fn|output-type-norx
            :fn|type-norx        (t/ftype (uid/qualify fn|ns-name fn|name) fn|output-type-norx)
@@ -1036,6 +1038,7 @@
   [opts ::opts
    {:as   fn|globals
     :keys [fn|inline? _, fn|output-type _, fn|output-type _, fn|output-type|form _]} ::fn|globals
+   env ::uana/env
    {:as overload-basis-form
     {:as arglist-form
      args                      [:args    _]
@@ -1062,7 +1065,8 @@
                            (assert (-> varargs :binding-form first (= :sym))))
         args-form        (reduce-2 assoc (umap/om) arg-bindings arg-types|form)
         ns-name-val      (>symbol *ns*)
-        [arglist-basis]  (uana/analyze-arg-syms {:opts {:ns (the-ns ns-name-val)}} args-form
+        [arglist-basis]  (uana/analyze-arg-syms
+                           (assoc-in env [:opts :ns] (the-ns ns-name-val)) args-form
                            (or output-type|form fn|output-type) false)
         binding->arg-type|basis (->> arglist-basis :env :opts :arg-env deref (uc/map-vals' :type))
         arg-types|basis   (->> args-form keys (uc/map binding->arg-type|basis))
@@ -1090,8 +1094,8 @@
      ;; previous split types. If non-reactive, then the split types of this overload basis can be
      ;; compared to existing overload bases.
      :types|split             (when dependent?
-                                (->> (overload-basis-data>types+ fn|globals ns-name-val args-form
-                                       output-type|form body-codelist|unanalyzed)
+                                (->> (overload-basis-data>types+ fn|globals env ns-name-val
+                                       args-form output-type|form body-codelist|unanalyzed)
                                      join))
      ;; TODO Only needed if `inline? or `reactive?`, or if new
      :body-codelist           body-codelist|unanalyzed
@@ -1176,10 +1180,11 @@
    but which can be updated and appended to."
   [{:as opts       :keys [kind _]} ::opts
    {:as fn|globals :keys [fn|ns-name _, fn|overload-bases-name _]} ::fn|globals
+   env ::uana/env
    overload-bases-form _]
   (let [new-overload-bases
-         (->> overload-bases-form
-              (uc/map (c/fn [x] (overload-basis-form>overload-basis opts fn|globals x))))]
+          (->> overload-bases-form
+               (uc/map (c/fn [x] (overload-basis-form>overload-basis opts fn|globals env x))))]
     (if (= kind :extend-defn!)
         (with-do-let [!overload-bases
                         (-> (uid/qualify fn|ns-name fn|overload-bases-name) resolve var-get)]
@@ -1204,8 +1209,9 @@
                 #(uref/set! !overload-bases prev-overload-bases))
               (uref/set! !overload-bases overload-bases'))))
         (with-do-let [!overload-bases (urx/! {:prev-norx nil :current new-overload-bases})]
-          (intern-with-rollback!
-            !global-rollback-queue fn|ns-name fn|overload-bases-name !overload-bases)))))
+          (when-not (= kind :fn)
+            (intern-with-rollback!
+              !global-rollback-queue fn|ns-name fn|overload-bases-name !overload-bases))))))
 
 (defns- >!fn|types
   "`!fn|types` is a reaction which depends on the `!overload-bases` atom and all reactive types
@@ -1228,8 +1234,9 @@
                                         (overload-bases-data>fn|types overload-bases-data
                                           old-overload-types opts fn|globals env !overload-queue)))
                                     norx-deref)]
-        (intern-with-rollback!
-          !global-rollback-queue fn|ns-name fn|overload-types-name !fn|types))))
+        (when-not (= kind :fn)
+          (intern-with-rollback!
+            !global-rollback-queue fn|ns-name fn|overload-types-name !fn|types)))))
 
 (defns- >!fn|type
   [{:as opts       :keys [kind _]} ::opts
@@ -1293,15 +1300,11 @@
                 (kw-map fn|fs-name fn|globals-name fn|inline? fn|meta fn|name fn|ns-name
                         fn|output-type|form fn|output-type fn|overload-bases-name
                         fn|overload-types-name fn|ts-name fn|type-name)]
-          (intern-with-rollback! !global-rollback-queue fn|ns-name fn|globals-name fn|globals)
+          (when-not (= kind :fn)
+            (intern-with-rollback! !global-rollback-queue fn|ns-name fn|globals-name fn|globals))
           (kw-map fn|globals overload-bases-form)))))
 
 ;; ===== Whole `t/(de)fn` creation ===== ;;
-
-(defns analyze-fn [env ::uana/env, form _]
-  (TODO))
-
-(reset! uana/!!analyze-fnt analyze-fn)
 
 (defns- >fn|ts
   "Creates the array-of-arrays containing the type input data, for consumption by dynamic dispatch.
@@ -1327,16 +1330,9 @@
 
 ;; TODO lazily and incrementally analyze this; maybe we want to do code transformations which don't
 ;; require analysis, as shown in tests
-(defns- analyze-defn* [kind #{:defn :extend-defn!}, env ::uana/env, unanalyzed-form _ > uast/node?]
-  (let [opts            (>fn|opts kind *compilation-mode*)
-        !overload-queue !global-overload-queue
-        {:keys [fn|globals overload-bases-form]
-         {:keys [fn|fs-name fn|globals-name fn|meta fn|name fn|ns-name fn|ts-name fn|type-name]}
-         :fn|globals}
-          (>fn|globals+?overload-bases-form kind unanalyzed-form)
-        !overload-bases (>!overload-bases opts fn|globals overload-bases-form)
-        !fn|types       (>!fn|types       opts fn|globals env !overload-bases !overload-queue)
-        fn|types        (norx-deref !fn|types)
+#_(defns- analyze-defn* [kind #{:defn :extend-defn!}, env ::uana/env, unanalyzed-form _ > uast/node?]
+  (analyze-fn* kind env unanalyzed-form)
+  (let [
         fn|ts           (>fn|ts                fn|globals fn|types)
         !fn|type        (>!fn|type        opts fn|globals !fn|types)
         {:keys [form overloads]}
@@ -1383,6 +1379,25 @@
     (case kind
       :defn         (uast/defnt-node        ast-basis)
       :extend-defn! (uast/extend-defnt-node ast-basis))))
+
+(defns- analyze-fn*
+  [kind #{:defn :extend-defn! :fn}, env ::uana/env, unanalyzed-form _ > uast/node?]
+  (let [!overload-queue !global-overload-queue
+        opts            (>fn|opts kind *compilation-mode*)
+        {:keys [fn|globals overload-bases-form]
+         {:keys [fn|fs-name fn|globals-name fn|meta fn|name fn|ns-name fn|ts-name fn|type-name]}
+         :fn|globals}
+          (>fn|globals+?overload-bases-form kind unanalyzed-form)
+        !overload-bases (>!overload-bases opts fn|globals env overload-bases-form)
+        !fn|types       (>!fn|types       opts fn|globals env !overload-bases !overload-queue)
+        fn|types        (norx-deref !fn|types)]
+    @!overload-bases
+    (println "DONEEE")
+    (TODO)))
+
+(defns analyze-fn [env ::uana/env, form _] (analyze-fn* :fn env form))
+
+(reset! uana/!!analyze-fnt analyze-fn)
 
 (defns analyze-defn [env ::uana/env, form _ > uast/node?] (analyze-defn* :defn env form))
 
