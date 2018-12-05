@@ -709,10 +709,18 @@
 (defns- overload-type-datum>reify-name [type-datum _, fn|name symbol? > qualified-symbol?]
   (symbol (-> type-datum :ns-name name) (str (name fn|name) "|__" (:id type-datum))))
 
+(defn aget* [x i]
+  #?(:clj  (list '. 'clojure.lang.RT 'aget           x i)
+     :cljs (list                     'cljs.core/aget x i)))
+
+(defn aset* [x i v]
+  #?(:clj  (list '. 'clojure.lang.RT 'aset           x i v)
+     :cljs (list                     'cljs.core/aset x i v)))
+
 (defns- >direct-dispatch|reify-call
   [caller|node uast/node?, caller|type _, type-datum _, args-codelist (us/seq-of t/any?)]
   (if-let [fn|name (utr/fn-type>fn-name caller|type)]
-    `(. ~(overload-type-datum>reify-name type-datum fn|name)
+    `(. ~(aget* (symbol (str (name fn|name) "|__fs")) (:id type-datum))
         ~direct-dispatch-method-sym ~@args-codelist)
     (err! "No name found for typed fn corresponding to caller; cannot create direct dispatch call"
           (assoc (select-keys caller|node [:unanalyzed-form :form]) :type caller|type))))

@@ -942,14 +942,6 @@
 
 ;; ===== Dynamic dispatch ===== ;;
 
-(c/defn aget* [x i]
-  #?(:clj  (list '. 'clojure.lang.RT 'aget           x i)
-     :cljs (list                     'cljs.core/aget x i)))
-
-(c/defn aset* [x i v]
-  #?(:clj  (list '. 'clojure.lang.RT 'aset           x i v)
-     :cljs (list                     'cljs.core/aset x i v)))
-
 (defns >direct-dispatch|reify-call
   [overload|id ::overload|id, reify|interface class?, fs|name simple-symbol?
    relevant-arglist (us/vec-of simple-symbol?)]
@@ -1329,13 +1321,6 @@
     (intern-with-rollback! fn|ns-name fn|ts-name ts)
     ts))
 
-(defns- >overload-types|form [{:as fn|opts :keys [compilation-mode _]} ::opts, fn|types ::fn|types]
-  (when (= compilation-mode :test)
-    (->> fn|types :overload-types
-         (uc/map (c/fn [{:keys [id index inline? arg-types output-type]}]
-                   [id index inline? arg-types output-type]))
-         fedn/-edn)))
-
 ;; TODO lazily and incrementally analyze this; maybe we want to do code transformations which don't
 ;; require analysis, as shown in tests
 (defns- analyze-fn*
@@ -1370,15 +1355,12 @@
                          ~@(->> direct-dispatch-seq
                                 (map (c/fn [{:as reify-data :keys [id form]}]
                                        (aset* fn|fs-name id form))))
-                         ~fn|name|global)
-                    overall-form (case kind
-                                   :fn         fn-form
-                                   :defn       `(uvar/defmeta-from ~fn|name|global ~fn-form)
-                                   ;; FIXME extend-defn should redefine the fs, ts, and dynamic dispatch of the existing TypedFn object
-                                   :extend-fn! (TODO))
-                    overload-types|form (>overload-types|form opts fn|types)]
-                {:form      `(do ~@(cond-> [] overload-types|form (conj overload-types|form))
-                                 ~overall-form)
+                         ~fn|name|global)]
+                {:form      (case kind
+                               :fn         fn-form
+                               :defn       `(uvar/defmeta-from ~fn|name|global ~fn-form)
+                               ;; FIXME extend-defn should redefine the fs, ts, and dynamic dispatch of the existing TypedFn object
+                               :extend-fn! (TODO))
                  :overloads (->> direct-dispatch-seq
                                  (uc/map
                                    (c/fn [{:keys [overload]}]

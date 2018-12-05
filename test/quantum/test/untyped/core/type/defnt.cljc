@@ -33,9 +33,8 @@
 
 ;; TODO test `:inline`
 
-;; Just in case
-(clojure.spec.test.alpha/unstrument)
 (do (require '[orchestra.spec.test :as st])
+    (clojure.spec.test.alpha/unstrument)
     (orchestra.spec.test/unstrument)
     (orchestra.spec.test/instrument))
 
@@ -2515,86 +2514,87 @@
                    (macroexpand '
                      ;: FIXME this contract is not being held up when returning nil
                      (self/defn f0|test [a (t/or tt/boolean? tt/double?)
-                                         > (t/ftype [tt/byte? :> (t/ftype [tt/char?])])]
+                                         ;> (t/ftype [tt/byte? :> (t/ftype [tt/char?])])
+                                         ]
                        ;; TODO this fits into a larger scheme of, should we have output types be
                        ;; `(t/and actual declared)` or should we just have them be `declared`? The
                        ;; latter is easier but it seems like the `t/fn` dispatch forces our hand
                        ;; towards the former. We need to think about this more.
                        (self/fn [b (t/or tt/byte? tt/char?)
-                                 > (t/ftype [(t/or (t/type a) tt/short?)])]
+                                 ;> (t/ftype [(t/or (t/type a) tt/short?)])
+                                 ]
                          (self/fn f1|test [c (t/or (t/type a) tt/short?)]
                            b (f1|test a) (f1|test c))))))
           expected
-            (case (env-lang)
-              :clj
-              ($ (do [[0 0 false [] (t/ftype tt/boolean? [tt/byte? :> (t/ftype [tt/char?])])]]
-            (defmeta-from ~'f0|test
-              (let* [~'f0|test|__fs (*<>|sized 2)
-                     ~'f0|test
-                       (new TypedFn
-                         {:quantum.core.type/type ~'f0|test|__type}
-                         ...
-                         ~'f0|test|__fs
-                         (fn* ([~&ts ~&fs ~'x00__]
-                                (ifs (~(aget* (aget* &ts 0) 0) ~'x00__)
-                                     (. ~(aget* &ts 0) ~'invoke ~'x00__)
-                                     (~(aget* (aget* &ts 1) 0) ~'x00__)
-                                     (. ~(aget* &ts 1) ~'invoke ~'x00__)
-                                     (unsupported! `f0|test [~'x00__] 0)))))]
-               ~(aset* f0|test|__fs 0
-                 `(reify* [~(csym `B__O)]
-                    (~'invoke [~&this ~(B 'a)]
-                      ;; From `(self/fn [b ...])`
-                      (let* [~'f__0|__fs (*<>|sized 2)
-                             ~'f__0
-                               (new TypedFn nil
-                                 ;; TODO perhaps extern this (and parts thereof) whenever
-                                 ;; possible in `let*` statement on the very outside of the fn
-                                 ;; (so around the outer `reify*`) ?
-                                 (*<> (*<> t/byte?) (*<> t/char?))
-                                 ~'f__0|__fs
-                                 (fn* ([~&ts ~&fs ~'x00__]
-                                        (ifs (~(aget* (aget* ~&ts 0) 0) ~'x00__)
-                                             (. ~(>Y__O (aget* &fs 0)) ~'invoke ~'x00__)
-                                             (~(aget* (aget* ~&ts 1) 0) ~'x00__)
-                                             (. ~(>C__O (aget* &fs 1)) ~'invoke ~'x00__)
-                                             (unsupported! [~'x00__] 0)))))]
-                       ~(aset* f__0|__fs 0
-                         `(reify* [~(csym `Y__O)]
-                            (~'invoke [~'_0__ ~(Y 'b)]
-                              ;; From `(self/fn [c ...])`
-                              (let* [~'f1|test|__fs (*<>|sized 2)
-                                     ~'f1|test
-                                       (new TypedFn nil
-                                         (*<> (*<> t/boolean?) (*<> t/short?))
-                                         ~'f1|test|__fs
-                                         (fn* ([~&ts ~&fs ~'x00]
-                                                (ifs (~(aget* (aget* &ts 0) 0) ~'x00__)
-                                                     (. ~(>B__O (aget* &fs 0)) ~'invoke ~'x00__)
-                                                     (~(aget* (aget* &ts 1) 0) ~'x00__)
-                                                     (. ~(>S__O (aget* &fs 1)) ~'invoke ~'x00__)
-                                                     (unsupported! [~'x00__] 0))))))]
-                                ~(aset* f1|test|__fs 0
-                                  `(reify* [~(csym `B__O)]
-                                     (~'invoke [~&this (B 'c)]
-                                       ~'b
-                                       (. ~(>B__O (aget* 'f1|test|__fs 0)) ~'invoke ~'a)
-                                       (. ~(>B__O (aget* 'f1|test|__fs 0)) ~'invoke ~'c))))
-                                ~(aset* f1|test|__fs 1
-                                  `(reify* [~(csym `S__O)]
-                                     (~'invoke [~&this (S 'c)]
-                                       ~'b
-                                       (. ~(>B__O (aget* 'f1|test|__fs 0)) ~'invoke ~'a)
-                                       (. ~(>S__O (aget* 'f1|test|__fs 1)) ~'invoke ~'c))))
-                                ~'f1|test)))
-                         ~(aset* f__0|__fs 1
-                            (reify* [~(csym `C__O)]
-                              (~'invoke [~&this ~(C 'a)] ...)))
-                         ~'f__0))))
-               ~(aset* f0|test|__fs 1
-                 `(reify* [~(csym `D__O)]
-                    (~'invoke [~&this ~(D 'a)] ...)))
-               ~'f0|test)))))]))
+           (case (env-lang)
+             :clj
+             ($ (defmeta-from ~'f0|test
+                  (let* [~'f0|test|__fs (*<>|sized 2)
+                         ~'f0|test
+                           (new TypedFn
+                             {:quantum.core.type/type f0|test|__type}
+                             f0|test|__ts
+                             ~'f0|test|__fs
+                             (fn* ([~&ts ~&fs ~'x00__]
+                                    (ifs (~(aget* (aget* &ts 0) 0) ~'x00__)
+                                         (. ~(aget* &fs 0) ~'invoke ~'x00__)
+                                         (~(aget* (aget* &ts 1) 0) ~'x00__)
+                                         (. ~(aget* &fs 1) ~'invoke ~'x00__)
+                                         (unsupported! `f0|test [~'x00__] 0)))))]
+                   ~(aset* 'f0|test|__fs 0
+                     `(reify* [~(csym `B__O)]
+                        (~'invoke [~&this ~(B 'a)]
+                          ;; From `(self/fn [b ...])`
+                          (let* [~'f__0|__fs (*<>|sized 2)
+                                 ~'f__0
+                                   (new TypedFn nil
+                                     ;; TODO perhaps extern this (and parts thereof) whenever
+                                     ;; possible in `let*` statement on the very outside of the fn
+                                     ;; (so around the outer `reify*`) ?
+                                     (*<> (*<> t/byte?) (*<> t/char?))
+                                     ~'f__0|__fs
+                                     (fn* ([~&ts ~&fs ~'x00__]
+                                            (ifs (~(aget* (aget* ~&ts 0) 0) ~'x00__)
+                                                 (. ~(>Y__O (aget* &fs 0)) ~'invoke ~'x00__)
+                                                 (~(aget* (aget* ~&ts 1) 0) ~'x00__)
+                                                 (. ~(>C__O (aget* &fs 1)) ~'invoke ~'x00__)
+                                                 (unsupported! [~'x00__] 0)))))]
+                           ~(aset* 'f__0|__fs 0
+                             `(reify* [~(csym `Y__O)]
+                                (~'invoke [~'_0__ ~(Y 'b)]
+                                  ;; From `(self/fn [c ...])`
+                                  (let* [~'f1|test|__fs (*<>|sized 2)
+                                         ~'f1|test
+                                           (new TypedFn nil
+                                             (*<> (*<> t/boolean?) (*<> t/short?))
+                                             ~'f1|test|__fs
+                                             (fn* ([~&ts ~&fs ~'x00]
+                                                    (ifs (~(aget* (aget* &ts 0) 0) ~'x00__)
+                                                         (. ~(>B__O (aget* &fs 0)) ~'invoke ~'x00__)
+                                                         (~(aget* (aget* &ts 1) 0) ~'x00__)
+                                                         (. ~(>S__O (aget* &fs 1)) ~'invoke ~'x00__)
+                                                         (unsupported! [~'x00__] 0))))))]
+                                    ~(aset* 'f1|test|__fs 0
+                                      `(reify* [~(csym `B__O)]
+                                         (~'invoke [~&this (B 'c)]
+                                           ~'b
+                                           (. ~(>B__O (aget* 'f1|test|__fs 0)) ~'invoke ~'a)
+                                           (. ~(>B__O (aget* 'f1|test|__fs 0)) ~'invoke ~'c))))
+                                    ~(aset* 'f1|test|__fs 1
+                                      `(reify* [~(csym `S__O)]
+                                         (~'invoke [~&this (S 'c)]
+                                           ~'b
+                                           (. ~(>B__O (aget* 'f1|test|__fs 0)) ~'invoke ~'a)
+                                           (. ~(>S__O (aget* 'f1|test|__fs 1)) ~'invoke ~'c))))
+                                    ~'f1|test)))
+                             ~(aset* 'f__0|__fs 1
+                                (reify* [~(csym `C__O)]
+                                  (~'invoke [~&this ~(C 'a)] ...)))
+                             ~'f__0))))
+                   ~(aset* 'f0|test|__fs 1
+                     `(reify* [~(csym `D__O)]
+                        (~'invoke [~&this ~(D 'a)] ...)))
+                   ~'f0|test))))]))
   (testing "Calling fns"
     (let [actual (binding [self/*compilation-mode* :test]
                    (macroexpand '

@@ -1331,8 +1331,7 @@
   (testing "universal class(-set) identity"
     (is (t/= t/val? (& t/any? t/val?)))))
 
-;; TODO incorporate into the other test?
-(deftest test|fn
+(deftest test|ftype
   #_"When we compare a t/ftype to another t/ftype, we are comparing set extensionality, as always.
      If we take the Wiener–Hausdorff–Kuratowski definition of a function as our definition of
      choice, then we may model a function as a set of ordered pairs, each of whose first element
