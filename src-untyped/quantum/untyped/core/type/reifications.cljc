@@ -500,24 +500,17 @@
 ;; ----- TypedFn (for FnType) ----- ;;
 ;; TODO figure out where this goes
 
-(defprotocol PTypedFn
-  (setFs [this fs'])
-  (setTs [this ts']))
-
 ;; TODO should we provide one with no `^:!` metadata, for optimization purposes?
 (udt/deftype TypedFn
   [meta
    ;; The types for direct dispatch overloads
-   ^:! #?(:clj ^"[Ljava.lang.Object;" ts :cljs ^array ts)
+   ^:! ^:get ^:set #?(:clj ^"[Ljava.lang.Object;" ts :cljs ^array ts)
    ;; The direct dispatch fns / `reify` overloads
    ;; Keys/indices are overload IDs, not dynamic overload-indices
-   ^:! #?(:clj ^"[Ljava.lang.Object;" fs :cljs ^array fs)
+   ^:! ^:get ^:set #?(:clj ^"[Ljava.lang.Object;" fs :cljs ^array fs)
    ;; The dynamic dispatch fn
    #?(:clj ^clojure.lang.IFn dynf :cljs dynf)]
-  {PTypedFn
-    {setTs ([this ts'] (set! ts ts') this)
-     setFs ([this fs'] (set! fs fs') this)}
-   clojure.lang.IFn
+  {clojure.lang.IFn
     {invoke
       (([              this]
          (.invoke dynf ts fs))

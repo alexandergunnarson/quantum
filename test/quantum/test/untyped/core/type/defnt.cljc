@@ -6,6 +6,7 @@
     [quantum.core.type
       :refer [dotyped]]
     [quantum.test.untyped.core.type         :as tt]
+    [quantum.untyped.core.analyze           :as uana]
     [quantum.untyped.core.data.array
       :refer [*<> *<>|sized]]
     [quantum.untyped.core.form
@@ -86,12 +87,12 @@
                 (->> ^:val (java.lang.management.ManagementFactory/getRuntimeMXBean)
                            (.getName)))))
         expected
-        ($ (do [[0 0 false [] (t/or t/nil? t/string?)]]
-               (defmeta-from ~'pid
+        ($ (do (defmeta-from ~'pid
                  (let* [~'pid|__fs (*<>|sized 1)
                         ~'pid (new TypedFn
                                 {:quantum.core.type/type pid|__type}
-                                pid|__ts ; defined/created within `t/defn`
+                                ;; [[0 0 false [] (t/or t/nil? t/string?)]]
+                                pid|__ts ; defined/created within `t/defn` ; FIXME make it so the arrays are shown here
                                 ~'pid|__fs
                                 (fn* ([~&ts ~&fs] (. ~(>__O (aget* &fs 0)) ~'invoke))))]
                    ~(aset* 'pid|__fs 0

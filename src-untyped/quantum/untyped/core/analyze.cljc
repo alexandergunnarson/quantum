@@ -1,46 +1,49 @@
 (ns quantum.untyped.core.analyze
-  (:require
-    ;; TODO excise this reference
-    [quantum.core.type.core                 :as tcore]
-    [quantum.untyped.core.analyze.ast       :as uast]
-    [quantum.untyped.core.analyze.expr      :as uxp]
-    [quantum.untyped.core.collections       :as uc
-      :refer [>vec]]
-    [quantum.untyped.core.collections.logic :as clogic]
-    [quantum.untyped.core.compare           :as ucomp]
-    [quantum.untyped.core.core
-      :refer [istr]]
-    [quantum.untyped.core.data
-      :refer [kw-map]]
-    [quantum.untyped.core.data.reactive     :as urx]
-    [quantum.untyped.core.data.set          :as uset]
-    [quantum.untyped.core.defnt
-      :refer [defns defns- fns]]
-    [quantum.untyped.core.error             :as uerr
-      :refer [TODO err!]]
-    [quantum.untyped.core.fn
-      :refer [<- fn-> fn->> fn1]]
-    [quantum.untyped.core.form              :as uform]
-    [quantum.untyped.core.form.evaluate     :as ufeval]
-    [quantum.untyped.core.form.type-hint    :as ufth]
-    [quantum.untyped.core.identifiers       :as uid]
-    [quantum.untyped.core.log               :as ulog
-      :refer [prl!]]
-    [quantum.untyped.core.logic             :as l
-      :refer [if-not-let ifs]]
-    [quantum.untyped.core.print
-      :refer [ppr]]
-    [quantum.untyped.core.reducers          :as ur
-      :refer [educe join reducei]]
-    [quantum.untyped.core.refs              :as uref
-      :refer [>!thread-local]]
-    [quantum.untyped.core.spec              :as us]
-    [quantum.untyped.core.type              :as t
-      :refer [?]]
-    [quantum.untyped.core.type.compare      :as utcomp]
-    [quantum.untyped.core.type.reifications :as utr]
-    [quantum.untyped.core.vars              :as uvar
-      :refer [update-meta]]))
+        (:require
+          ;; TODO excise this reference
+          [quantum.core.type.core                 :as tcore]
+          [quantum.untyped.core.analyze.ast       :as uast]
+          [quantum.untyped.core.analyze.expr      :as uxp]
+          [quantum.untyped.core.collections       :as uc
+            :refer [>vec]]
+          [quantum.untyped.core.collections.logic :as clogic]
+          [quantum.untyped.core.compare           :as ucomp]
+          [quantum.untyped.core.core
+            :refer [istr]]
+          [quantum.untyped.core.data
+            :refer [kw-map]]
+          [quantum.untyped.core.data.reactive     :as urx]
+          [quantum.untyped.core.data.set          :as uset]
+          [quantum.untyped.core.defnt
+            :refer [defns defns- fns]]
+          [quantum.untyped.core.error             :as uerr
+            :refer [TODO err!]]
+          [quantum.untyped.core.fn
+            :refer [<- fn-> fn->> fn1]]
+          [quantum.untyped.core.form              :as uform]
+          [quantum.untyped.core.form.evaluate     :as ufeval]
+          [quantum.untyped.core.form.type-hint    :as ufth]
+          [quantum.untyped.core.identifiers       :as uid]
+          [quantum.untyped.core.log               :as ulog
+            :refer [prl!]]
+          [quantum.untyped.core.logic             :as l
+            :refer [if-not-let ifs]]
+          [quantum.untyped.core.print
+            :refer [ppr]]
+          [quantum.untyped.core.reducers          :as ur
+            :refer [educe join reducei]]
+          [quantum.untyped.core.refs              :as uref
+            :refer [>!thread-local]]
+          [quantum.untyped.core.spec              :as us]
+          [quantum.untyped.core.type              :as t
+            :refer [?]]
+          [quantum.untyped.core.type.compare      :as utcomp]
+          [quantum.untyped.core.type.reifications :as utr
+            #?@(:cljs [:refer [TypedFn]])]
+          [quantum.untyped.core.vars              :as uvar
+            :refer [update-meta]])
+#?(:clj (:import
+          [quantum.untyped.core.type.reifications TypedFn])))
 
 (def special-metadata-keys #{:val})
 
@@ -720,7 +723,12 @@
 (defns- >direct-dispatch|reify-call
   [caller|node uast/node?, caller|type _, type-datum _, args-codelist (us/seq-of t/any?)]
   (if-let [fn|name (utr/fn-type>fn-name caller|type)]
-    `(. ~(aget* (symbol (str (name fn|name) "|__fs")) (:id type-datum))
+    `(. ~(ufth/with-type-hint
+           (aget* `(. ~(-> fn|name name symbol
+                           (ufth/with-type-hint (ufth/>body-embeddable-tag TypedFn)))
+                      ~'getFs)
+                  (:id type-datum))
+           (-> type-datum :interface ufth/>body-embeddable-tag))
         ~direct-dispatch-method-sym ~@args-codelist)
     (err! "No name found for typed fn corresponding to caller; cannot create direct dispatch call"
           (assoc (select-keys caller|node [:unanalyzed-form :form]) :type caller|type))))
@@ -1117,7 +1125,6 @@
   > uast/node?
   ([form _] (analyze {} form))
   ([env ::env, form _]
-    (when (and (-> env (dissoc :opts) empty?) (-> form first name (= "fn"))) (throw (Exception.)))
     (uref/set! !!analyze-depth 0)
     (binding [*analyzing?* true] (analyze* env form))))
 
@@ -1132,14 +1139,14 @@
   (binding [quantum.untyped.core.analyze.ast/*print-env?* false
             quantum.untyped.core.print/*collapse-symbols?* true
             *print-meta*  true
-            *print-level* 10]
+            *print-level* 20]
     (quantum.untyped.core.print/ppr x)))
 
 (defn pr-no-meta! [x]
   (binding [quantum.untyped.core.analyze.ast/*print-env?* false
             quantum.untyped.core.print/*collapse-symbols?* true
             *print-meta*  false
-            *print-level* 10]
+            *print-level* 20]
     (quantum.untyped.core.print/ppr x)))
 
 #?(:clj
