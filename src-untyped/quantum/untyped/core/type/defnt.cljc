@@ -1315,14 +1315,23 @@
   [{:as opts       :keys [kind _]} ::opts
    {:as fn|globals :keys [fn|ns-name _, fn|ts-name _]} ::fn|globals
    fn|types ::fn|types
-   #_> #_(t/of oarray? (t/of oarray? t/type?))]
+   > (us/kv {:ts   t/any? ; (t/of oarray? (t/of oarray? t/type?)
+             :form t/any?})]
+  ;; TODO perhaps extern this (and parts thereof) whenever possible in `let*` statement on the very
+  ;;      outside of the fn (so around the outer `reify*`) ?
   (let [ts (->> fn|types
                 :overload-types
                 (uc/map+ (fn-> :arg-types uc/>array))
                 uc/>array)]
-    ;; TODO need to avoid this in CLJS and when there are closed over locals in the type
-    (intern-with-rollback! fn|ns-name fn|ts-name ts)
-    ts))
+    (if (= kind :fn)
+        (let [form (list* `uarr/*<>
+                          (->> fn|types
+                               :overload-types
+                               (uc/lmap (fn->> :arg-types (uc/lmap >form) (list* `uarr/*<>)))))]
+          {:ts ts :form form})
+        (do ;; TODO need to avoid this in CLJS and when there are closed over locals in the type
+            (intern-with-rollback! fn|ns-name fn|ts-name ts)
+            {:ts ts :form (uid/qualify fn|ns-name fn|ts-name)}))))
 
 ;; TODO lazily and incrementally analyze this; maybe we want to do code transformations which don't
 ;; require analysis, as shown in tests
@@ -1352,10 +1361,9 @@
                                                          (uid/qualify fn|ns-name fn|type-name)}))
                       direct-dispatch-seq (>direct-dispatch-seq opts fn|globals fn|types)
                       dynamic-dispatch    (>dynamic-dispatch    opts fn|globals fn|types)
-                      qualified-ts-name   (uid/qualify fn|ns-name fn|ts-name)
                       fn-form
                         `(let* [~fn|fs-name    (uarr/*<>|sized ~(-> fn|types :overload-types count))
-                                ~fn|name|local (new TypedFn ~fn|meta ~qualified-ts-name ~fn|fs-name
+                                ~fn|name|local (new TypedFn ~fn|meta ~(:form fn|ts) ~fn|fs-name
                                                             ~(:form dynamic-dispatch))]
                            ~@(->> direct-dispatch-seq
                                   (map (c/fn [{:as reify-data :keys [id form]}]

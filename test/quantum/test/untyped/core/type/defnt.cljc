@@ -2519,12 +2519,17 @@
   (let [ts (O<> (symbol (str "ts" n "__")))
         fs (O<> (symbol (str "fs" n "__")))
         x  (symbol (str "x0" n "__"))]
-   `(fn* ([~(O<> 'ts6__) ~(O<> 'fs6__) ~x]
+   `(fn* ([~(O<> ts) ~(O<> fs) ~x]
            (ifs (~(aget* (O<> (aget* ts 0)) 0) ~x)
-                (. ~(hintf0 (aget* (O<> 'fs6__) 0)) ~'invoke ~x)
+                (. ~(hintf0 (aget* (O<> fs) 0)) ~'invoke ~x)
                 (~(aget* (O<> (aget* ts 1)) 0) ~x)
-                (. ~(hintf1 (aget* (O<> 'fs6__) 1)) ~'invoke ~x)
+                (. ~(hintf1 (aget* (O<> fs) 1)) ~'invoke ~x)
                 (unsupported! ~(list 'quote unsupported-sym) [~x] 0))))))
+
+(defn- test|fn|reify-body [hintf0 i0 hintf1 i1]
+  (O `(do ~'b
+          ~(O `(. ~(hintf0 (aget* `(. ~(tag (cstr `TypedFn) 'f1|test) ~'getFs) i0)) ~'invoke ~'a))
+          ~(O `(. ~(hintf1 (aget* `(. ~(tag (cstr `TypedFn) 'f1|test) ~'getFs) i1)) ~'invoke ~'c)))))
 
 (deftest test|fn
   (testing "Nested fns"
@@ -2561,45 +2566,27 @@
                           (let* [~'__anon0__|__fs (*<>|sized 2)
                                  ~'__anon0__
                                    (new TypedFn nil
-                                     ;; TODO perhaps extern this (and parts thereof) whenever
-                                     ;; possible in `let*` statement on the very outside of the fn
-                                     ;; (so around the outer `reify*`) ?
                                      (*<> (*<> t/byte?) (*<> t/char?))
                                      ~'__anon0__|__fs
-                                     (fn* ([~(O<> 'ts2__) ~(O<> 'fs2__) ~'x02__]
-                                            (ifs (~(aget* (aget* 'ts2__ 0) 0) ~'x02__)
-                                                 (. ~(>Y__O (aget* 'fs2__ 0)) ~'invoke ~'x02__)
-                                                 (~(aget* (aget* 'ts2__ 1) 0) ~'x02__)
-                                                 (. ~(>C__O (aget* 'fs2__ 1)) ~'invoke ~'x02__)
-                                                 (unsupported! ~'<anonymous-fn> [~'x02__] 0)))))]
+                                     ~(test|fn|gen-dynf 2 >Y__O >C__O '<anonymous-fn>))]
                            ~(aset* '__anon0__|__fs 0
                              `(reify* [~(csym `Y__O)]
-                                (~(O 'invoke) [~'_0__ ~(Y 'b)]
+                                (~(O 'invoke) [~'_4__ ~(Y 'b)]
                                   ;; From `(self/fn [c ...])`
                                   (let* [~'f1|test|__fs (*<>|sized 2)
                                          ~'f1|test
                                            (new TypedFn nil
                                              (*<> (*<> t/boolean?) (*<> t/short?))
                                              ~'f1|test|__fs
-                                             (fn*
-                                               ([~(O<> 'ts0__) ~(O<> 'fs0__) ~'x00__]
-                                                 (ifs (~(aget* (aget* 'ts0__ 0) 0) ~'x00__)
-                                                      (. ~(>B__O (aget* &fs 0)) ~'invoke ~'x00__)
-                                                      (~(aget* (aget* 'ts0__ 1) 0) ~'x00__)
-                                                      (. ~(>S__O (aget* 'fs0__ 1)) ~'invoke ~'x00__)
-                                                      (unsupported! ~'f1|test [~'x00__] 0)))))]
+                                             ~(test|fn|gen-dynf 0 >B__O >S__O 'f1|test))]
                                     ~(aset* 'f1|test|__fs 0
                                       `(reify* [~(csym `B__O)]
-                                         (~(O 'invoke) [~&this (B 'c)]
-                                           ~'b
-                                           (. ~(>B__O (aget* '(. f1|test getFs) 0)) ~'invoke ~'a)
-                                           (. ~(>B__O (aget* '(. f1|test getFs) 0)) ~'invoke ~'c))))
+                                         (~(O 'invoke) [~'_0__ ~(B 'c)]
+                                           ~(test|fn|reify-body >B__O 0 >B__O 0))))
                                     ~(aset* 'f1|test|__fs 1
                                       `(reify* [~(csym `S__O)]
-                                         (~(O 'invoke) [~&this (S 'c)]
-                                           ~'b
-                                           (. ~(>B__O (aget* '(. f1|test getFs) 0)) ~'invoke ~'a)
-                                           (. ~(>S__O (aget* '(. f1|test getFs) 1)) ~'invoke ~'c))))
+                                         (~(O 'invoke) [~'_1__ ~(S 'c)]
+                                           ~(test|fn|reify-body >B__O 0 >S__O 1))))
                                     ~'f1|test))))
                            ~(aset* '__anon0__|__fs 1
                              `(reify* [~(csym `C__O)]
@@ -2608,27 +2595,17 @@
                                   (let* [~'f1|test|__fs (*<>|sized 2)
                                          ~'f1|test
                                            (new TypedFn nil
-                                             ...
+                                             (*<> (*<> t/boolean?) (*<> t/short?))
                                              ~'f1|test|__fs
-                                             (fn*
-                                               ([~(O<> 'ts1__) ~(O<> 'fs1__) ~'x01__]
-                                                 (ifs (~(aget* (aget* 'ts1__ 0) 0) ~'x01__)
-                                                      (. ~(>B__O (aget* &fs 0)) ~'invoke ~'x01__)
-                                                      (~(aget* (aget* 'ts1__ 1) 0) ~'x01__)
-                                                      (. ~(>S__O (aget* 'fs1__ 1)) ~'invoke ~'x01__)
-                                                      (unsupported! ~'f1|test [~'x01__] 0)))))]
+                                             ~(test|fn|gen-dynf 1 >B__O >S__O 'f1|test))]
                                     ~(aset* 'f1|test|__fs 0
                                       `(reify* [~(csym `B__O)]
-                                         (~(O 'invoke) [~'_2__ (B 'c)]
-                                           ~'b
-                                           (. ~(>B__O (aget* '(. f1|test getFs) 0)) ~'invoke ~'a)
-                                           (. ~(>B__O (aget* '(. f1|test getFs) 0)) ~'invoke ~'c))))
+                                         (~(O 'invoke) [~'_2__ ~(B 'c)]
+                                           ~(test|fn|reify-body >B__O 0 >B__O 0))))
                                     ~(aset* 'f1|test|__fs 1
                                       `(reify* [~(csym `S__O)]
-                                         (~(O 'invoke) [~&this (S 'c)]
-                                           ~'b
-                                           (. ~(>B__O (aget* '(. f1|test getFs) 0)) ~'invoke ~'a)
-                                           (. ~(>S__O (aget* '(. f1|test getFs) 1)) ~'invoke ~'c))))
+                                         (~(O 'invoke) [~'_3__ ~(S 'c)]
+                                           ~(test|fn|reify-body >B__O 0 >S__O 1))))
                                     ~'f1|test))))
                            ~'__anon0__))))
                    ~(aset* 'f0|test|__fs 1
@@ -2638,14 +2615,9 @@
                           (let* [~'__anon3__|__fs (*<>|sized 2)
                                  ~'__anon3__
                                    (new TypedFn nil
-                                     ...
-                                     ~'__anon0__|__fs
-                                     (fn* ([~'(O<> ts5__) ~(O<> 'fs5__) ~'x05__]
-                                            (ifs (~(aget* (aget* 'ts5__ 0) 0) ~'x05__)
-                                                 (. ~(>Y__O (aget* 'fs5__ 0)) ~'invoke ~'x05__)
-                                                 (~(aget* (aget* 'ts5__ 1) 0) ~'x05__)
-                                                 (. ~(>C__O (aget* 'fs5__ 1)) ~'invoke ~'x05__)
-                                                 (unsupported! ~'<anonymous-fn> [~'x05__] 0)))))]
+                                     (*<> (*<> t/byte?) (*<> t/char?))
+                                     ~'__anon3__|__fs
+                                     ~(test|fn|gen-dynf 5 >Y__O >C__O '<anonymous-fn>))]
                            ~(aset* '__anon3__|__fs 0
                              `(reify* [~(csym `Y__O)]
                                 (~(O 'invoke) [~'_10__ ~(Y 'b)]
@@ -2653,27 +2625,17 @@
                                   (let* [~'f1|test|__fs (*<>|sized 2)
                                          ~'f1|test
                                            (new TypedFn nil
-                                             ...
+                                             (*<> (*<> t/short?) (*<> t/double?))
                                              ~'f1|test|__fs
-                                             (fn*
-                                               ([~(O<> 'ts3__) ~(O<> 'fs3__) ~'x03__]
-                                                 (ifs (~(aget* (aget* 'ts3__ 0) 0) ~'x03__)
-                                                      (. ~(>B__O (aget* &fs 0)) ~'invoke ~'x03__)
-                                                      (~(aget* (aget* 'ts3__ 1) 0) ~'x03__)
-                                                      (. ~(>S__O (aget* 'fs3__ 1)) ~'invoke ~'x03__)
-                                                      (unsupported! ~'f1|test [~'x03__] 0)))))]
+                                             ~(test|fn|gen-dynf 3 >S__O >D__O 'f1|test))]
                                     ~(aset* 'f1|test|__fs 0
                                       `(reify* [~(csym `S__O)]
-                                         (~(O 'invoke) [~'_6__ (S 'c)]
-                                           ~'b
-                                           (. ~(>B__O (aget* '(. f1|test getFs) 1)) ~'invoke ~'a)
-                                           (. ~(>B__O (aget* '(. f1|test getFs) 0)) ~'invoke ~'c))))
+                                         (~(O 'invoke) [~'_6__ ~(S 'c)]
+                                           ~(test|fn|reify-body >D__O 1 >S__O 0))))
                                     ~(aset* 'f1|test|__fs 1
                                       `(reify* [~(csym `D__O)]
-                                         (~(O 'invoke) [~'_7__ (D 'c)]
-                                           ~'b
-                                           (. ~(>B__O (aget* '(. f1|test getFs) 1)) ~'invoke ~'a)
-                                           (. ~(>S__O (aget* '(. f1|test getFs) 1)) ~'invoke ~'c))))
+                                         (~(O 'invoke) [~'_7__ ~(D 'c)]
+                                           ~(test|fn|reify-body >D__O 1 >D__O 1))))
                                     ~'f1|test))))
                            ~(aset* '__anon3__|__fs 1
                              `(reify* [~(csym `C__O)]
@@ -2682,27 +2644,17 @@
                                   (let* [~'f1|test|__fs (*<>|sized 2)
                                          ~'f1|test
                                            (new TypedFn nil
-                                             ...
+                                             (*<> (*<> t/short?) (*<> t/double?))
                                              ~'f1|test|__fs
-                                             (fn*
-                                               ([~(O<> 'ts4__) ~(O<> 'fs4__) ~'x04__]
-                                                 (ifs (~(aget* (aget* 'ts4__ 0) 0) ~'x04__)
-                                                      (. ~(>B__O (aget* &fs 0)) ~'invoke ~'x04__)
-                                                      (~(aget* (aget* 'ts4__ 1) 0) ~'x04__)
-                                                      (. ~(>S__O (aget* 'fs4__ 1)) ~'invoke ~'x04__)
-                                                      (unsupported! ~'f1|test [~'x04__] 0)))))]
+                                             ~(test|fn|gen-dynf 4 >S__O >D__O 'f1|test))]
                                     ~(aset* 'f1|test|__fs 0
                                       `(reify* [~(csym `S__O)]
-                                         (~(O 'invoke) [~'_8__ (S 'c)]
-                                           ~'b
-                                           (. ~(>B__O (aget* '(. f1|test getFs) 1)) ~'invoke ~'a)
-                                           (. ~(>B__O (aget* '(. f1|test getFs) 0)) ~'invoke ~'c))))
+                                         (~(O 'invoke) [~'_8__ ~(S 'c)]
+                                           ~(test|fn|reify-body >D__O 1 >S__O 0))))
                                     ~(aset* 'f1|test|__fs 1
                                       `(reify* [~(csym `D__O)]
-                                         (~(O 'invoke) [~'_9__ (D 'c)]
-                                           ~'b
-                                           (. ~(>B__O (aget* '(. f1|test getFs) 1)) ~'invoke ~'a)
-                                           (. ~(>S__O (aget* '(. f1|test getFs) 1)) ~'invoke ~'c))))
+                                         (~(O 'invoke) [~'_9__ ~(D 'c)]
+                                           ~(test|fn|reify-body >D__O 1 >D__O 1))))
                                     ~'f1|test))))
                            ~'__anon3__))))
                    ~'f0|test)))))]
