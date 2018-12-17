@@ -942,7 +942,8 @@
 (defns >direct-dispatch|reify-call
   [overload|id ::overload|id, reify|interface class?, fs|name simple-symbol?
    relevant-arglist (us/vec-of simple-symbol?)]
-  `(. ~(ufth/with-type-hint (aget* fs|name overload|id) (ufth/>body-embeddable-tag reify|interface))
+  `(. ~(ufth/with-type-hint
+         (uana/aget* fs|name overload|id) (ufth/>body-embeddable-tag reify|interface))
       ~uana/direct-dispatch-method-sym ~@relevant-arglist))
 
 ;; TODO spec
@@ -969,7 +970,7 @@
                      (c/fn [i|arg arg-type]
                        {:i    i|arg
                         :t    arg-type
-                        :getf `(~(aget* (with-array-type-hint (aget* ts|name id)) i|arg)
+                        :getf `(~(uana/aget* (with-array-type-hint (uana/aget* ts|name id)) i|arg)
                                  ~(get relevant-arglist i|arg))})))])))))
 
 (defns- >dynamic-dispatch|body-for-arity
@@ -1358,7 +1359,7 @@
                                                             ~(:form dynamic-dispatch))]
                            ~@(->> direct-dispatch-seq
                                   (map (c/fn [{:as reify-data :keys [id form]}]
-                                         (aset* fn|fs-name id form))))
+                                         (uana/aset* fn|fs-name id form))))
                            ~fn|name|local)]
                   {:form      (case kind
                                  :fn           fn-form
@@ -1397,6 +1398,6 @@
 
 (reset! uana/!!analyze-defnt analyze-defn)
 
-(defns analyze-extend-defn [env ::uana/env, form _] (analyze-defn* :extend-defn! env form))
+(defns analyze-extend-defn [env ::uana/env, form _] (analyze-fn* :extend-defn! env form))
 
 (reset! uana/!!analyze-extend-defnt analyze-extend-defn)
