@@ -2658,7 +2658,10 @@
                                     ~'f1|test))))
                            ~'__anon3__))))
                    ~'f0|test)))))]
-    (is-code= actual expected)))
+    (testing "code equivalence" (is-code= actual expected))
+    (testing "functionality"
+      (eval actual)
+      (eval '((f0|test true) \A)))))
   #_(testing "Calling fns"
     (let [actual (binding [self/*compilation-mode* :test]
                    (macroexpand '
