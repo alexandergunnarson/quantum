@@ -13,6 +13,7 @@
 
 ; TO EXPLORE
 ; - http://developer.factual.com for Factual (Geo, etc.) API
+; - https://www.mapbox.com/ — The premiere solution for map/geographical related things. Used by pretty much everybody important
 ; - Factual/geo
 ; - Countries of the world
 ;   - (http/request! {:url http://restcountries.eu/rest/v1/all :parse? true})
