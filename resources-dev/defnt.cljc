@@ -7,6 +7,9 @@ Note that for anything built-in js/<whatever>, the `t/isa?` predicates might nee
 
 ;; TO MOVE
 
+(defn equinumerous?
+  [xs0 (t/input count :?), xs1 (t/input count :?) > boolean?] (= (count xs0) (count xs1)))
+
 #?(:clj  (def thread?          (isa? java.lang.Thread)))
 #?(:clj  (def class?           (isa? java.lang.Class)))
 ;; TODO for CLJS based on untyped impl
