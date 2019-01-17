@@ -66,31 +66,6 @@ Legend:
 - [!] : refused
 
 - TODO implement the following:
-  [-] t/fn
-      [-] Get `t/defn` working with `let*` + TypedFn way of doing things
-      [ ] Sketch out `defnt/analyze-fn` using tests as a guide
-      [ ] t/ftype should automatically split types, while perhaps t/ftype* should just assume
-          they're split (for use by e.g. `t/fn` and `t/defn`)
-      [ ] test t/fn to make sure meta 'sticks' : `(t/fn {...} [] ...)`
-      [ ] support `ts` and `types` referring to closed-over local vars
-          - Should do e.g. `(OrType. ... [t/boolean? (AndType. ...)])` to have minimal overhead
-  [2] `?` : type inference
-      - use logic programming and variable unification e.g. `?1` `?2` ?
-      - For this situation: `?` is `(t/- <whatever-deduced-type> dc/counted?)`
-        ([n dn/std-integer?, xs dc/counted?] (count xs))
-        ([n dn/std-integer?, xs ?] ...)
-      - [ ] No trailing `>` means `> ?`
-  [3] inner expansion (see tests to see how this could work)
-  [4] t/numerically : e.g. a double representing exactly what a float is able to represent
-      - and variants thereof: `numerically-long?` etc.
-      - t/numerically-integer?
-      - Primitive conversions not requiring checks can go in data.primitive
-        - core.data.numeric (requires data.primitive)
-          - numeric definitions
-          - numeric ranges
-          - numeric characteristics
-  [ ] Probably should disallow recursive type references, including:
-      `(t/defn f [x (t/input f ...)])`
   [ ] Perhaps it's the case that we can't actually have type bases but rather reactive splits.
       In the case of `narrowest`, it expects a split and fails without it:
       `[a (t/- integer? int?), b integer? > (narrowest (t/type a) (t/type b))]`
