@@ -33,7 +33,7 @@
           [quantum.untyped.core.error                 :as uerr
             :refer [TODO err!]]
           [quantum.untyped.core.fn
-            :refer [<- aritoid fn' fn1 fn-> with-do with-do-let]]
+            :refer [<- aritoid fn' fn1 fn-> fn->> with-do with-do-let]]
           [quantum.untyped.core.form                  :as uform
             :refer [>form]]
           [quantum.untyped.core.form.evaluate         :as ufeval]

@@ -2449,7 +2449,7 @@
 
 
 (deftest test|sort-overload-types
-  (is= (self/sort-overload-types core/identity
+  (is-code= (self/sort-overload-types core/identity
          [[(t/isa? Boolean)            (t/value nil)]
           [(t/isa? Double)             (t/isa? Byte)]
           [(t/isa? Double)             (t/isa? Short)]
@@ -2483,37 +2483,37 @@
           [(t/ref (t/isa? Comparable)) (t/isa? Double)]
           [(t/ref (t/isa? Comparable)) (t/ref (t/isa? Comparable))]])
          [[(t/value nil)               (t/value nil)]
-          [(t/isa? Boolean)            (t/value nil)]
           [(t/value nil)               (t/isa? Boolean)]
           [(t/value nil)               (t/isa? Byte)]
-          [(t/isa? Double)             (t/isa? Byte)]
           [(t/value nil)               (t/isa? Short)]
-          [(t/isa? Double)             (t/isa? Short)]
           [(t/value nil)               (t/isa? Character)]
-          [(t/isa? Double)             (t/isa? Character)]
           [(t/value nil)               (t/isa? Integer)]
-          [(t/isa? Double)             (t/isa? Integer)]
           [(t/value nil)               (t/isa? Long)]
-          [(t/isa? Double)             (t/isa? Long)]
           [(t/value nil)               (t/isa? Float)]
-          [(t/isa? Double)             (t/isa? Float)]
           [(t/value nil)               (t/isa? Double)]
-          [(t/isa? Double)             (t/isa? Double)]
-          [(t/isa? Double)             (t/ref (t/isa? Comparable))]
+          [(t/value nil)               (t/not (t/value nil))]
+          [(t/isa? Boolean)            (t/value nil)]
           [(t/isa? Double)             (t/value nil)]
-          [(t/value true)              (t/value false)]
+          [(t/isa? Double)             (t/isa? Byte)]
+          [(t/isa? Double)             (t/isa? Short)]
+          [(t/isa? Double)             (t/isa? Character)]
+          [(t/isa? Double)             (t/isa? Integer)]
+          [(t/isa? Double)             (t/isa? Long)]
+          [(t/isa? Double)             (t/isa? Float)]
+          [(t/isa? Double)             (t/isa? Double)]
           [(t/value true)              (t/value true)]
-          [(t/value false)             (t/value false)]
+          [(t/value true)              (t/value false)]
           [(t/value false)             (t/value true)]
+          [(t/value false)             (t/value false)]
           [(t/ref (t/isa? Comparable)) (t/isa? Byte)]
           [(t/ref (t/isa? Comparable)) (t/isa? Short)]
+          [(t/isa? Double)             (t/ref (t/isa? Comparable))]
           [(t/ref (t/isa? Comparable)) (t/isa? Character)]
           [(t/ref (t/isa? Comparable)) (t/isa? Integer)]
           [(t/ref (t/isa? Comparable)) (t/isa? Long)]
           [(t/ref (t/isa? Comparable)) (t/isa? Float)]
           [(t/ref (t/isa? Comparable)) (t/isa? Double)]
-          [(t/ref (t/isa? Comparable)) (t/ref (t/isa? Comparable))]
-          [(t/value nil)               (t/not (t/value nil))]]))
+          [(t/ref (t/isa? Comparable)) (t/ref (t/isa? Comparable))]]))
 
 (defn- test|fn|gen-dynf [n hintf0 hintf1 unsupported-sym]
   (let [ts (O<> (symbol (str "ts" n "__")))
@@ -2662,39 +2662,34 @@
     (testing "functionality"
       (eval actual)
       (eval '((f0|test true) \A)))))
-  #_(testing "Calling fns"
-    (let [actual (binding [self/*compilation-mode* :test]
-                   (macroexpand '
-                     (do (self/defn g|test [f0 (t/ftype [tt/long? :> tt/float?]) > tt/float?]
-                           (f0 5))
-                         (self/defn h|test [f0 (t/ftype [tt/string? :> tt/char?]) > (t/type f0)]
-                           f0)
-                         ;; This won't compile
-                       #_(self/defn i|test [f0 (t/ftype  [tt/string? :> tt/char?])
-                                            >  (t/ftype' [tt/string? :> tt/char?])]
-                           f0)
-                         (self/defn i|test [f0 (t/ftype' [tt/string? :> tt/char?]) > (t/type f0)]
-                           f0)
-                         (self/defn j|test [f0 (t/ftype  [tt/long?   :> tt/float?]
-                                                         [tt/string? :> tt/char?])
-                                            f1 (t/ftype  [tt/byte?   :> tt/boolean?]
-                                                         [tt/long?   :> tt/char?]
-                                                         [tt/string? :> tt/char?])
-                                            f2 (t/ftype' [tt/long?   :> tt/float?])
-                                            >  tt/char?]
-                           (f0 7)
-                           (f1 21)
-                           (g|test f0)
-                           ((h|test f0) "63")
-                           ;; This won't compile
-                         #_((i|test f0) "98")
-                           ((i|test ^:wrap f0) "98")
-                           (j|test f1 f0)
-                           ;; FIXME for `t/ftype` comparison: what if `f1` also has the overload
-                           ;; `[(t/and tt/string? (fn-> count (= 2))) :> tt/double?]`?
-                           ;; Then yes `f1` accepts at least `tt/string?`, which outputs no more
-                           ;; than `tt/boolean?`, but it's not clear whether `tt/double?` or `tt/char?` gets output
-                           (f1 "11")))))
+  (testing "Calling fns"
+    (eval '(self/defn g|test [f0 (t/ftype  [tt/long?   :> tt/float?]) > tt/float?] (f0 5)))
+    (eval '(self/defn h|test [f0 (t/ftype  [tt/string? :> tt/char?])  > (t/type f0)] f0))
+    (eval '(self/defn i|test [f0 (t/ftype' [tt/string? :> tt/char?])  > (t/type f0)] f0))
+    (let [j|test|actual
+            (binding [self/*compilation-mode* :test]
+              (macroexpand '
+                (self/defn j|test [f0 (t/ftype  [tt/long?   :> tt/float?]
+                                                [tt/string? :> tt/char?])
+                                   f1 (t/ftype  [tt/byte?   :> tt/boolean?]
+                                                [tt/long?   :> tt/char?]
+                                                [tt/string? :> tt/char?])
+                                   f2 (t/ftype' [tt/long?   :> tt/float?])
+                                   >  tt/char?]
+                  (f0 7)
+                  (f1 21)
+                  (g|test f0)
+                  ((h|test f0) "63")
+                  ;; This won't compile
+                #_((i|test f0) "98")
+                  ((i|test ^:wrap f0) "98")
+                  (j|test f1 f0)
+                  ;; FIXME for `t/ftype` comparison: what if `f1` also has the overload
+                  ;; `[(t/and tt/string? (fn-> count (= 2))) :> tt/double?]`?
+                  ;; Then yes `f1` accepts at least `tt/string?`, which outputs no more than
+                  ;; `tt/boolean?`, but it's not clear whether `tt/double?` or `tt/char?` gets
+                  ;; output
+                  (f1 "11"))))
           expected
             (case (env-lang)
               :clj

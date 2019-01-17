@@ -693,19 +693,20 @@
 
 (defns- caller>overload-type-data-for-arity
   [env ::env, caller|node uast/node?, caller|type _, inputs-ct _]
-  (if-let [fn|name (utr/fn-type>fn-name caller|type)]
+  ;; FIXME pull name from local binding if not present on type
+  (if-not-let [fn|name (utr/fn-type>fn-name caller|type)]
+    (err! "No name found for typed fn corresponding to caller"
+          (assoc (select-keys caller|node [:unanalyzed-form :form]) :type caller|type))
     (let [overload-types-name (symbol (namespace fn|name) (str (name fn|name) "|__types"))]
       (if-let [fn|types-node (get env overload-types-name)]
         (->> fn|types-node :value (uc/filter #(-> % :arg-types count (= inputs-ct))))
-        (if-let [fn|types-var (uvar/resolve (or (-> env :opts :ns) *ns*) overload-types-name)]
-          (->> fn|types-var var-get urx/norx-deref :overload-types
-               (uc/filter #(-> % :arg-types count (= inputs-ct))))
+        (if-not-let [fn|types-var (uvar/resolve (or (-> env :opts :ns) *ns*) overload-types-name)]
           (err! "Overload-types not found for typed fn"
                 {:fn|name fn|name
                  :caller  (assoc (select-keys caller|node [:unanalyzed-form :form])
-                                 :type caller|type)}))))
-    (err! "No name found for typed fn corresponding to caller"
-          (assoc (select-keys caller|node [:unanalyzed-form :form]) :type caller|type))))
+                                 :type caller|type)})
+          (->> fn|types-var var-get urx/norx-deref :overload-types
+               (uc/filter #(-> % :arg-types count (= inputs-ct)))))))))
 
 (def direct-dispatch-method-sym 'invoke)
 
