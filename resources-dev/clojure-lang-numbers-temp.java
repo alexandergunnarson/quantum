@@ -1650,28 +1650,11 @@ static public Number divide(long x, long y){
 	return divide((Number)x, (Number)y);
 }
 
-static public double max(double x, double y){
-	return Math.max(x, y);
-}
-
 static public Object max(double x, long y){
 	if(Double.isNaN(x)){
 		return x;
 	}
 	if(x > y){
-		return x;
-	} else {
-		return y;
-	}
-}
-
-static public Object max(double x, Object y){
-	if(Double.isNaN(x)){
-		return x;
-	} else if(isNaN(y)){
-		return y;
-	}
-	if(x > ((Number)y).doubleValue()){
 		return x;
 	} else {
 		return y;
@@ -1690,50 +1673,6 @@ static public Object max(long x, double y){
 }
 
 
-static public long max(long x, long y){
-	if(x > y) {
-		return x;
-	} else {
-		return y;
-	}
-}
-
-
-static public Object max(long x, Object y){
-	if(isNaN(y)){
-		return y;
-	}
-	if(gt(x,y)){
-		return x;
-	} else {
-		return y;
-	}
-}
-
-static public Object max(Object x, long y){
-	if(isNaN(x)){
-		return x;
-	}
-	if(gt(x,y)){
-		return x;
-	} else {
-		return y;
-	}
-}
-
-static public Object max(Object x, double y){
-	if (isNaN(x)){
-		return x;
-	} else if(Double.isNaN(y)){
-		return y;
-	}
-	if(((Number)x).doubleValue() > y){
-		return x;
-	} else {
-		return y;
-	}
-}
-
 static public Object max(Object x, Object y){
 	if(isNaN(x)){
 		return x;
@@ -1747,11 +1686,6 @@ static public Object max(Object x, Object y){
 	}
 }
 
-
-static public double min(double x, double y){
-	return Math.min(x, y);
-}
-
 static public Object min(double x, long y){
 	if (Double.isNaN(x)){
 		return x;
@@ -1763,68 +1697,11 @@ static public Object min(double x, long y){
 	}
 }
 
-static public Object min(double x, Object y){
-	if(Double.isNaN(x)){
-		return x;
-	} else if(isNaN(y)){
-		return y;
-	}
-	if(x < ((Number)y).doubleValue()){
-		return x;
-	} else {
-		return y;
-	}
-}
-
 static public Object min(long x, double y){
 	if(Double.isNaN(y)){
 		return y;
 	}
 	if(x < y){
-		return x;
-	} else {
-		return y;
-	}
-}
-
-
-static public long min(long x, long y){
-	if(x < y) {
-		return x;
-	} else {
-		return y;
-	}
-}
-
-static public Object min(long x, Object y){
-	if(isNaN(y)){
-		return y;
-	}
-	if(lt(x,y)){
-		return x;
-	} else {
-		return y;
-	}
-}
-
-static public Object min(Object x, long y){
-	if(isNaN(x)){
-		return x;
-	}
-	if(lt(x,y)){
-		return x;
-	} else {
-		return y;
-	}
-}
-
-static public Object min(Object x, double y){
-	if(isNaN(x)){
-		return x;
-	} else if(Double.isNaN(y)){
-		return y;
-	}
-	if(((Number)x).doubleValue() < y){
 		return x;
 	} else {
 		return y;
