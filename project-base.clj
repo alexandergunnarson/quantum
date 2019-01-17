@@ -198,14 +198,7 @@
          #_[binaryage/devtools                  "0.5.2"           ]
          [environ  "1.0.3"  ]
      ; ==== DB ====
-       ; DATOMIC
-      #_[quantum/datomic-pro                     "0.9.5206" ; Doesn't work, apparnetly
-         :exclusions [joda-time
-                      org.slf4j/slf4j-nop
-                      org.slf4j/log4j-over-slf4j
-                      org.slf4j/jul-to-slf4j
-                      org.slf4j/jcl-over-slf4j
-                      org.codehaus.janino/commons-compiler-jdk]   ]
+       [org.voltdb/voltdbclient                 "8.3"]
        [com.datomic/datomic-free                "0.9.5407"
          :exclusions [org.slf4j/slf4j-nop
                       org.slf4j/log4j-over-slf4j
