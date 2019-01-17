@@ -1,3 +1,6 @@
+-- ~/voltdb-community-8.3.3/bin/voltdb start --http=8081
+-- ./bin/voltdb/sqlcmd
+
 -- TODO performance-test this against Datomic! Generate a bunch of random data till it gets big
 
 drop table entities;
@@ -30,8 +33,7 @@ create index vaet on entities (v, a, e, t);
 create index t on entities (t);
 
 -- TODO is this wise? It seems the best partitioning but might not be
-partition table entities on column t;
-
+partition table entities on column e;
 
 -- Multiple insert in one clause is not supported
 insert into entities (t, e, a, v) values (0, -9223372036854775807, 'db|attribute'        , 'db|attribute');
@@ -68,7 +70,7 @@ select max(e) + 1 from entities;
 
 -- TODO make sure revisions (changes in value of an identity across time) are addressed here
 select customer.e
-  from entities as concert,
+  from s as concert,
        entities as booking,
        entities as customer
   where (    concert.a = "concert/organization"
@@ -76,10 +78,10 @@ select customer.e
      or (    booking.a = "booking/concert"
          and booking.v = concert.e)
      or (    booking.a = "booking/customer"
-         and booking.v = customer.e)
+         and booking.v = customer.e);
 
 -- This is probably as much effort as the type system. I think we should do it only when we start to
 -- scale, and only if it proves to have performance gains that Datomic can't match. We should code
 -- to the Datomic interface though. Plus if we preserve all the data in datom format, it's about the
 -- easiest thing to migrate (in theory). Perhaps we should do it either way — having source code we
--- can configure and edit it really helpful.
+-- can configure and edit will be really helpful.
